@@ -5,11 +5,11 @@ begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
     gem.name = "little-blue-pill"
-    gem.summary = %Q{TODO: one-line summary of your gem}
+    gem.summary = %Q{TODO: keep out}
     gem.description = %Q{TODO: longer description of your gem}
-    gem.email = "gary.tsang@gmail.com"
-    gem.homepage = "http://github.com/garru/little-blue-pill"
-    gem.authors = ["garru"]
+    # gem.email
+    gem.homepage = "http://github.com/arya/little-blue-pill"
+    gem.authors = ["arya", "garru"]
     gem.add_development_dependency "rspec"
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end

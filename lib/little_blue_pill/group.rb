@@ -1,4 +1,4 @@
-module LBP
+module BluePill
   class Group
     attr_accessor :name, :processes
     def initialize(name)

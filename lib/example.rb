@@ -1,14 +1,14 @@
-LBP.watch do
+BluePill.watch do
   start_command "start_process -P file.pid"
   stop_command "stop_process -P file.pid"
   pid_file 'file.pid'
   
   checks do |checks|
-    checks.memory :every => 15.minutes,
+    checks.mem_usage :every => 15.minutes,
                   :below => 250.megabytes,
                   :fires => :restart
                   
-    checks.cpu  :every 10.seconds,
+    checks.cpu_usage  :every 10.seconds,
                 :below => 50.percent,
                 :fires => :restart
                 

@@ -1,4 +1,4 @@
-module LBP
+module BluePill
   class ProcessStateMachine
     def initialize(process)
       @process = process

@@ -1,4 +1,4 @@
-module LBP
+module BluePill
   class ConditionWatch
     def initialize(name, options = {})
       @name = name

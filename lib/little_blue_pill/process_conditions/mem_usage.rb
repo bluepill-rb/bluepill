@@ -1,4 +1,4 @@
-module LBP
+module BluePill
   module ProcessConditions
     class MemUsage < ProcessCondition
       def initialize(options = {})

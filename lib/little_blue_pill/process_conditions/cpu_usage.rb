@@ -1,4 +1,4 @@
-module LBP
+module BluePill
   module ProcessConditions
     class CpuUsage < ProcessCondition
       def initialize(options = {})

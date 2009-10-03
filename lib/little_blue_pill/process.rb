@@ -1,4 +1,4 @@
-module LBP
+module BluePill
   class Process
     attr_reader :name
     attr_accessor :pid
@@ -15,6 +15,7 @@ module LBP
     end
     
     def checkup
+      # events are handled on FIFO, returning false from an event handler halts the chain, transitions force halt the chain.
       @watches.each do |watch|
         # do stuff, what to do with the events?
       end

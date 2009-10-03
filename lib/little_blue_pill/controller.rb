@@ -1,2 +1,2 @@
-module LBP
+module BluePill
 end

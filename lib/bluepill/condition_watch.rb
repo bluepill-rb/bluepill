@@ -26,7 +26,7 @@ module BluePill
     
     def record_value(value)
       # TODO: record value in ProcessStatistics
-      logger.info(self.to_s)
+      self.logger.info(self.to_s) if self.logger
       @history[@history_index] = [value, @process_condition.check(value)]
       @history_index = (@history_index + 1) % @history.size
     end

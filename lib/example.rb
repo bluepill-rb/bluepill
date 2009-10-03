@@ -1,4 +1,4 @@
-BluePill.watch do
+Bluepill.watch do
   start_command "start_process -P file.pid"
   stop_command "stop_process -P file.pid"
   pid_file 'file.pid'

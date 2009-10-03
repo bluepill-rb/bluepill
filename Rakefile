@@ -4,12 +4,12 @@ require 'rake'
 begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
-    gem.name = "little-blue-pill"
+    gem.name = "blue-pill"
     gem.summary = %Q{TODO: keep out}
     gem.description = %Q{TODO: longer description of your gem}
     # gem.email
-    gem.homepage = "http://github.com/arya/little-blue-pill"
-    gem.authors = ["arya", "garru"]
+    gem.homepage = "http://github.com/arya/blue-pill"
+    gem.authors = ["arya", "entombed", "garru"]
     gem.add_development_dependency "rspec"
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
@@ -42,7 +42,7 @@ Rake::RDocTask.new do |rdoc|
   end
 
   rdoc.rdoc_dir = 'rdoc'
-  rdoc.title = "little-blue-pill #{version}"
+  rdoc.title = "blue-pill #{version}"
   rdoc.rdoc_files.include('README*')
   rdoc.rdoc_files.include('lib/**/*.rb')
 end

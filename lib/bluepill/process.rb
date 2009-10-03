@@ -1,4 +1,4 @@
-module BluePill
+module Bluepill
   class Process
     attr_reader :name
     attr_accessor :pid

@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+require 'optparse'
+
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: bluepill [app] cmd [options]"
+
+  opts.on("-app", "--application", "Application") do |v|
+    options[:application] = v
+  end
+  
+  opts.on("-c", "--cmd", "Command") do |v|
+    options[:command] = v
+  end
+  
+  options[:application] ||= 'all'
+end.parse!

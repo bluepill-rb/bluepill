@@ -1,4 +1,4 @@
-module BluePill
+module Bluepill
   class ConditionWatch
     attr_accessor :logger
     def initialize(name, options = {})

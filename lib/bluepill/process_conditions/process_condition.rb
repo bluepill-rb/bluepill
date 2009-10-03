@@ -1,4 +1,4 @@
-module BluePill
+module Bluepill
   module ProcessConditions
     class ProcessCondition  
       def run(pid)

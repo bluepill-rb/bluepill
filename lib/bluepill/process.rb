@@ -35,6 +35,18 @@ module Bluepill
       
     end
 
+    def tick
+      # clear the momoization per tick
+      @process_running = nil
+
+      # run state machine transitions
+      super
+      
+      if process_running?
+        run_watches
+      end
+    end
+    
     def initialize(process_name, &block)
       raise ArgumentError, "Process needs to be constructed with a block" unless block_given?
       
@@ -70,6 +82,11 @@ module Bluepill
     
     # TODO
     def restart_process
+      
+    end
+    
+    # TODO
+    def run_watches
       
     end
   end

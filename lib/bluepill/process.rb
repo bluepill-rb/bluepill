@@ -48,15 +48,15 @@ module Bluepill
     end
 
     def tick
-      # clear the momoization per tick
-      puts "TICK"
       return if self.skip_ticks_until && self.skip_ticks_until > Time.now.to_i
       self.skip_ticks_until = nil
-      
+
+      # clear the momoization per tick
       @process_running = nil
+      
       # run state machine transitions
       super
-      puts "#{self.state} #{self.process_running?(true)}"
+      
       return if self.skip_ticks_until && self.skip_ticks_until > Time.now.to_i
       
       if process_running?
@@ -69,12 +69,14 @@ module Bluepill
       
       @name = process_name
       @transition_history = Util::RotationalArray.new(10)
-      yield(self)
-      
-      @watch_logger = Logger.new(self.logger, "#{self.name}:") if self.logger
       self.watches = []
+      @watch_logger = Logger.new(self.logger, "#{self.name}:") if self.logger
       
+      yield(self)
+
       raise ArgumentError, "Please specify a pid_file or the demonize option" if pid_file.nil? && !daemonize?
+      
+      # Let state_machine do its initialization stuff
       super()
     end
     
@@ -91,19 +93,15 @@ module Bluepill
     end
     
     def process_running?(force = false)
-      if force || @process_running.nil?
-        @process_running = signal_process(0)
-        @process_running
-      else
-        @process_running
-      end
+      @process_running = signal_process(0) if force || @process_running.nil?
+      @process_running
     end
     
     def start_process
-      puts "STARTING"
       @actual_pid = nil
       if daemonize?
-        if fork.nil?
+        if fork.nil? 
+          # child process
           Daemonize.daemonize
           File.open(pid_file, "w") {|f| f.write(::Process.pid)}
           exec(start_command)
@@ -181,7 +179,6 @@ module Bluepill
     
     def signal_process(code)
       ::Process.kill(code, actual_pid)
-      puts actual_pid
       true
     rescue
       false

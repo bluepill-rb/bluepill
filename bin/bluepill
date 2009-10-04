@@ -3,21 +3,18 @@ $LOAD_PATH.unshift File.join(File.dirname(__FILE__), '..', 'lib')
 require 'optparse'
 require 'bluepill'
 
-options = {}
-OptionParser.new do |opts|
-  opts.banner = "Usage: bluepill [app] [cmd] [options]"
+controller = Bluepill::Controller.new()
 
-  opts.on("-app", "--application", "Application") do |v|
-    options[:application] = v
-  end
-  
-  opts.on("-cmd", "--command", "Command") do |v|
-    options[:command] = v
-  end
-  
-  options[:application] ||= 'all'
+options = {}
+options[:application] = ARGV.shift if controller.list.include?(ARGV.first)
+options[:application] ||= 'all'
+
+options[:command] = ARGV.shift
+options[:command_args] = ARGV
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: bluepill [app] cmd [options]"
 end.parse!
 
 puts options.inspect
-controller = Bluepill::Controller.new()
 puts controller.send_cmd('applcation', options[:command])

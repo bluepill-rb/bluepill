@@ -6,11 +6,7 @@ module Bluepill
     attr_accessor :name, :start_command, :stop_command, :restart_command, :daemonize, :pid_file
     attr_accessor :watches, :logger, :skip_ticks_until
     
-    state_machine :initial => :unmonitored do
-      before_transition :up => :down do |process, transition|
-        process.skip_ticks_until = Time.now.to_i + process.start_grace_time
-      end
-      
+    state_machine :initial => :unmonitored do      
       state :unmonitored, :up, :down
       
       event :tick do
@@ -48,16 +44,15 @@ module Bluepill
     end
 
     def tick
-      # clear the momoization per tick
-      puts "TICK"
       return if self.skip_ticks_until && self.skip_ticks_until > Time.now.to_i
       self.skip_ticks_until = nil
-      
+
+      # clear the momoization per tick
       @process_running = nil
+      
       # run state machine transitions
       super
-      puts "#{self.state} #{self.process_running?(true)}"
-      return if self.skip_ticks_until && self.skip_ticks_until > Time.now.to_i
+
       
       if process_running?
         run_watches
@@ -69,12 +64,14 @@ module Bluepill
       
       @name = process_name
       @transition_history = Util::RotationalArray.new(10)
-      yield(self)
-      
-      @watch_logger = Logger.new(self.logger, "#{self.name}:") if self.logger
       self.watches = []
+      @watch_logger = Logger.new(self.logger, "#{self.name}:") if self.logger
       
+      yield(self)
+
       raise ArgumentError, "Please specify a pid_file or the demonize option" if pid_file.nil? && !daemonize?
+      
+      # Let state_machine do its initialization stuff
       super()
     end
     
@@ -91,27 +88,23 @@ module Bluepill
     end
     
     def process_running?(force = false)
-      if force || @process_running.nil?
-        @process_running = signal_process(0)
-        @process_running
-      else
-        @process_running
-      end
+      @process_running = signal_process(0) if force || @process_running.nil?
+      @process_running
     end
     
     def start_process
-      puts "STARTING"
       @actual_pid = nil
       if daemonize?
-        if fork.nil?
-          Daemonize.daemonize
-          File.open(pid_file, "w") {|f| f.write(::Process.pid)}
-          exec(start_command)
-        end
+        starter = lambda {::Kernel.exec(start_command)}
+        child_pid = Daemonize.call_as_daemon(starter)
+        File.open(pid_file, "w") {|f| f.write(child_pid)}
+        
       else
         # This is a self-daemonizing process
         system(start_command)
       end
+      
+      skip_ticks_for(start_grace_time)
       
       true
     end
@@ -126,6 +119,8 @@ module Bluepill
         signal_process("KILL") if process_running?(true)
       end
 
+      skip_ticks_for(stop_grace_time)
+      
       true
     end
     
@@ -133,12 +128,16 @@ module Bluepill
       @actual_pid = nil
       if restart_command
         system(restart_command)
+        skip_ticks_for(restart_grace_time)
         
       else
         stop_process
-        sleep(restart_grace_time)
         start_process
       end
+    end
+    
+    def skip_ticks_for(seconds)
+      self.skip_ticks_until = (self.skip_ticks_until || Time.now.to_i) + seconds
     end
     
     # TODO
@@ -181,7 +180,6 @@ module Bluepill
     
     def signal_process(code)
       ::Process.kill(code, actual_pid)
-      puts actual_pid
       true
     rescue
       false

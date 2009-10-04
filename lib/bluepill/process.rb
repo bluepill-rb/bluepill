@@ -1,45 +1,104 @@
+require "state_machine"
+
 module Bluepill
   class Process
-    attr_reader :name
-    attr_accessor :pid
-    def initialize(name)
-      self.name = name
-      @watches = []
-      @handlers = {}
+    attr_accessor :name, :start_command, :stop_command, :restart_command, :daemonize, :pid_file
+
+    state_machine :initial => :unmonitored do
+      state :unmonitored, :up, :down
       
-      set_default_event_handlers
+      event :tick do
+        transition :unmonitored => :unmonitored
+        
+        transition [:up, :down] => :up, :if => :process_running?
+        transition [:up, :down] => :down, :unless => :process_running?        
+      end
+      
+      event :start do
+        transition :unmonitored => :up, :if => lambda {|process| process.process_running? || process.start_process }
+        transition :up => :up
+        transition :down => :up, :if => :start_process
+      end
+      
+      event :stop do
+        transition [:unmonitored, :down] => :unmonitored
+        transition :up => :unmonitored, :if => :stop_process
+      end
+      
+      event :restart do
+        transition all => :up, :if => :restart_process
+      end
+      
+      event :unmonitor do
+        transition all => :unmonitored
+      end
+      
     end
-    
-    def transition(state)
-      # Transition to this state
-    end
-    
-    def checkup
-      # events are handled on FIFO, returning false from an event handler halts the chain, transitions force halt the chain.
-      @watches.each do |watch|
-        # do stuff, what to do with the events?
+
+    def tick
+      # clear the momoization per tick
+      @process_running = nil
+
+      # run state machine transitions
+      super
+      
+      if process_running?
+        run_watches
       end
     end
     
-    def clear_history!
-      @watch.each { |watch| watch.clear_history! }
+    def initialize(process_name, &block)
+      raise ArgumentError, "Process needs to be constructed with a block" unless block_given?
+      
+      @name = process_name
+      yield(self)
+      
+      raise ArgumentError, "Please specify a pid_file or the demonize option" if pid_file.nil? && !daemonize?
+      super()
     end
+    
+    def daemonize?
+      !!self.daemonize
+    end
+    
+    def dispatch!(event)
+      self.send("#{event}!")
+    end
+    
+    # TODO. Must memoize result per tick
+    def running?
+      @process_running ||= signal_process(0)
+    end
+    
+    # TODO
+    def start_process
       
-    private
-    def set_default_event_handlers
-      @handlers[:start] = lambda do |process|
-        process.transition :up
-      end
+    end
+    
+    # TODO
+    def stop_process
       
-      @handlers[:restart] = lambda do |process|
-        process.transition :down
-        process.clear_history!
-        process.transition :up
-      end
+    end
+    
+    # TODO
+    def restart_process
       
-      @handlers[:stop] = lambda do |process|
-        process.transition :down
-      end
+    end
+    
+    # TODO
+    def run_watches
+      
+    end
+    
+    def signal_process(code)
+      Process.kill(code, actual_pid)
+      true
+    rescue
+      false
+    end
+    
+    def actual_pid
+      @actual_pid ||= File.read(pid_file).to_i
     end
   end
 end

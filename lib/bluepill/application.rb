@@ -7,7 +7,8 @@ module Bluepill
     def initialize(name, options = {})
       self.name = name
       self.bp_dir = options["bp_dir"] ||= '/var/bluepill'
-      self.logger = Logger.new("/tmp/bp.log")
+      self.logger = Bluepill::Logger.new
+      socket = Bluepill::Socket.new(name, bp_dir)
       signal_trap
     end
         

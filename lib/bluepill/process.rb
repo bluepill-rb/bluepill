@@ -3,7 +3,8 @@ require "state_machine"
 module Bluepill
   class Process
     attr_accessor :name, :start_command, :stop_command, :restart_command, :daemonize, :pid_file
-
+    attr_accessor :watches, :logger
+    
     state_machine :initial => :unmonitored do
       state :unmonitored, :up, :down
       
@@ -33,6 +34,10 @@ module Bluepill
         transition all => :unmonitored
       end
       
+      after_transition any => any do |process, transition|
+        process.record_transition(transition.to_name) unless transition.loopback?
+      end
+      
     end
 
     def tick
@@ -51,10 +56,17 @@ module Bluepill
       raise ArgumentError, "Process needs to be constructed with a block" unless block_given?
       
       @name = process_name
+      @transition_history = Util::RotationalArray.new(10)
       yield(self)
+      
+      @watch_logger = Logger.new(self.logger, "#{self.name}:") if self.logger
       
       raise ArgumentError, "Please specify a pid_file or the demonize option" if pid_file.nil? && !daemonize?
       super()
+    end
+    
+    def add_watch(name, options = {})
+      self.watches << ConditionWatch.new(name, options.merge(:logger => @watch_logger))
     end
     
     def daemonize?
@@ -66,7 +78,7 @@ module Bluepill
     end
     
     # TODO. Must memoize result per tick
-    def running?
+    def process_running?
       @process_running ||= signal_process(0)
     end
     
@@ -84,10 +96,28 @@ module Bluepill
     def restart_process
       
     end
-    
-    # TODO
+
     def run_watches
+      now = Time.now.to_i
       
+      threads = self.watches.collect do |watch|
+        Thread.new { Thread.current[:events] = watch.run(pid, now) }
+      end
+      
+      @transitioned = false
+      
+      threads.inject([]) do |events, thread|
+        thread.join
+        events << thread[:events]
+      end.flatten.uniq.each do |event|
+        break if @transitioned
+        self.dispatch!(event)
+      end
+    end
+    
+    def record_transition(state_name)
+      @transitioned = true
+      # do other stuff here?
     end
     
     def signal_process(code)

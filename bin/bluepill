@@ -1,17 +1,26 @@
 #!/usr/bin/env ruby
+
+$LOAD_PATH.unshift File.join(File.dirname(__FILE__), '..', 'lib')
+
 require 'optparse'
+require 'bluepill'
+
 
 options = {}
 OptionParser.new do |opts|
-  opts.banner = "Usage: bluepill [app] cmd [options]"
+  opts.banner = "Usage: bluepill [app] [cmd] [options]"
 
   opts.on("-app", "--application", "Application") do |v|
     options[:application] = v
   end
   
-  opts.on("-c", "--cmd", "Command") do |v|
+  opts.on("-cmd", "--command", "Command") do |v|
     options[:command] = v
   end
   
   options[:application] ||= 'all'
 end.parse!
+
+puts options.inspect
+controller = Bluepill::Controller.new()
+puts controller.send_cmd('applcation', options[:command])

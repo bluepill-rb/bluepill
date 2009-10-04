@@ -80,8 +80,6 @@ module Bluepill
         cleanup
         shutdown()
       end
-      
-      Signal.trap
     end
     
   end

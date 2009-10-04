@@ -88,12 +88,12 @@ module Bluepill
     end
     
     def process_running?(force = false)
-      @process_running = signal_process(0) if force || @process_running.nil?
-      @process_running
+      @process_running = nil if force
+      @process_running ||= signal_process(0)
     end
     
     def start_process
-      @actual_pid = nil
+      self.clear_pid
       if daemonize?
         starter = lambda {::Kernel.exec(start_command)}
         child_pid = Daemonize.call_as_daemon(starter)
@@ -110,7 +110,7 @@ module Bluepill
     end
     
     def stop_process
-      @actual_pid = nil
+      self.clear_pid
       if stop_command
         system(stop_command)
       else
@@ -125,7 +125,7 @@ module Bluepill
     end
     
     def restart_process
-      @actual_pid = nil
+      self.clear_pid
       if restart_command
         system(restart_command)
         skip_ticks_for(restart_grace_time)
@@ -159,7 +159,7 @@ module Bluepill
       now = Time.now.to_i
       
       threads = self.watches.collect do |watch|
-        Thread.new { Thread.current[:events] = watch.run(actual_pid, now) }
+        Thread.new { Thread.current[:events] = watch.run(self.actual_pid, now) }
       end
       
       @transitioned = false
@@ -186,7 +186,12 @@ module Bluepill
     end
     
     def actual_pid
-      @actual_pid ||= File.read(pid_file).to_i
+      @actual_pid ||= File.read(pid_file).to_i if File.exists?(pid_file)
+    end
+    
+    def clear_pid
+      @actual_pid = nil
+      File.unlink(pid_file)
     end
   end
 end

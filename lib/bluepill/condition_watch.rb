@@ -16,7 +16,7 @@ module Bluepill
     end
     
     def run(pid, tick_number = Time.now.to_i)
-      if @last_ran_at.nil? || (@last_ran_at + @every) >= tick_number
+      if @last_ran_at.nil? || (@last_ran_at + @every) <= tick_number
         @last_ran_at = tick_number
         self.record_value(@process_condition.run(pid))
         return @fires if self.fired?

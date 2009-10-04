@@ -2,29 +2,27 @@ require 'logger'
 
 module Bluepill
   class Application
-    attr_accessor :name, :logger, :bp_dir, :socket
+    attr_accessor :name, :logger, :bp_dir, :socket, :processes, :pid_file
     
     def initialize(name, options = {})
+      self.processes = []
       self.name = name
       self.bp_dir = options["bp_dir"] ||= '/var/bluepill'
       self.logger = Bluepill::Logger.new
-      socket = Bluepill::Socket.new(name, bp_dir)
+      self.pid_file = File.join(self.bp_dir, 'pids', self.name + ".pid")
+      
       signal_trap
     end
         
     def start
-      child_pid = fork
-      if child_pid.nil?
-        start_child 
-        File.open(File.join(self.bp_dir, 'pids', self.name + ".pid"), 'w') do |x|
-          x.write(child_pid)
-        end
-      end
+      # Daemonize.daemonize
+      File.open(self.pid_file, 'w') { |x| x.write(::Process.pid) }
+      start_server
     end
     
-    def start_child
+    def start_server
       self.socket = Bluepill::Socket.new(name, bp_dir).server
-      command_loop
+      listener
       run
     end
 
@@ -47,12 +45,14 @@ module Bluepill
     
     def run
       loop do
-        logger.info("#{name} hi")
-        sleep(10)
+        self.processes.each do |process|
+          process.tick
+        end
+        sleep 1
       end
     end
     
-    def command_loop
+    def listener
       Thread.new do
         begin
           loop do

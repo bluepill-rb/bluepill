@@ -4,16 +4,22 @@ require "daemons"
 module Bluepill
   class Process
     attr_accessor :name, :start_command, :stop_command, :restart_command, :daemonize, :pid_file
-    attr_accessor :watches, :logger
+    attr_accessor :watches, :logger, :skip_ticks_until
     
     state_machine :initial => :unmonitored do
+      before_transition :up => :down do |process, transition|
+        process.skip_ticks_until = Time.now.to_i + process.start_grace_time
+      end
+      
       state :unmonitored, :up, :down
       
       event :tick do
         transition :unmonitored => :unmonitored
         
-        transition [:up, :down] => :up, :if => :process_running?
-        transition [:up, :down] => :down, :unless => :process_running?        
+        transition :up => :up, :if => :process_running?
+        transition :up => :down, :unless => :process_running?
+
+        transition :down => :up, :if => lambda {|process| process.process_running? || process.start_process }
       end
       
       event :start do
@@ -43,10 +49,15 @@ module Bluepill
 
     def tick
       # clear the momoization per tick
+      puts "TICK"
+      return if self.skip_ticks_until && self.skip_ticks_until > Time.now.to_i
+      self.skip_ticks_until = nil
+      
       @process_running = nil
-
       # run state machine transitions
       super
+      puts "#{self.state} #{self.process_running?(true)}"
+      return if self.skip_ticks_until && self.skip_ticks_until > Time.now.to_i
       
       if process_running?
         run_watches
@@ -61,6 +72,7 @@ module Bluepill
       yield(self)
       
       @watch_logger = Logger.new(self.logger, "#{self.name}:") if self.logger
+      self.watches = []
       
       raise ArgumentError, "Please specify a pid_file or the demonize option" if pid_file.nil? && !daemonize?
       super()
@@ -81,18 +93,21 @@ module Bluepill
     def process_running?(force = false)
       if force || @process_running.nil?
         @process_running = signal_process(0)
+        @process_running
       else
         @process_running
       end
     end
     
     def start_process
+      puts "STARTING"
+      @actual_pid = nil
       if daemonize?
-        Daemons.call do
-          File.open(pid_file, "w") {|f| f.write(Process.pid)}
+        if fork.nil?
+          Daemonize.daemonize
+          File.open(pid_file, "w") {|f| f.write(::Process.pid)}
           exec(start_command)
         end
-        
       else
         # This is a self-daemonizing process
         system(start_command)
@@ -102,9 +117,9 @@ module Bluepill
     end
     
     def stop_process
+      @actual_pid = nil
       if stop_command
         system(stop_command)
-        
       else
         signal_process("TERM")
         sleep(stop_grace_time)
@@ -115,6 +130,7 @@ module Bluepill
     end
     
     def restart_process
+      @actual_pid = nil
       if restart_command
         system(restart_command)
         
@@ -134,12 +150,17 @@ module Bluepill
     def restart_grace_time
       3
     end
+    
+    # TODO
+    def start_grace_time
+      3
+    end
 
     def run_watches
       now = Time.now.to_i
       
       threads = self.watches.collect do |watch|
-        Thread.new { Thread.current[:events] = watch.run(pid, now) }
+        Thread.new { Thread.current[:events] = watch.run(actual_pid, now) }
       end
       
       @transitioned = false
@@ -159,7 +180,8 @@ module Bluepill
     end
     
     def signal_process(code)
-      Process.kill(code, actual_pid)
+      ::Process.kill(code, actual_pid)
+      puts actual_pid
       true
     rescue
       false

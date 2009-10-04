@@ -19,9 +19,9 @@ require 'bluepill'
 
 
 Bluepill.application(:sample_app, "bp_dir" => "/tmp/bp") do |app|
-  10.times do |i|
+  100.times do |i|
     app.process("process_#{i}") do |p|
-      p.start_command = "nc -l #{9000 + i}"
+      p.start_command = "sleep 10"
       p.daemonize = true
       p.pid_file = "/tmp/bp/process_#{i}.pid"
 

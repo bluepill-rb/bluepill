@@ -19,11 +19,11 @@ require 'bluepill'
 
 
 Bluepill.application(:sample_app, "bp_dir" => "/Users/arya/Desktop/bp") do |app|
-  3.times do |i|
+  1.times do |i|
     app.process("process_#{i}") do |p|
       p.start_command = "sleep 10"
       p.daemonize = true
-      p.pid_file = "/tmp/bp/process_#{i}.pid"
+      p.pid_file = "/Users/arya/Desktop/bp/pids/process_#{i}.pid"
     end
   end
 end

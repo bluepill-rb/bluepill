@@ -194,7 +194,7 @@ module Bluepill
     
     def clear_pid
       @actual_pid = nil
-      File.unlink(pid_file)
+      File.unlink(pid_file) if File.exists?(pid_file)
     end
     
     def watch_logger

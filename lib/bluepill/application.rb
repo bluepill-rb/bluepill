@@ -45,7 +45,7 @@ module Bluepill
       if(@server)
         buffer = ""
         self.processes.each do | process |
-          buffer << "#{process.name} #{process.state}\n" +
+          buffer << "#{process.name} #{process.state}\n"
         end
         buffer
       else
@@ -70,6 +70,11 @@ module Bluepill
         send_to_server('unmonitor')
       end
     end
+    
+    def add_process(process, group = nil)
+      self.groups[group].add_process(process)
+    end
+    
 private
 
     def listener
@@ -93,17 +98,11 @@ private
     def start_server
       @server = true
       self.socket = Bluepill::Socket.new(name, bp_dir).server
+      self.groups.each {|name, group| group.start }
       listener
       run
     end
-    
-    def run
-      loop do
-        logger.info("#{name} hi")
-        sleep(10)
-      end
-    end
-    
+        
     def cleanup
       self.socket.cleanup
     end
@@ -116,9 +115,6 @@ private
       end
     end
     
-    def add_process(process, group = nil)
-      self.groups[group].add_process(process)
-    end
     
   end
 end

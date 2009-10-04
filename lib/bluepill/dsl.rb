@@ -11,7 +11,6 @@ module Bluepill
       end
       
       def method_missing(name, *args)
-        puts "#{name}: #{args.inspect}"
         if args.size == 1 && name.to_s =~ /^(.*)=$/
           @attributes[$1.to_sym] = args.first
         else

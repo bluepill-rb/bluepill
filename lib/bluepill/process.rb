@@ -7,7 +7,7 @@ module Bluepill
     attr_accessor :watches, :logger, :skip_ticks_until
     
     state_machine :initial => :unmonitored do
-      before_transition :up => :down do |process, transition|
+      after_transition :down => :up do |process, transition|
         process.skip_ticks_until = Time.now.to_i + process.start_grace_time
       end
       
@@ -49,15 +49,12 @@ module Bluepill
 
     def tick
       # clear the momoization per tick
-      puts "TICK"
       return if self.skip_ticks_until && self.skip_ticks_until > Time.now.to_i
       self.skip_ticks_until = nil
       
       @process_running = nil
       # run state machine transitions
       super
-      puts "#{self.state} #{self.process_running?(true)}"
-      return if self.skip_ticks_until && self.skip_ticks_until > Time.now.to_i
       
       if process_running?
         run_watches
@@ -181,7 +178,6 @@ module Bluepill
     
     def signal_process(code)
       ::Process.kill(code, actual_pid)
-      puts actual_pid
       true
     rescue
       false

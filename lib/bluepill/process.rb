@@ -8,7 +8,6 @@ module Bluepill
     
     state_machine :initial => :unmonitored do
       before_transition :up => :down do |process, transition|
-        process.skip_ticks_until = Time.now.to_i + process.start_grace_time
       end
       
       state :unmonitored, :up, :down
@@ -100,16 +99,16 @@ module Bluepill
     def start_process
       @actual_pid = nil
       if daemonize?
-        if fork.nil? 
-          # child process
-          Daemonize.daemonize
-          File.open(pid_file, "w") {|f| f.write(::Process.pid)}
-          exec(start_command)
-        end
+        starter = lambda {::Kernel.exec(start_command)}
+        child_pid = Daemonize.call_as_daemon(starter)
+        File.open(pid_file, "w") {|f| f.write(child_pid)}
+        
       else
         # This is a self-daemonizing process
         system(start_command)
       end
+      
+      skip_ticks_for(start_grace_time)
       
       true
     end
@@ -124,6 +123,8 @@ module Bluepill
         signal_process("KILL") if process_running?(true)
       end
 
+      skip_ticks_for(stop_grace_time)
+      
       true
     end
     
@@ -131,12 +132,16 @@ module Bluepill
       @actual_pid = nil
       if restart_command
         system(restart_command)
+        skip_ticks_for(restart_grace_time)
         
       else
         stop_process
-        sleep(restart_grace_time)
         start_process
       end
+    end
+    
+    def skip_ticks_for(seconds)
+      self.skip_ticks_until = (self.skip_ticks_until || Time.now.to_i) + seconds
     end
     
     # TODO

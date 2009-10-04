@@ -1,4 +1,5 @@
 require "state_machine"
+require "daemons"
 
 module Bluepill
   class Process
@@ -65,24 +66,61 @@ module Bluepill
       self.send("#{event}!")
     end
     
-    # TODO. Must memoize result per tick
-    def running?
-      @process_running ||= signal_process(0)
+    def process_running?(force = false)
+      if force || @process_running.nil?
+        @process_running = signal_process(0)
+      else
+        @process_running
+      end
     end
     
-    # TODO
     def start_process
+      if daemonize?
+        Daemons.call do
+          File.open(pid_file, "w") {|f| f.write(Process.pid)}
+          exec(start_command)
+        end
+        
+      else
+        # This is a self-daemonizing process
+        system(start_command)
+      end
       
+      true
     end
     
-    # TODO
     def stop_process
+      if stop_command
+        system(stop_command)
+        
+      else
+        signal_process("TERM")
+        sleep(stop_grace_time)
+        signal_process("KILL") if process_running?(true)
+      end
       
+      true
+    end
+    
+    def restart_process
+      if restart_command
+        system(restart_command)
+        
+      else
+        stop_process
+        sleep(restart_grace_time)
+        start_process
+      end
     end
     
     # TODO
-    def restart_process
-      
+    def stop_grace_time
+      3
+    end
+    
+    # TODO
+    def restart_grace_time
+      3
     end
     
     # TODO

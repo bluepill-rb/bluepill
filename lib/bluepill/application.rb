@@ -42,7 +42,7 @@ module Bluepill
       socket.recvfrom(255)
       socket.close
     end
-    
+
     def run
       loop do
         self.processes.each do |process|
@@ -52,6 +52,15 @@ module Bluepill
       end
     end
     
+
+private
+    def signal_trap
+      Signal.trap("TERM") do
+        puts "Terminating..."
+        shutdown()
+      end
+    end
+
     def listener
       Thread.new do
         begin
@@ -69,13 +78,18 @@ module Bluepill
         end
       end
     end
-    
-    def signal_trap
-      Signal.trap("TERM") do
-        puts "Terminating..."
-        shutdown()
-      end
+
+    def start_server
+      self.socket = Bluepill::Socket.new(name, bp_dir).server
+      command_loop
+      run
     end
     
+    def run
+      loop do
+        logger.info("#{name} hi")
+        sleep(10)
+      end
+    end
   end
 end

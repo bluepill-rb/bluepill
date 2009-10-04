@@ -2,13 +2,18 @@ require 'logger'
 
 module Bluepill
   class Application
-    attr_accessor :name, :logger, :bp_dir, :socket, :processes, :pid_file
+    attr_accessor :name, :logger, :bp_dir, :socket, :pid_file
+    attr_accessor :groups, :group_logger
     
     def initialize(name, options = {})
-      self.processes = []
       self.name = name
       self.bp_dir = options["bp_dir"] ||= '/var/bluepill'
+      
       self.logger = Bluepill::Logger.new
+      self.group_logger = Bluepill::Logger.new(self.logger, "#{self.name}:") if self.logger
+      
+      self.groups = Hash.new { |h,k| h[k] = Group.new(k, :logger => self.group_logger) }
+      
       self.pid_file = File.join(self.bp_dir, 'pids', self.name + ".pid")
       @server = false
       signal_trap
@@ -23,8 +28,8 @@ module Bluepill
 
     def run
       loop do
-        self.processes.each do |process|
-          process.tick
+        self.groups.each do |_, group|
+          group.tick
         end
         sleep 1
       end
@@ -109,6 +114,10 @@ private
         cleanup
         shutdown()
       end
+    end
+    
+    def add_process(process, group = nil)
+      self.groups[group].add_process(process)
     end
     
   end

@@ -18,14 +18,12 @@ require 'bluepill'
 # application.start
 
 
-Bluepill.application(:sample_app, "bp_dir" => "/tmp/bp") do |app|
-  100.times do |i|
+Bluepill.application(:sample_app, "bp_dir" => "/Users/arya/Desktop/bp") do |app|
+  3.times do |i|
     app.process("process_#{i}") do |p|
       p.start_command = "sleep 10"
       p.daemonize = true
       p.pid_file = "/tmp/bp/process_#{i}.pid"
-
-      p.add_watch("AlwaysTrue", :every => 5)
     end
   end
 end

@@ -22,7 +22,7 @@ module Bluepill
         #if sock file has been created.  test to see if there is a server
         tmp_socket = UNIXSocket.open(socket_name) rescue nil
         if tmp_socket.nil?
-          cleanup_server
+          cleanup
         else
           raise Exception.new("Server is already running")
         end

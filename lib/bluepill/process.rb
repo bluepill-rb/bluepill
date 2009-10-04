@@ -3,8 +3,9 @@ require "daemons"
 
 module Bluepill
   class Process
-    attr_accessor :name, :start_command, :stop_command, :restart_command, :daemonize, :pid_file
-    attr_accessor :watches, :logger, :skip_ticks_until
+    CONFIGURABLE_ATTRIBUTES = [:start_command, :stop_command, :restart_command, :daemonize, :pid_file]
+    attr_accessor :name, :watches, :logger, :skip_ticks_until
+    attr_accessor *CONFIGURABLE_ATTRIBUTES
     
     state_machine :initial => :unmonitored do      
       state :unmonitored, :up, :down
@@ -62,16 +63,15 @@ module Bluepill
       end
     end
     
-    def initialize(process_name, &block)
-      raise ArgumentError, "Process needs to be constructed with a block" unless block_given?
-      
+    def initialize(process_name, options = {})      
       @name = process_name
       @transition_history = Util::RotationalArray.new(10)
-      self.watches = []
-      @watch_logger = Logger.new(self.logger, "#{self.name}:") if self.logger
+      @watches = []
       
-      yield(self)
-
+      CONFIGURABLE_ATTRIBUTES.each do |attribute_name|
+        self.send("#{attribute_name}=", options[attribute_name]) if options.has_key?(attribute_name)
+      end
+      
       raise ArgumentError, "Please specify a pid_file or the demonize option" if pid_file.nil? && !daemonize?
       
       # Let state_machine do its initialization stuff
@@ -79,7 +79,7 @@ module Bluepill
     end
     
     def add_watch(name, options = {})
-      self.watches << ConditionWatch.new(name, options.merge(:logger => @watch_logger))
+      self.watches << ConditionWatch.new(name, options.merge(:logger => self.watch_logger))
     end
     
     def daemonize?
@@ -195,6 +195,10 @@ module Bluepill
     def clear_pid
       @actual_pid = nil
       File.unlink(pid_file)
+    end
+    
+    def watch_logger
+      @watch_logger ||= Logger.new(self.logger, "#{self.name}:") if self.logger
     end
   end
 end

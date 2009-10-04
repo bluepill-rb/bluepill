@@ -61,13 +61,13 @@ module Bluepill
       !!self.daemonize
     end
     
-    def signal!(event)
+    def dispatch!(event)
       self.send("#{event}!")
     end
     
     # TODO. Must memoize result per tick
     def running?
-      
+      @process_running ||= signal_process(0)
     end
     
     # TODO
@@ -88,6 +88,16 @@ module Bluepill
     # TODO
     def run_watches
       
+    end
+    
+    def signal_process(code)
+      Process.kill(code, actual_pid)
+    rescue
+      false
+    end
+    
+    def actual_pid
+      File.read(pid_file).to_i
     end
   end
 end

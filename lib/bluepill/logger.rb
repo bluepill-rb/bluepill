@@ -9,7 +9,7 @@ module Bluepill
       eval <<-END
         def #{method}(*args)
           with_prefix = args.collect {|s| "\#{@prefix}\#{s}" }
-          @logger.#{method}(with_prefix)
+          @logger.#{method}(*with_prefix)
         end
       END
     end

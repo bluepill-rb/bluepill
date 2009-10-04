@@ -1,4 +1,6 @@
 require 'rubygems'
 require 'active_support/inflector'
 
-require 'bluepill/process_condition'
+require 'bluepill/application'
+require 'bluepill/controller'
+require 'bluepill/socket'

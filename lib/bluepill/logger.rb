@@ -8,7 +8,7 @@ module Bluepill
     [:emerg, :alert, :crit, :err, :warning, :notice, :info, :debug].each do |method|
       eval <<-END
         def #{method}(*args)
-          with_prefix = args.collect {|s| "\#{@prefix}\#{s}" } if \@prefix
+          with_prefix = args.collect {|s| "\#{@prefix}\#{s}" }
           @logger.#{method}(with_prefix)
         end
       END

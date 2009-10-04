@@ -38,7 +38,10 @@ module Bluepill
       end
       
       after_transition any => any do |process, transition|
-        process.record_transition(transition.to_name) unless transition.loopback?
+        unless transition.loopback?
+          process.record_transition(transition.to_name) 
+          process.logger.info "Going from #{transition.from_name} => #{transition.to_name}"
+        end
       end
       
     end

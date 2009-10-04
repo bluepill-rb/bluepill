@@ -7,6 +7,7 @@ module Bluepill
       @@app = app
       def process(process_name, &process_block)
         p = Process.new(process_name, &process_block)
+        p.logger = Logger.new(@@app.logger, "[Bluepill|#{@@app.name}|#{process_name}] ")
         @@app.processes << p
       end
     end

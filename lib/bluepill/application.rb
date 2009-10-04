@@ -70,11 +70,18 @@ module Bluepill
       end
     end
     
+    def cleanup
+      self.socket.cleanup
+    end
+    
     def signal_trap
       Signal.trap("TERM") do
         puts "Terminating..."
+        cleanup
         shutdown()
       end
+      
+      Signal.trap
     end
     
   end

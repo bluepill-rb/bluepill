@@ -2,20 +2,33 @@ require 'rubygems'
 require 'bluepill'
 
 
-application = Bluepill::Application.new("poop", 'bp_dir' => '/Users/arya/Desktop/bp')
+# application = Bluepill::Application.new("poop", 'bp_dir' => '/tmp/bp')
+# 
+# process = Bluepill::Process.new("hello_world") do |process|
+#   process.start_command = "sleep 5"
+#   process.daemonize = true
+#   process.pid_file = "/tmp/bp/sleep.pid"
+# end
+# 
+# process.add_watch("AlwaysTrue", :every => 5)
+# 
+# application.processes << process
+# process.dispatch!("start")
+# 
+# application.start
 
-process = Bluepill::Process.new("hello_world") do |process|
-  process.start_command = "sleep 5"
-  process.daemonize = true
-  process.pid_file = "/Users/arya/Desktop/bp/sleep.pid"
+
+Bluepill.application(:sample_app, "bp_dir" => "/tmp/bp") do |app|
+  10.times do |i|
+    app.process("process_#{i}") do |p|
+      p.start_command = "nc -l #{9000 + i}"
+      p.daemonize = true
+      p.pid_file = "/tmp/bp/process_#{i}.pid"
+
+      p.add_watch("AlwaysTrue", :every => 5)
+    end
+  end
 end
-
-process.add_watch("AlwaysTrue", :every => 5)
-
-application.processes << process
-process.dispatch!("start")
-
-application.start
 
 # Bluepill.watch do
 #   start_command "start_process -P file.pid"

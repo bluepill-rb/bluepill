@@ -9,6 +9,7 @@ require 'bluepill/socket'
 require "bluepill/process"
 require "bluepill/logger"
 require "bluepill/condition_watch"
+require "bluepill/dsl"
 
 require "bluepill/process_conditions"
 require "bluepill/process_conditions/process_condition"

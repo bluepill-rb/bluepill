@@ -92,12 +92,13 @@ module Bluepill
     
     def signal_process(code)
       Process.kill(code, actual_pid)
+      true
     rescue
       false
     end
     
     def actual_pid
-      File.read(pid_file).to_i
+      @actual_pid ||= File.read(pid_file).to_i
     end
   end
 end

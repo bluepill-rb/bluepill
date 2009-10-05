@@ -114,7 +114,10 @@ private
         shutdown()
       end
     end
-    
-    
+   
+   def grep_pattern(query)
+     pattern = [self.name, query].join('|')
+    'bluepill.*\[.*' + Regexp.escape(pattern) + '.*\]'
+   end 
   end
 end

@@ -2,6 +2,7 @@ require 'rubygems'
 
 require 'syslog'
 require 'active_support/inflector'
+require 'active_support/core_ext/hash'
 
 require 'bluepill/application'
 require 'bluepill/controller'

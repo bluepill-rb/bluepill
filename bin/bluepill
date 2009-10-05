@@ -3,18 +3,39 @@ $LOAD_PATH.unshift File.join(File.dirname(__FILE__), '..', 'lib')
 require 'optparse'
 require 'bluepill'
 
-controller = Bluepill::Controller.new()
-
-options = {}
-options[:application] = ARGV.shift if controller.list.include?(ARGV.first)
-options[:application] ||= 'all'
-
-options[:command] = ARGV.shift
-options[:command_args] = ARGV
+# defaults
+options = {
+  :application => "all",
+  :log_file => "/var/log/bluepill.log"
+}
 
 OptionParser.new do |opts|
   opts.banner = "Usage: bluepill [app] cmd [options]"
+  
+  opts.on("--logfile LOGFILE") do |file|
+    options[:log_file] = file
+  end
+  
+  opts.on("--base-dir DIR") do |base_dir|
+    options[:base_dir] = base_dir
+  end
 end.parse!
 
 puts options.inspect
-puts controller.send_cmd('applcation', options[:command])
+
+controller = Bluepill::Controller.new(options.slice(:base_dir))
+options[:application] = ARGV.shift if controller.list.include?(ARGV.first)
+
+options[:command] = ARGV.shift
+
+case options[:command]
+when "log"
+  pattern = ARGV.shift
+  cmd = "tail -n 100 -f #{options[:log_file]} | grep -E '#{controller.active_application.grep_pattern(pattern)}'"
+  Kernel.exec(cmd)
+else
+  "Unknown command `%s`" % options[:command]
+end
+
+
+# puts controller.send_cmd('applcation', options[:command])

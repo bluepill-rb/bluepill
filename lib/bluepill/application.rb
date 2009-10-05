@@ -155,8 +155,10 @@ private
       if File.exists?(self.pid_file)
         previous_pid = File.read(self.pid_file).to_i
         begin
-          puts "Killing previous bluepilld[#{previous_pid}]"
-          ::Process.kill(2, previous_pid)
+          if ::Process.kill(0, previous_pid)
+            puts "Killing previous bluepilld[#{previous_pid}]"
+            ::Process.kill(2, previous_pid)
+          end
         rescue Exception => e
           exit unless e.is_a?(Errno::ESRCH)
           # it was probably already dead

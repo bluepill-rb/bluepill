@@ -19,13 +19,6 @@ module Bluepill
       signal_trap
     end
     
-    def method_missing(method_name, *args)
-      self.socket = Bluepill::Socket.new(name, base_dir).client 
-      socket.send(method_name.to_s + "\n", 0)
-      socket.recvfrom(255)
-      socket.close
-    end
-
     def start
       # Daemonize.daemonize
       File.open(self.pid_file, 'w') { |x| x.write(::Process.pid) }
@@ -33,10 +26,16 @@ module Bluepill
     end
     
     def status
+      puts "STATUS"
+      puts @server
       if(@server)
+        logger.info("Server: GOT STATUS")
         buffer = ""
-        self.processes.each do | process |
-          buffer << "#{process.name} #{process.state}\n"
+        self.groups.each do | group |
+          buffer << "#{group.name}"
+          group.status.each do |process_name, status|
+            buffer << "\t#{process_name} #{status}\n"
+          end
         end
         buffer
       else
@@ -54,8 +53,8 @@ module Bluepill
     
     def unmonitor
       if(@server)
-        self.processes.each do |process|
-          process.unmonitor
+        self.groups.each do |group|
+          group.unmonitor
         end
       else
         send_to_server('unmonitor')
@@ -79,14 +78,22 @@ module Bluepill
 private
 
     def listener
-      Thread.new do
+      Thread.new(self) do |app|
+        puts app.inspect
         begin
           loop do
             logger.info("Server | Command loop started:")
             client = socket.accept
             logger.info("Server: Handling Request")
-            cmd = client.readline
-            response = self.send(cmd)
+            cmd = client.readline.strip
+            logger.info("Server: #{cmd}")
+            puts cmd
+            begin
+              response = app.send(cmd)
+            rescue Exception => e
+              puts e.inspect
+            end
+            puts response
             logger.info("Server: Sending Response")
             client.write(response)
             client.close

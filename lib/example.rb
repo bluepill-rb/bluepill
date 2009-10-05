@@ -18,7 +18,7 @@ require 'bluepill'
 # application.start
 
 
-Bluepill.application(:sample_app, "base_dir" => "/Users/gary/Desktop/bp") do |app|
+Bluepill.application(:sample_app, :base_dir => "/Users/gary/Desktop/bp/") do |app|
   1.times do |i|
     app.process("process_#{i}") do |p|
       p.start_command = "sleep 10"

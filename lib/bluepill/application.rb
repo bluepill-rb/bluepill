@@ -19,16 +19,16 @@ module Bluepill
       @server = false
       signal_trap
     end
-    
-    def start
+        
+    def load
       # Daemonize.daemonize
       File.open(self.pid_file, 'w') { |x| x.write(::Process.pid) }
       start_server
     end
     
+    
     def status
       if(@server)
-        logger.info("Server: GOT STATUS")
         buffer = ""
         self.groups.each do |name, group|
           buffer << "#{name}:\n" if name
@@ -46,9 +46,31 @@ module Bluepill
     
     def stop
       if(@server)
-        logger.info("stop process")
+        self.groups.each do |group|
+          group.stop
+        end
       else
         send_to_server('stop')
+      end
+    end
+    
+    def start
+      if(@server)
+        self.groups.each do |group|
+          group.start
+        end
+      else
+        send_to_server('start')
+      end
+    end
+    
+    def restart
+      if(@server)
+        self.groups.each do |group|
+          group.restart
+        end
+      else
+        send_to_server('restart')
       end
     end
     

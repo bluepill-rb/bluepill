@@ -21,11 +21,8 @@ module Bluepill
     end
         
     def load
-      # Daemonize.daemonize
-      File.open(self.pid_file, 'w') { |x| x.write(::Process.pid) }
       start_server
     end
-    
     
     def status
       if(@server)
@@ -125,9 +122,24 @@ private
     end
 
     def start_server
+      if File.exists?(self.pid_file)
+        previous_pid = File.read(self.pid_file).to_i
+        begin
+          puts "Killing previous bluepilld[#{previous_pid}]"
+          ::Process.kill(2, previous_pid)
+        rescue Exception => e
+          exit unless e.is_a?(Errno::ESRCH)
+          # it was probably already dead
+        end
+        sleep 1 # wait for it to die
+      end
+      
+      Daemonize.daemonize
+      
       @server = true
       self.socket = Bluepill::Socket.new(name, base_dir).server
-      $0 = "bluepill: #{self.name}"
+      File.open(self.pid_file, 'w') { |x| x.write(::Process.pid) }
+      $0 = "bluepilld: #{self.name}"
       self.groups.each {|name, group| group.start }
       listener
       run

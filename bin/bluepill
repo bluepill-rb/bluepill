@@ -26,6 +26,9 @@ options[:application] = ARGV.shift if controller.list.include?(ARGV.first)
 options[:command] = ARGV.shift
 
 case options[:command]
+when "load"
+  file = ARGV.shift
+  eval(File.read(file))
 when "log"
   pattern = ARGV.shift
   pattern = controller.send_cmd(options[:application], :grep_pattern, pattern)

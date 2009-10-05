@@ -3,7 +3,8 @@ require "daemons"
 
 module Bluepill
   class Process
-    CONFIGURABLE_ATTRIBUTES = [:start_command, :stop_command, :restart_command, :daemonize, :pid_file]
+    CONFIGURABLE_ATTRIBUTES = [:start_command, :stop_command, :restart_command, :daemonize, :pid_file, :start_grace_time, :stop_grace_time, :restart_grace_time]
+    
     attr_accessor :name, :watches, :logger, :skip_ticks_until
     attr_accessor *CONFIGURABLE_ATTRIBUTES
     
@@ -67,6 +68,8 @@ module Bluepill
       @name = process_name
       @transition_history = Util::RotationalArray.new(10)
       @watches = []
+      
+      @stop_grace_time = @start_grace_time = @restart_grace_time = 3
       
       CONFIGURABLE_ATTRIBUTES.each do |attribute_name|
         self.send("#{attribute_name}=", options[attribute_name]) if options.has_key?(attribute_name)
@@ -141,21 +144,6 @@ module Bluepill
     
     def skip_ticks_for(seconds)
       self.skip_ticks_until = (self.skip_ticks_until || Time.now.to_i) + seconds
-    end
-    
-    # TODO
-    def stop_grace_time
-      3
-    end
-    
-    # TODO
-    def restart_grace_time
-      3
-    end
-    
-    # TODO
-    def start_grace_time
-      3
     end
 
     def run_watches

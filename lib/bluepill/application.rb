@@ -2,25 +2,25 @@ require 'logger'
 
 module Bluepill
   class Application
-    attr_accessor :name, :logger, :bp_dir, :socket, :pid_file
+    attr_accessor :name, :logger, :base_dir, :socket, :pid_file
     attr_accessor :groups, :group_logger
     
     def initialize(name, options = {})
       self.name = name
-      self.bp_dir = options["bp_dir"] ||= '/var/bluepill'
+      self.base_dir = options[:base_dir] ||= '/var/bluepill'
       
       self.logger = Bluepill::Logger.new
       self.group_logger = Bluepill::Logger.new(self.logger, "#{self.name}:") if self.logger
       
       self.groups = Hash.new { |h,k| h[k] = Group.new(k, :logger => self.group_logger) }
       
-      self.pid_file = File.join(self.bp_dir, 'pids', self.name + ".pid")
+      self.pid_file = File.join(self.base_dir, 'pids', self.name + ".pid")
       @server = false
       signal_trap
     end
     
     def method_missing(method_name, *args)
-      self.socket = Bluepill::Socket.new(name, bp_dir).client 
+      self.socket = Bluepill::Socket.new(name, base_dir).client 
       socket.send(method_name.to_s + "\n", 0)
       socket.recvfrom(255)
       socket.close
@@ -66,9 +66,9 @@ module Bluepill
       self.groups[group].add_process(process)
     end
     
-    def send_to_server
-      self.socket = Bluepill::Socket.new(name, bp_dir).client 
-      socket.write(method_name.to_s + "\n")
+    def send_to_server(method)
+      self.socket = Bluepill::Socket.new(name, base_dir).client 
+      socket.write(method + "\n")
       buffer = ""
       while(line = socket.gets)
         line << buffer
@@ -84,8 +84,10 @@ private
           loop do
             logger.info("Server | Command loop started:")
             client = socket.accept
+            logger.info("Server: Handling Request")
             cmd = client.readline
             response = self.send(cmd)
+            logger.info("Server: Sending Response")
             client.write(response)
             client.close
           end
@@ -97,7 +99,7 @@ private
 
     def start_server
       @server = true
-      self.socket = Bluepill::Socket.new(name, bp_dir).server
+      self.socket = Bluepill::Socket.new(name, base_dir).server
       $0 = "bluepill: #{self.name}"
       self.groups.each {|name, group| group.start }
       listener

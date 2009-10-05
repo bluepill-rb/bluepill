@@ -11,12 +11,12 @@ module Bluepill
       end
 
       def restart
-        self.socket = Bluepill::Socket.new(name, bp_dir).client      
+        self.socket = Bluepill::Socket.new(name, base_dir).client      
         socket.send("restart\n", 0)
       end
 
       def stop
-        self.socket = Bluepill::Socket.new(name, bp_dir).client      
+        self.socket = Bluepill::Socket.new(name, base_dir).client      
         socket.send("stop\n", 0)
       end
     end

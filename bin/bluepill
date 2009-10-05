@@ -23,6 +23,7 @@ end.parse!
 
 puts options.inspect
 controller = Bluepill::Controller.new(options.slice(:base_dir))
+puts controller.list
 options[:application] = ARGV.shift if controller.list.include?(ARGV.first)
 options[:command] = ARGV.shift
 
@@ -36,4 +37,4 @@ else
   "Unknown command `%s`" % options[:command]
 end
 puts options.inspect
-# puts controller.send_cmd('applcation', options[:command])
+puts controller.send_cmd(options[:application], options[:command])

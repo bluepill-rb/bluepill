@@ -2,11 +2,11 @@ require 'socket'
 
 module Bluepill
   class Socket
-    attr_accessor :name, :bp_dir, :socket
+    attr_accessor :name, :base_dir, :socket
     
-    def initialize(name, bp_dir)
+    def initialize(name, base_dir)
       self.name = name
-      self.bp_dir = bp_dir
+      self.base_dir = base_dir
       @isserver = false
     end
 
@@ -34,7 +34,7 @@ module Bluepill
     end
     
     def socket_name
-      @socket_name ||= File.join(bp_dir, 'socks', name + ".sock") 
+      @socket_name ||= File.join(base_dir, 'socks', name + ".sock") 
     end
     
   end

@@ -21,38 +21,30 @@ OptionParser.new do |opts|
   end
 end.parse!
 
+ALLOWED_COMMANDS = %w(load start stop restart log unmonitor quit)
+
 controller = Bluepill::Controller.new(options.slice(:base_dir))
-options[:application] = ARGV.shift if controller.list.include?(ARGV.first)
+
+if controller.list.include?(ARGV.first)
+  options[:application] = ARGV.shift 
+elsif controller.list.length == 1 && ALLOWED_COMMANDS.include?(ARGV.first)
+  options[:application] = controller.list.first
+end
+
 options[:command] = ARGV.shift
 
-case options[:command]
-when "log"
+case 
+when options[:command] == "log"
   pattern = ARGV.shift
   pattern = controller.send_cmd(options[:application], :grep_pattern, pattern)
   
   cmd = "tail -n 100 -f #{options[:log_file]} | grep -E '#{pattern}'"
   Kernel.exec(cmd)
 
-when "start"  
+when ALLOWED_COMMANDS.include?(option[:command])
   process_or_group_name = ARGV.shift
-  controller.send_cmd(options[:application], :start, process_or_group_name)
+  controller.send_cmd(options[:application], option[:command], process_or_group_name)
 
-when "stop"  
-  process_or_group_name = ARGV.shift
-  controller.send_cmd(options[:application], :stop, process_or_group_name)
-
-when "restart"  
-  process_or_group_name = ARGV.shift
-  controller.send_cmd(options[:application], :restart, process_or_group_name)
-
-when "unmonitor"  
-  process_or_group_name = ARGV.shift
-  controller.send_cmd(options[:application], :unmonitor, process_or_group_name)
-
-when "quit"  
-  process_or_group_name = ARGV.shift
-  controller.send_cmd(options[:application], :quit)
-  
 else
   "Unknown command `%s`" % options[:command]
 end

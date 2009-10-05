@@ -20,9 +20,20 @@ ROOT_DIR = "/Users/#{`whoami`.strip}"
 
 
 Bluepill.application(:sample_app, :base_dir => "#{ROOT_DIR}/Desktop/bp") do |app|
-  1.times do |i|
+  2.times do |i|
     app.process("process_#{i}") do |process|
       process.start_command = "sleep 10"
+      process.daemonize = true
+      process.pid_file = "#{ROOT_DIR}/Desktop/bp/pids/process_#{i}.pid"
+      
+      process.checks :always_true, :every => 2
+    end
+  end
+  
+  2.times do |i|
+    app.process("group_process_#{i}") do |process|
+      process.start_command = "sleep 10"
+      process.group = "Poopfaced"
       process.daemonize = true
       process.pid_file = "#{ROOT_DIR}/Desktop/bp/pids/process_#{i}.pid"
       

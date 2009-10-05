@@ -27,16 +27,16 @@ module Bluepill
     end
     
     def status
-      puts "STATUS"
-      puts @server
       if(@server)
         logger.info("Server: GOT STATUS")
         buffer = ""
-        self.groups.each do | group |
-          buffer << "#{group.name}"
+        self.groups.each do |name, group|
+          buffer << "#{name}:\n" if name
+          prefix = name ? "  " : ""
           group.status.each do |process_name, status|
-            buffer << "\t#{process_name} #{status}\n"
+            buffer << "#{prefix}#{process_name}: #{status}\n"
           end
+          buffer << "\n"
         end
         buffer
       else
@@ -80,7 +80,6 @@ private
 
     def listener
       Thread.new(self) do |app|
-        puts app.inspect
         begin
           loop do
             logger.info("Server | Command loop started:")
@@ -88,12 +87,7 @@ private
             logger.info("Server: Handling Request")
             cmd = client.readline.strip
             logger.info("Server: #{cmd}")
-            puts cmd
-            begin
-              response = app.send(cmd)
-            rescue Exception => e
-              puts e.inspect
-            end
+            response = app.send(cmd)
             puts response
             logger.info("Server: Sending Response")
             client.write(response)

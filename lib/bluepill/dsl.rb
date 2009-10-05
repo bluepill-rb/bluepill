@@ -41,6 +41,6 @@ module Bluepill
     end
     
     yield(app_proxy.new)
-    app.start
+    app.load
   end
 end

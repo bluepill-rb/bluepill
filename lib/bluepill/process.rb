@@ -41,8 +41,7 @@ module Bluepill
       
       after_transition any => any do |process, transition|
         unless transition.loopback?
-          process.record_transition(transition.to_name) 
-          # process.logger.info "Going from #{transition.from_name} => #{transition.to_name}"
+          process.record_transition(transition.from_name, transition.to_name)
         end
       end
       
@@ -82,7 +81,7 @@ module Bluepill
     end
     
     def add_watch(name, options = {})
-      self.watches << ConditionWatch.new(name, options.merge(:logger => self.watch_logger))
+      self.watches << ConditionWatch.new(name, options.merge(:logger => self.logger))
     end
     
     def daemonize?
@@ -90,8 +89,12 @@ module Bluepill
     end
     
     def dispatch!(event)
-      logger.info "Got stop"
       self.send("#{event}!")
+    end
+    
+    def logger=(logger)
+      @logger = logger
+      self.watches.each {|w| w.logger = logger }
     end
     
     def process_running?(force = false)
@@ -158,23 +161,28 @@ module Bluepill
       now = Time.now.to_i
 
       threads = self.watches.collect do |watch|
-        Thread.new { Thread.current[:events] = watch.run(self.actual_pid, now) }
+        [watch, Thread.new { Thread.current[:events] = watch.run(self.actual_pid, now) }]
       end
       
       @transitioned = false
       
-      threads.inject([]) do |events, thread|
+      threads.inject([]) do |events, (watch, thread)|
         thread.join
-        events << thread[:events]
+        if thread[:events].size > 0
+          logger.info "#{watch.name} dispatched: #{thread[:events].join(',')}"
+          events << thread[:events]
+        end
+        events
       end.flatten.uniq.each do |event|
         break if @transitioned
         self.dispatch!(event)
       end
     end
     
-    def record_transition(state_name)
+    def record_transition(from, to)
       @transitioned = true
-      # do other stuff here?
+      logger.info "Going from #{from} => #{to}"
+      self.watches.each { |w| w.clear_history! }
     end
     
     def signal_process(code)
@@ -191,10 +199,6 @@ module Bluepill
     def clear_pid
       @actual_pid = nil
       File.unlink(pid_file) if File.exists?(pid_file)
-    end
-    
-    def watch_logger
-      @watch_logger ||= Logger.new(self.logger, "#{self.name}:") if self.logger
     end
   end
 end

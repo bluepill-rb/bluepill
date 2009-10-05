@@ -7,15 +7,10 @@ module Bluepill
       self.name = name
       self.processes = []
       self.logger = options[:logger]
-      
-      if self.logger
-        logger_prefix = self.name ? "#{self.name}:" : nil
-        self.process_logger = Bluepill::Logger.new(self.logger, logger_prefix) 
-      end
     end
     
     def add_process(process)
-      process.logger = Logger.new(self.process_logger, process.name)
+      process.logger = self.logger.prefix_with(process.name)
       self.processes << process
     end
     

@@ -4,14 +4,17 @@ require 'rake'
 begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
-    gem.name = "blue-pill"
-    gem.summary = %Q{TODO: keep out}
-    gem.description = %Q{TODO: longer description of your gem}
-    # gem.email
-    gem.homepage = "http://github.com/arya/blue-pill"
-    gem.authors = ["arya", "entombed", "garru"]
+    gem.name = "bluepill"
+    gem.summary = %Q{A process monitor written in Ruby with stability and minimalism in mind.}
+    gem.description = %Q{Bluepill keeps your daemons up while taking up as little resources as possible. After all you probably want the resources of your server to be used by whatever daemons you are running rather than the thing that's supposed to make sure they are brought back up, should they die or misbehave.}
+    gem.email = "entombedvirus@gmail.com"
+    gem.homepage = "http://github.com/arya/bluepill"
+    gem.authors = ["Arya Asemanfar", "Gary Tsang", "Rohith Ravi"]
     gem.add_development_dependency "rspec"
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
+    gem.add_dependency("daemons", ">= 1.0.9")
+    gem.add_dependency("pluginaweek-state_machine", ">= 0.8.0")
+    gem.add_dependency("activesupport", ">= 2.0.2")
   end
 rescue LoadError
   puts "Jeweler (or a dependency) not available. Install it with: sudo gem install jeweler"

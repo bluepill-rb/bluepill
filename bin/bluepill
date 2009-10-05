@@ -41,9 +41,9 @@ when options[:command] == "log"
   cmd = "tail -n 100 -f #{options[:log_file]} | grep -E '#{pattern}'"
   Kernel.exec(cmd)
 
-when ALLOWED_COMMANDS.include?(option[:command])
+when ALLOWED_COMMANDS.include?(options[:command])
   process_or_group_name = ARGV.shift
-  controller.send_cmd(options[:application], option[:command], process_or_group_name)
+  controller.send_cmd(options[:application], options[:command], process_or_group_name)
 
 else
   "Unknown command `%s`" % options[:command]

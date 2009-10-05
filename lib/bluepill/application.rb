@@ -49,6 +49,7 @@ module Bluepill
         self.groups.values.each do |group|
           group.stop
         end
+        "ok"
       else
         send_to_server('stop')
       end
@@ -59,6 +60,7 @@ module Bluepill
         self.groups.values.each do |group|
           group.start
         end
+        "ok"
       else
         send_to_server('start')
       end
@@ -69,6 +71,7 @@ module Bluepill
         self.groups.values.each do |group|
           group.restart
         end
+        "ok"
       else
         send_to_server('restart')
       end
@@ -79,6 +82,7 @@ module Bluepill
         self.groups.values.each do |group|
           group.unmonitor
         end
+        "ok"
       else
         send_to_server('unmonitor')
       end

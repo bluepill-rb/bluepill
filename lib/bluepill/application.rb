@@ -1,18 +1,14 @@
-require 'logger'
-
 module Bluepill
   class Application
     attr_accessor :name, :logger, :base_dir, :socket, :pid_file
-    attr_accessor :groups, :group_logger
+    attr_accessor :groups
     
     def initialize(name, options = {})
       self.name = name
       self.base_dir = options[:base_dir] ||= '/var/bluepill'
       
-      self.logger = Bluepill::Logger.new
-      self.group_logger = Bluepill::Logger.new(self.logger, "#{self.name}:") if self.logger
+      self.logger = Bluepill::Logger.new.prefix_with(self.name)
       
-      # self.groups = Hash.new { |h,k| h[k] = Group.new(k, :logger => self.group_logger) }
       self.groups = Hash.new 
 
       self.pid_file = File.join(self.base_dir, 'pids', self.name + ".pid")
@@ -118,9 +114,9 @@ module Bluepill
       end
     end
     
-    def add_process(process, group = nil)
-      self.groups[group] ||= Group.new(group, :logger => self.group_logger)
-      self.groups[group].add_process(process)
+    def add_process(process, group_name = nil)
+      self.groups[group_name] ||= Group.new(group_name, :logger => self.logger.prefix_with(group_name))
+      self.groups[group_name].add_process(process)
     end
     
     def send_to_server(method)
@@ -204,10 +200,10 @@ private
       Signal.trap("INT", &terminator) 
     end
    
-    def grep_pattern(query)
-      bluepilld = 'bluepill\[[[:digit:]]+\]:[[:space:]]+'
-      pattern = [self.name, query].join('|')
-      [bluepilld, '\[.*', Regexp.escape(pattern), '.*\]'].join
+    def grep_pattern(query = nil)
+      bluepilld = 'bluepilld\[[[:digit:]]+\]:[[:space:]]+'
+      pattern = [self.name, query].compact.join(':')
+      [bluepilld, '\[.*', Regexp.escape(pattern), '.*'].join
     end
   end
 end

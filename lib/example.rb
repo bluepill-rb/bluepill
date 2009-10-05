@@ -26,18 +26,18 @@ Bluepill.application(:sample_app, :base_dir => ROOT_DIR) do |app|
       process.daemonize = true
       process.pid_file = "#{ROOT_DIR}/pids/process_#{i}.pid"
       
-      process.checks :always_true, :every => 2
+      process.checks :cpu_usage, :every => 1, :below => 1, :times => [1,4]
     end
   end
   
-  10.times do |i|
+  0.times do |i|
     app.process("group_process_#{i}") do |process|
       process.start_command = "sleep #{rand(15) + i}"
       process.group = "Poopfaced"
       process.daemonize = true
       process.pid_file = "#{ROOT_DIR}/pids/process_#{i}.pid"
       
-      process.checks :always_true, :every => 2
+      process.checks :always_true, :every => 10
     end
   end
 end

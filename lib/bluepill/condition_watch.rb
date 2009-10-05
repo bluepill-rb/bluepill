@@ -1,6 +1,6 @@
 module Bluepill
   class ConditionWatch
-    attr_accessor :logger
+    attr_accessor :logger, :name
     def initialize(name, options = {})
       @name = name
 
@@ -26,9 +26,9 @@ module Bluepill
     
     def record_value(value)
       # TODO: record value in ProcessStatistics
-      self.logger.info(self.to_s) if self.logger
       @history[@history_index] = [value, @process_condition.check(value)]
       @history_index = (@history_index + 1) % @history.size
+      self.logger.info(self.to_s)
     end
     
     def clear_history!
@@ -38,7 +38,7 @@ module Bluepill
     end
     
     def fired?
-      @history.select {|v| !v[1] }.size >= @times[0]
+      @history.select {|v| v && !v[1]}.size >= @times[0]
     end
     
     def to_s
@@ -46,7 +46,8 @@ module Bluepill
       # use (@history[(@history_index - 1)..1] + @history[0..(@history_index - 1)]).
       #       collect {|v| "#{v[0]}#{v[1] ? '' : '*'}"}.join(", ")
       # but that's gross so... it's gonna be out of order till we figure out a better way to get it in order
-      @history.collect {|v| "#{v[0]}#{v[1] ? '' : '*'}"}.join(", ")
+      data = @history.collect {|v| "#{v[0]}#{v[1] ? '' : '*'}" if v}.compact.join(", ")
+      "#{@name}: [#{data}]"
     end
   end
 end

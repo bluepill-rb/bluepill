@@ -32,10 +32,29 @@ when "log"
   
   cmd = "tail -n 100 -f #{options[:log_file]} | grep -E '#{pattern}'"
   Kernel.exec(cmd)
+
+when "start"  
+  process_or_group_name = ARGV.shift
+  controller.send_cmd(options[:application], :start, process_or_group_name)
+
+when "stop"  
+  process_or_group_name = ARGV.shift
+  controller.send_cmd(options[:application], :stop, process_or_group_name)
+
+when "restart"  
+  process_or_group_name = ARGV.shift
+  controller.send_cmd(options[:application], :restart, process_or_group_name)
+
+when "unmonitor"  
+  process_or_group_name = ARGV.shift
+  controller.send_cmd(options[:application], :unmonitor, process_or_group_name)
+
+when "quit"  
+  process_or_group_name = ARGV.shift
+  controller.send_cmd(options[:application], :quit)
   
 else
   "Unknown command `%s`" % options[:command]
 end
 
-puts options.inspect
 puts controller.send_cmd(options[:application], options[:command])

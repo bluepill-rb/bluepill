@@ -121,8 +121,15 @@ module Bluepill
         system(stop_command)
       else
         signal_process("TERM")
-        sleep(stop_grace_time)
-        signal_process("KILL") if process_running?(true)
+        
+        wait_until = Time.now.to_i + stop_grace_time
+        while process_running?(true)
+          if wait_until <= Time.now.to_i
+            signal_process("KILL")
+            break
+          end
+          sleep 0.1
+        end
       end
 
       skip_ticks_for(stop_grace_time)

@@ -5,7 +5,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{bluepill}
-  s.version = "0.0.1"
+  s.version = "0.0.2"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Arya Asemanfar", "Gary Tsang", "Rohith Ravi"]
@@ -28,6 +28,7 @@ Gem::Specification.new do |s|
      "Rakefile",
      "VERSION",
      "bin/bluepill",
+     "bluepill.gemspec",
      "lib/bluepill.rb",
      "lib/bluepill/application.rb",
      "lib/bluepill/application/client.rb",

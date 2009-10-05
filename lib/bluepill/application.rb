@@ -26,15 +26,6 @@ module Bluepill
       socket.close
     end
 
-    def run
-      loop do
-        self.groups.each do |_, group|
-          group.tick
-        end
-        sleep 1
-      end
-    end
-
     def start
       # Daemonize.daemonize
       File.open(self.pid_file, 'w') { |x| x.write(::Process.pid) }
@@ -98,21 +89,35 @@ private
     def start_server
       @server = true
       self.socket = Bluepill::Socket.new(name, bp_dir).server
+      $0 = "bluepill: #{self.name}"
       self.groups.each {|name, group| group.start }
       listener
       run
     end
+    
+    def run
+      loop do
+        self.groups.each do |_, group|
+          group.tick
+        end
+        sleep 1
+      end
+    end
         
     def cleanup
-      self.socket.cleanup
+      # self.socket.cleanup
     end
     
     def signal_trap
-      Signal.trap("TERM") do
+      
+      terminator = lambda do
         puts "Terminating..."
         cleanup
-        shutdown()
+        ::Kernel.exit
       end
+      
+      Signal.trap("TERM", &terminator) 
+      Signal.trap("INT", &terminator) 
     end
     
     

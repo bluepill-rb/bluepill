@@ -24,6 +24,7 @@ Bluepill.application(:sample_app, "bp_dir" => "/Users/arya/Desktop/bp") do |app|
       p.start_command = "sleep 10"
       p.daemonize = true
       p.pid_file = "/Users/arya/Desktop/bp/pids/process_#{i}.pid"
+      p.group = "foobar"
     end
   end
 end

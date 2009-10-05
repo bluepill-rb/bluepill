@@ -20,15 +20,29 @@ module Bluepill
     end
     
     def tick
-      self.processes.each do |process|
+      self.each_process do |process|
         process.tick
       end
     end
     
     def start
-      self.processes.each do |process|
+      self.each_process do |process|
         process.dispatch!("start")
       end
+    end
+    
+    def status
+      status = []
+      self.each_process do |process|
+        status << [process.name, process.state]
+      end
+      status
+    end
+    
+    
+    protected
+    def each_process(&block)
+      self.processes.each(&block)
     end
   end
 end

@@ -5,7 +5,6 @@ require 'bluepill'
 
 # defaults
 options = {
-  :application => "all",
   :log_file => "/var/log/bluepill.log"
 }
 
@@ -37,6 +36,7 @@ case options[:command]
 when "load"
   file = ARGV.shift
   eval(File.read(file))
+  
 when "log"
   pattern = ARGV.shift
   pattern = controller.send_cmd(options[:application], :grep_pattern, pattern)
@@ -49,5 +49,5 @@ when *ALLOWED_COMMANDS
   puts controller.send_cmd(options[:application], options[:command], process_or_group_name)
 
 else
-  "Unknown command `%s`" % options[:command]
+  puts "Unknown command `%s`" % options[:command]
 end

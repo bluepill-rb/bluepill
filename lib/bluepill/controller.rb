@@ -16,7 +16,7 @@ module Bluepill
     
     def send_cmd(application, command, *args)
       applications[application] ||= Application.new(application, {:base_dir => base_dir})
-      applications[application].send(command.to_sym, *args)
+      applications[application].send(command.to_sym, *args.compact)
     end
   end
 end

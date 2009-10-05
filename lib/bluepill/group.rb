@@ -31,6 +31,18 @@ module Bluepill
       end
     end
     
+    def unmonitor
+      self.each_process do |process|
+        process.dispatch!("unmonitor")
+      end
+    end
+    
+    def stop
+      self.each_process do |process|
+        process.dispatch!("stop")
+      end
+    end
+    
     def status
       status = []
       self.each_process do |process|

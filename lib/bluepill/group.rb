@@ -24,31 +24,18 @@ module Bluepill
         process.tick
       end
     end
-    
-    def start(process_name = nil)
-      self.each_process do |process|
-        process.dispatch!("start") if process_name.nil? || process.name == process_name
-      end
-    end
-    
-    def unmonitor(process_name = nil)
-      self.each_process do |process|
-        process.dispatch!("unmonitor") if process_name.nil? || process.name == process_name
-      end
-    end
-    
-    def stop(process_name = nil)
-      self.each_process do |process|
-        process.dispatch!("stop") if process_name.nil? || process.name == process_name
-      end
-    end
-    
-    def restart(process_name = nil)
-      self.each_process do |process|
-        process.dispatch!("restart") if process_name.nil? || process.name == process_name
-      end
-    end
 
+    # proxied events
+    [:start, :unmonitor, :stop, :restart].each do |event|
+      eval <<-END
+        def #{event}(process_name = nil)
+          self.each_process do |process|
+            process.dispatch!("#{event}") if process_name.nil? || process.name == process_name
+          end
+        end      
+      END
+    end
+    
     def status
       status = []
       self.each_process do |process|

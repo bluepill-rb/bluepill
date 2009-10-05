@@ -160,7 +160,7 @@ module Bluepill
 
     def run_watches
       now = Time.now.to_i
-      
+
       threads = self.watches.collect do |watch|
         Thread.new { Thread.current[:events] = watch.run(self.actual_pid, now) }
       end

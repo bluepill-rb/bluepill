@@ -1,7 +1,7 @@
 require 'rubygems'
 require 'bluepill'
 
-ROOT_DIR = "/Users/#{`whoami`.strip}"
+ROOT_DIR = "/tmp/bp"
 
 # application = Bluepill::Application.new("poop", 'base_dir' => '/tmp/bp')
 # 
@@ -19,23 +19,23 @@ ROOT_DIR = "/Users/#{`whoami`.strip}"
 # application.start
 
 
-Bluepill.application(:sample_app, :base_dir => "#{ROOT_DIR}/Desktop/bp") do |app|
+Bluepill.application(:sample_app, :base_dir => ROOT_DIR) do |app|
   2.times do |i|
     app.process("process_#{i}") do |process|
-      process.start_command = "sleep 10"
+      process.start_command = "sleep #{rand(15) + i}"
       process.daemonize = true
-      process.pid_file = "#{ROOT_DIR}/Desktop/bp/pids/process_#{i}.pid"
+      process.pid_file = "#{ROOT_DIR}/pids/process_#{i}.pid"
       
       process.checks :always_true, :every => 2
     end
   end
   
-  2.times do |i|
+  10.times do |i|
     app.process("group_process_#{i}") do |process|
-      process.start_command = "sleep 10"
+      process.start_command = "sleep #{rand(15) + i}"
       process.group = "Poopfaced"
       process.daemonize = true
-      process.pid_file = "#{ROOT_DIR}/Desktop/bp/pids/process_#{i}.pid"
+      process.pid_file = "#{ROOT_DIR}/pids/process_#{i}.pid"
       
       process.checks :always_true, :every => 2
     end

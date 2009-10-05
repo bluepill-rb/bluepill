@@ -14,21 +14,9 @@ module Bluepill
       Dir[File.join(sockets_dir, "*.sock")].map{|x| File.basename(x, ".sock")}
     end
     
-    # TODO
-    def active_application
-      obj = Struct.new(:grep_pattern)
-      def obj.grep_pattern(query)
-        bluepilld = 'bluepill\[[[:digit:]]+\]:[[:space:]]+'
-        pattern = ["sample_app", query].join('|')
-        [bluepilld, '\[.*',  Regexp.escape(pattern), '.*\]'].join
-      end
-      
-      obj
-    end
-    
-    def send_cmd(application, command)
+    def send_cmd(application, command, *args)
       applications[application] ||= Application.new(application, {:base_dir => base_dir})
-      applications[application].send(command.to_sym)
+      applications[application].send(command.to_sym, *args)
     end
   end
 end

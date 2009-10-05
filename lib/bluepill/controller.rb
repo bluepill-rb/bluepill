@@ -4,9 +4,9 @@ module Bluepill
     attr_accessor :applications
     
     def initialize(options = {})
-      bp_dir = options[:base_dir] || '/var/bluepill'
-      @sockets_dir = File.join(bp_dir, 'socks')
-      pids_dir = File.join(bp_dir, 'pids')
+      self.bp_dir = options['bp_dir'] || '/var/bluepill'
+      self.sockets_dir = File.join(bp_dir, 'socks')
+      self.pids_dir = File.join(bp_dir, 'pids')
       self.applications = Hash.new 
     end
     

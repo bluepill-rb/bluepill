@@ -18,13 +18,17 @@ require 'bluepill'
 # application.start
 
 
-Bluepill.application(:sample_app, "bp_dir" => "/Users/arya/Desktop/bp") do |app|
+Bluepill.application(:sample_app, "bp_dir" => "/Users/gary/Desktop/bp") do |app|
   1.times do |i|
     app.process("process_#{i}") do |p|
       p.start_command = "sleep 10"
       p.daemonize = true
+<<<<<<< Updated upstream:lib/example.rb
       p.pid_file = "/Users/arya/Desktop/bp/pids/process_#{i}.pid"
       p.group = "foobar"
+=======
+      p.pid_file = "/Users/gary/Desktop/bp/pids/process_#{i}.pid"
+>>>>>>> Stashed changes:lib/example.rb
     end
   end
 end

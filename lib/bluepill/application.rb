@@ -20,7 +20,7 @@ module Bluepill
     end
     
     def method_missing(method_name, *args)
-      self.socket = Bluepill::Socket.new(name, bp_dir).client      
+      self.socket = Bluepill::Socket.new(name, bp_dir).client 
       socket.send(method_name.to_s + "\n", 0)
       socket.recvfrom(255)
       socket.close
@@ -66,6 +66,16 @@ module Bluepill
       self.groups[group].add_process(process)
     end
     
+    def send_to_server
+      self.socket = Bluepill::Socket.new(name, bp_dir).client 
+      socket.write(method_name.to_s + "\n")
+      buffer = ""
+      while(line = socket.gets)
+        line << buffer
+      end
+      return buffer
+    end
+
 private
 
     def listener
@@ -73,12 +83,11 @@ private
         begin
           loop do
             logger.info("Server | Command loop started:")
-            logger.info
             client = socket.accept
-            logger.info("Server | Connection accepted: #{client}")
-            info = client.recvfrom(180)
-            logger.info("#{name}: #{info}")
-            client.send("#{name}: got #{info} returned ok\n", 0)
+            cmd = client.readline
+            response = self.send(cmd)
+            client.write(response)
+            client.close
           end
         rescue Exception => e
           logger.info(e.inspect)
@@ -124,5 +133,6 @@ private
      pattern = [self.name, query].join('|')
     'bluepill.*\[.*' + Regexp.escape(pattern) + '.*\]'
    end 
+
   end
 end

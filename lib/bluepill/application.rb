@@ -30,12 +30,16 @@ module Bluepill
       if(@server)
         logger.info("Server: GOT STATUS")
         buffer = ""
-        self.groups.each do |name, group|
-          buffer << "#{name}:\n" if name
-          prefix = name ? "  " : ""
-          group.status.each do |process_name, status|
-            buffer << "#{prefix}#{process_name}: #{status}\n"
+        if self.groups.has_key?(nil)
+          self.groups[nil].status.each do |line|
+            buffer << "%s: %s\n" % line
           end
+          buffer << "\n"
+        end
+        self.groups.keys.compact.sort.each do |name|
+          group = self.groups[name]
+          buffer << "#{name}:\n"
+          group.status.each { |line| buffer << "  %s: %s\n" % line }
           buffer << "\n"
         end
         buffer

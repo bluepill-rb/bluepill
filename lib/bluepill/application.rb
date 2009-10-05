@@ -1,8 +1,8 @@
 module Bluepill
   class Application
     attr_accessor :name, :logger, :base_dir, :socket, :pid_file
-    attr_accessor :groups
-    
+    attr_accessor :groups, :work_queue
+
     def initialize(name, options = {})
       self.name = name
       self.base_dir = options[:base_dir] ||= '/var/bluepill'
@@ -43,74 +43,38 @@ module Bluepill
     end
     
     def stop(process_or_group_name)
-      if(@server)
-        group = self.groups[process_or_group_name]
-        
-        if group
-          group.stop
-          
-        else
-          self.groups.values.each do |group|
-            group.stop(process_or_group_name)
-          end
-        end
-        "ok"
-      else
-        send_to_server("stop:#{process_or_group_name}")
-      end
+      send_to_process_or_group(:stop, process_or_group_name)
     end
     
     def start(process_or_group_name)
-      if(@server)
-        group = self.groups[process_or_group_name]
-        
-        if group
-          group.start
-          
-        else
-          self.groups.values.each do |group|
-            group.start(process_or_group_name)
-          end
-        end
-        "ok"
-      else
-        send_to_server("start:#{process_or_group_name}")
-      end
+      send_to_process_or_group(:start, process_or_group_name)
     end
 
     def restart(process_or_group_name)
-      if(@server)
-        group = self.groups[process_or_group_name]
-        
-        if group
-          group.restart
-          
-        else
-          self.groups.values.each do |group|
-            group.restart(process_or_group_name)
-          end
-        end
-        "ok"
-      else
-        send_to_server("restart:#{process_or_group_name}")
-      end
+      send_to_process_or_group(:restart, process_or_group_name)
     end
 
     def unmonitor(process_or_group_name)
+      send_to_process_or_group(:unmonitor, process_or_group_name)
+    end
+    
+    def send_to_process_or_group(method, process_or_group_name, async = true)      
       if(@server)
-        group = self.groups[process_or_group_name]
-        
-        if group
-          group.unmonitor
-          
+        if async
+          self.work_queue.push([method, process_or_group_name])
         else
-          self.groups.values.each do |group|
-            group.unmonitor(process_or_group_name)
+          group = self.groups[process_or_group_name]
+          if group
+            group.send(method)  
+          else
+            self.groups.values.each do |group|
+              group.send(method, process_or_group_name)
+            end
           end
         end
-        "ok"
+        return "ok"
       else
-        send_to_server("unmonitor:#{process_or_group_name}")
+        send_to_server("#{method}:#{process_or_group_name}")
       end
     end
     
@@ -150,7 +114,19 @@ private
         end
       end
     end
-
+    
+    def worker
+      Thread.new(self) do |app|
+        loop do
+          app.logger.info("Server | worker loop started:")
+          job = self.work_queue.pop
+          app.logger.info("Server | worker job recieved:")          
+          send_to_process_or_group(job[0], job[1], false)
+          app.logger.info("Server | worker job processed:")  
+        end
+      end
+    end
+    
     def start_server
       if File.exists?(self.pid_file)
         previous_pid = File.read(self.pid_file).to_i
@@ -169,11 +145,13 @@ private
       Daemonize.daemonize
       
       @server = true
+      self.work_queue = Queue.new
       self.socket = Bluepill::Socket.new(name, base_dir).server
       File.open(self.pid_file, 'w') { |x| x.write(::Process.pid) }
       $0 = "bluepilld: #{self.name}"
       self.groups.each {|name, group| group.start }
       listener
+      worker
       run
     end
     

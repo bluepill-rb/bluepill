@@ -154,10 +154,10 @@ private
       Signal.trap("INT", &terminator) 
     end
    
-   def grep_pattern(query)
-     pattern = [self.name, query].join('|')
-    'bluepill.*\[.*' + Regexp.escape(pattern) + '.*\]'
-   end 
-
+    def grep_pattern(query)
+      bluepilld = 'bluepill\[[[:digit:]]+\]:[[:space:]]+'
+      pattern = [self.name, query].join('|')
+      [bluepilld, '\[.*', Regexp.escape(pattern), '.*\]'].join
+    end
   end
 end

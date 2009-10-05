@@ -42,7 +42,7 @@ module Bluepill
       after_transition any => any do |process, transition|
         unless transition.loopback?
           process.record_transition(transition.to_name) 
-          process.logger.info "Going from #{transition.from_name} => #{transition.to_name}"
+          # process.logger.info "Going from #{transition.from_name} => #{transition.to_name}"
         end
       end
       
@@ -90,6 +90,7 @@ module Bluepill
     end
     
     def dispatch!(event)
+      logger.info "Got stop"
       self.send("#{event}!")
     end
     

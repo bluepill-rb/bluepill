@@ -21,7 +21,7 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-ALLOWED_COMMANDS = %w(load start stop restart log unmonitor quit)
+ALLOWED_COMMANDS = %w(load status start stop restart log unmonitor quit)
 
 controller = Bluepill::Controller.new(options.slice(:base_dir))
 
@@ -46,10 +46,8 @@ when "log"
 
 when *ALLOWED_COMMANDS
   process_or_group_name = ARGV.shift
-  controller.send_cmd(options[:application], options[:command], process_or_group_name)
+  puts controller.send_cmd(options[:application], options[:command], process_or_group_name)
 
 else
   "Unknown command `%s`" % options[:command]
 end
-
-puts controller.send_cmd(options[:application], options[:command])

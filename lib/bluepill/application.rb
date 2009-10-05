@@ -12,7 +12,8 @@ module Bluepill
       self.logger = Bluepill::Logger.new
       self.group_logger = Bluepill::Logger.new(self.logger, "#{self.name}:") if self.logger
       
-      self.groups = Hash.new { |h,k| h[k] = Group.new(k, :logger => self.group_logger) }
+      # self.groups = Hash.new { |h,k| h[k] = Group.new(k, :logger => self.group_logger) }
+      self.groups = Hash.new 
 
       self.pid_file = File.join(self.base_dir, 'pids', self.name + ".pid")
 
@@ -59,44 +60,66 @@ module Bluepill
         end
         "ok"
       else
-        send_to_server('stop')
+        send_to_server("stop:#{process_or_group_name}")
       end
     end
     
-    def start
+    def start(process_or_group_name)
       if(@server)
-        self.groups.values.each do |group|
+        group = self.groups[process_or_group_name]
+        
+        if group
           group.start
+          
+        else
+          self.groups.values.each do |group|
+            group.start(process_or_group_name)
+          end
         end
         "ok"
       else
-        send_to_server('start')
+        send_to_server("start:#{process_or_group_name}")
       end
     end
-    
-    def restart
+
+    def restart(process_or_group_name)
       if(@server)
-        self.groups.values.each do |group|
+        group = self.groups[process_or_group_name]
+        
+        if group
           group.restart
+          
+        else
+          self.groups.values.each do |group|
+            group.restart(process_or_group_name)
+          end
         end
         "ok"
       else
-        send_to_server('restart')
+        send_to_server("restart:#{process_or_group_name}")
       end
     end
-    
-    def unmonitor
+
+    def unmonitor(process_or_group_name)
       if(@server)
-        self.groups.values.each do |group|
+        group = self.groups[process_or_group_name]
+        
+        if group
           group.unmonitor
+          
+        else
+          self.groups.values.each do |group|
+            group.unmonitor(process_or_group_name)
+          end
         end
         "ok"
       else
-        send_to_server('unmonitor')
+        send_to_server("unmonitor:#{process_or_group_name}")
       end
     end
     
     def add_process(process, group = nil)
+      self.groups[group] ||= Group.new(group, :logger => self.group_logger)
       self.groups[group].add_process(process)
     end
     
@@ -121,7 +144,7 @@ private
             logger.info("Server: Handling Request")
             cmd = client.readline.strip
             logger.info("Server: #{cmd}")
-            response = app.send(cmd)
+            response = app.send(*cmd.split(":"))
             logger.info("Server: Sending Response")
             client.write(response)
             client.close

@@ -15,7 +15,7 @@ module Bluepill
     end
     
     def add_process(process)
-      process.logger = self.process_logger
+      process.logger = Logger.new(self.process_logger, process.name)
       self.processes << process
     end
     
@@ -25,15 +25,15 @@ module Bluepill
       end
     end
     
-    def start
+    def start(process_name = nil)
       self.each_process do |process|
-        process.dispatch!("start")
+        process.dispatch!("start") if process_name.nil? || process.name == process_name
       end
     end
     
-    def unmonitor
+    def unmonitor(process_name = nil)
       self.each_process do |process|
-        process.dispatch!("unmonitor")
+        process.dispatch!("unmonitor") if process_name.nil? || process.name == process_name
       end
     end
     
@@ -43,6 +43,12 @@ module Bluepill
       end
     end
     
+    def restart(process_name = nil)
+      self.each_process do |process|
+        process.dispatch!("restart") if process_name.nil? || process.name == process_name
+      end
+    end
+
     def status
       status = []
       self.each_process do |process|

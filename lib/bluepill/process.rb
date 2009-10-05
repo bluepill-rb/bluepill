@@ -41,8 +41,7 @@ module Bluepill
       
       after_transition any => any do |process, transition|
         unless transition.loopback?
-          process.record_transition(transition.to_name) 
-          # process.logger.info "Going from #{transition.from_name} => #{transition.to_name}"
+          process.record_transition(transition.from_name, transition.to_name)
         end
       end
       
@@ -180,10 +179,10 @@ module Bluepill
       end
     end
     
-    def record_transition(state_name)
+    def record_transition(from, to)
       @transitioned = true
+      logger.info "Going from #{from} => #{to}"
       self.watches.each { |w| w.clear_history! }
-      # do other stuff here?
     end
     
     def signal_process(code)

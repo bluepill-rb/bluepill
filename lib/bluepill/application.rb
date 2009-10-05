@@ -13,8 +13,9 @@ module Bluepill
       self.group_logger = Bluepill::Logger.new(self.logger, "#{self.name}:") if self.logger
       
       self.groups = Hash.new { |h,k| h[k] = Group.new(k, :logger => self.group_logger) }
-      
+
       self.pid_file = File.join(self.base_dir, 'pids', self.name + ".pid")
+
       @server = false
       signal_trap
     end

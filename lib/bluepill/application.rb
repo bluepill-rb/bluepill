@@ -78,6 +78,14 @@ module Bluepill
       end
     end
     
+    def quit
+      if @server
+        ::Process.kill("TERM", 0)
+      else
+        send_to_server("quit")
+      end
+    end
+    
     def add_process(process, group_name = nil)
       self.groups[group_name] ||= Group.new(group_name, :logger => self.logger.prefix_with(group_name))
       self.groups[group_name].add_process(process)

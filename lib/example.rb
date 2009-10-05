@@ -19,7 +19,7 @@ ROOT_DIR = "/tmp/bp"
 # application.start
 
 
-Bluepill.application(:sample_app, :base_dir => ROOT_DIR) do |app|
+Bluepill.application(:sample_app) do |app|
   2.times do |i|
     app.process("process_#{i}") do |process|
       process.start_command = "echo 'Process #{i}' && sleep #{rand(15) + i}"

@@ -45,10 +45,17 @@ module Bluepill
       end
     end
     
-    def stop
+    def stop(process_or_group_name)
       if(@server)
-        self.groups.values.each do |group|
+        group = self.groups[process_or_group_name]
+        
+        if group
           group.stop
+          
+        else
+          self.groups.values.each do |group|
+            group.stop(process_or_group_name)
+          end
         end
         "ok"
       else

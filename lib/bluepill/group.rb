@@ -37,9 +37,9 @@ module Bluepill
       end
     end
     
-    def stop
+    def stop(process_name = nil)
       self.each_process do |process|
-        process.dispatch!("stop")
+        process.dispatch!("stop") if process_name.nil? || process.name == process_name
       end
     end
     

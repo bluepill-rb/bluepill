@@ -20,7 +20,6 @@ module Bluepill
         self.socket = UNIXServer.open(socket_name)
       rescue Errno::EADDRINUSE
         #if sock file has been created.  test to see if there is a server
-        puts "this sock file has already been created"
         tmp_socket = UNIXSocket.open(socket_name) rescue nil
         if tmp_socket.nil?
           cleanup

@@ -71,7 +71,7 @@ module Bluepill
       socket.write(method + "\n")
       buffer = ""
       while(line = socket.gets)
-        line << buffer
+        buffer << line
       end
       return buffer
     end
@@ -88,7 +88,6 @@ private
             cmd = client.readline.strip
             logger.info("Server: #{cmd}")
             response = app.send(cmd)
-            puts response
             logger.info("Server: Sending Response")
             client.write(response)
             client.close

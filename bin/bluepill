@@ -21,9 +21,7 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-puts options.inspect
 controller = Bluepill::Controller.new(options.slice(:base_dir))
-puts controller.list
 options[:application] = ARGV.shift if controller.list.include?(ARGV.first)
 options[:command] = ARGV.shift
 

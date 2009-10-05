@@ -5,7 +5,6 @@ module Bluepill
     
     def initialize(options = {})
       self.base_dir = options[:base_dir] || '/var/bluepill'
-      puts self.base_dir
       self.sockets_dir = File.join(base_dir, 'socks')
       self.pids_dir = File.join(base_dir, 'pids')
       self.applications = Hash.new 

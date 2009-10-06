@@ -114,16 +114,15 @@ module Bluepill
     end
     
     def start_process
-      self.clear_pid
       if daemonize?
         starter = lambda { drop_privileges; ::Kernel.exec(start_command) }
         child_pid = Daemonize.call_as_daemon(starter)
         File.open(pid_file, "w") {|f| f.write(child_pid)}
-        
       else
         # This is a self-daemonizing process
         system(start_command)
       end
+      self.clear_pid
       
       skip_ticks_for(start_grace_time)
       
@@ -131,7 +130,6 @@ module Bluepill
     end
     
     def stop_process
-      self.clear_pid
       if stop_command
         system(stop_command)
       else
@@ -146,6 +144,7 @@ module Bluepill
           sleep 0.1
         end
       end
+      self.clear_pid(true)
 
       skip_ticks_for(stop_grace_time)
       
@@ -153,11 +152,10 @@ module Bluepill
     end
     
     def restart_process
-      self.clear_pid
       if restart_command
         system(restart_command)
         skip_ticks_for(restart_grace_time)
-        
+        self.clear_pid
       else
         stop_process
         start_process
@@ -207,9 +205,9 @@ module Bluepill
       @actual_pid ||= File.read(pid_file).to_i if File.exists?(pid_file)
     end
     
-    def clear_pid
+    def clear_pid(unlink = false)
       @actual_pid = nil
-      File.unlink(pid_file) if File.exists?(pid_file)
+      File.unlink(pid_file) if unlink && File.exists?(pid_file)
     end
     
     def drop_privileges

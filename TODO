@@ -1,0 +1,3 @@
+* Run daemons as a different user
+* Proper implementation of the cpu and mem watches. Possibly not forking to use ps ax?
+* munin support?

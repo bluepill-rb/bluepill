@@ -3,7 +3,18 @@ require "daemons"
 
 module Bluepill
   class Process
-    CONFIGURABLE_ATTRIBUTES = [:start_command, :stop_command, :restart_command, :daemonize, :pid_file, :start_grace_time, :stop_grace_time, :restart_grace_time]
+    CONFIGURABLE_ATTRIBUTES = [
+      :start_command, 
+      :stop_command, 
+      :restart_command, 
+      :daemonize, 
+      :pid_file, 
+      :start_grace_time, 
+      :stop_grace_time, 
+      :restart_grace_time,
+      :uid,
+      :gid
+    ]
     
     attr_accessor :name, :watches, :logger, :skip_ticks_until
     attr_accessor *CONFIGURABLE_ATTRIBUTES
@@ -105,7 +116,7 @@ module Bluepill
     def start_process
       self.clear_pid
       if daemonize?
-        starter = lambda {::Kernel.exec(start_command)}
+        starter = lambda { drop_privileges; ::Kernel.exec(start_command) }
         child_pid = Daemonize.call_as_daemon(starter)
         File.open(pid_file, "w") {|f| f.write(child_pid)}
         
@@ -199,6 +210,21 @@ module Bluepill
     def clear_pid
       @actual_pid = nil
       File.unlink(pid_file) if File.exists?(pid_file)
+    end
+    
+    def drop_privileges
+      begin
+        require 'etc'
+        
+        uid_num = Etc.getpwnam(self.uid).uid if self.uid
+        gid_num = Etc.getgrnam(self.gid).gid if self.gid
+
+        ::Process.groups = [gid_num] if self.gid
+        ::Process::Sys.setgid(gid_num) if self.gid
+        ::Process::Sys.setuid(uid_num) if self.uid
+      rescue ArgumentError, Errno::EPERM, Errno::ENOENT => e
+        File.open("/tmp/exception.log", "w+"){|f| puts e}
+      end
     end
   end
 end

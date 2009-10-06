@@ -1,3 +1,6 @@
 * Run daemons as a different user
+* Flap detection
 * Proper implementation of the cpu and mem watches. Possibly not forking to use ps ax?
+* Better error output than just vanilla exception traces
+* Better output for cli commands than just "ok"
 * munin support?

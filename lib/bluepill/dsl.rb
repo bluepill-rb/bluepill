@@ -30,7 +30,9 @@ module Bluepill
       def process(process_name, &process_block)
         process_proxy = @@process_proxy.new
         process_block.call(process_proxy)
+        
         group = process_proxy.attributes.delete(:group)
+        
         process = Bluepill::Process.new(process_name, process_proxy.attributes)
         process_proxy.watches.each do |name, opts|  
           process.add_watch(name, opts)

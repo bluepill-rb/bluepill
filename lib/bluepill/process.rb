@@ -90,7 +90,14 @@ module Bluepill
       # Let state_machine do its initialization stuff
       super()
     end
-    
+
+    def self.register_state_callback(&block)
+      machine = StateMachine::Machine.find_or_create(self)
+
+      return machine  unless block_given?
+      machine.instance_eval(&block)
+    end
+
     def add_watch(name, options = {})
       self.watches << ConditionWatch.new(name, options.merge(:logger => self.logger))
     end

@@ -51,7 +51,7 @@ module Bluepill
      private
      
      def rotational_idx(idx)
-       idx % self.size
+       idx % @capacity
      end
    end
  end

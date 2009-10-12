@@ -29,7 +29,7 @@ module Bluepill
       Thread.new do
         sleep delay
         self.logger.info("Retrying from flapping")
-        process.dispatch!(:start)
+        process.dispatch!(event)
       end
     end
     

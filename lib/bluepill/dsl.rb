@@ -34,8 +34,12 @@ module Bluepill
         group = process_proxy.attributes.delete(:group)
         
         process = Bluepill::Process.new(process_name, process_proxy.attributes)
-        process_proxy.watches.each do |name, opts|  
-          process.add_watch(name, opts)
+        process_proxy.watches.each do |name, opts|
+          if Bluepill::Trigger[name]
+            process.add_trigger(name, opts)
+          else
+            process.add_watch(name, opts)
+          end
         end
         
         @@app.add_process(process, group)

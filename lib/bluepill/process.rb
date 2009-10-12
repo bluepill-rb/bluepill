@@ -16,7 +16,7 @@ module Bluepill
       :gid
     ]
     
-    attr_accessor :name, :watches, :logger, :skip_ticks_until
+    attr_accessor :name, :watches, :triggers, :logger, :skip_ticks_until
     attr_accessor *CONFIGURABLE_ATTRIBUTES
     
     state_machine :initial => :unmonitored do      
@@ -56,28 +56,17 @@ module Bluepill
         end
       end
       
-    end
-
-    def tick
-      return if self.skip_ticks_until && self.skip_ticks_until > Time.now.to_i
-      self.skip_ticks_until = nil
-
-      # clear the momoization per tick
-      @process_running = nil
-      
-      # run state machine transitions
-      super
-
-      
-      if process_running?
-        run_watches
+      after_transition any => any do |process, transition|
+        process.notify_triggers(transition)
       end
     end
     
     def initialize(process_name, options = {})      
       @name = process_name
+      @event_mutex = Mutex.new
       @transition_history = Util::RotationalArray.new(10)
       @watches = []
+      @triggers = []
       
       @stop_grace_time = @start_grace_time = @restart_grace_time = 3
       
@@ -91,86 +80,52 @@ module Bluepill
       super()
     end
 
-    def self.register_state_callback(&block)
-      machine = StateMachine::Machine.find_or_create(self)
+    def tick
+      return if self.skipping_ticks?
+      self.skip_ticks_until = nil
 
-      return machine  unless block_given?
-      machine.instance_eval(&block)
-    end
-
-    def add_watch(name, options = {})
-      self.watches << ConditionWatch.new(name, options.merge(:logger => self.logger))
-    end
-    
-    def daemonize?
-      !!self.daemonize
-    end
-    
-    def dispatch!(event)
-      self.send("#{event}!")
+      # clear the memoization per tick
+      @process_running = nil
+      
+      # run state machine transitions
+      super
+      
+      if process_running?
+        run_watches
+      end
     end
     
     def logger=(logger)
       @logger = logger
       self.watches.each {|w| w.logger = logger }
+      self.triggers.each {|t| t.logger = logger }
     end
     
-    def process_running?(force = false)
-      @process_running = nil if force
-      @process_running ||= signal_process(0)
-    end
-    
-    def start_process
-      if daemonize?
-        starter = lambda { drop_privileges; ::Kernel.exec(start_command) }
-        child_pid = Daemonize.call_as_daemon(starter)
-        File.open(pid_file, "w") {|f| f.write(child_pid)}
-      else
-        # This is a self-daemonizing process
-        system(start_command)
+    # State machine methods
+    def dispatch!(event)
+      @event_mutex.synchronize do
+        self.send("#{event}!")
       end
-      self.clear_pid
-      
-      skip_ticks_for(start_grace_time)
-      
-      true
     end
     
-    def stop_process
-      if stop_command
-        system(stop_command)
-      else
-        signal_process("TERM")
-        
-        wait_until = Time.now.to_i + stop_grace_time
-        while process_running?(true)
-          if wait_until <= Time.now.to_i
-            signal_process("KILL")
-            break
-          end
-          sleep 0.1
-        end
-      end
-      self.clear_pid(true)
+    def record_transition(from, to)
+      @transitioned = true
+      logger.info "Going from #{from} => #{to}"
+      self.watches.each { |w| w.clear_history! }
+    end
+    
+    def notify_triggers(transition)
+      self.triggers.each {|trigger| trigger.notify(transition)}
+    end
 
-      skip_ticks_for(stop_grace_time)
-      
-      true
+    
+    # Watch related methods
+    def add_watch(name, options = {})
+      self.watches << ConditionWatch.new(name, options.merge(:logger => self.logger))
     end
     
-    def restart_process
-      if restart_command
-        system(restart_command)
-        skip_ticks_for(restart_grace_time)
-        self.clear_pid
-      else
-        stop_process
-        start_process
-      end
-    end
-    
-    def skip_ticks_for(seconds)
-      self.skip_ticks_until = (self.skip_ticks_until || Time.now.to_i) + seconds
+    def add_trigger(name, options = {})
+      self.triggers << Trigger[name].new(self, options.merge(:logger => self.logger))
     end
 
     def run_watches
@@ -195,10 +150,65 @@ module Bluepill
       end
     end
     
-    def record_transition(from, to)
-      @transitioned = true
-      logger.info "Going from #{from} => #{to}"
-      self.watches.each { |w| w.clear_history! }
+    
+    # System Process Methods
+    def process_running?(force = false)
+      @process_running = nil if force
+      @process_running ||= signal_process(0)
+    end
+    
+    def start_process
+      if self.daemonize?
+        starter = lambda { drop_privileges; ::Kernel.exec(start_command) }
+        child_pid = Daemonize.call_as_daemon(starter)
+        File.open(pid_file, "w") {|f| f.write(child_pid)}
+      else
+        # This is a self-daemonizing process
+        system(start_command)
+      end
+      self.clear_pid
+      
+      skip_ticks_for(start_grace_time)
+      
+      true
+    end
+    
+    def stop_process
+      if stop_command
+        system(stop_command)
+      else
+        signal_process("TERM")
+  
+        wait_until = Time.now.to_i + stop_grace_time
+        while process_running?(true)
+          if wait_until <= Time.now.to_i
+            signal_process("KILL")
+            break
+          end
+          sleep 0.2
+        end
+      end
+      self.unlink_pid
+      self.clear_pid
+
+      skip_ticks_for(stop_grace_time)
+      
+      true
+    end
+    
+    def restart_process
+      if restart_command
+        system(restart_command)
+        skip_ticks_for(restart_grace_time)
+        self.clear_pid
+      else
+        stop_process
+        start_process
+      end
+    end
+    
+    def daemonize?
+      !!self.daemonize
     end
     
     def signal_process(code)
@@ -212,9 +222,12 @@ module Bluepill
       @actual_pid ||= File.read(pid_file).to_i if File.exists?(pid_file)
     end
     
-    def clear_pid(unlink = false)
+    def clear_pid
       @actual_pid = nil
-      File.unlink(pid_file) if unlink && File.exists?(pid_file)
+    end
+    
+    def unlink_pid
+      File.unlink(pid_file) if File.exists?(pid_file)
     end
     
     def drop_privileges
@@ -228,8 +241,19 @@ module Bluepill
         ::Process::Sys.setgid(gid_num) if self.gid
         ::Process::Sys.setuid(uid_num) if self.uid
       rescue ArgumentError, Errno::EPERM, Errno::ENOENT => e
+        # TODO: log exceptions elsewhere
         File.open("/tmp/exception.log", "w+"){|f| puts e}
       end
+    end
+    
+    
+    # Internal State Methods
+    def skip_ticks_for(seconds)
+      self.skip_ticks_until = (self.skip_ticks_until || Time.now.to_i) + seconds
+    end
+       
+    def skipping_ticks?
+      self.skip_ticks_until && self.skip_ticks_until > Time.now.to_i
     end
   end
 end

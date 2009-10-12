@@ -30,7 +30,7 @@ Bluepill.application(:sample_app) do |app|
       
       
       # process.checks :cpu_usage, :every => 1, :below => 1, :times => [1,4]
-      process.checks :flapping, :times => 2, :within => 6
+      process.checks :flapping, :times => 2, :within => 30, :retry_in => 30
     end
   end
   

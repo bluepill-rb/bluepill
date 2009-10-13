@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{bluepill}
-  s.version = "0.0.2"
+  s.version = "0.0.3"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Arya Asemanfar", "Gary Tsang", "Rohith Ravi"]
-  s.date = %q{2009-10-05}
+  s.date = %q{2009-10-12}
   s.default_executable = %q{bluepill}
   s.description = %q{Bluepill keeps your daemons up while taking up as little resources as possible. After all you probably want the resources of your server to be used by whatever daemons you are running rather than the thing that's supposed to make sure they are brought back up, should they die or misbehave.}
   s.email = %q{entombedvirus@gmail.com}
@@ -26,6 +26,7 @@ Gem::Specification.new do |s|
      "README",
      "README.rdoc",
      "Rakefile",
+     "TODO",
      "VERSION",
      "bin/bluepill",
      "bluepill.gemspec",
@@ -46,6 +47,8 @@ Gem::Specification.new do |s|
      "lib/bluepill/process_conditions/mem_usage.rb",
      "lib/bluepill/process_conditions/process_condition.rb",
      "lib/bluepill/socket.rb",
+     "lib/bluepill/trigger.rb",
+     "lib/bluepill/triggers/flapping.rb",
      "lib/bluepill/util/rotational_array.rb",
      "lib/example.rb",
      "spec/blue-pill_spec.rb",

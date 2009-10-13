@@ -55,11 +55,10 @@ Gem::Specification.new do |s|
      "spec/process_spec.rb",
      "spec/spec_helper.rb"
   ]
-  s.has_rdoc = true
   s.homepage = %q{http://github.com/arya/bluepill}
   s.rdoc_options = ["--charset=UTF-8"]
   s.require_paths = ["lib"]
-  s.rubygems_version = %q{1.3.2}
+  s.rubygems_version = %q{1.3.4}
   s.summary = %q{A process monitor written in Ruby with stability and minimalism in mind.}
   s.test_files = [
     "spec/blue-pill_spec.rb",
@@ -75,17 +74,17 @@ Gem::Specification.new do |s|
       s.add_development_dependency(%q<rspec>, [">= 0"])
       s.add_runtime_dependency(%q<daemons>, [">= 1.0.9"])
       s.add_runtime_dependency(%q<pluginaweek-state_machine>, [">= 0.8.0"])
-      s.add_runtime_dependency(%q<activesupport>, [">= 2.0.2"])
+      s.add_runtime_dependency(%q<activesupport>, [">= 2.3.4"])
     else
       s.add_dependency(%q<rspec>, [">= 0"])
       s.add_dependency(%q<daemons>, [">= 1.0.9"])
       s.add_dependency(%q<pluginaweek-state_machine>, [">= 0.8.0"])
-      s.add_dependency(%q<activesupport>, [">= 2.0.2"])
+      s.add_dependency(%q<activesupport>, [">= 2.3.4"])
     end
   else
     s.add_dependency(%q<rspec>, [">= 0"])
     s.add_dependency(%q<daemons>, [">= 1.0.9"])
     s.add_dependency(%q<pluginaweek-state_machine>, [">= 0.8.0"])
-    s.add_dependency(%q<activesupport>, [">= 2.0.2"])
+    s.add_dependency(%q<activesupport>, [">= 2.3.4"])
   end
 end

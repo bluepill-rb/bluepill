@@ -14,7 +14,7 @@ begin
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
     gem.add_dependency("daemons", ">= 1.0.9")
     gem.add_dependency("pluginaweek-state_machine", ">= 0.8.0")
-    gem.add_dependency("activesupport", ">= 2.0.2")
+    gem.add_dependency("activesupport", ">= 2.3.4")
   end
 rescue LoadError
   puts "Jeweler (or a dependency) not available. Install it with: sudo gem install jeweler"

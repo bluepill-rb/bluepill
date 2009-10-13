@@ -13,6 +13,8 @@ module Bluepill
       def method_missing(name, *args)
         if args.size == 1 && name.to_s =~ /^(.*)=$/
           @attributes[$1.to_sym] = args.first
+        elsif args.empty? && @attributes.key?(name.to_sym)
+          @attributes[name.to_sym]
         else
           super
         end

@@ -5,6 +5,8 @@ require 'syslog'
 
 require 'active_support/inflector'
 require 'active_support/core_ext/hash'
+require 'active_support/core_ext/numeric'
+require 'active_support/duration'
 
 require 'bluepill/application'
 require 'bluepill/controller'

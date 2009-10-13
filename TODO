@@ -10,7 +10,5 @@ Issues encountered in the wild
 ------------------------------
 
 1. Requiring only parts of active_support did not work. Had to load the whole thing by require 'active_support'
-2. Being able to say 3.seconds and 200.megabytes is really nice in the dsl. Right now, you have to require "active_support" in your recipe to get this.
 3. There were weird dependencies on xml-simple and builder gems when you try to use the bluepill cli.
-4. If the process intervals are high enough, running a bluepill log <pattern> will not produce any output. Maybe print out a "Please wait..."?
 5. I think flap detection trigger has a bug in it. When couple bg workers quit right after bluepill attempted to start them, they went in to the unmonitored state but did not come back from it. Not sure if flap detection even got triggered cuz I did not see a flapping detected message in the log.

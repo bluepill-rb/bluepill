@@ -38,10 +38,11 @@ when "load"
   eval(File.read(file))
   
 when "log"
-  pattern = ARGV.shift
+  orig_pattern = pattern = ARGV.shift
   pattern = controller.send_cmd(options[:application], :grep_pattern, pattern)
   
   cmd = "tail -n 100 -f #{options[:log_file]} | grep -E '#{pattern}'"
+  cmd = "echo 'Tailing log for #{orig_pattern}...'; #{cmd}"
   Kernel.exec(cmd)
 
 when *ALLOWED_COMMANDS

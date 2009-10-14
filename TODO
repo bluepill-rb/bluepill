@@ -1,4 +1,3 @@
-* Flap detection
 * Figure out proper logger lvl for each msg. So a person can choose only to log local6.warn and get only state transition messages and not any of the watch chatter.
 * Proper implementation of the cpu and mem watches. Possibly not forking to use ps ax?
 * Better error output than just vanilla exception traces
@@ -11,3 +10,5 @@ Issues encountered in the wild
 
 1. There were weird dependencies on xml-simple and builder gems when you try to use the bluepill cli.
 2s. I think flap detection trigger has a bug in it. When couple bg workers quit right after bluepill attempted to start them, they went in to the unmonitored state but did not come back from it. Not sure if flap detection even got triggered cuz I did not see a flapping detected message in the log.
+3. Whenever bluepill executes user specified commands (like start_command, stop_command, restart_command), it should execute it in such a way that it does not affect the stability of bluepill daemon itself. This is probably related (2)
+4. Whenever a command is sent to a process group, execute them in parallel for each process in the group instead of serially.

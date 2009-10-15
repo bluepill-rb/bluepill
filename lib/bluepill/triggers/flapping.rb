@@ -1,7 +1,10 @@
 module Bluepill
   module Triggers
     class Flapping < Bluepill::Trigger
-      UP_TO_DOWN = [:up, :down] # to avoid recreating this array on every notify
+      TRIGGER_STATES = [
+        [:up, :down],
+        [:up, :restarting]
+      ]
       
       PARAMS = [:times, :within, :retry_in]
       
@@ -20,7 +23,7 @@ module Bluepill
       end
       
       def notify(transition)
-        if [transition.from_name, transition.to_name] == UP_TO_DOWN
+        if TRIGGER_STATES.include?([transition.from_name, transition.to_name])
           self.timeline << Time.now.to_i
           self.check_flapping
         end

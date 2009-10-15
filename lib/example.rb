@@ -22,15 +22,15 @@ ROOT_DIR = "/tmp/bp"
 Bluepill.application(:sample_app) do |app|
   1.times do |i|
     app.process("process_#{i}") do |process|
-      process.start_command = "sleep 2"
+      process.start_command = "while true; do echo ''; sleep 0.01; done"
       process.daemonize = true
       process.pid_file = "#{ROOT_DIR}/pids/process_#{i}.pid"
       process.uid = "admin"
       process.gid = "staff"
       
       
-      # process.checks :cpu_usage, :every => 1, :below => 1, :times => [1,4]
-      process.checks :flapping, :times => 2, :within => 30, :retry_in => 30
+      process.checks :cpu_usage, :every => 5, :below => 0.5, :times => [2, 5]
+      process.checks :flapping, :times => 2, :within => 30.seconds, :retry_in => 7.seconds
     end
   end
   

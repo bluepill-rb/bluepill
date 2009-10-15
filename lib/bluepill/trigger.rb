@@ -26,10 +26,15 @@ module Bluepill
     
     def schedule_event(event, delay)
       # TODO: maybe wrap this in a ScheduledEvent class with methods like cancel
-      Thread.new do
-        sleep delay
-        self.logger.info("Retrying from flapping")
-        process.dispatch!(event)
+      Thread.new(self) do |trigger|
+        begin
+          sleep delay.to_i
+          trigger.logger.info("Retrying from flapping")
+          trigger.process.dispatch!(event)
+        rescue Exception => e
+          trigger.logger.error(e)
+          trigger.logger.error(e.backtrace.join("\n"))
+        end
       end
     end
     

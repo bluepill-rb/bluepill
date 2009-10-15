@@ -20,7 +20,7 @@ module Bluepill
     attr_accessor *CONFIGURABLE_ATTRIBUTES
     
     state_machine :initial => :unmonitored do      
-      state :unmonitored, :up, :down
+      state :unmonitored, :up, :down, :restarting
       
       event :tick do
         transition :unmonitored => :unmonitored
@@ -29,21 +29,24 @@ module Bluepill
         transition :up => :down, :unless => :process_running?
 
         transition :down => :up, :if => lambda {|process| process.process_running? || process.start_process }
+        
+        transition :restarting => :up, :if => :process_running?
+        transition :restarting => :down, :unless => :process_running?
       end
       
       event :start do
         transition :unmonitored => :up, :if => lambda {|process| process.process_running? || process.start_process }
-        transition :up => :up
+        transition [:restarting, :up] => :up
         transition :down => :up, :if => :start_process
       end
       
       event :stop do
         transition [:unmonitored, :down] => :unmonitored
-        transition :up => :unmonitored, :if => :stop_process
+        transition [:up, :restarting] => :unmonitored, :if => :stop_process
       end
       
       event :restart do
-        transition all => :up, :if => :restart_process
+        transition all => :restarting, :if => :restart_process
       end
       
       event :unmonitor do
@@ -63,7 +66,7 @@ module Bluepill
     
     def initialize(process_name, options = {})      
       @name = process_name
-      @event_mutex = Mutex.new
+      @event_mutex = Monitor.new
       @transition_history = Util::RotationalArray.new(10)
       @watches = []
       @triggers = []
@@ -205,6 +208,8 @@ module Bluepill
         stop_process
         start_process
       end
+      
+      true
     end
     
     def daemonize?

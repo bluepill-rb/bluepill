@@ -1,6 +1,7 @@
 require 'rubygems'
 
 require 'thread'
+require 'monitor'
 require 'syslog'
 
 require 'active_support/inflector'

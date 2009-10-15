@@ -6,7 +6,8 @@ module Bluepill
       end
       
       def run(pid)
-        `ps ux -p #{pid} | tail -1 | awk '{print $5}'`.to_f
+        # rss is on the 5th col
+        System.ps_axu[pid][4].to_f
       end
       
       def check(value)

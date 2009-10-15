@@ -165,6 +165,8 @@ private
     
     def run
       loop do
+        System.reset_data
+        
         self.groups.each do |_, group|
           group.tick
         end

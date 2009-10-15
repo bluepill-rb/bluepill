@@ -6,7 +6,8 @@ module Bluepill
       end
       
       def run(pid)
-        `ps ux -p #{pid} | tail -1 | awk '{print $3}'`.to_f
+        # third col in the ps axu output
+        System.ps_axu[pid][2].to_f
       end
       
       def check(value)

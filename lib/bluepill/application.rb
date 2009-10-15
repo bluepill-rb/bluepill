@@ -107,13 +107,13 @@ private
       Thread.new(self) do |app|
         begin
           loop do
-            logger.info("Server | Command loop started:")
+            # logger.info("Server | Command loop started:")
             client = socket.accept
-            logger.info("Server: Handling Request")
+            # logger.info("Server: Handling Request")
             cmd = client.readline.strip
-            logger.info("Server: #{cmd}")
+            # logger.info("Server: #{cmd}")
             response = app.send(*cmd.split(":"))
-            logger.info("Server: Sending Response")
+            # logger.info("Server: Sending Response")
             client.write(response)
             client.close
           end
@@ -126,11 +126,11 @@ private
     def worker
       Thread.new(self) do |app|
         loop do
-          app.logger.info("Server | worker loop started:")
+          # app.logger.info("Server | worker loop started:")
           job = self.work_queue.pop
-          app.logger.info("Server | worker job recieved:")          
+          # app.logger.info("Server | worker job recieved:")          
           send_to_process_or_group(job[0], job[1], false)
-          app.logger.info("Server | worker job processed:")  
+          # app.logger.info("Server | worker job processed:")  
         end
       end
     end

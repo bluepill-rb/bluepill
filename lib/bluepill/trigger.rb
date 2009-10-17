@@ -32,8 +32,8 @@ module Bluepill
           trigger.logger.info("Retrying from flapping")
           trigger.process.dispatch!(event)
         rescue Exception => e
-          trigger.logger.error(e)
-          trigger.logger.error(e.backtrace.join("\n"))
+          trigger.logger.err(e)
+          trigger.logger.err(e.backtrace.join("\n"))
         end
       end
     end

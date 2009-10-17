@@ -7,7 +7,7 @@ module Bluepill
       
       def run(pid)
         # third col in the ps axu output
-        System.ps_axu[pid][2].to_f
+        System.cpu_usage(pid).to_f
       end
       
       def check(value)

@@ -7,7 +7,7 @@ module Bluepill
       
       def run(pid)
         # rss is on the 5th col
-        System.ps_axu[pid][4].to_f
+        System.memory_usage(pid).to_f
       end
       
       def check(value)

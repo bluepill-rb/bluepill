@@ -1,9 +1,16 @@
-require "singleton"
 module Bluepill
   # This class represents the system that bluepill is running on.. It's mainly used to memoize
   # results of running ps auxx etc so that every watch in the every process will not result in a fork
   module System
     extend self
+    
+    def cpu_usage(pid)
+      ps_axu[pid] && ps_axu[pid][2].to_f
+    end
+    
+    def memory_usage(pid)
+      ps_axu[pid] && ps_axu[pid][4].to_f
+    end
     
     def store
       @store ||= Hash.new

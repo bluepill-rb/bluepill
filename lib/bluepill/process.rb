@@ -71,7 +71,9 @@ module Bluepill
       @watches = []
       @triggers = []
       
-      @stop_grace_time = @start_grace_time = @restart_grace_time = 3
+      %w(start_grace_time stop_grace_time restart_grace_time).each do |grace|
+        instance_variable_set("@#{grace}", options[grace.to_sym])
+      end
       
       CONFIGURABLE_ATTRIBUTES.each do |attribute_name|
         self.send("#{attribute_name}=", options[attribute_name]) if options.has_key?(attribute_name)

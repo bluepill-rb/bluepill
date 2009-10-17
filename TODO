@@ -10,3 +10,4 @@ Issues encountered in the wild
 1. There were weird dependencies on xml-simple and builder gems when you try to use the bluepill cli.
 2. Whenever bluepill executes user specified commands (like start_command, stop_command, restart_command), it should execute it in such a way that it does not affect the stability of bluepill daemon itself.
 3. Whenever a command is sent to a process group, execute them in parallel for each process in the group instead of serially.
+4. Issuing commands to the running bluepill daemon can trigger flapping condition to be triggered.

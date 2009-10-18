@@ -18,7 +18,12 @@ module Bluepill
     end
         
     def load
-      start_server
+      begin
+        start_server
+      rescue StandardError => e
+        logger.emerg("Got exception: %s `%s`" % [e.class.name, e.message])
+        logger.emerg(e.backtrace.join("\n"))
+      end
     end
     
     def status
@@ -144,7 +149,7 @@ private
             client.write(response)
             client.close
           end
-        rescue Exception => e
+        rescue StandardError => e
           logger.err(e.inspect)
           logger.err(e.backtrace.join("\n"))
         end
@@ -154,10 +159,15 @@ private
     def worker
       Thread.new(self) do |app|
         loop do
-          # app.logger.info("Server | worker loop started:")
-          job = self.work_queue.pop
-          # app.logger.info("Server | worker job recieved:")          
-          send_to_process_or_group(job[0], job[1], false)
+          begin
+            # app.logger.info("Server | worker loop started:")
+            job = app.work_queue.pop
+            send_to_process_or_group(job[0], job[1], false)
+            
+          rescue StandardError => e
+            logger.err("Error while trying to execute %s from work_queue" % job.inspect)
+            logger.err("%s: `%s`" % [e.class.name, e.message])
+          end
           # app.logger.info("Server | worker job processed:")  
         end
       end

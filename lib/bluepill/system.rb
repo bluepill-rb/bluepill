@@ -30,7 +30,7 @@ module Bluepill
     
     def execute_non_blocking(cmd)
       if Daemonize.safefork
-        # In master, return immediately
+        # In parent, return immediately
         return
         
       else

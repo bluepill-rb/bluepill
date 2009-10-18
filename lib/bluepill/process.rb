@@ -236,6 +236,7 @@ module Bluepill
         
       else
         stop_process
+        sleep(restart_grace_time.to_f)
         start_process
       end
       
@@ -308,7 +309,9 @@ module Bluepill
       # Add new found children to the list
       new_children_pids = System.get_children(self.actual_pid) - @children.map {|child| child.actual_pid}
  
-      logger.info "Existing children: #{@children.collect{|c| c.actual_pid}.join(",")}. Got new children: #{new_children_pids.inspect} for #{actual_pid}"
+      unless new_children_pids.empty?
+        logger.info "Existing children: #{@children.collect{|c| c.actual_pid}.join(",")}. Got new children: #{new_children_pids.inspect} for #{actual_pid}"
+      end
       
       # Construct a new process wrapper for each new found children
       new_children_pids.each do |child_pid|

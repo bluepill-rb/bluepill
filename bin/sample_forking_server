@@ -23,9 +23,10 @@ acceptor.bind(address)
 acceptor.listen(10)
 
 trap('EXIT') { acceptor.close }
+children = []
 
 3.times do
-  fork do
+  children << fork do
     trap('QUIT') {$0 = "forking_server| QUIT received shutting down gracefully..."; sleep 5; exit}
     trap('INT') {$0 = "forking_server| INT received shutting down UN-gracefully..."; sleep 3; exit}
     
@@ -46,6 +47,6 @@ trap('EXIT') { acceptor.close }
   end
 end
 
-trap('INT') { puts "\nbailing" ; exit }
+trap('INT') { $0 = "bailing..." ; children.each {|c| Process.kill('QUIT', c) rescue nil}; exit }
 
 Process.waitall

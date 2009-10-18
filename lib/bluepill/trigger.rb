@@ -28,7 +28,7 @@ module Bluepill
       # TODO: maybe wrap this in a ScheduledEvent class with methods like cancel
       Thread.new(self) do |trigger|
         begin
-          sleep delay.to_i
+          sleep delay.to_f
           trigger.logger.info("Retrying from flapping")
           trigger.process.dispatch!(event)
         rescue Exception => e

@@ -3,75 +3,66 @@ require 'bluepill'
 
 ROOT_DIR = "/tmp/bp"
 
-# application = Bluepill::Application.new("poop", 'base_dir' => '/tmp/bp')
-# 
-# process = Bluepill::Process.new("hello_world") do |process|
-#   process.start_command = "sleep 5"
-#   process.daemonize = true
-#   process.pid_file = "/tmp/bp/sleep.pid"
-# end
-# 
-# process.add_watch("AlwaysTrue", :every => 5)
-# 
-# application.processes << process
-# process.dispatch!("start")
-# 
-# application.start
-
-
+# Watch with 
+# watch -n0.2 'ps axu | egrep "(CPU|forking|bluepill|sleep)" | grep -v grep | sort'
 Bluepill.application(:sample_app) do |app|
-  1.times do |i|
+  2.times do |i|
     app.process("process_#{i}") do |process|
-      process.start_command = "while true; do echo ''; sleep 0.01; done"
-      process.daemonize = true
       process.pid_file = "#{ROOT_DIR}/pids/process_#{i}.pid"
+      
+      # I could not figure out a portable way to
+      # specify the path to the sample forking server across the diff developer laptops.
+      # Since this code is eval'ed we cannot reliably use __FILE__
+      process.start_command = "/Users/rohith/work/bluepill/bin/sample_forking_server #{4242 + i}"
+      process.daemonize = true
+      
+      process.start_grace_time = 10.seconds
+      process.restart_grace_time = 10.seconds
+      process.stop_grace_time = 10.seconds
+      
       process.uid = "admin"
       process.gid = "staff"
       
-      
-      process.checks :cpu_usage, :every => 5, :below => 0.5, :times => [2, 5]
+      process.checks :cpu_usage, :every => 10, :below => 0.5, :times => [5, 5]
       process.checks :flapping, :times => 2, :within => 30.seconds, :retry_in => 7.seconds
+      
+      process.monitor_children do |child_process|
+        child_process.checks :cpu_usage, 
+          :every => 10, 
+          :below => 0.5, 
+          :times => [5, 5]
+        
+        child_process.checks :mem_usage, 
+          :every => 3, 
+          :below => 600.kilobytes, 
+          :times => [3, 5], 
+          :fires => [:stop]
+        
+        child_process.stop_command = "kill -QUIT {{PID}}"
+        # child_process.checks :flapping, :times => 2, :within => 30.seconds, :retry_in => 7.seconds
+      end
     end
   end
   
-  0.times do |i|
+  5.times do |i|
     app.process("group_process_#{i}") do |process|
       process.start_command = "sleep #{rand(30) + i}"
       process.group = "Poopfaced"
       process.daemonize = true
-      process.pid_file = "#{ROOT_DIR}/pids/process_#{i}.pid"
+      process.pid_file = "#{ROOT_DIR}/pids/#{process.group}_process_#{i}.pid"
+      
+      process.checks :always_true, :every => 10
+    end
+  end
+  
+  1.times do |i|
+    app.process("group_process_#{i}") do |process|
+      process.start_command = "sleep #{rand(30) + i}"
+      process.group = "Poopfaced_2"
+      process.daemonize = true
+      process.pid_file = "#{ROOT_DIR}/pids/#{process.group}_process_#{i}.pid"
       
       process.checks :always_true, :every => 10
     end
   end
 end
-
-
-# Bluepill.watch do
-#   start_command "start_process -P file.pid"
-#   stop_command "stop_process -P file.pid"
-#   pid_file 'file.pid'
-#   
-#   checks do |checks|
-#     checks.mem_usage :every => 15.minutes,
-#                   :below => 250.megabytes,
-#                   :fires => :restart
-#                   
-#     checks.cpu_usage  :every 10.seconds,
-#                 :below => 50.percent,
-#                 :fires => :restart
-#                 
-#     checks.custom_method  :custom_params => :to_be_sent_to_the_custom_condition,
-#                           :fires => [:stop, :custom_event, :start]
-#                           
-#     checks.deadly_condition :every => 20.seconds,
-#                             :fires => :stop
-#   end
-#  
-#   handles(:restart) do |process|
-#     # process has pid
-#     process.transition :down
-#     process.transition :up
-#     run "some commands -P #{process.pid}"
-#   end
-# end

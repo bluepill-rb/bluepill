@@ -11,7 +11,7 @@ module Bluepill
       end
       
       def check(value)
-        value < @below
+        value.kilobytes < @below
       end
     end
   end

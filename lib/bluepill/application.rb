@@ -23,20 +23,47 @@ module Bluepill
     
     def status
       if(@server)
-        buffer = ""
+        buffer = []
+        depth = 0
+        
         if self.groups.has_key?(nil)
-          self.groups[nil].status.each do |line|
-            buffer << "%s: %s\n" % line
+          self.groups[nil].processes.each do |p|
+            buffer << "%s%s: %s" % [" " * depth, p.name, p.state]
+            
+            if p.monitor_children?
+              depth += 2
+              p.children.each do |c|
+                buffer << "%s%s: %s" % [" " * depth, c.name, c.state]
+              end
+              depth -= 2
+            end
           end
-          buffer << "\n"
         end
-        self.groups.keys.compact.sort.each do |name|
-          group = self.groups[name]
-          buffer << "#{name}:\n"
-          group.status.each { |line| buffer << "  %s: %s\n" % line }
-          buffer << "\n"
+
+        self.groups.each do |group_name, group|
+          next if group_name.nil?
+          
+          buffer << "\n#{group_name}"
+          
+          group.processes.each do |p|
+            depth += 2
+            
+            buffer << "%s%s(pid:%d): %s" % [" " * depth, p.name, p.actual_pid, p.state]
+            
+            if p.monitor_children?
+              depth += 2
+              p.children.each do |c|
+                buffer << "%s%s: %s" % [" " * depth, c.name, c.state]
+              end
+              depth -= 2
+            end
+            
+            depth -= 2
+          end
         end
-        buffer
+        
+        buffer.join("\n")
+        
       else
         send_to_server('status')
       end
@@ -118,7 +145,8 @@ private
             client.close
           end
         rescue Exception => e
-          logger.info(e.inspect)
+          logger.err(e.inspect)
+          logger.err(e.backtrace.join("\n"))
         end
       end
     end

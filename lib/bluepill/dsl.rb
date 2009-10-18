@@ -23,6 +23,33 @@ module Bluepill
       def checks(name, options = {})
         @watches[name] = options
       end
+      
+      def monitor_children(&child_process_block)
+        child_proxy = self.class.new
+        
+        # Children inherit some properties of the parent
+        child_proxy.start_grace_time = @attributes[:start_grace_time]
+        child_proxy.stop_grace_time = @attributes[:stop_grace_time]
+        child_proxy.restart_grace_time = @attributes[:restart_grace_time]
+        
+        child_process_block.call(child_proxy)
+        
+        @attributes[:child_process_template] = child_proxy.to_process(nil)
+        # @attributes[:child_process_template].freeze
+        @attributes[:monitor_children] = true
+      end
+      
+      def to_process(process_name)
+        process = Bluepill::Process.new(process_name, @attributes)
+        @watches.each do |name, opts|
+          if Bluepill::Trigger[name]
+            process.add_trigger(name, opts)
+          else
+            process.add_watch(name, opts)
+          end
+        end
+        process
+      end
     end
     
     app_proxy = Class.new do
@@ -33,16 +60,8 @@ module Bluepill
         process_proxy = @@process_proxy.new
         process_block.call(process_proxy)
         
-        group = process_proxy.attributes.delete(:group)
-        
-        process = Bluepill::Process.new(process_name, process_proxy.attributes)
-        process_proxy.watches.each do |name, opts|
-          if Bluepill::Trigger[name]
-            process.add_trigger(name, opts)
-          else
-            process.add_watch(name, opts)
-          end
-        end
+        group = process_proxy.attributes.delete(:group)        
+        process = process_proxy.to_process(process_name)
         
         @@app.add_process(process, group)
       end

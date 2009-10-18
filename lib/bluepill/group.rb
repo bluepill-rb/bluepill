@@ -31,16 +31,8 @@ module Bluepill
       END
     end
     
-    def status
-      status = []
-      self.each_process do |process|
-        status << [process.name, process.state]
-      end
-      status
-    end
-    
-    
     protected
+    
     def each_process(&block)
       self.processes.each(&block)
     end

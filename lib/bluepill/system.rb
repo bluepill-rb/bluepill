@@ -4,12 +4,28 @@ module Bluepill
   module System
     extend self
     
+    # The position of each field in ps output
+    IDX_MAP = {
+      :pid => 0,
+      :ppid => 1,
+      :pcpu => 2,
+      :rss => 3
+    }
+    
     def cpu_usage(pid)
-      ps_axu[pid] && ps_axu[pid][2].to_f
+      ps_axu[pid] && ps_axu[pid][IDX_MAP[:pcpu]].to_f
     end
     
     def memory_usage(pid)
-      ps_axu[pid] && ps_axu[pid][4].to_f
+      ps_axu[pid] && ps_axu[pid][IDX_MAP[:rss]].to_f
+    end
+    
+    def get_children(parent_pid)
+      returning(Array.new) do |child_pids|
+        ps_axu.each_pair do |pid, chunks| 
+          child_pids << chunks[IDX_MAP[:pid]].to_i if chunks[IDX_MAP[:ppid]].to_i == parent_pid.to_i
+        end
+      end
     end
     
     def store
@@ -23,14 +39,13 @@ module Bluepill
     def ps_axu
       store[:ps_axu] ||= begin
         # BSD style ps invocation
-        lines = `ps axu`.split("\n")
-        
+        lines = `ps axo pid=,ppid=,pcpu=,rss=`.split("\n")
+
         lines.inject(Hash.new) do |mem, line| 
-          # There are 11 cols in the ps ax output. This keeps programs that use spaces in $0 in one chunk
-          chunks = line.split(/\s+/, 11)
-          pid = chunks[1].to_i
+          chunks = line.split(/\s+/)
+          chunks.delete_if {|c| c.strip.empty? }
+          pid = chunks[IDX_MAP[:pid]].strip.to_i
           mem[pid] = chunks
-          
           mem
         end
       end

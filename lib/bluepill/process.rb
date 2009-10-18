@@ -192,7 +192,7 @@ module Bluepill
         File.open(pid_file, "w") {|f| f.write(child_pid)}
       else
         # This is a self-daemonizing process
-        system(start_command)
+        System.execute_non_blocking(start_command)
       end
             
       skip_ticks_for(start_grace_time)
@@ -205,7 +205,7 @@ module Bluepill
         cmd = stop_command.to_s.gsub("{{PID}}", actual_pid.to_s)
         logger.warning "Executing stop command: #{cmd}"
         
-        system(cmd)
+        System.execute_non_blocking(cmd)
         
         skip_ticks_for(stop_grace_time)
         
@@ -231,7 +231,7 @@ module Bluepill
     def restart_process
       if restart_command
         logger.warning "Executing restart command: #{restart_command}"
-        system(restart_command)
+        System.execute_non_blocking(restart_command)
         skip_ticks_for(restart_grace_time)
         
       else

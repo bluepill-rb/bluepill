@@ -28,6 +28,19 @@ module Bluepill
       end
     end
     
+    def execute_non_blocking(cmd)
+      if Daemonize.safefork
+        # In master, return immediately
+        return
+        
+      else
+        # in child
+        ::Kernel.exec(cmd)
+        # execution should not reach here
+        exit
+      end
+    end
+    
     def store
       @store ||= Hash.new
     end

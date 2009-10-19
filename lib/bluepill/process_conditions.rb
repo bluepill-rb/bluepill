@@ -1,6 +1,6 @@
 module Bluepill
-  module ProcessConditions
-    def self.name_to_class(name)
+  module ProcessConditions    
+    def self.[](name)
       "#{self}::#{name.to_s.camelcase}".constantize
     end
   end

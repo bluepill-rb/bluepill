@@ -1,18 +1,20 @@
 module Bluepill
   class ConditionWatch
     attr_accessor :logger, :name
+    EMPTY_ARRAY = [].freeze # no need to recreate one every tick
+    
     def initialize(name, options = {})
       @name = name
 
       @logger = options.delete(:logger)      
-      @fires = options.has_key?(:fires) ? [options.delete(:fires)].flatten : [:restart]
+      @fires = options.has_key?(:fires) ? Array(options.delete(:fires)) : [:restart]
       @every = options.delete(:every)
       @times = options[:times] || [1,1]
       @times = [@times, @times] unless @times.is_a?(Array) # handles :times => 5
 
       self.clear_history!
       
-      @process_condition = ProcessConditions.name_to_class(@name).new(options)
+      @process_condition = ProcessConditions[@name].new(options)
     end
     
     def run(pid, tick_number = Time.now.to_i)
@@ -21,7 +23,7 @@ module Bluepill
         self.record_value(@process_condition.run(pid))
         return @fires if self.fired?
       end
-      []
+      EMPTY_ARRAY
     end
     
     def record_value(value)

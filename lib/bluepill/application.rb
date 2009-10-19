@@ -14,7 +14,6 @@ module Bluepill
       self.pid_file = File.join(self.base_dir, 'pids', self.name + ".pid")
 
       @server = false
-      signal_trap
     end
         
     def load
@@ -191,11 +190,16 @@ private
       Daemonize.daemonize
       
       @server = true
+      $0 = "bluepilld: #{self.name}"
+      
       self.work_queue = Queue.new
+      
       self.socket = Bluepill::Socket.new(name, base_dir).server
       File.open(self.pid_file, 'w') { |x| x.write(::Process.pid) }
-      $0 = "bluepilld: #{self.name}"
-      self.groups.each {|name, group| group.start }
+      
+      self.groups.each {|_, group| group.start }
+      
+      setup_signal_traps
       listener
       worker
       run
@@ -211,16 +215,10 @@ private
         sleep 1
       end
     end
-        
-    def cleanup
-      # self.socket.cleanup
-    end
     
-    def signal_trap
-      
+    def setup_signal_traps
       terminator = lambda do
         puts "Terminating..."
-        cleanup
         ::Kernel.exit
       end
       

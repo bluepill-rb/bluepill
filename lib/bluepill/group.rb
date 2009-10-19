@@ -15,26 +15,23 @@ module Bluepill
     end
     
     def tick
-      self.each_process do |process|
+      self.processes.each do |process|
         process.tick
       end
     end
 
     # proxied events
     [:start, :unmonitor, :stop, :restart].each do |event|
-      eval <<-END
+      class_eval <<-END
         def #{event}(process_name = nil)
-          self.each_process do |process|
-            process.dispatch!("#{event}") if process_name.nil? || process.name == process_name
+          threads = []
+          self.processes.each do |process|
+            next if process_name && process_name != process.name
+            threads << Thread.new { process.dispatch!("#{event}") }
           end
+          threads.each { |t| t.join }
         end      
       END
-    end
-    
-    protected
-    
-    def each_process(&block)
-      self.processes.each(&block)
     end
   end
 end

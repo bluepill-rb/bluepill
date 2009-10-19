@@ -50,6 +50,7 @@ module Bluepill
     end
     
     def ps_axu
+      # TODO: need a mutex here
       store[:ps_axu] ||= begin
         # BSD style ps invocation
         lines = `ps axo pid=,ppid=,pcpu=,rss=`.split("\n")

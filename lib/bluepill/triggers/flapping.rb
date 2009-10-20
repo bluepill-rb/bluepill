@@ -2,7 +2,7 @@ module Bluepill
   module Triggers
     class Flapping < Bluepill::Trigger
       TRIGGER_STATES = [
-        [:up, :down],
+        [:up, :starting],
         [:up, :restarting]
       ]
       
@@ -26,6 +26,10 @@ module Bluepill
         if TRIGGER_STATES.include?([transition.from_name, transition.to_name])
           self.timeline << Time.now.to_i
           self.check_flapping
+        elsif transition.to_name == :unmonitored
+          self.logger.info "Canceling all scheduled events"
+          @timeline.clear
+          self.cancel_all_events
         end
       end
 
@@ -47,6 +51,7 @@ module Bluepill
           self.dispatch!(:stop)
           
           @timeline.clear
+          throw :halt
         end
       end
     end

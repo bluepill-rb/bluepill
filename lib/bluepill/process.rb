@@ -27,55 +27,61 @@ module Bluepill
     attr_reader :children
     
     state_machine :initial => :unmonitored do
-      state :unmonitored, :up, :down, :restarting
-      
+      # These are the idle states, i.e. only an event (either external or internal) will trigger a transition.
+      # The distinction between down and unmonitored is that down
+      # means we know it is not running and unmonitored is that we don't care if it's running.
+      state :unmonitored, :up, :down
+
+      # These are transitionary states, we expect the process to change state after a certain period of time.
+      state :starting, :stopping, :restarting
+
       event :tick do
-        transition :unmonitored => :unmonitored
-        
-        transition :up => :up, :if => :process_running?
-        transition :up => :down, :unless => :process_running?
+        transition :up => :starting, :unless => :process_running?
 
-        transition :down => :up, :if => lambda {|process| process.process_running? || process.start_process }
-        
-        transition :restarting => :up, :if => :process_running?
-        transition :restarting => :down, :unless => :process_running?
+        # transitionary success states
+        transition [:starting, :restarting] => :up, :if => :process_running?
+        transition :stopping => :down, :unless => :process_running?
+
+        # transitionary fail states
+        transition [:starting, :restarting] => :starting, :unless => :process_running?
+        transition :stopping => :stopping, :if => :process_running?
       end
-      
+
       event :start do
-        transition :unmonitored => :up, :if => lambda {|process| process.process_running? || process.start_process }
-        transition [:restarting, :up] => :up
-        transition :down => :up, :if => :start_process
-      end
-      
-      event :stop do
-        transition [:unmonitored, :down] => :unmonitored
-        transition [:up, :restarting] => :unmonitored, :if => :stop_process
-      end
-      
-      event :restart do
-        transition all => :restarting, :if => :restart_process
-      end
-      
-      event :unmonitor do
-        transition all => :unmonitored
-      end
-      
-      after_transition any => any do |process, transition|
-        process.notify_triggers(transition)
-        
-        unless transition.loopback?
-          process.record_transition(transition.from_name, transition.to_name)
-          
-          # When a process changes state, we should clear the memory of all the watches
-          process.watches.each { |w| w.clear_history! }
+        # We want to be in the up state.
+        transition [:up, :unmonitored, :down] => :starting, :unless => :process_running?
+        transition [:unmonitored, :down] => :up, :if => :process_running?
 
-          # Also, when a process changes state, we should re-populate its child list
-          if process.monitor_children?
-            process.logger.warning "Clearing child list"
-            process.children.clear
-          end
-        end
+        # TODO: Consider the consequences
+        # transition [:starting, :stopping, :restarting] => :starting
       end
+
+      event :stop do
+        transition [:up, :unmonitored, :down] => :stopping, :if => :process_running?
+        transition [:up, :unmonitored] => :down, :unless => :process_running?
+
+        # TODO: Consider the consequences
+        # transition [:starting, :stopping, :restarting] => :stopping
+      end
+
+      event :unmonitor do
+        transition any => :unmonitored
+      end
+
+      event :restart do
+        transition :up => :restarting
+
+        # TODO: Consider the consequences
+        # transition [:starting, :stopping, :restarting] => :restarting
+      end
+
+      before_transition any => any, :do => :notify_triggers
+
+      after_transition any => :starting, :do => :start_process
+      after_transition any => :stopping, :do => :stop_process
+      after_transition any => :restarting, :do => :restart_process
+
+      after_transition any => any, :do => :record_transition
     end
     
     def initialize(process_name, options = {})      
@@ -110,7 +116,7 @@ module Bluepill
       # run state machine transitions
       super
 
-      if process_running?
+      if self.up?
         run_watches
         
         if monitor_children?
@@ -133,15 +139,25 @@ module Bluepill
       end
     end
     
-    def record_transition(from, to)
-      @transitioned = true
-      logger.info "Going from #{from} => #{to}"
+    def record_transition(transition)
+      unless transition.loopback?
+        @transitioned = true
+        
+        # When a process changes state, we should clear the memory of all the watches
+        self.watches.each { |w| w.clear_history! }
+        
+        # Also, when a process changes state, we should re-populate its child list
+        if self.monitor_children?
+          self.logger.warning "Clearing child list"
+          self.children.clear
+        end
+        logger.info "Going from #{transition.from_name} => #{transition.to_name}"
+      end
     end
     
     def notify_triggers(transition)
       self.triggers.each {|trigger| trigger.notify(transition)}
     end
-
     
     # Watch related methods
     def add_watch(name, options = {})
@@ -195,9 +211,7 @@ module Bluepill
         System.execute_non_blocking(start_command)
       end
             
-      skip_ticks_for(start_grace_time)
-      
-      true
+      self.skip_ticks_for(start_grace_time)
     end
     
     def stop_process      
@@ -206,41 +220,25 @@ module Bluepill
         logger.warning "Executing stop command: #{cmd}"
         
         System.execute_non_blocking(cmd)
-        
-        skip_ticks_for(stop_grace_time)
-        
       else
         logger.warning "Executing default stop command. Sending TERM signal to #{actual_pid}"
-        
         signal_process("TERM")
-  
-        wait_until = Time.now.to_i + stop_grace_time
-        while process_running?(true)
-          if wait_until <= Time.now.to_i
-            signal_process("KILL")
-            break
-          end
-          sleep 0.2
-        end
       end
-      self.unlink_pid
-
-      true
+      self.unlink_pid # TODO: we only write the pid file if we daemonize, should we only unlink it if we daemonize?
+      
+      self.skip_ticks_for(stop_grace_time)
     end
     
     def restart_process
       if restart_command
         logger.warning "Executing restart command: #{restart_command}"
         System.execute_non_blocking(restart_command)
-        skip_ticks_for(restart_grace_time)
-        
       else
-        stop_process
-        sleep(restart_grace_time.to_f)
-        start_process
+        self.stop_process
+        # the tick will bring it back.
       end
       
-      true
+      self.skip_ticks_for(restart_grace_time)
     end
     
     def daemonize?

@@ -21,13 +21,13 @@ module Bluepill
     end
 
     # proxied events
-    [:start, :unmonitor, :stop, :restart].each do |event|
+    [:start, :unmonitor, :stop, :restart, :boot!].each do |event|
       class_eval <<-END
         def #{event}(process_name = nil)
           threads = []
           self.processes.each do |process|
             next if process_name && process_name != process.name
-            threads << Thread.new { process.dispatch!("#{event}") }
+            threads << Thread.new { process.handle_user_command("#{event}") }
           end
           threads.each { |t| t.join }
         end      

@@ -1,10 +1,7 @@
 module Bluepill
   module Triggers
     class Flapping < Bluepill::Trigger
-      TRIGGER_STATES = [
-        [:up, :starting],
-        [:up, :restarting]
-      ]
+      TRIGGER_STATES = [:starting, :restarting]
       
       PARAMS = [:times, :within, :retry_in]
       
@@ -23,16 +20,17 @@ module Bluepill
       end
       
       def notify(transition)
-        if TRIGGER_STATES.include?([transition.from_name, transition.to_name])
+        if TRIGGER_STATES.include?(transition.to_name)
           self.timeline << Time.now.to_i
           self.check_flapping
-        elsif transition.to_name == :unmonitored
-          self.logger.info "Canceling all scheduled events"
-          @timeline.clear
-          self.cancel_all_events
         end
       end
-
+      
+      def reset!
+        @timeline.clear
+        super
+      end
+      
       def check_flapping
         num_occurances = (@timeline.nitems == self.times)
         
@@ -48,9 +46,11 @@ module Bluepill
           self.schedule_event(:start, self.retry_in)
           
           # this happens in the process' thread so we don't have to worry about concurrency issues with this event
-          self.dispatch!(:stop)
+          self.dispatch!(:unmonitor)
           
           @timeline.clear
+          
+          # This will prevent a transition from happening in the process state_machine
           throw :halt
         end
       end

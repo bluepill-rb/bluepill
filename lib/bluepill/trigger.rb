@@ -18,6 +18,10 @@ module Bluepill
       self.scheduled_events = []
     end
     
+    def reset!
+      self.cancel_all_events
+    end
+    
     def notify(transition)
       raise "Implement in subclass"
     end
@@ -46,6 +50,7 @@ module Bluepill
     end
     
     def cancel_all_events
+      self.logger.info "Canceling all scheduled events"
       self.mutex.synchronize do
         self.scheduled_events.each {|_, thread| thread.kill}
       end

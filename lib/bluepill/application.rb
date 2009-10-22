@@ -20,8 +20,8 @@ module Bluepill
       begin
         start_server
       rescue StandardError => e
-        logger.emerg("Got exception: %s `%s`" % [e.class.name, e.message])
-        logger.emerg(e.backtrace.join("\n"))
+        logger.err("Got exception: %s `%s`" % [e.class.name, e.message])
+        logger.err(e.backtrace.join("\n"))
       end
     end
     
@@ -197,7 +197,7 @@ private
       self.socket = Bluepill::Socket.new(name, base_dir).server
       File.open(self.pid_file, 'w') { |x| x.write(::Process.pid) }
       
-      self.groups.each {|_, group| group.start }
+      self.groups.each {|_, group| group.boot! }
       
       setup_signal_traps
       listener

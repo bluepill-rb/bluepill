@@ -36,32 +36,30 @@ module Bluepill
       state :starting, :stopping, :restarting
 
       event :tick do
-        transition :up => :starting, :unless => :process_running?
+        transition :starting => :up, :if => :process_running?
+        transition :starting => :down, :unless => :process_running?
 
-        # transitionary success states
-        transition [:starting, :restarting] => :up, :if => :process_running?
+        transition :up => :up, :if => :process_running?
+        transition :up => :down, :unless => :process_running?
+        
+        # The process failed to die after entering the stopping state. Change the state to reflect
+        # reality.
+        transition :stopping => :up, :if => :process_running? 
         transition :stopping => :down, :unless => :process_running?
-
-        # transitionary fail states
-        transition [:starting, :restarting] => :starting, :unless => :process_running?
-        transition :stopping => :stopping, :if => :process_running?
+        
+        transition :down => :up, :if => :process_running?
+        transition :down => :starting, :unless => :process_running?
+        
+        transition :restarting => :up, :if => :process_running?
+        transition :restarting => :down, :unless => :process_running?
       end
 
       event :start do
-        # We want to be in the up state.
-        transition [:up, :unmonitored, :down] => :starting, :unless => :process_running?
-        transition [:unmonitored, :down] => :up, :if => :process_running?
-
-        # TODO: Consider the consequences
-        # transition [:starting, :stopping, :restarting] => :starting
+        transition [:unmonitored, :down] => :starting
       end
 
       event :stop do
-        transition [:up, :unmonitored, :down] => :stopping, :if => :process_running?
-        transition [:up, :unmonitored] => :down, :unless => :process_running?
-
-        # TODO: Consider the consequences
-        # transition [:starting, :stopping, :restarting] => :stopping
+        transition :up => :stopping
       end
 
       event :unmonitor do
@@ -69,10 +67,7 @@ module Bluepill
       end
 
       event :restart do
-        transition :up => :restarting
-
-        # TODO: Consider the consequences
-        # transition [:starting, :stopping, :restarting] => :restarting
+        transition [:up, :down] => :restarting
       end
 
       before_transition any => any, :do => :notify_triggers
@@ -190,6 +185,38 @@ module Bluepill
       end
     end
     
+    def handle_user_command(cmd)
+      case cmd
+      when "boot!"
+        # This is only called when bluepill is initially starting up
+        if process_running?(true)
+          # process was running even before bluepill was
+          self.state = 'up'
+        else
+          self.state = 'starting'
+        end
+        
+      when "start"
+        if process_running?(true) && daemonize?
+          logger.warning("Refusing to re-run start command on an automatically daemonized process to preserve currently running process pid file.")
+          return
+        end
+        dispatch!(:start)
+
+      when "stop"
+        stop_process
+        dispatch!(:unmonitor)
+        
+      when "restart"
+        restart_process
+        
+      when "unmonitor"
+        # When the user issues an unmonitor cmd, reset any triggers so that
+        # scheduled events gets cleared
+        triggers.each {|t| t.reset! }
+        dispatch!(:unmonitor)
+      end
+    end
     
     # System Process Methods
     def process_running?(force = false)
@@ -208,7 +235,9 @@ module Bluepill
         File.open(pid_file, "w") {|f| f.write(child_pid)}
       else
         # This is a self-daemonizing process
-        System.execute_non_blocking(start_command)
+        unless System.execute_blocking(start_command)
+          logger.warning "Start command execution returned non-zero exit code"
+        end
       end
             
       self.skip_ticks_for(start_grace_time)
@@ -219,7 +248,10 @@ module Bluepill
         cmd = stop_command.to_s.gsub("{{PID}}", actual_pid.to_s)
         logger.warning "Executing stop command: #{cmd}"
         
-        System.execute_non_blocking(cmd)
+        unless System.execute_blocking(cmd)
+          logger.warning "Stop command execution returned non-zero exit code"
+        end
+        
       else
         logger.warning "Executing default stop command. Sending TERM signal to #{actual_pid}"
         signal_process("TERM")
@@ -232,13 +264,17 @@ module Bluepill
     def restart_process
       if restart_command
         logger.warning "Executing restart command: #{restart_command}"
-        System.execute_non_blocking(restart_command)
+        
+        unless System.execute_blocking(restart_command)
+          logger.warning "Restart command execution returned non-zero exit code"
+        end
+        
+        self.skip_ticks_for(restart_grace_time)
       else
+        logger.warning "No restart_command specified. Must stop and start to restart"
         self.stop_process
         # the tick will bring it back.
       end
-      
-      self.skip_ticks_for(restart_grace_time)
     end
     
     def daemonize?

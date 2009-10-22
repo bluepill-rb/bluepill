@@ -22,8 +22,9 @@ address = Socket.pack_sockaddr_in(port, '127.0.0.1')
 acceptor.bind(address)
 acceptor.listen(10)
 
-trap('EXIT') { acceptor.close }
 children = []
+trap('EXIT') { acceptor.close; children.each {|c| Process.kill('QUIT', c)} }
+
 
 3.times do
   children << fork do
@@ -47,6 +48,6 @@ children = []
   end
 end
 
-trap('INT') { $0 = "bailing..." ; children.each {|c| Process.kill('QUIT', c) rescue nil}; exit }
+trap('INT') { puts "\nbailing" ; exit }
 
 Process.waitall

@@ -25,7 +25,7 @@ Bluepill.application(:sample_app) do |app|
       process.gid = "staff"
       
       # process.checks :cpu_usage, :every => 10, :below => 0.5, :times => [5, 5]
-      # process.checks :flapping, :times => 5, :within => 30.seconds, :retry_in => 7.seconds
+      process.checks :flapping, :times => 2, :within => 30.seconds, :retry_in => 7.seconds
       
       process.monitor_children do |child_process|
         # child_process.checks :cpu_usage, 

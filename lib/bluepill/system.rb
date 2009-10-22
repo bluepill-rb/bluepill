@@ -41,6 +41,10 @@ module Bluepill
       end
     end
     
+    def execute_blocking(cmd)
+      ::Kernel.system(cmd)
+    end
+    
     def store
       @store ||= Hash.new
     end

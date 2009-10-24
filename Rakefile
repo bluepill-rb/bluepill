@@ -15,6 +15,9 @@ begin
     gem.add_dependency("daemons", ">= 1.0.9")
     gem.add_dependency("pluginaweek-state_machine", ">= 0.8.0")
     gem.add_dependency("activesupport", ">= 2.3.4")
+
+    gem.files -= ["bin/sample_forking_server"]
+    gem.executables = ["bluepill"]
   end
 rescue LoadError
   puts "Jeweler (or a dependency) not available. Install it with: sudo gem install jeweler"

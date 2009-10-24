@@ -21,7 +21,7 @@ module Bluepill
         start_server
       rescue StandardError => e
         logger.err("Got exception: %s `%s`" % [e.class.name, e.message])
-        logger.err(e.backtrace.join("\n"))
+        e.backtrace.each {|l| logger.err(l)}
       end
     end
     
@@ -32,7 +32,7 @@ module Bluepill
         
         if self.groups.has_key?(nil)
           self.groups[nil].processes.each do |p|
-            buffer << "%s%s: %s" % [" " * depth, p.name, p.state]
+            buffer << "%s%s(pid:%s): %s" % [" " * depth, p.name, p.actual_pid.inspect, p.state]
             
             if p.monitor_children?
               depth += 2
@@ -52,7 +52,7 @@ module Bluepill
           group.processes.each do |p|
             depth += 2
             
-            buffer << "%s%s(pid:%d): %s" % [" " * depth, p.name, p.actual_pid, p.state]
+            buffer << "%s%s(pid:%s): %s" % [" " * depth, p.name, p.actual_pid.inspect, p.state]
             
             if p.monitor_children?
               depth += 2
@@ -149,8 +149,8 @@ private
             client.close
           end
         rescue StandardError => e
-          logger.err(e.inspect)
-          logger.err(e.backtrace.join("\n"))
+          logger.err("Got exception in cmd listener: %s `%s`" % [e.class.name, e.message])
+          e.backtrace.each {|l| logger.err(l)}
         end
       end
     end

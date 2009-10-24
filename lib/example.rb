@@ -1,12 +1,13 @@
 require 'rubygems'
 require 'bluepill'
+require 'logger'
 
 ROOT_DIR = "/tmp/bp"
 
 # Watch with 
 # watch -n0.2 'ps axu | egrep "(CPU|forking|bluepill|sleep)" | grep -v grep | sort'
 Bluepill.application(:sample_app) do |app|
-  2.times do |i|
+  0.times do |i|
     app.process("process_#{i}") do |process|
       process.pid_file = "#{ROOT_DIR}/pids/process_#{i}.pid"
       
@@ -21,7 +22,7 @@ Bluepill.application(:sample_app) do |app|
       process.restart_grace_time = 7.seconds
       process.stop_grace_time = 7.seconds
       
-      process.uid = "admin"
+      process.uid = "rohith"
       process.gid = "staff"
       
       # process.checks :cpu_usage, :every => 10, :below => 0.5, :times => [5, 5]
@@ -45,14 +46,18 @@ Bluepill.application(:sample_app) do |app|
     end
   end
   
-  0.times do |i|
+  1.times do |i|
     app.process("group_process_#{i}") do |process|
-      process.start_command = "sleep #{rand(30) + i}"
       process.group = "Poopfaced"
-      process.daemonize = true
-      process.pid_file = "#{ROOT_DIR}/pids/#{process.group}_process_#{i}.pid"
+      process.pid_file = "/Users/rohith/ffs/tmp/pids/mongrel_#{i}.pid"
+      process.start_command = "cd ~/ffs && mongrel_rails start -P #{process.pid_file} -p 3000 -d"
       
-      process.checks :always_true, :every => 10
+      process.start_grace_time = 10.seconds
+      
+      process.uid = "rohith"
+      process.gid = "staff"
+      
+      # process.checks :always_true, :every => 10
     end
   end
   

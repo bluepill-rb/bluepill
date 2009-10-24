@@ -230,13 +230,16 @@ module Bluepill
       logger.warning "Executing start command: #{start_command}"
       
       if self.daemonize?
-        starter = lambda { drop_privileges; ::Kernel.exec(start_command) }
-        child_pid = Daemonize.call_as_daemon(starter)
+        child_pid = System.daemonize(start_command, :uid => self.uid, :gid => self.gid)
         File.open(pid_file, "w") {|f| f.write(child_pid)}
+        
       else
         # This is a self-daemonizing process
-        unless System.execute_blocking(start_command)
-          logger.warning "Start command execution returned non-zero exit code"
+        result = System.execute_blocking(start_command, :uid => self.uid, :gid => self.gid, :logger => logger)
+        
+        unless result[:exit_code].zero?
+          logger.warning "Start command execution returned non-zero exit code:"
+          logger.warning result.inspect
         end
       end
             
@@ -247,9 +250,11 @@ module Bluepill
       if stop_command
         cmd = stop_command.to_s.gsub("{{PID}}", actual_pid.to_s)
         logger.warning "Executing stop command: #{cmd}"
-        
-        unless System.execute_blocking(cmd)
-          logger.warning "Stop command execution returned non-zero exit code"
+
+        result = System.execute_blocking(cmd, :uid => self.uid, :gid => self.gid)
+        unless result[:exit_code].zero?
+          logger.warning "Stop command execution returned non-zero exit code:"
+          logger.warning result.inspect
         end
         
       else
@@ -265,8 +270,10 @@ module Bluepill
       if restart_command
         logger.warning "Executing restart command: #{restart_command}"
         
-        unless System.execute_blocking(restart_command)
-          logger.warning "Restart command execution returned non-zero exit code"
+        result = System.execute_blocking(restart_command, :uid => self.uid, :gid => self.gid)
+        unless result[:exit_code].zero?
+          logger.warning "Restart command execution returned non-zero exit code:"
+          logger.warning result.inspect
         end
         
         self.skip_ticks_for(restart_grace_time)
@@ -294,7 +301,14 @@ module Bluepill
     
     def actual_pid
       @actual_pid ||= begin
-        File.read(pid_file).to_i if pid_file && File.exists?(pid_file)
+        if pid_file
+          if File.exists?(pid_file)
+            File.read(pid_file).to_i 
+          else
+            logger.warning("pid_file #{pid_file} does not exist or cannot be read")
+            nil
+          end
+        end
       end
     end
     
@@ -310,24 +324,7 @@ module Bluepill
       File.unlink(pid_file) if pid_file && File.exists?(pid_file)
     end
     
-    def drop_privileges
-      begin
-        require 'etc'
-        
-        uid_num = Etc.getpwnam(self.uid).uid if self.uid
-        gid_num = Etc.getgrnam(self.gid).gid if self.gid
-
-        ::Process.groups = [gid_num] if self.gid
-        ::Process::Sys.setgid(gid_num) if self.gid
-        ::Process::Sys.setuid(uid_num) if self.uid
-      rescue ArgumentError, Errno::EPERM, Errno::ENOENT => e
-        # TODO: log exceptions elsewhere
-        File.open("/tmp/exception.log", "w+"){|f| puts e}
-      end
-    end
-    
-    
-    # Internal State Methods
+     # Internal State Methods
     def skip_ticks_for(seconds)
       # TODO: should this be addative or longest wins?
       #       i.e. if two calls for skip_ticks_for come in for 5 and 10, should it skip for 10 or 15?

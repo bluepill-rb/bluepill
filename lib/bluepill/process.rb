@@ -248,7 +248,7 @@ module Bluepill
     
     def stop_process      
       if stop_command
-        cmd = stop_command.to_s.gsub("{{PID}}", actual_pid.to_s)
+        cmd = process_command(stop_command)
         logger.warning "Executing stop command: #{cmd}"
 
         result = System.execute_blocking(cmd, :uid => self.uid, :gid => self.gid)
@@ -270,7 +270,9 @@ module Bluepill
       if restart_command
         logger.warning "Executing restart command: #{restart_command}"
         
-        result = System.execute_blocking(restart_command, :uid => self.uid, :gid => self.gid)
+        cmd = process_command(restart_command)
+        result = System.execute_blocking(cmd, :uid => self.uid, :gid => self.gid)
+        
         unless result[:exit_code].zero?
           logger.warning "Restart command execution returned non-zero exit code:"
           logger.warning result.inspect
@@ -363,6 +365,10 @@ module Bluepill
     
     def deep_copy
       Marshal.load(Marshal.dump(self))
+    end
+    
+    def process_command(cmd)
+      cmd.to_s.gsub("{{PID}}", actual_pid.to_s)
     end
   end
 end

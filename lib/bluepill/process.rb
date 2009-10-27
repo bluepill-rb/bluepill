@@ -268,9 +268,10 @@ module Bluepill
     
     def restart_process
       if restart_command
-        logger.warning "Executing restart command: #{restart_command}"
-        
         cmd = process_command(restart_command)
+        
+        logger.warning "Executing restart command: #{cmd}"
+        
         result = System.execute_blocking(cmd, :uid => self.uid, :gid => self.gid)
         
         unless result[:exit_code].zero?

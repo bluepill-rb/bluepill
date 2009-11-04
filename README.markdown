@@ -2,7 +2,7 @@
 Bluepill is a simple process monitoring tool written in Ruby. 
 
 ## Installation
-It's hosted on [gemcutter.org][gemcutter], soon to be the primary source of Ruby Gems.
+It's hosted on [gemcutter.org][gemcutter].
 
     sudo gem install bluepill
     

@@ -52,7 +52,13 @@ module Bluepill
         
         drop_privileges(options[:uid], options[:gid])
         
-        daemon_id = Daemonize.call_as_daemon(lambda { ::Kernel.exec(cmd); exit }, nil, cmd)
+        to_daemonize = lambda do
+           Dir.chdir(options[:working_dir]) if options[:working_dir]
+           ::Kernel.exec(cmd)
+           exit
+         end
+        
+        daemon_id = Daemonize.call_as_daemon(to_daemonize, nil, cmd)
         
         wr.write daemon_id        
         wr.close
@@ -87,6 +93,8 @@ module Bluepill
         pid = fork {
           # grandchild
           drop_privileges(options[:uid], options[:gid])
+          
+          Dir.chdir(options[:working_dir]) if options[:working_dir]
           
           # close unused fds so ancestors wont hang. This line is the only reason we are not
           # using something like popen3. If this fd is not closed, the .read call on the parent

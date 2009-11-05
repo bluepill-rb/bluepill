@@ -10,6 +10,7 @@ module Bluepill
       
       :daemonize, 
       :pid_file, 
+      :working_dir,
       
       :start_grace_time, 
       :stop_grace_time, 
@@ -230,12 +231,12 @@ module Bluepill
       logger.warning "Executing start command: #{start_command}"
       
       if self.daemonize?
-        child_pid = System.daemonize(start_command, :uid => self.uid, :gid => self.gid)
+        child_pid = System.daemonize(start_command, self.system_command_options)
         File.open(pid_file, "w") {|f| f.write(child_pid)}
         
       else
         # This is a self-daemonizing process
-        result = System.execute_blocking(start_command, :uid => self.uid, :gid => self.gid, :logger => logger)
+        result = System.execute_blocking(start_command, self.system_command_options)
         
         unless result[:exit_code].zero?
           logger.warning "Start command execution returned non-zero exit code:"
@@ -251,7 +252,7 @@ module Bluepill
         cmd = process_command(stop_command)
         logger.warning "Executing stop command: #{cmd}"
 
-        result = System.execute_blocking(cmd, :uid => self.uid, :gid => self.gid)
+        result = System.execute_blocking(cmd, self.system_command_options)
         unless result[:exit_code].zero?
           logger.warning "Stop command execution returned non-zero exit code:"
           logger.warning result.inspect
@@ -272,7 +273,7 @@ module Bluepill
         
         logger.warning "Executing restart command: #{cmd}"
         
-        result = System.execute_blocking(cmd, :uid => self.uid, :gid => self.gid)
+        result = System.execute_blocking(cmd, self.system_command_options)
         
         unless result[:exit_code].zero?
           logger.warning "Restart command execution returned non-zero exit code:"
@@ -370,6 +371,10 @@ module Bluepill
     
     def process_command(cmd)
       cmd.to_s.gsub("{{PID}}", actual_pid.to_s)
+    end
+    
+    def system_command_options
+      {:uid => self.uid, :gid => self.gid, :working_dir => self.working_dir, :logger => self.logger}
     end
   end
 end

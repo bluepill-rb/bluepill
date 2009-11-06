@@ -26,8 +26,20 @@ controller = Bluepill::Controller.new(options.slice(:base_dir))
 
 if controller.list.include?(ARGV.first)
   options[:application] = ARGV.shift 
-elsif controller.list.length == 1 && ALLOWED_COMMANDS.include?(ARGV.first)
-  options[:application] = controller.list.first
+elsif ALLOWED_COMMANDS.include?(ARGV.first)
+  if controller.list.length == 1
+    options[:application] = controller.list.first
+  elsif controller.list.length > 1
+    $stderr.puts "You must specify an application name. Here's the list:"
+    controller.list.each_with_index do |app, index|
+      $stderr.puts "  #{index + 1}. #{app}"
+    end
+    $stderr.puts "Usage: bluepill [app] cmd [options]"
+    exit
+  else
+    $stderr.puts "There are no running bluepill daemons.\nTo start a bluepill daemon, use: bluepill load <config file>"
+    exit
+  end
 end
 
 options[:command] = ARGV.shift

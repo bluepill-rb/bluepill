@@ -14,12 +14,19 @@ module Bluepill
       cleanup
     end
     
-    def list
+    def running_applications
       Dir[File.join(sockets_dir, "*.sock")].map{|x| File.basename(x, ".sock")}
     end
     
+    def send_cmd(application, command, *args)
+      applications[application] ||= Application.new(application, {:base_dir => base_dir})
+      applications[application].send(command.to_sym, *args.compact)
+    end
+    
+    private
+    
     def cleanup
-      self.list.each do |app|
+      self.running_applications.each do |app|
         pid = pid_for(app)
         if !pid || !alive?(pid)
           pid_file = File.join(self.pids_dir, "#{app}.pid")
@@ -30,18 +37,10 @@ module Bluepill
       end
     end
     
-    def send_cmd(application, command, *args)
-      applications[application] ||= Application.new(application, {:base_dir => base_dir})
-      applications[application].send(command.to_sym, *args.compact)
-    end
-    
-    private
-    
     def pid_for(app)
       pid_file = File.join(self.pids_dir, "#{app}.pid")
       File.exists?(pid_file) && File.read(pid_file).to_i
     end
-    
     
     def alive?(pid)
       begin

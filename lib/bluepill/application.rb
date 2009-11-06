@@ -1,18 +1,19 @@
 module Bluepill
   class Application
     attr_accessor :name, :logger, :base_dir, :socket, :pid_file
-    attr_accessor :groups, :work_queue
+    attr_accessor :groups, :work_queue, :socket_timeout
 
     def initialize(name, options = {})
       self.name = name
       self.base_dir = options[:base_dir] ||= '/var/bluepill'
+      self.socket_timeout = options[:socket_timeout] ||= 10
       
       self.logger = Bluepill::Logger.new.prefix_with(self.name)
       
       self.groups = Hash.new 
 
       self.pid_file = File.join(self.base_dir, 'pids', self.name + ".pid")
-
+      
       @server = false
     end
         
@@ -123,11 +124,19 @@ module Bluepill
     end
     
     def send_to_server(method)
-      self.socket = Bluepill::Socket.new(name, base_dir).client 
-      socket.write(method + "\n")
-      buffer = ""
-      while(line = socket.gets)
-        buffer << line
+      begin
+        status = Timeout::timeout(self.socket_timeout) do
+          self.socket = Bluepill::Socket.new(name, base_dir).client # Something that should be interrupted if it takes too much time...
+          socket.write(method + "\n")
+          buffer = ""
+          while(line = socket.gets)
+            buffer << line
+          end
+        end
+      rescue Timeout::Error
+        abort("Socket Timeout: Server may not be responding")
+      rescue Errno::ECONNREFUSED
+        abort("Connection Refused: Server is not running")
       end
       return buffer
     end
@@ -138,13 +147,9 @@ private
       Thread.new(self) do |app|
         begin
           loop do
-            # logger.info("Server | Command loop started:")
             client = socket.accept
-            # logger.info("Server: Handling Request")
             cmd = client.readline.strip
-            # logger.info("Server: #{cmd}")
             response = app.send(*cmd.split(":"))
-            # logger.info("Server: Sending Response")
             client.write(response)
             client.close
           end
@@ -159,15 +164,12 @@ private
       Thread.new(self) do |app|
         loop do
           begin
-            # app.logger.info("Server | worker loop started:")
             job = app.work_queue.pop
             send_to_process_or_group(job[0], job[1], false)
-            
           rescue StandardError => e
             logger.err("Error while trying to execute %s from work_queue" % job.inspect)
             logger.err("%s: `%s`" % [e.class.name, e.message])
           end
-          # app.logger.info("Server | worker job processed:")  
         end
       end
     end
@@ -181,7 +183,6 @@ private
           ::Process.kill(2, previous_pid)
         rescue Exception => e
           exit unless e.is_a?(Errno::ESRCH)
-          # it was probably already dead
         else
           sleep 1 # wait for it to die
         end

@@ -3,6 +3,7 @@ require 'rubygems'
 require 'thread'
 require 'monitor'
 require 'syslog'
+require 'timeout'
 
 require 'active_support/inflector'
 require 'active_support/core_ext/hash'

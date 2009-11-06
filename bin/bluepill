@@ -62,5 +62,5 @@ when *ALLOWED_COMMANDS
   puts controller.send_cmd(options[:application], options[:command], process_or_group_name)
 
 else
-  puts "Unknown command `%s`" % options[:command]
+  puts "Unknown command `%s` (or application `%s` has not been loaded yet)" % [options[:command], options[:command]]
 end

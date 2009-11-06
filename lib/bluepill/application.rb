@@ -124,11 +124,11 @@ module Bluepill
     end
     
     def send_to_server(method)
+      buffer = ""
       begin
         status = Timeout::timeout(self.socket_timeout) do
           self.socket = Bluepill::Socket.new(name, base_dir).client # Something that should be interrupted if it takes too much time...
           socket.write(method + "\n")
-          buffer = ""
           while(line = socket.gets)
             buffer << line
           end
@@ -138,7 +138,7 @@ module Bluepill
       rescue Errno::ECONNREFUSED
         abort("Connection Refused: Server is not running")
       end
-      return buffer
+      buffer
     end
 
 private

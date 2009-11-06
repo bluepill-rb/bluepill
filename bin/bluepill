@@ -20,13 +20,13 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-ALLOWED_COMMANDS = %w(status start stop restart log unmonitor quit)
+APPLICATION_COMMANDS = %w(status start stop restart unmonitor quit)
 
 controller = Bluepill::Controller.new(options.slice(:base_dir))
 
 if controller.list.include?(ARGV.first)
   options[:application] = ARGV.shift 
-elsif ALLOWED_COMMANDS.include?(ARGV.first)
+elsif APPLICATION_COMMANDS.include?(ARGV.first)
   if controller.list.length == 1
     options[:application] = controller.list.first
   elsif controller.list.length > 1
@@ -57,7 +57,7 @@ when "log"
   cmd = "echo 'Tailing log for #{orig_pattern}...'; #{cmd}"
   Kernel.exec(cmd)
 
-when *ALLOWED_COMMANDS
+when *APPLICATION_COMMANDS
   process_or_group_name = ARGV.shift
   puts controller.send_cmd(options[:application], options[:command], process_or_group_name)
 

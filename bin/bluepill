@@ -20,7 +20,7 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-ALLOWED_COMMANDS = %w(load status start stop restart log unmonitor quit)
+ALLOWED_COMMANDS = %w(status start stop restart log unmonitor quit)
 
 controller = Bluepill::Controller.new(options.slice(:base_dir))
 

@@ -27,11 +27,12 @@ The minimum config file looks something like this:
       end
     end
     
-Note that since we specified a PID file and start command, bluepill assumes the process will daemonize itself. If we wanted bluepill to daemonize it for us, we can do:
+Note that since we specified a PID file and start command, bluepill assumes the process will daemonize itself. If we wanted bluepill to daemonize it for us, we can do (note we still need to specify a PID file):
 
     Bluepill.application("app_name") do |app|
       app.process("process_name") do |process|
         process.start_command = "/usr/bin/some_start_command"
+        process.pid_file = "/tmp/some_pid_file.pid"
         process.daemonize = true
       end
     end

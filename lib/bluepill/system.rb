@@ -14,6 +14,15 @@ module Bluepill
       :rss => 3
     }
     
+    def pid_alive?(pid)
+      begin
+        ::Process.kill(0, pid)
+        true
+      rescue Errno::ESRCH
+        false
+      end
+    end
+    
     def cpu_usage(pid)
       ps_axu[pid] && ps_axu[pid][IDX_MAP[:pcpu]].to_f
     end

@@ -184,7 +184,15 @@ private
         rescue Exception => e
           exit unless e.is_a?(Errno::ESRCH)
         else
-          sleep 1 # wait for it to die
+          5.times do |i|
+            sleep 0.5
+            break unless System.pid_alive?(previous_pid)
+          end
+          
+          if System.pid_alive?(previous_pid)
+            $stderr.puts "Previous bluepilld[#{previous_pid}] didn't die"
+            exit(4)
+          end
         end
       end
       

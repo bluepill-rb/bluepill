@@ -63,10 +63,9 @@ Bluepill.application(:sample_app) do |app|
   
   1.times do |i|
     app.process("group_process_#{i}") do |process|
-      process.start_command = "./sleeper"
+      process.start_command = "sleep 10"
       process.daemonize = true
       process.pid_file = "#{ROOT_DIR}/pids/process_#{i}.pid"
-      process.working_dir = '/tmp/somedir'
       
       process.checks :always_true, :every => 10
     end

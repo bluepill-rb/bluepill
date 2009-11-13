@@ -5,7 +5,8 @@ require 'bluepill'
 
 # defaults
 options = {
-  :log_file => "/var/log/bluepill.log"
+  :log_file => "/var/log/bluepill.log",
+  :base_dir => "/var/bluepill"
 }
 
 OptionParser.new do |opts|
@@ -22,6 +23,11 @@ end.parse!
 
 APPLICATION_COMMANDS = %w(status start stop restart unmonitor quit log)
 
+unless File.writable?(options[:base_dir])
+  $stderr.puts "Error: You don't have permissions to #{options[:base_dir]}\nYou should run bluepill as root."
+  exit(3)
+end
+
 controller = Bluepill::Controller.new(options.slice(:base_dir))
 
 if controller.running_applications.include?(ARGV.first)
@@ -36,10 +42,10 @@ elsif APPLICATION_COMMANDS.include?(ARGV.first)
       $stderr.puts "  #{index + 1}. #{app}"
     end
     $stderr.puts "Usage: bluepill [app] cmd [options]"
-    exit
+    exit(1)
   else
-    $stderr.puts "There are no running bluepill daemons.\nTo start a bluepill daemon, use: bluepill load <config file>"
-    exit
+    $stderr.puts "Error: There are no running bluepill daemons.\nTo start a bluepill daemon, use: bluepill load <config file>"
+    exit(2)
   end
 end
 

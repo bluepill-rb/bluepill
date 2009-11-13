@@ -48,7 +48,7 @@ Bluepill.application(:sample_app) do |app|
   
   0.times do |i|
     app.process("group_process_#{i}") do |process|
-      process.group = "Poopfaced"
+      process.group = "group_1"
       process.pid_file = "/Users/rohith/ffs/tmp/pids/mongrel_#{i}.pid"
       process.start_command = "cd ~/ffs && mongrel_rails start -P #{process.pid_file} -p 3000 -d"
       

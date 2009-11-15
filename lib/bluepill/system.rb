@@ -62,13 +62,28 @@ module Bluepill
         drop_privileges(options[:uid], options[:gid])
 
         to_daemonize = lambda do
+          # Setting end PWD env emulates bash behavior when dealing with symlinks
           Dir.chdir(ENV["PWD"] = options[:working_dir]) if options[:working_dir]
-          ::Kernel.exec(cmd)
+          
+          # Forcing execution through bash to make output redirection and shell exapansion in commands work and still have
+          # bluepill monitor the correct process
+          args = ["/bin/sh", "-c", "--", cmd]
+          
+          ::Kernel.exec(*args)
           exit
         end
 
         daemon_id = Daemonize.call_as_daemon(to_daemonize, nil, cmd)
-
+        
+        # Kludge. In order to make bluepill monitor the correct process while given start_commands of the form
+        # "cd /some/dir && ./some/server > /tmp/server.log 2>&1"
+        # we inspect the children of the "sh -c" process and pick it's single child. 
+        # There are many cases where this could break. If Bluepill is not monitoring the correct process, try
+        # simplyfying the start_command by moving all the bash scripting to a separate file and specifying that
+        # as the start_command.
+        spawned_children = get_children(daemon_id)
+        daemon_id = spawned_children.first if spawned_children.length == 1
+        
         wr.write daemon_id        
         wr.close
 

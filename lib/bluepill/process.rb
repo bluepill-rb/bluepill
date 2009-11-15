@@ -231,8 +231,7 @@ module Bluepill
       logger.warning "Executing start command: #{start_command}"
       
       if self.daemonize?
-        child_pid = System.daemonize(start_command, self.system_command_options)
-        File.open(pid_file, "w") {|f| f.write(child_pid)}
+        System.daemonize(start_command, self.system_command_options)
         
       else
         # This is a self-daemonizing process
@@ -374,7 +373,13 @@ module Bluepill
     end
     
     def system_command_options
-      {:uid => self.uid, :gid => self.gid, :working_dir => self.working_dir, :logger => self.logger}
+      {
+        :uid         => self.uid, 
+        :gid         => self.gid, 
+        :working_dir => self.working_dir,
+        :pid_file    => self.pid_file,
+        :logger      => self.logger
+      }
     end
   end
 end

@@ -60,7 +60,10 @@ module Bluepill
         rd.close
 
         drop_privileges(options[:uid], options[:gid])
-
+        
+        # if we cannot write the pid file as the provided user, err out
+        exit unless can_write_pid_file(options[:pid_file], options[:logger])
+        
         to_daemonize = lambda do
           # Setting end PWD env emulates bash behavior when dealing with symlinks
           Dir.chdir(ENV["PWD"] = options[:working_dir]) if options[:working_dir]
@@ -80,9 +83,11 @@ module Bluepill
         # we inspect the children of the "sh -c" process and pick it's single child. 
         # There are many cases where this could break. If Bluepill is not monitoring the correct process, try
         # simplyfying the start_command by moving all the bash scripting to a separate file and specifying that
-        # as the start_command.
+        # as the start_command. That said, this should work for 99% use cases.
         spawned_children = get_children(daemon_id)
         daemon_id = spawned_children.first if spawned_children.length == 1
+        
+        File.open(options[:pid_file], "w") {|f| f.write(daemon_id)}
         
         wr.write daemon_id        
         wr.close
@@ -201,6 +206,17 @@ module Bluepill
       ::Process.groups = [gid_num] if gid
       ::Process::Sys.setgid(gid_num) if gid
       ::Process::Sys.setuid(uid_num) if uid
+    end
+    
+    def can_write_pid_file(pid_file, logger)
+      FileUtils.touch(pid_file)
+      File.unlink(pid_file)
+      return true
+      
+    rescue Exception => e
+      logger.warning "%s - %s" % [e.class.name, e.message]
+      e.backtrace.each {|l| logger.warning l}
+      return false
     end
   end
 end

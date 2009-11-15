@@ -7,7 +7,7 @@ ROOT_DIR = "/tmp/bp"
 # Watch with 
 # watch -n0.2 'ps axu | egrep "(CPU|forking|bluepill|sleep)" | grep -v grep | sort'
 Bluepill.application(:sample_app) do |app|
-  1.times do |i|
+  0.times do |i|
     app.process("process_#{i}") do |process|
       process.pid_file = "#{ROOT_DIR}/pids/process_#{i}.pid"
       
@@ -63,10 +63,13 @@ Bluepill.application(:sample_app) do |app|
   
   1.times do |i|
     app.process("group_process_#{i}") do |process|
+      process.uid = "rohith"
+      process.gid = "wheel"
+      
       process.group = "grouped"
       process.start_command = %Q{cd /tmp && ruby -e '$stderr.puts("hello stderr");$stdout.puts("hello stdout"); sleep 10' 1>> /tmp/err.log 2>&1 }
       process.daemonize = true
-      process.pid_file = "#{ROOT_DIR}/pids/process_#{process.group}_#{i}.pid"
+      process.pid_file = "/tmp/noperm/p_#{process.group}_#{i}.pid"
       
       # process.checks :always_true, :every => 5
     end

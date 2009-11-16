@@ -23,11 +23,6 @@ end.parse!
 
 APPLICATION_COMMANDS = %w(status start stop restart unmonitor quit log)
 
-unless File.writable?(options[:base_dir])
-  $stderr.puts "Error: You don't have permissions to #{options[:base_dir]}\nYou should run bluepill as root."
-  exit(3)
-end
-
 controller = Bluepill::Controller.new(options.slice(:base_dir))
 
 if controller.running_applications.include?(ARGV.first)

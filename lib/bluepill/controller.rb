@@ -55,6 +55,10 @@ module Bluepill
       [@sockets_dir, @pids_dir].each do |dir|
         FileUtils.mkdir_p(dir) unless File.exists?(dir)
       end
+      
+    rescue Errno::EACCES
+      $stderr.puts "Error: You don't have permissions to #{base_dir}\nYou should run bluepill as root."
+      exit(3)
     end
   end
 end

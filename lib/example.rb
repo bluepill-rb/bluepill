@@ -65,10 +65,14 @@ Bluepill.application(:sample_app) do |app|
     app.process("group_process_#{i}") do |process|
       process.uid = "rohith"
       process.gid = "wheel"
+
+      process.stderr = "/tmp/err.log"      
+      process.stdout = "/tmp/err.log"
+
       
       process.group = "grouped"
-      process.start_command = %Q{cd /tmp && ruby -e '$stderr.puts("hello stderr");$stdout.puts("hello stdout"); sleep 10' 1>> /tmp/err.log 2>&1 }
-      process.daemonize = false
+      process.start_command = %Q{cd /tmp && ruby -e '$stderr.puts("hello stderr");$stdout.puts("hello stdout"); $stdout.flush; $stderr.flush; sleep 10'}
+      process.daemonize = true
       process.pid_file = "/tmp/noperm/p_#{process.group}_#{i}.pid"
       
       # process.checks :always_true, :every => 5

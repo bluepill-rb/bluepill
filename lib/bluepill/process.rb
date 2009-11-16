@@ -8,6 +8,10 @@ module Bluepill
       :stop_command, 
       :restart_command, 
       
+      :stdout,
+      :stderr,
+      :stdin,
+      
       :daemonize, 
       :pid_file, 
       :working_dir,
@@ -385,7 +389,10 @@ module Bluepill
         :gid         => self.gid, 
         :working_dir => self.working_dir,
         :pid_file    => self.pid_file,
-        :logger      => self.logger
+        :logger      => self.logger,
+        :stdin       => self.stdin,
+        :stdout      => self.stdout,
+        :stderr      => self.stderr
       }
     end
     

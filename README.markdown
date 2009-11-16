@@ -120,6 +120,31 @@ And lastly, to monitor child processes:
     
 Note {{PID}} will be substituted for the pid of process in both the stop and restart commands.
 
+### A Note About Output Redirection
+
+While you can specify shell tricks like the following in the start_command of a process:
+    
+    Bluepill.application("app_name") do |app|
+      app.process("process_name") do |process|
+        process.start_command = "cd /tmp/some_dir && SOME_VAR=1 /usr/bin/some_start_command > /tmp/server.log 2>&1"
+        process.pid_file = "/tmp/some_pid_file.pid"
+      end
+    end
+    
+We recommend that you not do that and instead use the DSL to capture output from your daemons. Like so:
+
+    Bluepill.application("app_name") do |app|
+      app.process("process_name") do |process|
+        process.start_command = "/usr/bin/env SOME_VAR=1 /usr/bin/some_start_command"
+        
+        process.working_dir = "/tmp/some_dir"
+        process.stdout = process.stderr = "/tmp/server.log"
+        
+        process.pid_file = "/tmp/some_pid_file.pid"
+      end
+    end
+    
+
 ### CLI
 To start a bluepill process and load a config:
 

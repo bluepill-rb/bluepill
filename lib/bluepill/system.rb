@@ -68,25 +68,14 @@ module Bluepill
           # Setting end PWD env emulates bash behavior when dealing with symlinks
           Dir.chdir(ENV["PWD"] = options[:working_dir]) if options[:working_dir]
           
-          # Forcing execution through bash to make output redirection and shell exapansion in commands work and still have
-          # bluepill monitor the correct process
-          args = ["/bin/sh", "-c", "--", cmd]
+          redirect_io(*options.values_at(:stdin, :stdout, :stderr))
           
-          ::Kernel.exec(*args)
+          ::Kernel.exec(cmd)
           exit
         end
 
         daemon_id = Daemonize.call_as_daemon(to_daemonize, nil, cmd)
-        
-        # Kludge. In order to make bluepill monitor the correct process while given start_commands of the form
-        # "cd /some/dir && ./some/server > /tmp/server.log 2>&1"
-        # we inspect the children of the "sh -c" process and pick it's single child. 
-        # There are many cases where this could break. If Bluepill is not monitoring the correct process, try
-        # simplyfying the start_command by moving all the bash scripting to a separate file and specifying that
-        # as the start_command. That said, this should work for 99% use cases.
-        spawned_children = get_children(daemon_id)
-        daemon_id = spawned_children.first if spawned_children.length == 1
-        
+                
         File.open(options[:pid_file], "w") {|f| f.write(daemon_id)}
         
         wr.write daemon_id        
@@ -217,6 +206,19 @@ module Bluepill
       logger.warning "%s - %s" % [e.class.name, e.message]
       e.backtrace.each {|l| logger.warning l}
       return false
+    end
+    
+    def redirect_io(io_in, io_out, io_err)
+      $stdin.reopen(streams[io_in]) if io_in
+      
+      if !io_out.nil? && !io_err.nil? && io_out == io_err
+        $stdout.reopen(io_out)
+        $stderr.reopen($stdout)
+        
+      else
+        $stdout.reopen(io_out) if io_out
+        $stderr.reopen(io_err) if io_err
+      end
     end
   end
 end

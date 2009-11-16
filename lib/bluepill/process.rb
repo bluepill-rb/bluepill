@@ -235,11 +235,13 @@ module Bluepill
         
       else
         # This is a self-daemonizing process
-        result = System.execute_blocking(start_command, self.system_command_options)
-        
-        unless result[:exit_code].zero?
-          logger.warning "Start command execution returned non-zero exit code:"
-          logger.warning result.inspect
+        with_timeout(start_grace_time) do
+          result = System.execute_blocking(start_command, self.system_command_options)
+          
+          unless result[:exit_code].zero?
+            logger.warning "Start command execution returned non-zero exit code:"
+            logger.warning result.inspect
+          end          
         end
       end
             
@@ -250,13 +252,16 @@ module Bluepill
       if stop_command
         cmd = process_command(stop_command)
         logger.warning "Executing stop command: #{cmd}"
-
-        result = System.execute_blocking(cmd, self.system_command_options)
-        unless result[:exit_code].zero?
-          logger.warning "Stop command execution returned non-zero exit code:"
-          logger.warning result.inspect
-        end
         
+        with_timeout(stop_grace_time) do
+          result = System.execute_blocking(cmd, self.system_command_options)
+          
+          unless result[:exit_code].zero?
+            logger.warning "Stop command execution returned non-zero exit code:"
+            logger.warning result.inspect
+          end
+        end
+                
       else
         logger.warning "Executing default stop command. Sending TERM signal to #{actual_pid}"
         signal_process("TERM")
@@ -272,11 +277,13 @@ module Bluepill
         
         logger.warning "Executing restart command: #{cmd}"
         
-        result = System.execute_blocking(cmd, self.system_command_options)
-        
-        unless result[:exit_code].zero?
-          logger.warning "Restart command execution returned non-zero exit code:"
-          logger.warning result.inspect
+        with_timeout(restart_grace_time) do
+          result = System.execute_blocking(cmd, self.system_command_options)
+
+          unless result[:exit_code].zero?
+            logger.warning "Restart command execution returned non-zero exit code:"
+            logger.warning result.inspect
+          end
         end
         
         self.skip_ticks_for(restart_grace_time)
@@ -380,6 +387,15 @@ module Bluepill
         :pid_file    => self.pid_file,
         :logger      => self.logger
       }
+    end
+    
+    def with_timeout(secs, &blk)
+      Timeout.timeout(secs.to_f, &blk)
+      
+    rescue Timeout::Error
+      logger.err "Execution is taking longer than expected. Unmonitoring."
+      logger.err "Did you forget to tell bluepill to daemonize this process?"
+      self.dispatch!("unmonitor")
     end
   end
 end

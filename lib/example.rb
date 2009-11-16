@@ -68,7 +68,7 @@ Bluepill.application(:sample_app) do |app|
       
       process.group = "grouped"
       process.start_command = %Q{cd /tmp && ruby -e '$stderr.puts("hello stderr");$stdout.puts("hello stdout"); sleep 10' 1>> /tmp/err.log 2>&1 }
-      process.daemonize = true
+      process.daemonize = false
       process.pid_file = "/tmp/noperm/p_#{process.group}_#{i}.pid"
       
       # process.checks :always_true, :every => 5

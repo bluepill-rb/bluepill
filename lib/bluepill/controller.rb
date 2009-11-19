@@ -11,24 +11,24 @@ module Bluepill
       self.pids_dir = File.join(base_dir, 'pids')
       self.applications = Hash.new 
       setup_dir_structure
-      cleanup
+      cleanup_bluepill_directory
     end
     
     def running_applications
       Dir[File.join(sockets_dir, "*.sock")].map{|x| File.basename(x, ".sock")}
     end
     
-    def send_cmd(application, command, *args)
+    def send_command_to_application(application, command, *args)
       applications[application] ||= Application.new(application, {:base_dir => base_dir})
       applications[application].send(command.to_sym, *args.compact)
     end
     
     private
     
-    def cleanup
+    def cleanup_bluepill_directory
       self.running_applications.each do |app|
         pid = pid_for(app)
-        if !pid || !alive?(pid)
+        if !pid || !System.pid_alive?(pid)
           pid_file = File.join(self.pids_dir, "#{app}.pid")
           sock_file = File.join(self.sockets_dir, "#{app}.sock")
           File.unlink(pid_file) if File.exists?(pid_file)
@@ -42,23 +42,10 @@ module Bluepill
       File.exists?(pid_file) && File.read(pid_file).to_i
     end
     
-    def alive?(pid)
-      begin
-        ::Process.kill(0, pid)
-        true
-      rescue Errno::ESRCH
-        false
-      end
-    end
-    
     def setup_dir_structure
       [@sockets_dir, @pids_dir].each do |dir|
         FileUtils.mkdir_p(dir) unless File.exists?(dir)
       end
-      
-    rescue Errno::EACCES
-      $stderr.puts "Error: You don't have permissions to #{base_dir}\nYou should run bluepill as root."
-      exit(3)
     end
   end
 end

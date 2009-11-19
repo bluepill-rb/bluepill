@@ -3,7 +3,14 @@ $LOAD_PATH.unshift File.join(File.dirname(__FILE__), '..', 'lib')
 require 'optparse'
 require 'bluepill'
 
-# defaults
+# Check for root
+unless ::Process.euid == 0
+  $stderr.puts "You must run bluepill as root."
+  exit(3)
+end
+
+
+# Default options
 options = {
   :log_file => "/var/log/bluepill.log",
   :base_dir => "/var/bluepill"
@@ -30,15 +37,18 @@ if controller.running_applications.include?(ARGV.first)
   options[:application] = ARGV.shift 
 elsif APPLICATION_COMMANDS.include?(ARGV.first)
   if controller.running_applications.length == 1
+    # there is only one, let's just use that
     options[:application] = controller.running_applications.first
   elsif controller.running_applications.length > 1
-    $stderr.puts "You must specify an application name. Here's the list of running applications:"
+    # There is more than one, tell them the list and exit
+    $stderr.puts "You must specify an application name to run that command. Here's the list of running applications:"
     controller.running_applications.each_with_index do |app, index|
       $stderr.puts "  #{index + 1}. #{app}"
     end
     $stderr.puts "Usage: bluepill [app] cmd [options]"
     exit(1)
   else
+    # There are none running AND they aren't trying to start one
     $stderr.puts "Error: There are no running bluepill daemons.\nTo start a bluepill daemon, use: bluepill load <config file>"
     exit(2)
   end
@@ -48,23 +58,23 @@ options[:command] = ARGV.shift
 
 case options[:command]
 when "load"
-  file = ARGV.shift
-  if File.exists?(file)
-    eval(File.read(file))
+  config_file = ARGV.shift
+  if File.exists?(config_file)
+    eval(File.read(config_file))
   else
     $stderr.puts "Can't find file: #{file}"
   end
 when "log"
-  orig_pattern = pattern = ARGV.shift
-  pattern = controller.send_cmd(options[:application], :grep_pattern, pattern)
+  requested_pattern = ARGV.shift
+  grep_pattern = controller.send_command_to_application(options[:application], :grep_pattern, requested_pattern)
   
-  cmd = "tail -n 100 -f #{options[:log_file]} | grep -E '#{pattern}'"
-  puts "Tailing log for #{orig_pattern}..."
-  Kernel.exec(cmd)
+  tail = "tail -n 100 -f #{options[:log_file]} | grep -E '#{grep_pattern}'"
+  puts "Tailing log for #{requested_pattern}..."
+  Kernel.exec(tail)
 
 when *APPLICATION_COMMANDS
-  process_or_group_name = ARGV.shift
-  puts controller.send_cmd(options[:application], options[:command], process_or_group_name)
+  target = ARGV.shift
+  puts controller.send_command_to_application(options[:application], options[:command], target)
   
 else
   puts "Unknown command `%s` (or application `%s` has not been loaded yet)" % [options[:command], options[:command]]

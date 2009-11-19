@@ -21,8 +21,10 @@ module Bluepill
       begin
         start_server
       rescue StandardError => e
-        logger.err("Got exception: %s `%s`" % [e.class.name, e.message])
-        e.backtrace.each {|l| logger.err(l)}
+        $stderr.puts "Failed to start bluepill:"
+        $stderr.puts "%s `%s`" % [e.class.name, e.message]
+        $stderr.puts e.backtrace
+        exit(5)
       end
     end
     
@@ -113,6 +115,7 @@ module Bluepill
     def quit
       if @server
         ::Process.kill("TERM", 0)
+        "Terminating bluepill[#{::Process.pid}]"
       else
         send_to_server("quit")
       end
@@ -141,13 +144,14 @@ module Bluepill
       buffer
     end
 
-private
+    private
 
-    def listener
-      Thread.new(self) do |app|
+    def start_listener
+      @listener_thread.kill if @listener_thread
+      @listener_thread = Thread.new(self) do |app|
         begin
           loop do
-            client = socket.accept
+            client = app.socket.accept
             cmd = client.readline.strip
             response = app.send(*cmd.split(":"))
             client.write(response)
@@ -160,8 +164,9 @@ private
       end
     end
     
-    def worker
-      Thread.new(self) do |app|
+    def start_worker
+      @worker_thread.kill if @worker_thread
+      @worker_thread = Thread.new(self) do |app|
         loop do
           begin
             job = app.work_queue.pop
@@ -209,8 +214,8 @@ private
       self.groups.each {|_, group| group.boot! }
       
       setup_signal_traps
-      listener
-      worker
+      start_listener
+      start_worker
       run
     end
     
@@ -228,6 +233,8 @@ private
     def setup_signal_traps
       terminator = lambda do
         puts "Terminating..."
+        File.unlink(self.socket.path) if self.socket
+        File.unlink(self.pid_file) if File.exists?(self.pid_file)
         ::Kernel.exit
       end
       

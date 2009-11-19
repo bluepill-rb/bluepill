@@ -7,7 +7,6 @@ module Bluepill
     def initialize(name, base_dir)
       self.name = name
       self.base_dir = base_dir
-      @isserver = false
     end
 
     def client
@@ -15,11 +14,10 @@ module Bluepill
     end
     
     def server
-      @isserver = true
       begin
         self.socket = UNIXServer.open(socket_name)
       rescue Errno::EADDRINUSE
-        #if sock file has been created.  test to see if there is a server
+        # if sock file has been created.  test to see if there is a server
         tmp_socket = UNIXSocket.open(socket_name) rescue nil
         if tmp_socket.nil?
           cleanup
@@ -31,7 +29,7 @@ module Bluepill
     end
     
     def cleanup
-      File.delete(socket_name) if @isserver      
+      File.delete(socket_name)
     end
     
     def socket_name

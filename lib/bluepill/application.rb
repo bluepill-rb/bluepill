@@ -8,7 +8,7 @@ module Bluepill
       self.base_dir = options[:base_dir] ||= '/var/bluepill'
       self.socket_timeout = options[:socket_timeout] ||= 10
       
-      self.logger = Bluepill::Logger.new.prefix_with(self.name)
+      self.logger = Bluepill::Logger.new(options.slice(:log_file)).prefix_with(self.name)
       
       self.groups = Hash.new 
 

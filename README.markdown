@@ -6,7 +6,7 @@ It's hosted on [gemcutter.org][gemcutter].
 
     sudo gem install bluepill
     
-In order to take advantage of logging, you also need to setup your syslog to log the local6 facility. Edit the appropriate config file for your syslogger (/etc/syslog.conf for syslog) and add a line for local6:
+In order to take advantage of logging with syslog, you also need to setup your syslog to log the local6 facility. Edit the appropriate config file for your syslogger (/etc/syslog.conf for syslog) and add a line for local6:
 
     local6.*          /var/log/bluepill.log
     
@@ -166,6 +166,15 @@ To view the log for a process or group:
 To quit bluepill:
 
     sudo bluepill quit
+
+### Logging  
+By default, bluepill uses syslog local6 facility as described in the installation section. But if for any reason you don't want to use syslog, you can use a log file. You can do this by setting the :log\_file option in the config:
+
+    Bluepill.application("app_name", :log_file => "/path/to/bluepill.log") do |app|
+      # ...
+    end
+
+Keep in mind that you still need to set up log rotation (described in the installation section) to keep the log file from growing huge.
     
 ## Contribute
 Code: [http://github.com/arya/bluepill](http://github.com/arya/bluepill)  

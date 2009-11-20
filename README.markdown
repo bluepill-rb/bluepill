@@ -131,7 +131,7 @@ While you can specify shell tricks like the following in the start_command of a 
       end
     end
     
-We recommend that you not do that and instead use the DSL to capture output from your daemons. Like so:
+We recommend that you _not_ do that and instead use the DSL to capture output from your daemons. Like so:
 
     Bluepill.application("app_name") do |app|
       app.process("process_name") do |process|
@@ -144,6 +144,7 @@ We recommend that you not do that and instead use the DSL to capture output from
       end
     end
     
+The main benefit of using the DSL is that Bluepill will be able to monitor the correct process instead of just watching the shell that spawned your actual server.
 
 ### CLI
 To start a bluepill process and load a config:

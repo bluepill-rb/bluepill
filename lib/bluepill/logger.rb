@@ -3,7 +3,8 @@ module Bluepill
     LOG_METHODS = [:emerg, :alert, :crit, :err, :warning, :notice, :info, :debug]
     
     def initialize(options = {})
-      @logger = options[:logger] || self.create_logger(options)
+      @options = options
+      @logger = options[:logger] || self.create_logger
       @prefix = options[:prefix]
       @prefixes = {}
     end
@@ -25,45 +26,32 @@ module Bluepill
       @prefixes[prefix] ||= self.class.new(:logger => self, :prefix => prefix)
     end
     
-    protected
-    def create_logger(options)
-      if options[:log_file]
-        LoggerAdapter.new(options)
+    def reopen
+      if @logger.is_a?(self.class)
+        @logger.reopen
       else
-        SyslogAdapter.new(options)
+        @logger = create_logger
       end
     end
     
-    class SyslogAdapter
-      def initialize(options)
-        @logger = Syslog.open(options[:identity] || 'bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6)
-      end
-      
-      LOG_METHODS.each do |method|
-        class_eval <<-END
-          def #{method}(msg)
-            @logger.#{method}(msg)
-          end
-        END
+    protected
+    def create_logger
+      if @options[:log_file]
+        LoggerAdapter.new(@options[:log_file])
+      else
+        Syslog.close if Syslog.opened? # need to explictly close it before reopening it
+        Syslog.open(@options[:identity] || 'bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6)
       end
     end
 
-    class LoggerAdapter
+    class LoggerAdapter < ::Logger
       LOGGER_EQUIVALENTS = 
         {:debug => :debug, :err => :error, :warning => :warn, :info => :info, :emerg => :fatal, :alert => :warn, :crit => :fatal, :notice => :info}
-
-      def initialize(options)
-        @logger = ::Logger.new(options[:log_file])
-      end
       
       LOG_METHODS.each do |method|
-        class_eval <<-END
-          def #{method}(msg)
-            @logger.#{LOGGER_EQUIVALENTS[method]}(msg)
-          end
-        END
+        next if method == LOGGER_EQUIVALENTS[method]
+        alias_method method, LOGGER_EQUIVALENTS[method]
       end
-      
     end 
   end
 end

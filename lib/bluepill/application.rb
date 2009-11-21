@@ -202,6 +202,7 @@ module Bluepill
       end
       
       Daemonize.daemonize
+      self.logger.reopen
       
       @server = true
       $0 = "bluepilld: #{self.name}"
@@ -240,6 +241,10 @@ module Bluepill
       
       Signal.trap("TERM", &terminator) 
       Signal.trap("INT", &terminator) 
+      
+      Signal.trap("HUP") do
+        self.logger.reopen
+      end
     end
    
     def grep_pattern(query = nil)

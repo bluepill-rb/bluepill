@@ -4,6 +4,7 @@ require 'thread'
 require 'monitor'
 require 'syslog'
 require 'timeout'
+require 'logger'
 
 require 'active_support/inflector'
 require 'active_support/core_ext/hash'

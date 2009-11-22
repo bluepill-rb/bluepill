@@ -18,13 +18,29 @@ options = {
 
 OptionParser.new do |opts|
   opts.banner = "Usage: bluepill [app] cmd [options]"
-  
-  opts.on("--logfile LOGFILE") do |file|
+  opts.on('-l', "--logfile LOGFILE", "Path to logfile, defaults to #{options[:log_file]}") do |file|
     options[:log_file] = file
   end
   
-  opts.on("--base-dir DIR") do |base_dir|
+  opts.on('-c', "--base-dir DIR", "Directory to store bluepill socket and pid files, defaults to #{options[:base_dir]}") do |base_dir|
     options[:base_dir] = base_dir
+  end
+    
+  opts.on_tail('-h','--help', 'Show this message') do
+    puts opts
+    puts
+    puts "Commands:"
+    puts "    load CONFIG_FILE\t\tLoads new instance of bluepill using the specified config file"
+    puts "    status\t\t\tLists the status of the proceses for the specified app"
+    puts "    start TARGET\t\tIssues the start command for the target process or group"
+    puts "    stop TARGET\t\t\tIssues the stop command for the target process or group"
+    puts "    restart TARGET\t\tIssues the restart command for the target process or group"
+    puts "    unmonitor TARGET\t\tStop monitoring target process or group"
+    puts "    log [TARGET]\t\tShow the log for the specified process or group, defaults to all for app"
+    puts "    quit\t\t\tStop bluepill"
+    puts
+    puts "See http://github.com/arya/bluepill for README"
+    exit
   end
 end.parse!
 

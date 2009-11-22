@@ -66,6 +66,8 @@ module Bluepill
       @@app = app
       @@process_proxy = process_proxy
       @@process_names = Hash.new # becuase I don't want to require Set just for validations
+      attr_accessor :working_dir, :uid, :gid
+      
       def validate_process(process, process_name)
         if @@process_names.key?(process_name)
           $stderr.puts "Config Error: You have two entries for the process name '#{process_name}'"
@@ -85,12 +87,22 @@ module Bluepill
       def process(process_name, &process_block)
         process_proxy = @@process_proxy.new(process_name)
         process_block.call(process_proxy)
+        set_app_wide_attributes(process_proxy)
+        
         validate_process(process_proxy, process_name)
         
         group = process_proxy.attributes.delete(:group)        
         process = process_proxy.to_process(process_name)
         
         @@app.add_process(process, group)
+      end
+      
+      def set_app_wide_attributes(process_proxy)
+        [:working_dir, :uid, :gid].each do |attribute|
+          unless process_proxy.attributes.key?(attribute)
+            process_proxy.attributes[attribute] = self.send(attribute)
+          end
+        end
       end
     end
     

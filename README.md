@@ -105,9 +105,44 @@ If you want to run the process as someone other than root:
       end
     end
     
+You can also set an app-wide uid/gid:
+
+    Bluepill.application("app_name") do |app|
+      app.uid = "deploy"
+      app.gid = "deploy"
+      app.process("process_name") do |process|
+        process.start_command = "/usr/bin/some_start_command"
+        process.pid_file = "/tmp/some_pid_file.pid"
+      end
+    end
+    
 To check for flapping:
 
     process.checks :flapping, :times => 2, :within => 30.seconds, :retry_in => 7.seconds
+    
+To set the working directory to _cd_ into when starting the command:
+
+    Bluepill.application("app_name") do |app|
+      app.process("process_name") do |process|
+        process.start_command = "/usr/bin/some_start_command"
+        process.pid_file = "/tmp/some_pid_file.pid"
+        process.working_dir = "/path/to/some_directory"
+      end
+    end
+    
+You can also have an app-wide working directory:
+
+
+    Bluepill.application("app_name") do |app|
+      app.working_dir = "/path/to/some_directory"
+      app.process("process_name") do |process|
+        process.start_command = "/usr/bin/some_start_command"
+        process.pid_file = "/tmp/some_pid_file.pid"
+      end
+    end
+    
+Note: We also set the PWD in the environment to the working dir you specify. This is useful for when the working dir is a symlink. Unicorn in particular will cd into the environment variable in PWD when it re-execs to deal with a change in the symlink.
+
 
 And lastly, to monitor child processes:
 

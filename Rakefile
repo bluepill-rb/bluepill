@@ -10,7 +10,6 @@ begin
     gem.email = "entombedvirus@gmail.com"
     gem.homepage = "http://github.com/arya/bluepill"
     gem.authors = ["Arya Asemanfar", "Gary Tsang", "Rohith Ravi"]
-    gem.add_development_dependency "rspec"
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
     gem.add_dependency("daemons", ">= 1.0.9")
     gem.add_dependency("blankslate", ">= 2.1.2.2")
@@ -37,4 +36,18 @@ Rake::RDocTask.new do |rdoc|
   rdoc.title = "blue-pill #{version}"
   rdoc.rdoc_files.include('README*')
   rdoc.rdoc_files.include('lib/**/*.rb')
+end
+
+
+namespace :version do
+  task :update_file do
+    version = File.read("VERSION").strip
+    File.open("lib/bluepill/version.rb", "w") do |file|
+      file.write <<-END
+module Bluepill
+  VERSION = "#{version}"
+end
+      END
+    end
+  end
 end

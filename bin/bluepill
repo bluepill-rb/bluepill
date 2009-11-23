@@ -1,5 +1,4 @@
 #!/usr/bin/env ruby
-$LOAD_PATH.unshift File.join(File.dirname(__FILE__), '..', 'lib')
 require 'optparse'
 require 'bluepill'
 
@@ -24,6 +23,11 @@ OptionParser.new do |opts|
   
   opts.on('-c', "--base-dir DIR", "Directory to store bluepill socket and pid files, defaults to #{options[:base_dir]}") do |base_dir|
     options[:base_dir] = base_dir
+  end
+  
+  opts.on("-v", "--version") do
+    puts "bluepill, version #{Bluepill::VERSION}"
+    exit
   end
     
   opts.on_tail('-h','--help', 'Show this message') do

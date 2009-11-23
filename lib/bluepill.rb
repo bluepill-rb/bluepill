@@ -27,3 +27,5 @@ require "bluepill/system"
 require "bluepill/process_conditions"
 
 require "bluepill/util/rotational_array"
+
+require "bluepill/version"

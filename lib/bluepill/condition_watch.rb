@@ -48,7 +48,7 @@ module Bluepill
       # use (@history[(@history_index - 1)..1] + @history[0..(@history_index - 1)]).
       #       collect {|v| "#{v[0]}#{v[1] ? '' : '*'}"}.join(", ")
       # but that's gross so... it's gonna be out of order till we figure out a better way to get it in order
-      data = @history.collect {|v| "#{v[0]}#{v[1] ? '' : '*'}" if v}.compact.join(", ")
+      data = @history.collect {|v| "#{@process_condition.format_value(v[0])}#{v[1] ? '' : '*'}" if v}.compact.join(", ")
       "#{@name}: [#{data}]"
     end
   end

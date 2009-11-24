@@ -29,8 +29,8 @@ OptionParser.new do |opts|
     puts "bluepill, version #{Bluepill::VERSION}"
     exit
   end
-    
-  opts.on_tail('-h','--help', 'Show this message') do
+  
+  help = lambda do
     puts opts
     puts
     puts "Commands:"
@@ -46,6 +46,9 @@ OptionParser.new do |opts|
     puts "See http://github.com/arya/bluepill for README"
     exit
   end
+    
+  opts.on_tail('-h','--help', 'Show this message', &help)
+  help.call if ARGV.empty?
 end.parse!
 
 APPLICATION_COMMANDS = %w(status start stop restart unmonitor quit log)

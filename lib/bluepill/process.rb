@@ -317,7 +317,8 @@ module Bluepill
       @actual_pid ||= begin
         if pid_file
           if File.exists?(pid_file)
-            File.read(pid_file).to_i 
+            str = File.read(pid_file)
+            str.to_i if str.size > 0
           else
             logger.warning("pid_file #{pid_file} does not exist or cannot be read")
             nil

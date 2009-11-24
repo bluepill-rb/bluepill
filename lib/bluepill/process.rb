@@ -135,7 +135,7 @@ module Bluepill
     # State machine methods
     def dispatch!(event)
       @event_mutex.synchronize do
-        self.send("#{event}!")
+        self.send("#{event}")
       end
     end
     

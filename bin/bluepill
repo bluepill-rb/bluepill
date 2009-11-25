@@ -20,16 +20,16 @@ OptionParser.new do |opts|
   opts.on('-l', "--logfile LOGFILE", "Path to logfile, defaults to #{options[:log_file]}") do |file|
     options[:log_file] = file
   end
-  
+
   opts.on('-c', "--base-dir DIR", "Directory to store bluepill socket and pid files, defaults to #{options[:base_dir]}") do |base_dir|
     options[:base_dir] = base_dir
   end
-  
+
   opts.on("-v", "--version") do
     puts "bluepill, version #{Bluepill::VERSION}"
     exit
   end
-  
+
   help = lambda do
     puts opts
     puts
@@ -46,7 +46,7 @@ OptionParser.new do |opts|
     puts "See http://github.com/arya/bluepill for README"
     exit
   end
-    
+
   opts.on_tail('-h','--help', 'Show this message', &help)
   help.call if ARGV.empty?
 end.parse!
@@ -57,7 +57,7 @@ controller = Bluepill::Controller.new(options.slice(:base_dir))
 
 if controller.running_applications.include?(ARGV.first)
   # the first arg is the application name
-  options[:application] = ARGV.shift 
+  options[:application] = ARGV.shift
 elsif APPLICATION_COMMANDS.include?(ARGV.first)
   if controller.running_applications.length == 1
     # there is only one, let's just use that
@@ -85,12 +85,12 @@ when "load"
   if File.exists?(config_file)
     eval(File.read(config_file))
   else
-    $stderr.puts "Can't find file: #{file}"
+    $stderr.puts "Can't find file: #{config_file}"
   end
 when "log"
   requested_pattern = ARGV.shift
   grep_pattern = controller.send_command_to_application(options[:application], :grep_pattern, requested_pattern)
-  
+
   tail = "tail -n 100 -f #{options[:log_file]} | grep -E '#{grep_pattern}'"
   puts "Tailing log for #{requested_pattern}..."
   Kernel.exec(tail)
@@ -98,7 +98,7 @@ when "log"
 when *APPLICATION_COMMANDS
   target = ARGV.shift
   puts controller.send_command_to_application(options[:application], options[:command], target)
-  
+
 else
   puts "Unknown command `%s` (or application `%s` has not been loaded yet)" % [options[:command], options[:command]]
 end

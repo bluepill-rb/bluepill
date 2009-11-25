@@ -90,6 +90,9 @@ when "load"
 when "log"
   requested_pattern = ARGV.shift
   grep_pattern = controller.send_command_to_application(options[:application], :grep_pattern, requested_pattern)
+  
+  log_file_location = controller.send_command_to_application(options[:application], :log_file)
+  options[:log_file] = log_file_location unless log_file_location.strip.empty?
 
   tail = "tail -n 100 -f #{options[:log_file]} | grep -E '#{grep_pattern}'"
   puts "Tailing log for #{requested_pattern}..."

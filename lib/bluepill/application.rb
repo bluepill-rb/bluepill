@@ -8,8 +8,9 @@ module Bluepill
       self.base_dir = options[:base_dir] ||= '/var/bluepill'
       self.socket_timeout = options[:socket_timeout] ||= 10
       
+      @log_file = options[:log_file]
       self.logger = Bluepill::Logger.new(options.slice(:log_file)).prefix_with(self.name)
-      
+
       self.groups = Hash.new 
 
       self.pid_file = File.join(self.base_dir, 'pids', self.name + ".pid")
@@ -25,6 +26,14 @@ module Bluepill
         $stderr.puts "%s `%s`" % [e.class.name, e.message]
         $stderr.puts e.backtrace
         exit(5)
+      end
+    end
+    
+    def log_file
+      if @server
+        @log_file.to_s
+      else
+        send_to_server('log_file')
       end
     end
     
@@ -248,9 +257,8 @@ module Bluepill
     end
    
     def grep_pattern(query = nil)
-      bluepilld = 'bluepilld\[[[:digit:]]+\]:[[:space:]]+'
       pattern = [self.name, query].compact.join(':')
-      [bluepilld, '\[.*', Regexp.escape(pattern), '.*'].join
+      ['\[.*', Regexp.escape(pattern), '.*'].compact.join
     end
   end
 end

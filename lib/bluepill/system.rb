@@ -4,6 +4,7 @@ module Bluepill
   # This class represents the system that bluepill is running on.. It's mainly used to memoize
   # results of running ps auxx etc so that every watch in the every process will not result in a fork
   module System
+    APPEND_MODE = "a"
     extend self
     
     # The position of each field in ps output
@@ -209,15 +210,15 @@ module Bluepill
     end
     
     def redirect_io(io_in, io_out, io_err)
-      $stdin.reopen(streams[io_in]) if io_in
+      $stdin.reopen(io_in) if io_in
       
       if !io_out.nil? && !io_err.nil? && io_out == io_err
-        $stdout.reopen(io_out)
+        $stdout.reopen(io_out, APPEND_MODE)
         $stderr.reopen($stdout)
         
       else
-        $stdout.reopen(io_out) if io_out
-        $stderr.reopen(io_err) if io_err
+        $stdout.reopen(io_out, APPEND_MODE) if io_out
+        $stderr.reopen(io_err, APPEND_MODE) if io_err
       end
     end
   end

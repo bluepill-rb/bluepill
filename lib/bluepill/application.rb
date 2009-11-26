@@ -2,6 +2,7 @@ module Bluepill
   class Application
     attr_accessor :name, :logger, :base_dir, :socket, :pid_file
     attr_accessor :groups, :work_queue, :socket_timeout
+    attr_accessor :pids_subdir
 
     def initialize(name, options = {})
       self.name = name
@@ -14,6 +15,7 @@ module Bluepill
       self.groups = Hash.new 
 
       self.pid_file = File.join(self.base_dir, 'pids', self.name + ".pid")
+      self.pids_subdir = File.join(self.base_dir, 'pids', self.name)
       
       @server = false
     end
@@ -224,6 +226,7 @@ module Bluepill
       self.groups.each {|_, group| group.boot! }
       
       setup_signal_traps
+      setup_pids_subdir
       start_listener
       start_worker
       run
@@ -254,6 +257,13 @@ module Bluepill
       Signal.trap("HUP") do
         self.logger.reopen
       end
+    end
+    
+    def setup_pids_subdir
+      FileUtils.mkdir_p(self.pids_subdir) unless File.exists?(self.pids_subdir)
+      # we need everybody to be able to write to the pids_dir as processes managed by
+      # bluepill will be writing to this dir.
+      FileUtils.chmod(0777, self.pids_subdir)
     end
    
     def grep_pattern(query = nil)

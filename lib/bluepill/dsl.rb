@@ -129,8 +129,7 @@ module Bluepill
         unless process_proxy.attributes.key?(:pid_file)
           group_name = process_proxy.attributes["group"]
           default_pid_name = [group_name, process_name].compact.join('_').gsub(/[^A-Za-z0-9_\-]/, "_")
-          pid_dir = File.dirname(@@app.pid_file)
-          process_proxy.pid_file = File.join(pid_dir, default_pid_name + ".pid")
+          process_proxy.pid_file = File.join(@@app.pids_subdir, default_pid_name + ".pid")
         end
       end
     end

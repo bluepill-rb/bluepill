@@ -81,11 +81,19 @@ options[:command] = ARGV.shift
 
 case options[:command]
 when "load"
-  config_file = ARGV.shift
-  if File.exists?(config_file)
-    eval(File.read(config_file))
+  file = ARGV.shift
+  if File.exists?(file)
+    # Restart the ruby interpreter for the config file so that anything loaded here
+    # does not stay in memory for the daemon
+    require 'rbconfig'
+    ruby = File.join(Config::CONFIG['bindir'], Config::CONFIG['ruby_install_name'])
+    load_path = File.expand_path("#{File.dirname(__FILE__)}/../lib")
+    file_path = File.expand_path(file)
+
+    exec(ruby, "-I#{load_path}", '-rbluepill', file_path)
+    
   else
-    $stderr.puts "Can't find file: #{config_file}"
+    $stderr.puts "Can't find file: #{file}"
   end
 when "log"
   requested_pattern = ARGV.shift

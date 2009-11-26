@@ -65,22 +65,37 @@ module Bluepill
     app_proxy = Class.new do
       @@app = app
       @@process_proxy = process_proxy
-      @@process_names = Hash.new # becuase I don't want to require Set just for validations
+      @@process_keys = Hash.new # because I don't want to require Set just for validations
+      @@pid_files = Hash.new
       attr_accessor :working_dir, :uid, :gid
       
       def validate_process(process, process_name)
-        if @@process_names.key?(process_name)
-          $stderr.puts "Config Error: You have two entries for the process name '#{process_name}'"
+        # validate uniqueness of group:process
+        process_key = [process.attributes[:group], process_name].join(":")
+        if @@process_keys.key?(process_key)
+          $stderr.print "Config Error: You have two entries for the process name '#{process_name}'"
+          $stderr.print " in the group '#{process.attributes[:group]}'" if process.attributes.key?(:group)
+          $stderr.puts
           exit(6)
         else
-          @@process_names[process_name] = 0
+          @@process_keys[process_key] = 0
         end
         
+        # validate required attributes
         [:start_command, :pid_file].each do |required_attr|
           if !process.attributes.key?(required_attr)
             $stderr.puts "Config Error: You must specify a #{required_attr} for '#{process_name}'"
             exit(6)
           end
+        end
+        
+        # validate uniqueness of pid files
+        pid_key = process.pid_file.strip
+        if @@pid_files.key?(pid_key)
+          $stderr.puts "Config Error: You have two entries with the pid file: #{process.pid_file}"
+          exit(6)
+        else
+          @@pid_files[pid_key] = 0
         end
       end
       

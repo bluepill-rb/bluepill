@@ -105,7 +105,7 @@ module Bluepill
         process_block.call(process_proxy)
         set_app_wide_attributes(process_proxy)
         
-        assign_default_pid_file(process_proxy, process_name) if process_proxy.attributes["pid_file"].to_s.strip.empty?
+        assign_default_pid_file(process_proxy, process_name)
         
         validate_process(process_proxy, process_name)
         
@@ -126,10 +126,12 @@ module Bluepill
       end
       
       def assign_default_pid_file(process_proxy, process_name)
-        group_name = process_proxy.attributes["group"]
-        default_pid_name = [group_name, process_name].compact.join('_').gsub(/[^A-Za-z0-9_\-]/, "_")
-        pid_dir = File.dirname(@@app.pid_file)
-        process_proxy.pid_file = File.join(pid_dir, default_pid_name + ".pid")
+        unless process_proxy.attributes.key?(:pid_file)
+          group_name = process_proxy.attributes["group"]
+          default_pid_name = [group_name, process_name].compact.join('_').gsub(/[^A-Za-z0-9_\-]/, "_")
+          pid_dir = File.dirname(@@app.pid_file)
+          process_proxy.pid_file = File.join(pid_dir, default_pid_name + ".pid")
+        end
       end
     end
     

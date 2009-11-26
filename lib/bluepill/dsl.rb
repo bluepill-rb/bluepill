@@ -58,6 +58,7 @@ module Bluepill
             process.add_watch(name, opts)
           end
         end
+
         process
       end
     end
@@ -82,7 +83,7 @@ module Bluepill
         end
         
         # validate required attributes
-        [:start_command, :pid_file].each do |required_attr|
+        [:start_command].each do |required_attr|
           if !process.attributes.key?(required_attr)
             $stderr.puts "Config Error: You must specify a #{required_attr} for '#{process_name}'"
             exit(6)
@@ -104,10 +105,14 @@ module Bluepill
         process_block.call(process_proxy)
         set_app_wide_attributes(process_proxy)
         
+        assign_default_pid_file(process_proxy, process_name) if process_proxy.attributes["pid_file"].to_s.strip.empty?
+        
         validate_process(process_proxy, process_name)
         
         group = process_proxy.attributes.delete(:group)        
         process = process_proxy.to_process(process_name)
+        
+        
         
         @@app.add_process(process, group)
       end
@@ -118,6 +123,13 @@ module Bluepill
             process_proxy.attributes[attribute] = self.send(attribute)
           end
         end
+      end
+      
+      def assign_default_pid_file(process_proxy, process_name)
+        group_name = process_proxy.attributes["group"]
+        default_pid_name = [group_name, process_name].compact.join('_').gsub(/[^A-Za-z0-9_\-]/, "_")
+        pid_dir = File.dirname(@@app.pid_file)
+        process_proxy.pid_file = File.join(pid_dir, default_pid_name + ".pid")
       end
     end
     

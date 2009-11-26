@@ -46,6 +46,14 @@ module Bluepill
       [@sockets_dir, @pids_dir].each do |dir|
         FileUtils.mkdir_p(dir) unless File.exists?(dir)
       end
+
+      # we need everybody to be able to write to the pids_dir as processes managed by
+      # bluepill will be writing to this dir.
+      FileUtils.chmod(0777, @pids_dir)
+      
+    rescue Errno::EACCES
+      $stderr.puts "Error: You don't have permissions to #{base_dir}\nYou should run bluepill as root."
+      exit(3)
     end
   end
 end

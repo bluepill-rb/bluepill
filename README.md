@@ -211,9 +211,10 @@ By default, bluepill uses syslog local6 facility as described in the installatio
 
 Keep in mind that you still need to set up log rotation (described in the installation section) to keep the log file from growing huge.
     
-## Contribute
+## Links
 Code: [http://github.com/arya/bluepill](http://github.com/arya/bluepill)  
 Bugs/Features: [http://github.com/arya/bluepill/issues](http://github.com/arya/bluepill/issues)  
+Mailing List: [http://groups.google.com/group/bluepill-rb](http://groups.google.com/group/bluepill-rb)
 
 
 [gemcutter]: http://gemcutter.org

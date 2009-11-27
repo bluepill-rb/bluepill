@@ -86,6 +86,8 @@ module Bluepill
     end
     
     def add_process(process, group_name = nil)
+      group_name = group_name.to_s if group_name
+      
       self.groups[group_name] ||= Group.new(group_name, :logger => self.logger.prefix_with(group_name))
       self.groups[group_name].add_process(process)
     end

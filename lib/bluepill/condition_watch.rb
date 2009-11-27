@@ -9,7 +9,7 @@ module Bluepill
       @logger = options.delete(:logger)      
       @fires = options.has_key?(:fires) ? Array(options.delete(:fires)) : [:restart]
       @every = options.delete(:every)
-      @times = options[:times] || [1,1]
+      @times = options.delete(:times) || [1,1]
       @times = [@times, @times] unless @times.is_a?(Array) # handles :times => 5
 
       self.clear_history!

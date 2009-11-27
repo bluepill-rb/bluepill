@@ -192,7 +192,7 @@ module Bluepill
     
     def handle_user_command(cmd)
       case cmd
-      when "boot!"
+      when "boot"
         # This is only called when bluepill is initially starting up
         if process_running?(true)
           # process was running even before bluepill was

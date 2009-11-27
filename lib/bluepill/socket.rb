@@ -1,41 +1,35 @@
 require 'socket'
 
 module Bluepill
-  class Socket
-    attr_accessor :name, :base_dir, :socket
-    
-    def initialize(name, base_dir)
-      self.name = name
-      self.base_dir = base_dir
-    end
+  module Socket
+    TIMEOUT = 10
+    extend self
 
-    def client
-      self.socket = UNIXSocket.open(socket_name)
+    def client(base_dir, name)
+      UNIXSocket.open(socket_path(base_dir, name))
     end
     
-    def server
+    def server(base_dir, name)
+      socket_path = self.socket_path(base_dir, name)
       begin
-        self.socket = UNIXServer.open(socket_name)
+        UNIXServer.open(socket_path)
       rescue Errno::EADDRINUSE
         # if sock file has been created.  test to see if there is a server
-        tmp_socket = UNIXSocket.open(socket_name) rescue nil
-        if tmp_socket.nil?
-          cleanup
-          retry
+        begin
+          return UNIXSocket.open(socket_path)
+        rescue Errno::ECONNREFUSED
+          File.delete(socket_path)
+          return UNIXServer.open(socket_path)
         else
-          raise Exception.new("Server is already running")
+          logger.err("Server is already running!")
+          exit(7)
         end
       end
     end
     
-    def cleanup
-      File.delete(socket_name)
+    def socket_path(base_dir, name)
+      File.join(base_dir, 'socks', name + ".sock") 
     end
-    
-    def socket_name
-      @socket_name ||= File.join(base_dir, 'socks', name + ".sock") 
-    end
-    
   end
 end
  

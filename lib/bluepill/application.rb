@@ -79,7 +79,6 @@ module Bluepill
     PROCESS_COMMANDS.each do |command|
       class_eval <<-END
         def #{command}(group_name, process_name = nil)
-          puts "got #{command}"
           self.send_to_process_or_group(:#{command}, group_name, process_name)
         end
       END

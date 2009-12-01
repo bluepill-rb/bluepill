@@ -21,6 +21,10 @@ module Bluepill
     def handle_command(application, command, *args)
       case command.to_sym
       when *Application::PROCESS_COMMANDS
+        if args.compact.empty?
+          $stderr.puts "You must specify a target process or group for the #{command} command."
+          exit(8)
+        end
         # these need to be sent to the daemon and the results printed out
         affected = self.send_to_daemon(application, command, *args)
         if affected.empty?

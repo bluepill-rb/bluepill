@@ -78,7 +78,7 @@ module Bluepill
     
     PROCESS_COMMANDS.each do |command|
       class_eval <<-END
-        def #{command}(group_name, process_name = nil)
+        def #{command}(group_name = nil, process_name = nil)
           self.send_to_process_or_group(:#{command}, group_name, process_name)
         end
       END
@@ -90,10 +90,18 @@ module Bluepill
       self.groups[group_name] ||= Group.new(group_name, :logger => self.logger.prefix_with(group_name))
       self.groups[group_name].add_process(process)
     end
+    
+    def version
+      Bluepill::VERSION
+    end
 
     protected
     def send_to_process_or_group(method, group_name, process_name)
-      if self.groups.key?(group_name)
+      if group_name.nil? && process_name.nil?
+        self.groups.values.collect do |group|
+          group.send(method)
+        end.flatten
+      elsif self.groups.key?(group_name)
         self.groups[group_name].send(method, process_name)
       elsif process_name.nil?
         # they must be targeting just by process name
@@ -109,17 +117,18 @@ module Bluepill
     def start_listener
       @listener_thread.kill if @listener_thread
       @listener_thread = Thread.new do
-        begin
-          loop do
+        loop do
+          begin
             client = self.socket.accept
             command, *args = client.readline.strip.split(":")
             response = self.send(command, *args)
             client.write(Marshal.dump(response))
+          rescue StandardError => e
+            logger.err("Got exception in cmd listener: %s `%s`" % [e.class.name, e.message])
+            e.backtrace.each {|l| logger.err(l)}
+          ensure
             client.close
           end
-        rescue StandardError => e
-          logger.err("Got exception in cmd listener: %s `%s`" % [e.class.name, e.message])
-          e.backtrace.each {|l| logger.err(l)}
         end
       end
     end

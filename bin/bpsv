@@ -1,0 +1,3 @@
+#!/bin/bash
+target=`basename $0`
+exec bluepill $1 $target 

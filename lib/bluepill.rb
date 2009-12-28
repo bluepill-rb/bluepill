@@ -16,6 +16,7 @@ require 'bluepill/application'
 require 'bluepill/controller'
 require 'bluepill/socket'
 require "bluepill/process"
+require "bluepill/process_statistics"
 require "bluepill/group"
 require "bluepill/logger"
 require "bluepill/condition_watch"

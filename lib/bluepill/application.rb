@@ -1,6 +1,6 @@
 module Bluepill
   class Application
-    PROCESS_COMMANDS = [:start, :stop, :restart, :unmonitor]
+    PROCESS_COMMANDS = [:start, :stop, :restart, :unmonitor, :status]
     
     attr_accessor :name, :logger, :base_dir, :socket, :pid_file
     attr_accessor :groups, :work_queue
@@ -31,49 +31,6 @@ module Bluepill
         $stderr.puts e.backtrace
         exit(5)
       end
-    end
-    
-    def status
-      buffer = []
-      depth = 0
-      
-      if self.groups.has_key?(nil)
-        self.groups[nil].processes.each do |p|
-          buffer << "%s%s(pid:%s): %s" % [" " * depth, p.name, p.actual_pid.inspect, p.state]
-
-          if p.monitor_children?
-            depth += 2
-            p.children.each do |c|
-              buffer << "%s%s: %s" % [" " * depth, c.name, c.state]
-            end
-            depth -= 2
-          end
-        end
-      end
-
-      self.groups.each do |group_name, group|
-        next if group_name.nil?
-
-        buffer << "\n#{group_name}"
-
-        group.processes.each do |p|
-          depth += 2
-
-          buffer << "%s%s(pid:%s): %s" % [" " * depth, p.name, p.actual_pid.inspect, p.state]
-
-          if p.monitor_children?
-            depth += 2
-            p.children.each do |c|
-              buffer << "%s%s: %s" % [" " * depth, c.name, c.state]
-            end
-            depth -= 2
-          end
-
-          depth -= 2
-        end
-      end
-
-      buffer.join("\n")
     end
     
     PROCESS_COMMANDS.each do |command|

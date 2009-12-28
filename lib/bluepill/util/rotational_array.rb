@@ -48,6 +48,14 @@ module Bluepill
       super
      end
      
+     def each(&block)
+       times = @counter >= @capacity ? @capacity : @counter
+       start = @counter >= @capacity ? rotational_idx(@counter) : 0
+       times.times do |i|
+         block.call(self[rotational_idx(start + i)])
+       end
+     end
+     
      private
      
      def rotational_idx(idx)

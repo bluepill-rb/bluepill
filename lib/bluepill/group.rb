@@ -36,5 +36,30 @@ module Bluepill
         end      
       END
     end
+    
+    def status(process_name = nil)
+      lines = []
+      if process_name.nil?
+        prefix = self.name ? "  " : ""
+        lines << "#{self.name}:" if self.name
+      
+        self.processes.each do |process|
+          lines << "%s%s(pid:%s): %s" % [prefix, process.name, process.actual_pid, process.state]
+          if process.monitor_children?
+            process.children.each do |child|
+              lines << "  %s%s: %s" % [prefix, child.name, child.state]
+            end
+          end
+        end
+      else
+        self.processes.each do |process|
+          next if process_name != process.name
+          lines << "%s%s(pid:%s): %s" % [prefix, process.name, process.actual_pid, process.state]
+          lines << process.statistics.to_s
+        end
+      end
+      lines << ""
+    end
+    
   end
 end

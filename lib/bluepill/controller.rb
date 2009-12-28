@@ -20,6 +20,8 @@ module Bluepill
     
     def handle_command(application, command, *args)
       case command.to_sym
+      when :status
+        puts self.send_to_daemon(application, :status, *args)
       when *Application::PROCESS_COMMANDS
         # these need to be sent to the daemon and the results printed out
         affected = self.send_to_daemon(application, command, *args)
@@ -31,8 +33,6 @@ module Bluepill
             puts "  #{process}"
           end
         end
-      when :status
-        puts self.send_to_daemon(application, :status, *args)
       when :quit
         pid = pid_for(application)
         if System.pid_alive?(pid)

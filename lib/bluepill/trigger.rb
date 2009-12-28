@@ -27,7 +27,7 @@ module Bluepill
     end
     
     def dispatch!(event)
-      self.process.dispatch!(event)
+      self.process.dispatch!(event, self.class.name.split("::").last)
     end
     
     def schedule_event(event, delay)
@@ -36,7 +36,7 @@ module Bluepill
         begin
           sleep delay.to_f
           trigger.logger.info("Retrying from flapping")
-          trigger.process.dispatch!(event)
+          trigger.dispatch!(event)
           trigger.mutex.synchronize do
             trigger.scheduled_events.delete_if { |_, thread| thread == Thread.current }
           end

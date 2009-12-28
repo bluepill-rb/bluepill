@@ -29,7 +29,7 @@ module Bluepill
     
     attr_accessor :name, :watches, :triggers, :logger, :skip_ticks_until
     attr_accessor *CONFIGURABLE_ATTRIBUTES
-    attr_reader :children
+    attr_reader :children, :statistics
     
     state_machine :initial => :unmonitored do
       # These are the idle states, i.e. only an event (either external or internal) will trigger a transition.
@@ -91,6 +91,7 @@ module Bluepill
       @watches = []
       @triggers = []
       @children = []
+      @statistics = ProcessStatistics.new
       
       @monitor_children = options[:monitor_children] || false
       
@@ -133,8 +134,9 @@ module Bluepill
     end
     
     # State machine methods
-    def dispatch!(event)
+    def dispatch!(event, reason = nil)
       @event_mutex.synchronize do
+        @statistics.record_event(event, reason)
         self.send("#{event}")
       end
     end
@@ -181,12 +183,14 @@ module Bluepill
         thread.join
         if thread[:events].size > 0
           logger.info "#{watch.name} dispatched: #{thread[:events].join(',')}"
-          events << thread[:events]
+          thread[:events].each do |event|
+            events << [event, watch.to_s]
+          end
         end
         events
-      end.flatten.uniq.each do |event|
+      end.each do |(event, reason)|
         break if @transitioned
-        self.dispatch!(event)
+        self.dispatch!(event, reason)
       end
     end
     
@@ -206,11 +210,11 @@ module Bluepill
           logger.warning("Refusing to re-run start command on an automatically daemonized process to preserve currently running process pid file.")
           return
         end
-        dispatch!(:start)
+        dispatch!(:start, "user initiated")
 
       when "stop"
         stop_process
-        dispatch!(:unmonitor)
+        dispatch!(:unmonitor, "user initiated")
         
       when "restart"
         restart_process
@@ -219,7 +223,7 @@ module Bluepill
         # When the user issues an unmonitor cmd, reset any triggers so that
         # scheduled events gets cleared
         triggers.each {|t| t.reset! }
-        dispatch!(:unmonitor)
+        dispatch!(:unmonitor, "user initiated")
       end
     end
     

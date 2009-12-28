@@ -1,5 +1,10 @@
 require 'ostruct'
 module Bluepill
+  def self.define_process_condition(name, &block)
+    klass = Class.new(ProcessConditions::ProcessCondition, &block)
+    ProcessConditions.const_set("#{name.to_s.camelcase}", klass)
+  end
+  
   def self.application(app_name, options = {}, &block)
     app = Application.new(app_name.to_s, options, &block)
    

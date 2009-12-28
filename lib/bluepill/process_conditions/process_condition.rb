@@ -1,6 +1,10 @@
 module Bluepill
   module ProcessConditions
     class ProcessCondition  
+      def initialize(options = {})
+        @options = options
+      end
+      
       def run(pid)
         raise "Implement in subclass!"
       end

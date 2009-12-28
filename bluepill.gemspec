@@ -5,7 +5,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{bluepill}
-  s.version = "0.0.29"
+  s.version = "0.0.30"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Arya Asemanfar", "Gary Tsang", "Rohith Ravi"]
@@ -43,6 +43,7 @@ Gem::Specification.new do |s|
      "lib/bluepill/process_conditions/cpu_usage.rb",
      "lib/bluepill/process_conditions/mem_usage.rb",
      "lib/bluepill/process_conditions/process_condition.rb",
+     "lib/bluepill/process_statistics.rb",
      "lib/bluepill/socket.rb",
      "lib/bluepill/system.rb",
      "lib/bluepill/trigger.rb",

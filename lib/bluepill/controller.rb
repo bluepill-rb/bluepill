@@ -66,7 +66,19 @@ module Bluepill
           while line = socket.gets
             buffer << line
           end
-          Marshal.load(buffer)
+          if buffer.size > 0
+            response = Marshal.load(buffer)
+            if response.is_a?(Exception)
+              $stderr.puts "Received error from server:"
+              $stderr.puts response.inspect
+              $stderr.puts response.backtrace.join("\n")
+              exit(8)
+            else
+              response
+            end
+          else
+            abort("No response from server")
+          end
         end
       rescue Timeout::Error
         abort("Socket Timeout: Server may not be responding")

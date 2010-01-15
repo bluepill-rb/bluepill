@@ -78,7 +78,11 @@ module Bluepill
           begin
             client = self.socket.accept
             command, *args = client.readline.strip.split(":")
-            response = self.send(command, *args)
+            response = begin
+              self.send(command, *args)
+            rescue Exception => e
+              e
+            end
             client.write(Marshal.dump(response))
           rescue StandardError => e
             logger.err("Got exception in cmd listener: %s `%s`" % [e.class.name, e.message])

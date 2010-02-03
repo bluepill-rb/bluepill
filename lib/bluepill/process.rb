@@ -1,3 +1,5 @@
+# fixes problem with loading on systems with rubyist-aasm installed
+gem "state_machine"
 require "state_machine"
 require "daemons"
 

@@ -5,7 +5,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{wijet-bluepill}
-  s.version = "0.0.32"
+  s.version = "0.0.33"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Arya Asemanfar", "Gary Tsang", "Rohith Ravi"]
@@ -27,7 +27,6 @@ Gem::Specification.new do |s|
      "VERSION",
      "bin/bluepill",
      "bin/bpsv",
-     "bluepill.gemspec",
      "lib/bluepill.rb",
      "lib/bluepill/application.rb",
      "lib/bluepill/application/client.rb",
@@ -50,7 +49,8 @@ Gem::Specification.new do |s|
      "lib/bluepill/triggers/flapping.rb",
      "lib/bluepill/util/rotational_array.rb",
      "lib/bluepill/version.rb",
-     "lib/example.rb"
+     "lib/example.rb",
+     "wijet-bluepill.gemspec"
   ]
   s.homepage = %q{http://github.com/wijet/bluepill}
   s.rdoc_options = ["--charset=UTF-8"]

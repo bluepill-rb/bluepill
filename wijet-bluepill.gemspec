@@ -4,12 +4,12 @@
 # -*- encoding: utf-8 -*-
 
 Gem::Specification.new do |s|
-  s.name = %q{bluepill}
+  s.name = %q{wijet-bluepill}
   s.version = "0.0.32"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Arya Asemanfar", "Gary Tsang", "Rohith Ravi"]
-  s.date = %q{2010-01-30}
+  s.date = %q{2010-02-04}
   s.default_executable = %q{bluepill}
   s.description = %q{Bluepill keeps your daemons up while taking up as little resources as possible. After all you probably want the resources of your server to be used by whatever daemons you are running rather than the thing that's supposed to make sure they are brought back up, should they die or misbehave.}
   s.email = %q{entombedvirus@gmail.com}
@@ -52,7 +52,7 @@ Gem::Specification.new do |s|
      "lib/bluepill/version.rb",
      "lib/example.rb"
   ]
-  s.homepage = %q{http://github.com/arya/bluepill}
+  s.homepage = %q{http://github.com/wijet/bluepill}
   s.rdoc_options = ["--charset=UTF-8"]
   s.require_paths = ["lib"]
   s.rubygems_version = %q{1.3.5}

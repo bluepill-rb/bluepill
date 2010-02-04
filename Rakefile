@@ -4,11 +4,11 @@ require 'rake'
 begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
-    gem.name = "bluepill"
+    gem.name = "wijet-bluepill"
     gem.summary = %Q{A process monitor written in Ruby with stability and minimalism in mind.}
     gem.description = %Q{Bluepill keeps your daemons up while taking up as little resources as possible. After all you probably want the resources of your server to be used by whatever daemons you are running rather than the thing that's supposed to make sure they are brought back up, should they die or misbehave.}
     gem.email = "entombedvirus@gmail.com"
-    gem.homepage = "http://github.com/arya/bluepill"
+    gem.homepage = "http://github.com/wijet/bluepill"
     gem.authors = ["Arya Asemanfar", "Gary Tsang", "Rohith Ravi"]
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
     gem.add_dependency("daemons", ">= 1.0.9")

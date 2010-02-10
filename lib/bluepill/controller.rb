@@ -58,30 +58,19 @@ module Bluepill
     
     def send_to_daemon(application, command, *args)
       begin
-        Timeout::timeout(Socket::TIMEOUT) do
-          verify_version!(application)
-          buffer = ""
-          socket = Socket.client(base_dir, application) # Something that should be interrupted if it takes too much time...
-          socket.puts(([command] + args).join(":"))
-          while line = socket.gets
-            buffer << line
-          end
-          if buffer.size > 0
-            response = Marshal.load(buffer)
-            if response.is_a?(Exception)
-              $stderr.puts "Received error from server:"
-              $stderr.puts response.inspect
-              $stderr.puts response.backtrace.join("\n")
-              exit(8)
-            else
-              response
-            end
-          else
-            abort("No response from server")
-          end
+        verify_version!(application)
+
+        command = ([command, *args]).join(":")
+        response = Socket.client_command(base_dir, application, command)
+        if response.is_a?(Exception)
+          $stderr.puts "Received error from server:"
+          $stderr.puts response.inspect
+          $stderr.puts response.backtrace.join("\n")
+          exit(8)
+        else
+          response
         end
-      rescue Timeout::Error
-        abort("Socket Timeout: Server may not be responding")
+
       rescue Errno::ECONNREFUSED
         abort("Connection Refused: Server is not running")
       end
@@ -118,13 +107,7 @@ module Bluepill
     
     def verify_version!(application)
       begin
-        socket = Socket.client(self.base_dir, application)
-        socket.puts("version")
-        buffer = ""
-        while line = socket.gets
-          buffer << line
-        end
-        version = Marshal.load(buffer)
+        version = Socket.client_command(base_dir, application, "version")
         if version != Bluepill::VERSION
           abort("The running version of your daemon seems to be out of date.\nDaemon Version: #{version}, CLI Version: #{Bluepill::VERSION}")
         end

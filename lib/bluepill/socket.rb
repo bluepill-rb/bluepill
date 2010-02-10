@@ -3,10 +3,22 @@ require 'socket'
 module Bluepill
   module Socket
     TIMEOUT = 10
+
     extend self
 
-    def client(base_dir, name)
-      UNIXSocket.open(socket_path(base_dir, name))
+    def client(base_dir, name, &b)
+      UNIXSocket.open(socket_path(base_dir, name), &b)
+    end
+    
+    def client_command(base_dir, name, command)
+      client(base_dir, name) do |socket|
+        Timeout.timeout(TIMEOUT) do
+          socket.puts command
+          Marshal.load(socket)
+        end
+      end
+    rescue EOFError, Timeout::Error
+      abort("Socket Timeout: Server may not be responding")
     end
     
     def server(base_dir, name)

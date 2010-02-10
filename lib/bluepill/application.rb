@@ -1,3 +1,5 @@
+require 'thread'
+
 module Bluepill
   class Application
     PROCESS_COMMANDS = [:start, :stop, :restart, :unmonitor, :status]
@@ -20,8 +22,14 @@ module Bluepill
       
       self.setup_signal_traps
       self.setup_pids_dir
+      
+      @mutex = Mutex.new
     end
-        
+
+    def mutex(&b)
+      @mutex.synchronize(&b)
+    end
+
     def load
       begin
         self.start_server
@@ -79,7 +87,7 @@ module Bluepill
             client = self.socket.accept
             command, *args = client.readline.strip.split(":")
             response = begin
-              self.send(command, *args)
+              mutex { self.send(command, *args) }
             rescue Exception => e
               e
             end
@@ -116,8 +124,10 @@ module Bluepill
     def run
       @running = true # set to false by signal trap
       while @running
-        System.reset_data
-        self.groups.each { |_, group| group.tick }
+        mutex do
+          System.reset_data
+          self.groups.each { |_, group| group.tick }
+        end
         sleep 1
       end
       cleanup

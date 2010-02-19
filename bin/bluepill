@@ -55,7 +55,10 @@ APPLICATION_COMMANDS = %w(status start stop restart unmonitor quit log)
 
 controller = Bluepill::Controller.new(options.slice(:base_dir, :log_file))
 
-if controller.running_applications.include?(ARGV.first)
+if controller.running_applications.include?(File.basename($0)) && File.symlink?($0)
+  # bluepill was called as a symlink with the name of the target application
+  options[:application] = File.basename($0)
+elsif controller.running_applications.include?(ARGV.first)
   # the first arg is the application name
   options[:application] = ARGV.shift
 elsif APPLICATION_COMMANDS.include?(ARGV.first)

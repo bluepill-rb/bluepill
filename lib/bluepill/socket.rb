@@ -28,7 +28,7 @@ module Bluepill
       rescue Errno::EADDRINUSE
         # if sock file has been created.  test to see if there is a server
         begin
-          return UNIXSocket.open(socket_path)
+          UNIXSocket.open(socket_path)
         rescue Errno::ECONNREFUSED
           File.delete(socket_path)
           return UNIXServer.open(socket_path)

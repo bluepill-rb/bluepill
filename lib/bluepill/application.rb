@@ -96,7 +96,7 @@ module Bluepill
             logger.err("Got exception in cmd listener: %s `%s`" % [e.class.name, e.message])
             e.backtrace.each {|l| logger.err(l)}
           ensure
-            client.close
+            client.close unless client.closed?
           end
         end
       end

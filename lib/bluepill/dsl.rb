@@ -38,19 +38,21 @@ module Bluepill
         end
       end
       
+      def create_child_process_template
+        if @child_process_block
+          child_proxy = self.class.new
+          # Children inherit some properties of the parent
+          [:start_grace_time, :stop_grace_time, :restart_grace_time].each do |attribute|
+            child_proxy.send("#{attributes}=", @attributes[attribute]) if @attributes.key?(attribute)
+          end
+          @child_process_block.call(child_proxy)
+          validate_child_process(child_proxy)
+          @attributes[:child_process_template] = child_proxy.to_process(nil)
+        end
+      end
+      
       def monitor_children(&child_process_block)
-        child_proxy = self.class.new
-        
-        # Children inherit some properties of the parent
-        child_proxy.start_grace_time = @attributes[:start_grace_time]
-        child_proxy.stop_grace_time = @attributes[:stop_grace_time]
-        child_proxy.restart_grace_time = @attributes[:restart_grace_time]
-        
-        child_process_block.call(child_proxy)
-        validate_child_process(child_proxy)
-        
-        @attributes[:child_process_template] = child_proxy.to_process(nil)
-        # @attributes[:child_process_template].freeze
+        @child_process_block = child_process_block
         @attributes[:monitor_children] = true
       end
       
@@ -108,13 +110,15 @@ module Bluepill
       def process(process_name, &process_block)
         process_proxy = @@process_proxy.new(process_name)
         process_block.call(process_proxy)
+        process_proxy.create_child_process_template
+        
         set_app_wide_attributes(process_proxy)
         
         assign_default_pid_file(process_proxy, process_name)
         
         validate_process(process_proxy, process_name)
         
-        group = process_proxy.attributes.delete(:group)        
+        group = process_proxy.attributes.delete(:group)
         process = process_proxy.to_process(process_name)
         
         

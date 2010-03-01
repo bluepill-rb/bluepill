@@ -93,16 +93,14 @@ module Bluepill
       @children = []
       @statistics = ProcessStatistics.new
       
-      @monitor_children = options[:monitor_children] || false
-      
-      %w(start_grace_time stop_grace_time restart_grace_time).each do |grace|
-        instance_variable_set("@#{grace}", options[grace.to_sym] || 3)
-      end
+      # These defaults are overriden below if it's configured to be something else.
+      @monitor_children =  false
+      @start_grace_time = @stop_grace_time = @restart_grace_time = 3
       
       CONFIGURABLE_ATTRIBUTES.each do |attribute_name|
         self.send("#{attribute_name}=", options[attribute_name]) if options.has_key?(attribute_name)
       end
-      
+            
       # Let state_machine do its initialization stuff
       super()
     end
@@ -120,7 +118,7 @@ module Bluepill
       if self.up?
         run_watches
         
-        if monitor_children?
+        if self.monitor_children?
           refresh_children!
           children.each {|child| child.tick}
         end

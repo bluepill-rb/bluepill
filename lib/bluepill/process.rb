@@ -102,7 +102,7 @@ module Bluepill
       end
             
       # Let state_machine do its initialization stuff
-      super()
+      super() # no arguments intentional
     end
 
     def tick
@@ -116,7 +116,7 @@ module Bluepill
       super
 
       if self.up?
-        run_watches
+        self.run_watches
         
         if self.monitor_children?
           refresh_children!
@@ -192,31 +192,28 @@ module Bluepill
       end
     end
     
+    def determine_initial_state
+      if self.process_running?(true)
+        self.state = 'up'
+      else
+        # TODO: or "unmonitored" if bluepill was started in no auto-start mode.
+        self.state = 'down'
+      end
+    end
+    
     def handle_user_command(cmd)
       case cmd
-      when "boot"
-        # This is only called when bluepill is initially starting up
-        if process_running?(true)
-          # process was running even before bluepill was
-          self.state = 'up'
-        else
-          self.state = 'starting'
-        end
-        
       when "start"
-        if process_running?(true) && daemonize?
-          logger.warning("Refusing to re-run start command on an automatically daemonized process to preserve currently running process pid file.")
-          return
+        if self.process_running?(true)
+          logger.warning("Refusing to re-run start command on an already running process.")
+        else
+          dispatch!(:start, "user initiated")
         end
-        dispatch!(:start, "user initiated")
-
       when "stop"
         stop_process
         dispatch!(:unmonitor, "user initiated")
-        
       when "restart"
         restart_process
-        
       when "unmonitor"
         # When the user issues an unmonitor cmd, reset any triggers so that
         # scheduled events gets cleared
@@ -227,8 +224,10 @@ module Bluepill
     
     # System Process Methods
     def process_running?(force = false)
-      @process_running = nil if force
+      @process_running = nil if force # clear existing state if forced
+      
       @process_running ||= signal_process(0)
+      # the process isn't running, so we should clear the PID
       self.clear_pid unless @process_running
       @process_running
     end
@@ -256,7 +255,7 @@ module Bluepill
     
     def stop_process      
       if stop_command
-        cmd = process_command(stop_command)
+        cmd = self.prepare_command(stop_command)
         logger.warning "Executing stop command: #{cmd}"
         
         with_timeout(stop_grace_time) do
@@ -279,7 +278,7 @@ module Bluepill
     
     def restart_process
       if restart_command
-        cmd = process_command(restart_command)
+        cmd = self.prepare_command(restart_command)
         
         logger.warning "Executing restart command: #{cmd}"
         
@@ -382,8 +381,8 @@ module Bluepill
       Marshal.load(Marshal.dump(self))
     end
     
-    def process_command(cmd)
-      cmd.to_s.gsub("{{PID}}", actual_pid.to_s)
+    def prepare_command(command)
+      command.to_s.gsub("{{PID}}", actual_pid.to_s)
     end
     
     def system_command_options

@@ -115,7 +115,7 @@ module Bluepill
       
       $0 = "bluepilld: #{self.name}"
       
-      self.groups.each {|_, group| group.boot }
+      self.groups.each {|_, group| group.determine_initial_state }
 
       
       self.write_pid_file

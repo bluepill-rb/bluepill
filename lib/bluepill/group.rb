@@ -19,9 +19,15 @@ module Bluepill
         process.tick
       end
     end
+    
+    def determine_initial_state
+      self.processes.each do |process|
+        process.determine_initial_state
+      end
+    end
 
     # proxied events
-    [:start, :unmonitor, :stop, :restart, :boot].each do |event|
+    [:start, :unmonitor, :stop, :restart].each do |event|
       class_eval <<-END
         def #{event}(process_name = nil)
           threads = []

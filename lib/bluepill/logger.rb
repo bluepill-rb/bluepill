@@ -3,20 +3,25 @@ module Bluepill
     LOG_METHODS = [:emerg, :alert, :crit, :err, :warning, :notice, :info, :debug]
     
     def initialize(options = {})
-      @options = options
-      @logger = options[:logger] || self.create_logger
-      @prefix = options[:prefix]
+      @options  = options
+      @logger   = options[:logger] || self.create_logger
+      @prefix   = options[:prefix]
+      @stdout   = options[:stdout]
       @prefixes = {}
     end
     
     LOG_METHODS.each do |method|
       eval <<-END
         def #{method}(msg, prefix = [])
+          s_prefix = prefix.size > 0 ? "[\#{prefix.compact.join(':')}] " : ""
+          if @stdout
+            $stdout.puts("[#{method}]: \#{s_prefix}\#{msg}")
+            $stdout.flush
+          end
           if @logger.is_a?(self.class)
             @logger.#{method}(msg, [@prefix] + prefix)
           else
-            prefix = prefix.size > 0 ? "[\#{prefix.compact.join(':')}] " : ""
-            @logger.#{method}("\#{prefix}\#{msg}")
+            @logger.#{method}("\#{s_prefix}\#{msg}")
           end
         end
       END

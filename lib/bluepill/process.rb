@@ -15,6 +15,7 @@ module Bluepill
       :daemonize, 
       :pid_file, 
       :working_dir,
+      :environment,
       
       :start_grace_time, 
       :stop_grace_time, 
@@ -96,6 +97,7 @@ module Bluepill
       # These defaults are overriden below if it's configured to be something else.
       @monitor_children =  false
       @start_grace_time = @stop_grace_time = @restart_grace_time = 3
+      @environment = {}
       
       CONFIGURABLE_ATTRIBUTES.each do |attribute_name|
         self.send("#{attribute_name}=", options[attribute_name]) if options.has_key?(attribute_name)
@@ -390,6 +392,7 @@ module Bluepill
         :uid         => self.uid, 
         :gid         => self.gid, 
         :working_dir => self.working_dir,
+        :environment => self.environment,
         :pid_file    => self.pid_file,
         :logger      => self.logger,
         :stdin       => self.stdin,

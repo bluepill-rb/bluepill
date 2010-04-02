@@ -75,7 +75,7 @@ module Bluepill
       @@process_proxy = process_proxy
       @@process_keys = Hash.new # because I don't want to require Set just for validations
       @@pid_files = Hash.new
-      attr_accessor :working_dir, :uid, :gid
+      attr_accessor :working_dir, :uid, :gid, :environment
       
       def validate_process(process, process_name)
         # validate uniqueness of group:process
@@ -127,7 +127,7 @@ module Bluepill
       end
       
       def set_app_wide_attributes(process_proxy)
-        [:working_dir, :uid, :gid].each do |attribute|
+        [:working_dir, :uid, :gid, :environment].each do |attribute|
           unless process_proxy.attributes.key?(attribute)
             process_proxy.attributes[attribute] = self.send(attribute)
           end

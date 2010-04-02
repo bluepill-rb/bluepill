@@ -68,6 +68,7 @@ module Bluepill
         to_daemonize = lambda do
           # Setting end PWD env emulates bash behavior when dealing with symlinks
           Dir.chdir(ENV["PWD"] = options[:working_dir]) if options[:working_dir]
+          options[:environment].each { |key, value| ENV[key] = value }
           
           redirect_io(*options.values_at(:stdin, :stdout, :stderr))
           
@@ -114,6 +115,7 @@ module Bluepill
           drop_privileges(options[:uid], options[:gid])
           
           Dir.chdir(ENV["PWD"] = options[:working_dir]) if options[:working_dir]
+          options[:environment].each { |key, value| ENV[key] = value }
           
           # close unused fds so ancestors wont hang. This line is the only reason we are not
           # using something like popen3. If this fd is not closed, the .read call on the parent

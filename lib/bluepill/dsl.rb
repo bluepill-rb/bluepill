@@ -43,7 +43,7 @@ module Bluepill
           child_proxy = self.class.new
           # Children inherit some properties of the parent
           [:start_grace_time, :stop_grace_time, :restart_grace_time].each do |attribute|
-            child_proxy.send("#{attributes}=", @attributes[attribute]) if @attributes.key?(attribute)
+            child_proxy.send("#{attribute}=", @attributes[attribute]) if @attributes.key?(attribute)
           end
           @child_process_block.call(child_proxy)
           validate_child_process(child_proxy)

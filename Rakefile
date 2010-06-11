@@ -40,6 +40,7 @@ end
 
 
 namespace :version do
+  desc "Update version of Bluepill in source code"
   task :update_file do
     version = File.read("VERSION").strip
     File.open("lib/bluepill/version.rb", "w") do |file|

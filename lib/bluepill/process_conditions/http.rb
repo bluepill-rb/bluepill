@@ -13,8 +13,8 @@ module Bluepill
                   Net::HTTPSuccess
                 end
         @pattern = options[:pattern] || nil
-        @open_timeout = options[:open_timeout] || options[:timeout] || 5
-        @read_timeout = options[:read_timeout] || options[:timeout] || 5
+        @open_timeout = (options[:open_timeout] || options[:timeout] || 5).to_i
+        @read_timeout = (options[:read_timeout] || options[:timeout] || 5).to_i
       end
 
       def run(pid)

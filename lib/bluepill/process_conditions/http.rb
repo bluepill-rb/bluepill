@@ -21,8 +21,10 @@ module Bluepill
         session = Net::HTTP.new(@uri.host, @uri.port)
         session.open_timeout = @open_timeout
         session.read_timeout = @read_timeout
-        session.start do |http|
-          http.get(@uri.path)
+        hide_net_http_bug do
+          session.start do |http|
+            http.get(@uri.path)
+          end
         end
       rescue
         $!
@@ -33,6 +35,17 @@ module Bluepill
         return true  unless @pattern
         return false unless value.class.body_permitted?
         @pattern === value.body
+      end
+
+    private
+      def hide_net_http_bug
+        yield
+      rescue NoMethodError => e
+        if e.to_s =~ /#{Regexp.escape(%q|undefined method `closed?' for nil:NilClass|)}/
+          raise Errno::ECONNREFUSED, "Connection refused attempting to contact #{@uri.scheme}://#{@uri.host}:#{@uri.port}"
+        else
+          raise
+        end
       end
     end
   end

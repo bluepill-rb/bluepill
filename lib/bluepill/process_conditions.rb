@@ -1,7 +1,7 @@
 module Bluepill
   module ProcessConditions    
     def self.[](name)
-      "#{self}::#{name.to_s.camelcase}".constantize
+      const_get(name.to_s.camelcase)
     end
   end
 end

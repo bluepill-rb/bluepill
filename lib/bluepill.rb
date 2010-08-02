@@ -9,7 +9,6 @@ require 'logger'
 require 'active_support/inflector'
 require 'active_support/core_ext/hash'
 require 'active_support/core_ext/numeric'
-require 'active_support/core_ext/object/misc'
 require 'active_support/duration'
 
 require 'bluepill/application'

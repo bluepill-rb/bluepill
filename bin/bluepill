@@ -24,8 +24,8 @@ OptionParser.new do |opts|
     exit
   end
 
-  opts.on("-np", "--non-privileged") do
-    options[:privileged] = false
+  opts.on("--[no-]privileged", "Allow/disallow to run #{$0} as non-privileged process. disallowed by default") do |v|
+    options[:privileged] = v
   end
 
   help = lambda do
@@ -51,7 +51,7 @@ end.parse!
 
 # Check for root
 if options[:privileged] && ::Process.euid != 0
-  $stderr.puts "You must run bluepill as root or use --non-privileged option."
+  $stderr.puts "You must run bluepill as root or use --no-privileged option."
   exit(3)
 end
 

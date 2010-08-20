@@ -2,17 +2,11 @@
 require 'optparse'
 require 'bluepill'
 
-# Check for root
-unless ::Process.euid == 0
-  $stderr.puts "You must run bluepill as root."
-  exit(3)
-end
-
-
 # Default options
 options = {
-  :log_file => "/var/log/bluepill.log",
-  :base_dir => "/var/bluepill"
+  :log_file   => "/var/log/bluepill.log",
+  :base_dir   => "/var/bluepill",
+  :privileged => true
 }
 
 OptionParser.new do |opts|
@@ -28,6 +22,10 @@ OptionParser.new do |opts|
   opts.on("-v", "--version") do
     puts "bluepill, version #{Bluepill::VERSION}"
     exit
+  end
+
+  opts.on("-np", "--non-privileged") do
+    options[:privileged] = false
   end
 
   help = lambda do
@@ -50,6 +48,12 @@ OptionParser.new do |opts|
   opts.on_tail('-h','--help', 'Show this message', &help)
   help.call if ARGV.empty?
 end.parse!
+
+# Check for root
+if options[:privileged] && ::Process.euid != 0
+  $stderr.puts "You must run bluepill as root or use --non-privileged option."
+  exit(3)
+end
 
 APPLICATION_COMMANDS = %w(status start stop restart unmonitor quit log)
 

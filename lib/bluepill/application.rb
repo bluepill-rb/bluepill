@@ -171,23 +171,25 @@ module Bluepill
     def kill_previous_bluepill
       if File.exists?(self.pid_file)
         previous_pid = File.read(self.pid_file).to_i
-        begin
-          ::Process.kill(0, previous_pid)
-          puts "Killing previous bluepilld[#{previous_pid}]"
-          ::Process.kill(2, previous_pid)
-        rescue Exception => e
-          $stderr.puts "Encountered error trying to kill previous bluepill:"
-          $stderr.puts "#{e.class}: #{e.message}"
-          exit(4) unless e.is_a?(Errno::ESRCH)
-        else
-          10.times do |i|
-            sleep 0.5
-            break unless System.pid_alive?(previous_pid)
-          end
-          
-          if System.pid_alive?(previous_pid)
-            $stderr.puts "Previous bluepilld[#{previous_pid}] didn't die"
-            exit(4)
+        if System.pid_alive?(previous_pid)
+          begin
+            ::Process.kill(0, previous_pid)
+            puts "Killing previous bluepilld[#{previous_pid}]"
+            ::Process.kill(2, previous_pid)
+          rescue Exception => e
+            $stderr.puts "Encountered error trying to kill previous bluepill:"
+            $stderr.puts "#{e.class}: #{e.message}"
+            exit(4) unless e.is_a?(Errno::ESRCH)
+          else
+            10.times do |i|
+              sleep 0.5
+              break unless System.pid_alive?(previous_pid)
+            end
+
+            if System.pid_alive?(previous_pid)
+              $stderr.puts "Previous bluepilld[#{previous_pid}] didn't die"
+              exit(4)
+            end
           end
         end
       end

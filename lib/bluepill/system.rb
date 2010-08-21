@@ -192,12 +192,14 @@ module Bluepill
     # be sure to call this from a fork otherwise it will modify the attributes
     # of the bluepill daemon
     def drop_privileges(uid, gid)
-      uid_num = Etc.getpwnam(uid).uid if uid
-      gid_num = Etc.getgrnam(gid).gid if gid
+      if ::Process::Sys.geteuid == 0
+        uid_num = Etc.getpwnam(uid).uid if uid
+        gid_num = Etc.getgrnam(gid).gid if gid
 
-      ::Process.groups = [gid_num] if gid
-      ::Process::Sys.setgid(gid_num) if gid
-      ::Process::Sys.setuid(uid_num) if uid
+        ::Process.groups = [gid_num] if gid
+        ::Process::Sys.setgid(gid_num) if gid
+        ::Process::Sys.setuid(uid_num) if uid
+      end
     end
     
     def can_write_pid_file(pid_file, logger)

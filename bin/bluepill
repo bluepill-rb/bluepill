@@ -28,7 +28,7 @@ OptionParser.new do |opts|
     options[:privileged] = v
   end
 
-  help = lambda do
+  help = proc do
     puts opts
     puts
     puts "Commands:"

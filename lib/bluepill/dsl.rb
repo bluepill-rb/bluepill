@@ -69,12 +69,11 @@ module Bluepill
         process
       end
     end
-    
     app_proxy = Class.new do
-      @@app = app
-      @@process_proxy = process_proxy
-      @@process_keys = Hash.new # because I don't want to require Set just for validations
-      @@pid_files = Hash.new
+      class_variable_set(:@@app, app)
+      class_variable_set(:@@process_proxy, process_proxy)
+      class_variable_set(:@@process_keys, Hash.new) # because I don't want to require Set just for validations
+      class_variable_set(:@@pid_files, Hash.new)
       attr_accessor :working_dir, :uid, :gid, :environment
       
       def validate_process(process, process_name)

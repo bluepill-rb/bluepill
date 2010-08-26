@@ -55,6 +55,12 @@ module Bluepill
          block.call(self[rotational_idx(start + i)])
        end
      end
+
+     unless method_defined?(:nitems)
+       def nitems
+         compact.length
+       end
+     end
      
      private
      

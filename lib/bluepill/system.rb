@@ -33,11 +33,11 @@ module Bluepill
     end
     
     def get_children(parent_pid)
-      Array.new.tap do |child_pids|
-        ps_axu.each_pair do |pid, chunks| 
-          child_pids << chunks[IDX_MAP[:pid]].to_i if chunks[IDX_MAP[:ppid]].to_i == parent_pid.to_i
-        end
+      child_pids = Array.new
+      ps_axu.each_pair do |pid, chunks| 
+        child_pids << chunks[IDX_MAP[:pid]].to_i if chunks[IDX_MAP[:ppid]].to_i == parent_pid.to_i
       end
+      child_pids
     end
     
     # Returns the pid of the child that executes the cmd

@@ -44,10 +44,8 @@ module Bluepill
           self.logger.info "Flapping detected: retrying in #{self.retry_in} seconds"
           
           self.schedule_event(:start, self.retry_in)
-          
-          # this happens in the process' thread so we don't have to worry about concurrency issues with this event
-          self.dispatch!(:unmonitor)
-          
+          self.schedule_event(:unmonitor, 0)
+
           @timeline.clear
           
           # This will prevent a transition from happening in the process state_machine

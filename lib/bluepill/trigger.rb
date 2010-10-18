@@ -35,7 +35,6 @@ module Bluepill
       thread = Thread.new(self) do |trigger|
         begin
           sleep delay.to_f
-          trigger.logger.info("Retrying from flapping")
           trigger.dispatch!(event)
           trigger.mutex.synchronize do
             trigger.scheduled_events.delete_if { |_, thread| thread == Thread.current }

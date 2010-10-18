@@ -43,7 +43,7 @@ module Bluepill
         if duration
           self.logger.info "Flapping detected: retrying in #{self.retry_in} seconds"
           
-          self.schedule_event(:start, self.retry_in)
+          self.schedule_event(:start, self.retry_in) unless self.retry_in == 0 # retry_in zero means "do not retry, ever"
           self.schedule_event(:unmonitor, 0)
 
           @timeline.clear

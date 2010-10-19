@@ -378,11 +378,17 @@ module Bluepill
         @children << child
       end
     end
-    
+
     def deep_copy
-      Marshal.load(Marshal.dump(self))
+      # TODO: This is a kludge. Ideally, process templates 
+      # would be facotries, and not a template object.
+      mutex, @event_mutex = @event_mutex, nil
+      clone = Marshal.load(Marshal.dump(self))
+      clone.instance_variable_set("@event_mutex", Monitor.new)
+      @event_mutex = mutex
+      clone
     end
-    
+
     def prepare_command(command)
       command.to_s.gsub("{{PID}}", actual_pid.to_s)
     end

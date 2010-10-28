@@ -1,4 +1,5 @@
 require 'etc'
+require "shellwords"
 
 module Bluepill
   # This class represents the system that bluepill is running on.. It's mainly used to memoize
@@ -72,7 +73,7 @@ module Bluepill
           
           redirect_io(*options.values_at(:stdin, :stdout, :stderr))
           
-          ::Kernel.exec(cmd)
+          ::Kernel.exec(*cmd.shellsplit)
           exit
         end
 

@@ -148,7 +148,7 @@ module Bluepill
     end
     
     def setup_signal_traps
-      terminator = lambda do
+      terminator = Proc.new do
         puts "Terminating..."
         @running = false
       end

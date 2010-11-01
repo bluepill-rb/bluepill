@@ -73,7 +73,7 @@ module Bluepill
           
           redirect_io(*options.values_at(:stdin, :stdout, :stderr))
           
-          ::Kernel.exec(*cmd.shellsplit)
+          ::Kernel.exec(*Shellwords.shellwords(cmd))
           exit
         end
 
@@ -137,7 +137,7 @@ module Bluepill
           cmd_err_write.close
 
           # finally, replace grandchild with cmd
-          ::Kernel.exec(cmd)
+          ::Kernel.exec(*Shellwords.shellwords(cmd))
         }
 
         # we do not use these ends of the pipes in the child

@@ -30,6 +30,16 @@ module Bluepill
       self.process.dispatch!(event, self.class.name.split("::").last)
     end
     
+    def deep_copy
+      # TODO: This is a kludge. Ideally, process templates 
+      # would be facotries, and not a template object.
+      mutex, @mutex = @mutex, nil
+      clone = Marshal.load(Marshal.dump(self))
+      clone.instance_variable_set("@mutex", Monitor.new)
+      @mutex = mutex
+      clone
+    end
+    
     def schedule_event(event, delay)
       # TODO: maybe wrap this in a ScheduledEvent class with methods like cancel
       thread = Thread.new(self) do |trigger|

@@ -383,10 +383,12 @@ module Bluepill
     def deep_copy
       # TODO: This is a kludge. Ideally, process templates 
       # would be facotries, and not a template object.
-      mutex, @event_mutex = @event_mutex, nil
+      mutex, triggers, @event_mutex, @triggers = @event_mutex, @triggers, nil, nil
       clone = Marshal.load(Marshal.dump(self))
       clone.instance_variable_set("@event_mutex", Monitor.new)
+      clone.instance_variable_set("@triggers", triggers.collect{ |t| t.deep_copy })
       @event_mutex = mutex
+      @triggers = triggers
       clone
     end
 

@@ -3,7 +3,7 @@ require 'socket'
 
 module Bluepill
   module Socket
-    TIMEOUT = 10
+    TIMEOUT = 60 # Used for client commands
 
     extend self
 

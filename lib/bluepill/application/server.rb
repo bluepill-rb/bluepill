@@ -3,11 +3,9 @@ module Bluepill
     module ServerMethods
       
       def status
-        buffer = ""
-        self.processes.each do | process |
-          buffer << "#{process.name} #{process.state}\n" +
-        end
-        buffer
+        self.processes.collect do |process|
+          "#{process.name} #{process.state}"
+        end.join("\n")
       end
 
       def restart

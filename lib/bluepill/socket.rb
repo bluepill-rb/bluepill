@@ -3,13 +3,15 @@ require 'socket'
 module Bluepill
   module Socket
     TIMEOUT = 10
+    RETRY = 5
+    @@timeout = 0
 
     extend self
 
     def client(base_dir, name, &b)
       UNIXSocket.open(socket_path(base_dir, name), &b)
     end
-    
+
     def client_command(base_dir, name, command)
       client(base_dir, name) do |socket|
         Timeout.timeout(TIMEOUT) do
@@ -18,9 +20,17 @@ module Bluepill
         end
       end
     rescue EOFError, Timeout::Error
-      abort("Socket Timeout: Server may not be responding")
+      @@timeout += 1
+      puts "Retry #{@@timeout} of #{RETRY}"
+      if @@timeout <= RETRY
+        client_command(base_dir, name, command)
+      else
+        abort("Socket Timeout: Server may not be responding")
+      end
+    ensure
+      @@timeout = 0
     end
-    
+
     def server(base_dir, name)
       socket_path = self.socket_path(base_dir, name)
       begin
@@ -38,10 +48,9 @@ module Bluepill
         end
       end
     end
-    
+
     def socket_path(base_dir, name)
-      File.join(base_dir, 'socks', name + ".sock") 
+      File.join(base_dir, 'socks', name + ".sock")
     end
   end
 end
- 

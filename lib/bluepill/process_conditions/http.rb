@@ -19,6 +19,11 @@ module Bluepill
 
       def run(pid)
         session = Net::HTTP.new(@uri.host, @uri.port)
+        if @uri.scheme == 'https'
+          require 'net/https'
+          session.use_ssl=true
+          session.verify_mode = OpenSSL::SSL::VERIFY_NONE
+        end
         session.open_timeout = @open_timeout
         session.read_timeout = @read_timeout
         hide_net_http_bug do

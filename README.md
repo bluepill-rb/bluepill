@@ -203,7 +203,7 @@ To quit bluepill:
     sudo bluepill quit
 
 ### Logging  
-By default, bluepill uses syslog local6 facility as described in the installation section. But if for any reason you don't want to use syslog, you can use a log file. You can do this by setting the :log\_file option in the config:
+By default, bluepill uses syslog local6 facility as described in the installation section. But if for any reason you don&apos;t want to use syslog, you can use a log file. You can do this by setting the :log\_file option in the config:
 
     Bluepill.application("app_name", :log_file => "/path/to/bluepill.log") do |app|
       # ...

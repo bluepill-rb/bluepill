@@ -2,7 +2,7 @@
 Bluepill is a simple process monitoring tool written in Ruby. 
 
 ## Installation
-It's hosted on [gemcutter.org][gemcutter].
+It&apos;s hosted on [gemcutter.org][gemcutter].
 
     sudo gem install bluepill
     
@@ -10,7 +10,7 @@ In order to take advantage of logging with syslog, you also need to setup your s
 
     local6.*          /var/log/bluepill.log
     
-You'll also want to add _/var/log/bluepill.log_ to _/etc/logrotate.d/syslog_ so that it gets rotated.
+You&apos;ll also want to add _/var/log/bluepill.log_ to _/etc/logrotate.d/syslog_ so that it gets rotated.
 
 Lastly, create the _/var/bluepill_ directory for bluepill to store its pid and sock files.
 
@@ -37,7 +37,7 @@ Note that since we specified a PID file and start command, bluepill assumes the 
       end
     end
     
-If you don't specify a stop command, a TERM signal will be sent by default. Similarly, the default restart action is to issue stop and then start.
+If you don&apos;t specify a stop command, a TERM signal will be sent by default. Similarly, the default restart action is to issue stop and then start.
 
 Now if we want to do something more meaningful, like actually monitor the process, we do:
 

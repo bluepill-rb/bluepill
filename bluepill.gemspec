@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Arya Asemanfar", "Gary Tsang", "Rohith Ravi"]
-  s.date = %q{2010-10-18}
+  s.date = %q{2011-03-24}
   s.default_executable = %q{bluepill}
   s.description = %q{Bluepill keeps your daemons up while taking up as little resources as possible. After all you probably want the resources of your server to be used by whatever daemons you are running rather than the thing that's supposed to make sure they are brought back up, should they die or misbehave.}
   s.email = %q{entombedvirus@gmail.com}
@@ -67,18 +67,18 @@ Gem::Specification.new do |s|
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
       s.add_runtime_dependency(%q<daemons>, [">= 1.0.9"])
       s.add_runtime_dependency(%q<blankslate>, [">= 2.1.2.2"])
-      s.add_runtime_dependency(%q<state_machine>, [">= 0.8.0"])
+      s.add_runtime_dependency(%q<state_machine>, [">= 0.8.0", "<= 0.9.4"])
       s.add_runtime_dependency(%q<activesupport>, [">= 2.3.4"])
     else
       s.add_dependency(%q<daemons>, [">= 1.0.9"])
       s.add_dependency(%q<blankslate>, [">= 2.1.2.2"])
-      s.add_dependency(%q<state_machine>, [">= 0.8.0"])
+      s.add_dependency(%q<state_machine>, [">= 0.8.0", "<= 0.9.4"])
       s.add_dependency(%q<activesupport>, [">= 2.3.4"])
     end
   else
     s.add_dependency(%q<daemons>, [">= 1.0.9"])
     s.add_dependency(%q<blankslate>, [">= 2.1.2.2"])
-    s.add_dependency(%q<state_machine>, [">= 0.8.0"])
+    s.add_dependency(%q<state_machine>, [">= 0.8.0", "<= 0.9.4"])
     s.add_dependency(%q<activesupport>, [">= 2.3.4"])
   end
 end

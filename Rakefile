@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 require 'rubygems'
 require 'rake'
 
@@ -13,7 +15,7 @@ begin
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
     gem.add_dependency("daemons", ">= 1.0.9")
     gem.add_dependency("blankslate", ">= 2.1.2.2")
-    gem.add_dependency("state_machine", ">= 0.8.0")
+    gem.add_dependency("state_machine", ">= 0.8.0", "<=0.9.4")
     gem.add_dependency("activesupport", ">= 2.3.4")
 
     gem.files -= ["bin/sample_forking_server"]

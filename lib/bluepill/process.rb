@@ -340,6 +340,7 @@ module Bluepill
     
     def unlink_pid
       File.unlink(pid_file) if pid_file && File.exists?(pid_file)
+    rescue Errno::ENOENT
     end
     
      # Internal State Methods

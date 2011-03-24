@@ -65,7 +65,7 @@ Gem::Specification.new do |s|
     s.specification_version = 3
 
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
-      sdd.add_runtime_dependency(%q<daemons>, [">= 1.0.9"])
+      s.add_runtime_dependency(%q<daemons>, [">= 1.0.9"])
       s.add_runtime_dependency(%q<blankslate>, [">= 2.1.2.2"])
       s.add_runtime_dependency(%q<state_machine>, [">= 0.8.0"])
       s.add_runtime_dependency(%q<activesupport>, [">= 2.3.4"])

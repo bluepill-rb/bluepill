@@ -28,6 +28,10 @@ OptionParser.new do |opts|
     options[:privileged] = v
   end
 
+  opts.on('-t', '--timeout Seconds', Integer, "Timeout for commands sent to the daemon, in seconds. Defaults to 10.") do |timeout|
+    options[:timeout] = timeout
+  end
+
   help = proc do
     puts opts
     puts

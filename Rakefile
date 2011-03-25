@@ -13,6 +13,7 @@ begin
     gem.homepage = "http://github.com/arya/bluepill"
     gem.authors = ["Arya Asemanfar", "Gary Tsang", "Rohith Ravi"]
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
+    gem.add_dependency("i18n", ">= 0.5.0")
     gem.add_dependency("daemons", ">= 1.0.9")
     gem.add_dependency("blankslate", ">= 2.1.2.2")
     gem.add_dependency("state_machine", ">= 0.8.0", "<=0.9.4")

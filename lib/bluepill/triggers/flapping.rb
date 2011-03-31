@@ -32,10 +32,8 @@ module Bluepill
       end
       
       def check_flapping
-        num_occurances = (@timeline.nitems == self.times)
-        
         # The process has not flapped if we haven't encountered enough incidents
-        return unless num_occurances
+        return unless (@timeline.compact.length == self.times)
         
         # Check if the incident happend within the timeframe
         duration = (@timeline.last - @timeline.first) <= self.within

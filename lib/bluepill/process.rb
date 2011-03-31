@@ -88,7 +88,6 @@ module Bluepill
     def initialize(process_name, options = {})      
       @name = process_name
       @event_mutex = Monitor.new
-      @transition_history = Util::RotationalArray.new(10)
       @watches = []
       @triggers = []
       @children = []

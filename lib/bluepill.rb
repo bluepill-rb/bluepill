@@ -11,6 +11,10 @@ require 'active_support/core_ext/hash'
 require 'active_support/core_ext/numeric'
 require 'active_support/duration'
 
+require 'bluepill/dsl/process_proxy'
+require 'bluepill/dsl/process_factory'
+require 'bluepill/dsl/app_proxy'
+
 require 'bluepill/application'
 require 'bluepill/controller'
 require 'bluepill/socket'

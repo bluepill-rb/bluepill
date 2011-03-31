@@ -25,10 +25,10 @@ module Bluepill
       :gid,
       
       :monitor_children,
-      :child_process_template
+      :child_process_factory
     ]
     
-    attr_accessor :name, :watches, :triggers, :logger, :skip_ticks_until
+    attr_accessor :name, :watches, :triggers, :logger, :skip_ticks_until, :process_running
     attr_accessor *CONFIGURABLE_ATTRIBUTES
     attr_reader :children, :statistics
     
@@ -85,7 +85,7 @@ module Bluepill
       after_transition any => any, :do => :record_transition
     end
     
-    def initialize(process_name, options = {})      
+    def initialize(process_name, checks, options = {})
       @name = process_name
       @event_mutex = Monitor.new
       @transition_history = Util::RotationalArray.new(10)
@@ -93,6 +93,16 @@ module Bluepill
       @triggers = []
       @children = []
       @statistics = ProcessStatistics.new
+      @actual_pid = options[:actual_pid]
+      self.logger = options[:logger]
+      
+      checks.each do |name, opts|
+        if Trigger[name]
+          self.add_trigger(name, opts)
+        else
+          self.add_watch(name, opts)
+        end
+      end
       
       # These defaults are overriden below if it's configured to be something else.
       @monitor_children =  false
@@ -367,29 +377,12 @@ module Bluepill
       
       # Construct a new process wrapper for each new found children
       new_children_pids.each do |child_pid|
-        child = self.child_process_template.deep_copy
-        
-        child.name = "<child(pid:#{child_pid})>"
-        child.actual_pid = child_pid
-        child.logger = self.logger.prefix_with(child.name)
-        
-        child.initialize_state_machines
-        child.state = "up"
-        
+        name = "<child(pid:#{child_pid})>"
+        logger = self.logger.prefix_with(name)
+
+        child = self.child_process_factory.create_child_process(name, child_pid, logger)
         @children << child
       end
-    end
-
-    def deep_copy
-      # TODO: This is a kludge. Ideally, process templates 
-      # would be facotries, and not a template object.
-      mutex, triggers, @event_mutex, @triggers = @event_mutex, @triggers, nil, nil
-      clone = Marshal.load(Marshal.dump(self))
-      clone.instance_variable_set("@event_mutex", Monitor.new)
-      clone.instance_variable_set("@triggers", triggers.collect{ |t| t.deep_copy })
-      @event_mutex = mutex
-      @triggers = triggers
-      clone
     end
 
     def prepare_command(command)

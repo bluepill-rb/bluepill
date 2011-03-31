@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 module Bluepill
   class ConditionWatch
     attr_accessor :logger, :name

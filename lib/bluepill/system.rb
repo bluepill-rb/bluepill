@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 require 'etc'
 require "shellwords"
 
@@ -7,7 +8,7 @@ module Bluepill
   module System
     APPEND_MODE = "a"
     extend self
-    
+
     # The position of each field in ps output
     IDX_MAP = {
       :pid => 0,
@@ -15,7 +16,7 @@ module Bluepill
       :pcpu => 2,
       :rss => 3
     }
-    
+
     def pid_alive?(pid)
       begin
         ::Process.kill(0, pid)
@@ -24,23 +25,23 @@ module Bluepill
         false
       end
     end
-    
+
     def cpu_usage(pid)
       ps_axu[pid] && ps_axu[pid][IDX_MAP[:pcpu]].to_f
     end
-    
+
     def memory_usage(pid)
       ps_axu[pid] && ps_axu[pid][IDX_MAP[:rss]].to_f
     end
-    
+
     def get_children(parent_pid)
       child_pids = Array.new
-      ps_axu.each_pair do |pid, chunks| 
+      ps_axu.each_pair do |pid, chunks|
         child_pids << chunks[IDX_MAP[:pid]].to_i if chunks[IDX_MAP[:ppid]].to_i == parent_pid.to_i
       end
       child_pids
     end
-    
+
     # Returns the pid of the child that executes the cmd
     def daemonize(cmd, options = {})
       rd, wr = IO.pipe
@@ -48,76 +49,76 @@ module Bluepill
       if child = Daemonize.safefork
         # we do not wanna create zombies, so detach ourselves from the child exit status
         ::Process.detach(child)
-        
+
         # parent
         wr.close
-        
+
         daemon_id = rd.read.to_i
         rd.close
-          
+
         return daemon_id if daemon_id > 0
-        
+
       else
         # child
         rd.close
 
         drop_privileges(options[:uid], options[:gid])
-        
+
         # if we cannot write the pid file as the provided user, err out
         exit unless can_write_pid_file(options[:pid_file], options[:logger])
-        
+
         to_daemonize = lambda do
           # Setting end PWD env emulates bash behavior when dealing with symlinks
           Dir.chdir(ENV["PWD"] = options[:working_dir]) if options[:working_dir]
           options[:environment].each { |key, value| ENV[key.to_s] = value.to_s } if options[:environment]
-          
+
           redirect_io(*options.values_at(:stdin, :stdout, :stderr))
-          
+
           ::Kernel.exec(*Shellwords.shellwords(cmd))
           exit
         end
 
         daemon_id = Daemonize.call_as_daemon(to_daemonize, nil, cmd)
-                
+
         File.open(options[:pid_file], "w") {|f| f.write(daemon_id)}
-        
-        wr.write daemon_id        
+
+        wr.write daemon_id
         wr.close
 
         exit
       end
     end
-    
+
     # Returns the stdout, stderr and exit code of the cmd
     def execute_blocking(cmd, options = {})
       rd, wr = IO.pipe
-      
+
       if child = Daemonize.safefork
         # parent
         wr.close
-        
+
         cmd_status = rd.read
         rd.close
-        
+
         ::Process.waitpid(child)
-        
+
         return Marshal.load(cmd_status)
-        
+
       else
         # child
         rd.close
-        
+
         # create a child in which we can override the stdin, stdout and stderr
         cmd_out_read, cmd_out_write = IO.pipe
         cmd_err_read, cmd_err_write = IO.pipe
-        
+
         pid = fork {
           # grandchild
           drop_privileges(options[:uid], options[:gid])
-          
+
           Dir.chdir(ENV["PWD"] = options[:working_dir]) if options[:working_dir]
           options[:environment].each { |key, value| ENV[key.to_s] = value.to_s } if options[:environment]
-          
+
           # close unused fds so ancestors wont hang. This line is the only reason we are not
           # using something like popen3. If this fd is not closed, the .read call on the parent
           # will never return because "wr" would still be open in the "exec"-ed cmd
@@ -143,10 +144,10 @@ module Bluepill
         # we do not use these ends of the pipes in the child
         cmd_out_write.close
         cmd_err_write.close
-        
+
         # wait for the cmd to finish executing and acknowledge it's death
         ::Process.waitpid(pid)
-        
+
         # collect stdout, stderr and exitcode
         result = {
           :stdout => cmd_out_read.read,
@@ -157,30 +158,30 @@ module Bluepill
         # We're done with these ends of the pipes as well
         cmd_out_read.close
         cmd_err_read.close
-        
+
         # Time to tell the parent about what went down
         wr.write Marshal.dump(result)
         wr.close
 
-        exit  
+        exit
       end
     end
-    
+
     def store
       @store ||= Hash.new
     end
-    
+
     def reset_data
       store.clear unless store.empty?
     end
-    
+
     def ps_axu
       # TODO: need a mutex here
       store[:ps_axu] ||= begin
         # BSD style ps invocation
         lines = `ps axo pid,ppid,pcpu,rss`.split("\n")
 
-        lines.inject(Hash.new) do |mem, line| 
+        lines.inject(Hash.new) do |mem, line|
           chunks = line.split(/\s+/)
           chunks.delete_if {|c| c.strip.empty? }
           pid = chunks[IDX_MAP[:pid]].strip.to_i
@@ -189,7 +190,7 @@ module Bluepill
         end
       end
     end
-    
+
     # be sure to call this from a fork otherwise it will modify the attributes
     # of the bluepill daemon
     def drop_privileges(uid, gid)
@@ -202,25 +203,25 @@ module Bluepill
         ::Process::Sys.setuid(uid_num) if uid
       end
     end
-    
+
     def can_write_pid_file(pid_file, logger)
       FileUtils.touch(pid_file)
       File.unlink(pid_file)
       return true
-      
+
     rescue Exception => e
       logger.warning "%s - %s" % [e.class.name, e.message]
       e.backtrace.each {|l| logger.warning l}
       return false
     end
-    
+
     def redirect_io(io_in, io_out, io_err)
       $stdin.reopen(io_in) if io_in
-      
+
       if !io_out.nil? && !io_err.nil? && io_out == io_err
         $stdout.reopen(io_out, APPEND_MODE)
         $stderr.reopen($stdout)
-        
+
       else
         $stdout.reopen(io_out, APPEND_MODE) if io_out
         $stderr.reopen(io_err, APPEND_MODE) if io_err

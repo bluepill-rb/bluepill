@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 require 'socket'
 
 module Bluepill
@@ -9,7 +10,7 @@ module Bluepill
     def client(base_dir, name, &b)
       UNIXSocket.open(socket_path(base_dir, name), &b)
     end
-    
+
     def client_command(base_dir, name, command)
       client(base_dir, name) do |socket|
         Timeout.timeout(TIMEOUT) do
@@ -20,7 +21,7 @@ module Bluepill
     rescue EOFError, Timeout::Error
       abort("Socket Timeout: Server may not be responding")
     end
-    
+
     def server(base_dir, name)
       socket_path = self.socket_path(base_dir, name)
       begin
@@ -38,10 +39,9 @@ module Bluepill
         end
       end
     end
-    
+
     def socket_path(base_dir, name)
-      File.join(base_dir, 'socks', name + ".sock") 
+      File.join(base_dir, 'socks', name + ".sock")
     end
   end
 end
- 

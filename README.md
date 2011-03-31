@@ -224,5 +224,5 @@ Bugs/Features: [http://github.com/arya/bluepill/issues](http://github.com/arya/b
 Mailing List: [http://groups.google.com/group/bluepill-rb](http://groups.google.com/group/bluepill-rb)
 
 
-[gemcutter]: http://gemcutter.org
+[rubygems/gems/bluepill]: http://rubygems.org/gems/bluepill
     

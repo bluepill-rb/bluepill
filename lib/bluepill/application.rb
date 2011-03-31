@@ -4,7 +4,7 @@ require 'thread'
 module Bluepill
   class Application
     PROCESS_COMMANDS = [:start, :stop, :restart, :unmonitor, :status]
-    
+
     attr_accessor :name, :logger, :base_dir, :socket, :pid_file
     attr_accessor :groups, :work_queue
     attr_accessor :pids_dir, :log_file
@@ -13,18 +13,18 @@ module Bluepill
       self.name = name
 
       @foreground   = options[:foreground]
-      self.log_file = options[:log_file]      
+      self.log_file = options[:log_file]
       self.base_dir = options[:base_dir] || '/var/bluepill'
       self.pid_file = File.join(self.base_dir, 'pids', self.name + ".pid")
       self.pids_dir = File.join(self.base_dir, 'pids', self.name)
 
       self.groups = {}
-      
+
       self.logger = Bluepill::Logger.new(:log_file => self.log_file, :stdout => foreground?).prefix_with(self.name)
-      
+
       self.setup_signal_traps
       self.setup_pids_dir
-      
+
       @mutex = Mutex.new
     end
 
@@ -46,7 +46,7 @@ module Bluepill
         exit(5)
       end
     end
-    
+
     PROCESS_COMMANDS.each do |command|
       class_eval <<-END
         def #{command}(group_name = nil, process_name = nil)
@@ -54,14 +54,14 @@ module Bluepill
         end
       END
     end
-    
+
     def add_process(process, group_name = nil)
       group_name = group_name.to_s if group_name
-      
+
       self.groups[group_name] ||= Group.new(group_name, :logger => self.logger.prefix_with(group_name))
       self.groups[group_name].add_process(process)
     end
-    
+
     def version
       Bluepill::VERSION
     end
@@ -111,26 +111,26 @@ module Bluepill
         end
       end
     end
-    
+
     def start_server
       self.kill_previous_bluepill
-      
+
       Daemonize.daemonize unless foreground?
-      
+
       self.logger.reopen
-      
+
       $0 = "bluepilld: #{self.name}"
-      
+
       self.groups.each {|_, group| group.determine_initial_state }
 
-      
+
       self.write_pid_file
       self.socket = Bluepill::Socket.server(self.base_dir, self.name)
       self.start_listener
-      
+
       self.run
     end
-    
+
     def run
       @running = true # set to false by signal trap
       while @running
@@ -142,33 +142,33 @@ module Bluepill
       end
       cleanup
     end
-    
+
     def cleanup
       File.unlink(self.socket.path) if self.socket
       File.unlink(self.pid_file) if File.exists?(self.pid_file)
     end
-    
+
     def setup_signal_traps
       terminator = Proc.new do
         puts "Terminating..."
         @running = false
       end
-      
-      Signal.trap("TERM", &terminator) 
-      Signal.trap("INT", &terminator) 
-      
+
+      Signal.trap("TERM", &terminator)
+      Signal.trap("INT", &terminator)
+
       Signal.trap("HUP") do
         self.logger.reopen if self.logger
       end
     end
-    
+
     def setup_pids_dir
       FileUtils.mkdir_p(self.pids_dir) unless File.exists?(self.pids_dir)
       # we need everybody to be able to write to the pids_dir as processes managed by
       # bluepill will be writing to this dir after they've dropped privileges
       FileUtils.chmod(0777, self.pids_dir)
     end
-    
+
     def kill_previous_bluepill
       if File.exists?(self.pid_file)
         previous_pid = File.read(self.pid_file).to_i
@@ -195,7 +195,7 @@ module Bluepill
         end
       end
     end
-    
+
     def write_pid_file
       File.open(self.pid_file, 'w') { |x| x.write(::Process.pid) }
     end

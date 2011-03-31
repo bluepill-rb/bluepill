@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 module Bluepill
-  module ProcessConditions    
+  module ProcessConditions
     def self.[](name)
       const_get(name.to_s.camelcase)
     end

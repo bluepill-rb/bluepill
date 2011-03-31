@@ -13,11 +13,11 @@ module Bluepill
 
     def create_process(name, pids_dir)
       self.assign_default_pid_file(name, pids_dir)
-      
+
       process = ProcessProxy.new(name, @attributes, @process_block)
       child_process_block = @attributes.delete(:child_process_block)
       @attributes[:child_process_factory] = ProcessFactory.new(@attributes, child_process_block) if @attributes[:monitor_children]
-      
+
       self.validate_process! process
       process.to_process
     end
@@ -31,7 +31,7 @@ module Bluepill
       child = ProcessProxy.new(name, attributes, @process_block)
       self.validate_child_process! child
       process = child.to_process
-      
+
       process.determine_initial_state
       process
     end

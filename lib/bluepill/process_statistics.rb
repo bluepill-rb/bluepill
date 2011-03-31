@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 module Bluepill
-  class ProcessStatistics    
+  class ProcessStatistics
     STRFTIME = "%m/%d/%Y %H:%I:%S"
     # possibly persist this data.
     def initialize

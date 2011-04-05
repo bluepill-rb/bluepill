@@ -1,25 +1,26 @@
+# -*- encoding: utf-8 -*-
 module Bluepill
   class Group
     attr_accessor :name, :processes, :logger
     attr_accessor :process_logger
-    
+
     def initialize(name, options = {})
       self.name = name
       self.processes = []
       self.logger = options[:logger]
     end
-    
+
     def add_process(process)
       process.logger = self.logger.prefix_with(process.name)
       self.processes << process
     end
-    
+
     def tick
       self.processes.each do |process|
         process.tick
       end
     end
-    
+
     def determine_initial_state
       self.processes.each do |process|
         process.determine_initial_state
@@ -39,16 +40,16 @@ module Bluepill
           end
           threads.each { |t| t.join }
           affected
-        end      
+        end
       END
     end
-    
+
     def status(process_name = nil)
       lines = []
       if process_name.nil?
         prefix = self.name ? "  " : ""
         lines << "#{self.name}:" if self.name
-      
+
         self.processes.each do |process|
           lines << "%s%s(pid:%s): %s" % [prefix, process.name, process.actual_pid, process.state]
           if process.monitor_children?
@@ -66,6 +67,6 @@ module Bluepill
       end
       lines << ""
     end
-    
+
   end
 end

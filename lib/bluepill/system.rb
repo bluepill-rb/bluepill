@@ -102,8 +102,7 @@ module Bluepill
 
         ::Process.waitpid(child)
 
-        return Marshal.load(cmd_status)
-
+        cmd_status.strip != '' ? Marshal.load(cmd_status) : {:exit_code => 0, :stdout => '', :stderr => ''}
       else
         # child
         rd.close

@@ -6,7 +6,7 @@ require "bluepill/version"
 
 Gem::Specification.new do |s|
   s.name        = "bluepill"
-  s.version     = Bluepill::VERSION
+  s.version     = Bluepill::VERSION.dup
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Arya Asemanfar", "Gary Tsang", "Rohith Ravi"]
   s.email       = ["entombedvirus@gmail.com"]

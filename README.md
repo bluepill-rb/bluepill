@@ -218,6 +218,8 @@ You can run bluepill in the foreground:
       # ...
     end
 
+Note that You must define only one application per config when using foreground mode.
+
 ## Links
 Code: [http://github.com/arya/bluepill](http://github.com/arya/bluepill)  
 Bugs/Features: [http://github.com/arya/bluepill/issues](http://github.com/arya/bluepill/issues)  

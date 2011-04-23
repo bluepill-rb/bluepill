@@ -25,6 +25,8 @@ module Bluepill
       :uid,
       :gid,
 
+      :cache_actual_pid,
+
       :monitor_children,
       :child_process_factory
     ]
@@ -106,6 +108,7 @@ module Bluepill
 
       # These defaults are overriden below if it's configured to be something else.
       @monitor_children =  false
+      @cache_actual_pid = true
       @start_grace_time = @stop_grace_time = @restart_grace_time = 3
       @environment = {}
 
@@ -326,8 +329,13 @@ module Bluepill
       false
     end
 
+    def cache_actual_pid?
+      !!@cache_actual_pid
+    end
+
     def actual_pid
-      @actual_pid ||= begin
+      return @actual_pid if cache_actual_pid? && @actual_pid
+      @actual_pid = begin
         if pid_file
           if File.exists?(pid_file)
             str = File.read(pid_file)

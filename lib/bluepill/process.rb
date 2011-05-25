@@ -360,7 +360,7 @@ module Bluepill
 
     def pid_from_command
       pid = %x{#{pid_command}}.strip
-      pid =~ /\A\d+\z/ ? pid.to_i : nil
+      (pid =~ /\A\d+\z/) ? pid.to_i : nil
     end
 
     def actual_pid=(pid)

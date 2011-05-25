@@ -32,7 +32,9 @@ module Bluepill
       :cache_actual_pid,
 
       :monitor_children,
-      :child_process_factory
+      :child_process_factory,
+
+      :pid_command
     ]
 
     attr_accessor :name, :watches, :triggers, :logger, :skip_ticks_until, :process_running
@@ -338,6 +340,10 @@ module Bluepill
     end
 
     def actual_pid
+      pid_command ? pid_from_command : pid_from_file
+    end
+
+    def pid_from_file
       return @actual_pid if cache_actual_pid? && @actual_pid
       @actual_pid = begin
         if pid_file
@@ -350,6 +356,11 @@ module Bluepill
           end
         end
       end
+    end
+
+    def pid_from_command
+      pid = %x{#{pid_command}}.strip
+      pid =~ /\A\d+\z/ ? pid.to_i : nil
     end
 
     def actual_pid=(pid)

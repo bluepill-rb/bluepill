@@ -11,6 +11,9 @@ Bluepill.application(:sample_app) do |app|
     app.process("process_#{i}") do |process|
       process.pid_file = "#{ROOT_DIR}/pids/process_#{i}.pid"
 
+      # Example of use of pid_command option to find memcached process
+      # process.pid_command = "ps -ef | awk '/memcached$/{ print $2 }'"
+
       # I could not figure out a portable way to
       # specify the path to the sample forking server across the diff developer laptops.
       # Since this code is eval'ed we cannot reliably use __FILE__

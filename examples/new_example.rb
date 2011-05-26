@@ -6,7 +6,7 @@ ROOT_DIR = "/tmp/bp"
 
 # Watch with
 # watch -n0.2 'ps axu | egrep "(CPU|forking|bluepill|sleep)" | grep -v grep | sort'
-Bluepill.application(:sample_app, :base_dir => 'tmp/bluepill') do
+Bluepill.application(:sample_app) do
   0.times do |i|
     process("process_#{i}") do
       pid_file "#{ROOT_DIR}/pids/process_#{i}.pid"

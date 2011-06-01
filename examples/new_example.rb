@@ -82,3 +82,4 @@ Bluepill.application(:sample_app) do
     end
   end
 end
+

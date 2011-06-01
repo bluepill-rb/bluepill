@@ -218,7 +218,7 @@ module Bluepill
       if self.process_running?(true)
         self.state = 'up'
       else
-        self.state = (!auto_start) ? 'unmonitored' : 'down'
+        self.state = (auto_start == false) ? 'unmonitored' : 'down' # we need to check for false value
       end
     end
 

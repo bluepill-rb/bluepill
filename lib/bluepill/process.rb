@@ -34,7 +34,8 @@ module Bluepill
       :monitor_children,
       :child_process_factory,
 
-      :pid_command
+      :pid_command,
+      :auto_start
     ]
 
     attr_accessor :name, :watches, :triggers, :logger, :skip_ticks_until, :process_running
@@ -217,8 +218,7 @@ module Bluepill
       if self.process_running?(true)
         self.state = 'up'
       else
-        # TODO: or "unmonitored" if bluepill was started in no auto-start mode.
-        self.state = 'down'
+        self.state = (!auto_start) ? 'unmonitored' : 'down'
       end
     end
 

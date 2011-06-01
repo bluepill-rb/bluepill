@@ -66,6 +66,8 @@ Bluepill.application(:sample_app) do |app|
 
   1.times do |i|
     app.process("group_process_#{i}") do |process|
+      process.auto_start = false
+
       process.uid = "rohith"
       process.gid = "wheel"
 
@@ -82,3 +84,4 @@ Bluepill.application(:sample_app) do |app|
     end
   end
 end
+

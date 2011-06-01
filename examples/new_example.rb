@@ -2,6 +2,8 @@ require 'rubygems'
 require 'bluepill'
 require 'logger'
 
+# Note that this syntax supported from bluepill 0.0.50
+
 ROOT_DIR = "/tmp/bp"
 
 # Watch with

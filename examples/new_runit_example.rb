@@ -8,6 +8,8 @@ require 'logger'
 #
 # http://github.com/Undev/runit-man used as example of monitored application.
 
+# Note that this syntax supported from bluepill 0.0.50
+
 Bluepill.application(:runit_man, :foreground => true) do
   process("runit-man") do
     pid_file        "/etc/service/runit-man/supervise/pid"

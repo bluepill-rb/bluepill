@@ -4,6 +4,8 @@ require 'socket'
 module Bluepill
   module Socket
     TIMEOUT = 60 # Used for client commands
+    RETRY = 5
+    @@timeout = 0
 
     extend self
 
@@ -19,7 +21,15 @@ module Bluepill
         end
       end
     rescue EOFError, Timeout::Error
-      abort("Socket Timeout: Server may not be responding")
+      @@timeout += 1
+      puts "Retry #{@@timeout} of #{RETRY}"
+      if @@timeout <= RETRY
+        client_command(base_dir, name, command)
+      else
+        abort("Socket Timeout: Server may not be responding")
+      end
+    ensure
+      @@timeout = 0
     end
 
     def server(base_dir, name)

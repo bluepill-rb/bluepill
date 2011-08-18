@@ -35,7 +35,9 @@ module Bluepill
       :child_process_factory,
 
       :pid_command,
-      :auto_start
+      :auto_start,
+
+      :supplementary_groups
     ]
 
     attr_accessor :name, :watches, :triggers, :logger, :skip_ticks_until, :process_running
@@ -422,7 +424,8 @@ module Bluepill
         :logger      => self.logger,
         :stdin       => self.stdin,
         :stdout      => self.stdout,
-        :stderr      => self.stderr
+        :stderr      => self.stderr,
+        :supplementary_groups => self.supplementary_groups
       }
     end
 

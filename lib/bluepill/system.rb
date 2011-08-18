@@ -62,7 +62,7 @@ module Bluepill
         # child
         rd.close
 
-        drop_privileges(options[:uid], options[:gid])
+        drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
 
         # if we cannot write the pid file as the provided user, err out
         exit unless can_write_pid_file(options[:pid_file], options[:logger])
@@ -113,7 +113,7 @@ module Bluepill
 
         pid = fork {
           # grandchild
-          drop_privileges(options[:uid], options[:gid])
+          drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
 
           Dir.chdir(ENV["PWD"] = options[:working_dir]) if options[:working_dir]
           options[:environment].each { |key, value| ENV[key.to_s] = value.to_s } if options[:environment]
@@ -192,12 +192,17 @@ module Bluepill
 
     # be sure to call this from a fork otherwise it will modify the attributes
     # of the bluepill daemon
-    def drop_privileges(uid, gid)
+    def drop_privileges(uid, gid, supplementary_groups)
       if ::Process::Sys.geteuid == 0
         uid_num = Etc.getpwnam(uid).uid if uid
         gid_num = Etc.getgrnam(gid).gid if gid
 
+        group_nums = supplementary_groups.map do |group|
+          Etc.getgrnam(group).gid
+        end
+
         ::Process.groups = [gid_num] if gid
+        ::Process.groups |= group_nums unless group_nums.empty?
         ::Process::Sys.setgid(gid_num) if gid
         ::Process::Sys.setuid(uid_num) if uid
       end

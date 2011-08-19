@@ -79,33 +79,35 @@ module Bluepill
       stop_grace_time = process.attributes[:stop_grace_time]
       stop_signals = process.attributes[:stop_signals]
 
-      #Start with the more helpful error messages before the 'odd number' message.
-      delay_sum = 0
-      stop_signals.each_with_index do |s_or_d, i|
-        if i % 2 == 0
-          signal = s_or_d
-          unless signal.is_a? Symbol
-            $stderr.puts "Config Error: Invalid stop_signals!  Expected a symbol (signal) at position #{i} instead of '#{signal}'."
-            exit(6)
+      unless stop_signals.nil?
+        #Start with the more helpful error messages before the 'odd number' message.
+        delay_sum = 0
+        stop_signals.each_with_index do |s_or_d, i|
+          if i % 2 == 0
+            signal = s_or_d
+            unless signal.is_a? Symbol
+              $stderr.puts "Config Error: Invalid stop_signals!  Expected a symbol (signal) at position #{i} instead of '#{signal}'."
+              exit(6)
+            end
+          else
+            delay = s_or_d
+            unless delay.is_a? Fixnum
+              $stderr.puts "Config Error: Invalid stop_signals!  Expected a number (delay) at position #{i} instead of '#{delay}'."
+              exit(6)
+            end
+            delay_sum += delay
           end
-        else
-          delay = s_or_d
-          unless delay.is_a? Fixnum
-            $stderr.puts "Config Error: Invalid stop_signals!  Expected a number (delay) at position #{i} instead of '#{delay}'."
-            exit(6)
-          end
-          delay_sum += delay
         end
-      end
 
-      unless stop_signals.size % 2 == 1
-        $stderr.puts "Config Error: Invalid stop_signals!  Expected an odd number of elements."
-        exit(6)
-      end
+        unless stop_signals.size % 2 == 1
+          $stderr.puts "Config Error: Invalid stop_signals!  Expected an odd number of elements."
+          exit(6)
+        end
 
-      if stop_grace_time <= delay_sum
-        $stderr.puts "Config Error: Stop_grace_time should be greater than the sum of stop_signals delays!"
-        exit(6)
+        if stop_grace_time.nil? || stop_grace_time <= delay_sum
+          $stderr.puts "Config Error: Stop_grace_time should be greater than the sum of stop_signals delays!"
+          exit(6)
+        end
       end
     end
 

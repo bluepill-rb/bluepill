@@ -164,6 +164,35 @@ You can also have an app-wide working directory:
 
 Note: We also set the PWD in the environment to the working dir you specify. This is useful for when the working dir is a symlink. Unicorn in particular will cd into the environment variable in PWD when it re-execs to deal with a change in the symlink.
 
+By default, bluepill will send a SIGTERM to your process when stopping.
+To change the stop command:
+
+```ruby
+    Bluepill.application("app_name") do |app|
+      app.process("process_name") do |process|
+        process.start_command = "/usr/bin/some_start_command"
+        process.pid_file = "/tmp/some_pid_file.pid"
+        process.stop_command = "/user/bin/some_stop_command"
+      end
+    end
+```
+
+If you'd like to send a signal or signals to your process to stop it:
+
+```ruby
+    Bluepill.application("app_name") do |app|
+      app.process("process_name") do |process|
+        process.start_command = "/usr/bin/some_start_command"
+        process.pid_file = "/tmp/some_pid_file.pid"
+        process.stop_signals = [:quit, 30.seconds, :term, 5.seconds, :kill]
+      end
+    end
+```
+
+We added a line that will send a SIGQUIT, wait 30 seconds and check to
+see if the process is still up, send a SIGTERM, wait 5 seconds and check
+to see if the process is still up, and finally send a SIGKILL.
+
 And lastly, to monitor child processes:
 
 ```ruby

@@ -119,6 +119,23 @@ If you want to run the process as someone other than root:
     end
 ```
 
+If you want to include one or more supplementary groups:
+
+```ruby
+    Bluepill.application("app_name") do |app|
+      app.process("process_name") do |process|
+        process.start_command = "/usr/bin/some_start_command"
+        process.pid_file = "/tmp/some_pid_file.pid"
+        process.uid = "deploy"
+        process.gid = "deploy"
+        process.supplementary_groups = ['rvm']
+
+        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3
+        process.checks :mem_usage, :every => 10.seconds, :below => 100.megabytes, :times => [3,5]
+      end
+    end
+```
+
 You can also set an app-wide uid/gid:
 
 ```ruby

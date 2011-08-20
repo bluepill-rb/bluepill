@@ -37,7 +37,9 @@ module Bluepill
       :pid_command,
       :auto_start,
 
-      :supplementary_groups
+      :supplementary_groups,
+
+      :stop_signals
     ]
 
     attr_accessor :name, :watches, :triggers, :logger, :skip_ticks_until, :process_running
@@ -89,6 +91,7 @@ module Bluepill
       end
 
       before_transition any => any, :do => :notify_triggers
+      before_transition :stopping => any, :do => :clean_threads
 
       after_transition any => :starting, :do => :start_process
       after_transition any => :stopping, :do => :stop_process
@@ -103,6 +106,7 @@ module Bluepill
       @watches = []
       @triggers = []
       @children = []
+      @threads = []
       @statistics = ProcessStatistics.new
       @actual_pid = options[:actual_pid]
       self.logger = options[:logger]
@@ -135,6 +139,9 @@ module Bluepill
 
       # clear the memoization per tick
       @process_running = nil
+
+      # Deal with thread cleanup here since the stopping state isn't used
+      clean_threads if self.unmonitored?
 
       # run state machine transitions
       super
@@ -290,6 +297,30 @@ module Bluepill
           end
         end
 
+      elsif stop_signals
+        # issue stop signals with configurable delay between each
+        logger.warning "Sending stop signals to #{actual_pid}"
+        @threads << Thread.new(self, stop_signals.clone) do |process, stop_signals|
+          signal = stop_signals.shift
+          logger.info "Sending signal #{signal} to #{process.actual_pid}"
+          process.signal_process(signal.upcase) # send first signal
+
+          until stop_signals.empty?
+            # we already checked to make sure stop_signals had an odd number of items
+            delay = stop_signals.shift
+            signal = stop_signals.shift
+
+            logger.debug "Sleeping for #{delay} seconds"
+            sleep delay
+            #break unless signal_process(0) #break unless the process can be reached
+            unless process.signal_process(0)
+              logger.debug "Process has terminated."
+              break
+            end
+            logger.info "Sending signal #{signal} to #{process.actual_pid}"
+            process.signal_process(signal.upcase)
+          end
+        end
       else
         logger.warning "Executing default stop command. Sending TERM signal to #{actual_pid}"
         signal_process("TERM")
@@ -320,6 +351,11 @@ module Bluepill
         self.stop_process
         # the tick will bring it back.
       end
+    end
+
+    def clean_threads
+      @threads.each { |t| t.kill }
+      @threads.clear
     end
 
     def daemonize?

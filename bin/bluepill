@@ -2,11 +2,20 @@
 require 'optparse'
 require 'bluepill'
 
+if RUBY_VERSION >= '1.9.2'
+  require 'rbconfig'
+  RubyConfig = RbConfig
+else
+  RubyConfig = Config
+end
+
 # Default options
 options = {
   :log_file   => "/var/log/bluepill.log",
   :base_dir   => "/var/bluepill",
-  :privileged => true
+  :privileged => true,
+  :timeout    => 10,
+  :attempts   => 1
 }
 
 OptionParser.new do |opts|
@@ -30,6 +39,10 @@ OptionParser.new do |opts|
 
   opts.on('-t', '--timeout Seconds', Integer, "Timeout for commands sent to the daemon, in seconds. Defaults to 10.") do |timeout|
     options[:timeout] = timeout
+  end
+
+  opts.on('--attempts Count', Integer, "Attempts for commands sent to the daemon, in seconds. Defaults to 1.") do |attempts|
+    options[:attempts] = attempts
   end
 
   help = proc do
@@ -96,7 +109,7 @@ if options[:command] == "load"
     # Restart the ruby interpreter for the config file so that anything loaded here
     # does not stay in memory for the daemon
     require 'rbconfig'
-    ruby = File.join(Config::CONFIG['bindir'], Config::CONFIG['ruby_install_name'])
+    ruby = File.join(RubyConfig::CONFIG['bindir'], RubyConfig::CONFIG['ruby_install_name'])
     load_path = File.expand_path("#{File.dirname(__FILE__)}/../lib")
     file_path = File.expand_path(file)
 
@@ -107,5 +120,6 @@ if options[:command] == "load"
   end
 else
   target = ARGV.shift
-  controller.handle_command(options[:application], options[:command], target)
+  controller.handle_target(target, options)
 end
+

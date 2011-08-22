@@ -2,11 +2,10 @@
 require 'optparse'
 require 'bluepill'
 
-if RUBY_VERSION >= '1.9.2'
+begin
   require 'rbconfig'
-  RubyConfig = RbConfig
-else
-  RubyConfig = Config
+rescue LoadError
+  RbConfig = Config
 end
 
 # Default options
@@ -109,7 +108,7 @@ if options[:command] == "load"
     # Restart the ruby interpreter for the config file so that anything loaded here
     # does not stay in memory for the daemon
     require 'rbconfig'
-    ruby = File.join(RubyConfig::CONFIG['bindir'], RubyConfig::CONFIG['ruby_install_name'])
+    ruby = File.join(RbConfig::CONFIG['bindir'], RbConfig::CONFIG['ruby_install_name'])
     load_path = File.expand_path("#{File.dirname(__FILE__)}/../lib")
     file_path = File.expand_path(file)
 

@@ -5,8 +5,9 @@ require 'bluepill'
 begin
   require 'rbconfig'
 rescue LoadError
-  RbConfig = Config
 end
+
+RbConfig = Config unless Object.const_defined?(:RbConfig)
 
 # Default options
 options = {
@@ -107,7 +108,6 @@ if options[:command] == "load"
   if File.exists?(file)
     # Restart the ruby interpreter for the config file so that anything loaded here
     # does not stay in memory for the daemon
-    require 'rbconfig'
     ruby = File.join(RbConfig::CONFIG['bindir'], RbConfig::CONFIG['ruby_install_name'])
     load_path = File.expand_path("#{File.dirname(__FILE__)}/../lib")
     file_path = File.expand_path(file)

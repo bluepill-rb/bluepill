@@ -25,6 +25,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rspec-expectations', '~> 2.0'
   s.add_development_dependency 'rr', '~> 1.0'
   s.add_development_dependency 'faker', '~> 0.9'
+  s.add_development_dependency 'yard', '~> 0.7'
 
   s.files            = `git ls-files`.split("\n")
   s.test_files       = `git ls-files -- {test,spec,features}/*`.split("\n")

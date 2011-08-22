@@ -21,3 +21,13 @@ rescue LoadError
   $stderr.puts "RSpec not available. Install it with: gem install rspec-core rspec-expectations rr"
 end
 
+begin
+  require 'yard'
+  YARD::Rake::YardocTask.new do |yard|
+    yard.options << "--title='bsf #{BSF_VERSION}'"
+
+  end
+rescue LoadError
+  $stderr.puts "Please install YARD with: gem install yard"
+end
+

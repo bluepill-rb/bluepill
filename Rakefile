@@ -7,6 +7,9 @@ rescue LoadError
   $stderr.puts "Bundler not installed. You should install it with: gem install bundler"
 end
 
+$LOAD_PATH << File.expand_path('./lib', File.dirname(__FILE__))
+require 'bluepill/version'
+
 begin
   require 'rspec/core/rake_task'
 
@@ -24,7 +27,7 @@ end
 begin
   require 'yard'
   YARD::Rake::YardocTask.new do |yard|
-    yard.options << "--title='bsf #{BSF_VERSION}'"
+    yard.options << "--title='bluepill #{Bluepill::VERSION}'"
 
   end
 rescue LoadError

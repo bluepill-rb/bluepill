@@ -16,7 +16,11 @@ begin
   RSpec::Core::RakeTask.new
 
   RSpec::Core::RakeTask.new(:rcov) do |t|
-    t.rcov = true
+    if RUBY_VERSION >= '1.9'
+      ENV['ENABLE_SIMPLECOV'] = '1'
+    else
+      t.rcov = true
+    end
     t.ruby_opts = '-w'
     t.rcov_opts = %q[-Ilib --exclude "spec/*,gems/*"]
   end

@@ -1,1 +1,1 @@
--c -f progress
+-r ./spec/spec_helper.rb -c -f progress

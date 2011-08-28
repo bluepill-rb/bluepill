@@ -15,17 +15,15 @@ begin
 
   RSpec::Core::RakeTask.new
 
-  RSpec::Core::RakeTask.new(:rcov) do |t|
-    if RUBY_VERSION >= '1.9'
+  if RUBY_VERSION >= '1.9'
+    RSpec::Core::RakeTask.new(:cov) do |t|
       ENV['ENABLE_SIMPLECOV'] = '1'
-    else
-      t.rcov = true
+      t.ruby_opts = '-w'
+      t.rcov_opts = %q[-Ilib --exclude "spec/*,gems/*"]
     end
-    t.ruby_opts = '-w'
-    t.rcov_opts = %q[-Ilib --exclude "spec/*,gems/*"]
   end
 rescue LoadError
-  $stderr.puts "RSpec not available. Install it with: gem install rspec-core rspec-expectations rr"
+  $stderr.puts "RSpec not available. Install it with: gem install rspec-core rspec-expectations rr faker"
 end
 
 begin

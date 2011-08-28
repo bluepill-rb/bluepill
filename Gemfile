@@ -3,8 +3,8 @@ source :rubygems
 # Specify your gem's dependencies in bluepill.gemspec
 gemspec
 
+# YARD helper for ruby 1.8 (already embedded into ruby 1.9)
 gem "ripper", :platforms => :ruby_18, :group => :development
 
-gem "rcov", :platforms => :ruby_18, :group => :test
-
+# Code coverage tool that works on Ruby 1.9
 gem "simplecov", ">= 0.4.0", :platforms => :ruby_19, :group => :test

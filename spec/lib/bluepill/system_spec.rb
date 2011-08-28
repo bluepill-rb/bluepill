@@ -25,4 +25,12 @@ describe Bluepill::System do
       Bluepill::System.store[:somekey].should be_eql(10) 
     end
   end
+
+  describe :reset_data do
+    it 'should clear the #store' do
+      Bluepill::System.store[:anotherkey] = Faker::Lorem.sentence
+      Bluepill::System.reset_data
+      Bluepill::System.store.should be_empty
+    end
+  end
 end

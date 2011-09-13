@@ -12,7 +12,7 @@ RbConfig = Config unless Object.const_defined?(:RbConfig)
 # Default options
 options = {
   :log_file   => "/var/log/bluepill.log",
-  :base_dir   => "/var/bluepill",
+  :base_dir   => "/var/run/bluepill",
   :privileged => true,
   :timeout    => 10,
   :attempts   => 1

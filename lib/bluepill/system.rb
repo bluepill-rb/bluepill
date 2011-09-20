@@ -205,6 +205,7 @@ module Bluepill
         ::Process.groups |= group_nums unless group_nums.empty?
         ::Process::Sys.setgid(gid_num) if gid
         ::Process::Sys.setuid(uid_num) if uid
+        ENV['HOME'] = Etc.getpwuid(uid_num).try(:dir) || ENV['HOME'] if uid
       end
     end
 

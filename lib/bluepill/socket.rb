@@ -13,12 +13,13 @@ module Bluepill
     end
 
     def client_command(base_dir, name, command)
+      res = nil
       MAX_ATTEMPTS.times do |current_attempt|
         begin
           client(base_dir, name) do |socket|
             Timeout.timeout(TIMEOUT) do
               socket.puts command
-              Marshal.load(socket)
+              res = Marshal.load(socket.read)
             end
           end
           break
@@ -29,6 +30,7 @@ module Bluepill
           puts "Retry #{current_attempt + 1} of #{MAX_ATTEMPTS}"
         end
       end
+      res
     end
 
     def server(base_dir, name)

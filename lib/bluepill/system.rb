@@ -192,7 +192,7 @@ module Bluepill
 
     # be sure to call this from a fork otherwise it will modify the attributes
     # of the bluepill daemon
-    def drop_privileges(uid, gid, supplementary_groups)
+    def drop_privileges(uid, gid, supplementary_groups=[])
       if ::Process::Sys.geteuid == 0
         uid_num = Etc.getpwnam(uid).uid if uid
         gid_num = Etc.getgrnam(gid).gid if gid

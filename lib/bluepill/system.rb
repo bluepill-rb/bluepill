@@ -197,6 +197,8 @@ module Bluepill
         uid_num = Etc.getpwnam(uid).uid if uid
         gid_num = Etc.getgrnam(gid).gid if gid
 
+        supplementary_groups ||= []
+
         group_nums = supplementary_groups.map do |group|
           Etc.getgrnam(group).gid
         end

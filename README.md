@@ -5,14 +5,14 @@ Bluepill is a simple process monitoring tool written in Ruby.
 It&apos;s hosted on [rubygems.org][rubygems].
 
     sudo gem install bluepill
-    
+
 In order to take advantage of logging with syslog, you also need to setup your syslog to log the local6 facility. Edit the appropriate config file for your syslogger (/etc/syslog.conf for syslog) and add a line for local6:
 
     local6.*          /var/log/bluepill.log
 
 You&apos;ll also want to add _/var/log/bluepill.log_ to _/etc/logrotate.d/syslog_ so that it gets rotated.
 
-Lastly, create the _/var/bluepill_ directory for bluepill to store its pid and sock files.
+Lastly, create the _/var/run/bluepill_ directory for bluepill to store its pid and sock files.
 
 ## Usage
 ### Config
@@ -303,4 +303,3 @@ Mailing List: [http://groups.google.com/group/bluepill-rb](http://groups.google.
 
 
 [rubygems]: http://rubygems.org/gems/bluepill
-    

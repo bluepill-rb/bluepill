@@ -1,6 +1,8 @@
 # -*- encoding: utf-8 -*-
 require 'rubygems'
 
+require 'bundler/setup' if File.exists?(ENV['BUNDLE_GEMFILE'])
+
 require 'thread'
 require 'monitor'
 require 'syslog'

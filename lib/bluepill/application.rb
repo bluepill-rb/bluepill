@@ -91,6 +91,7 @@ module Bluepill
         loop do
           begin
             client = self.socket.accept
+            client.close_on_exec = true
             command, *args = client.readline.strip.split(":")
             response = begin
               mutex { self.send(command, *args) }

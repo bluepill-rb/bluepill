@@ -6,6 +6,10 @@ gem "state_machine"
 require "state_machine"
 require "daemons"
 
+unless const_defined?(Daemonize)
+  Daemonize = Daemonization
+end
+
 module Bluepill
   class Process
     CONFIGURABLE_ATTRIBUTES = [

@@ -307,7 +307,7 @@ module Bluepill
         @threads << Thread.new(self, stop_signals.clone) do |process, stop_signals|
           signal = stop_signals.shift
           logger.info "Sending signal #{signal} to #{process.actual_pid}"
-          process.signal_process(signal.upcase) # send first signal
+          process.signal_process(signal) # send first signal
 
           until stop_signals.empty?
             # we already checked to make sure stop_signals had an odd number of items
@@ -322,7 +322,7 @@ module Bluepill
               break
             end
             logger.info "Sending signal #{signal} to #{process.actual_pid}"
-            process.signal_process(signal.upcase)
+            process.signal_process(signal)
           end
         end
       else
@@ -371,7 +371,7 @@ module Bluepill
     end
 
     def signal_process(code)
-      ::Process.kill(code, actual_pid)
+      ::Process.kill(code.to_s.upcase, actual_pid)
       true
     rescue
       false

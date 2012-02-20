@@ -1,0 +1,129 @@
+#! /usr/bin/env ruby
+
+require 'rubygems'
+require 'bundler/setup'
+$LOAD_PATH.unshift(File.expand_path('lib', File.dirname(__FILE__)))
+
+require 'optparse'
+require 'bluepill'
+
+begin
+  require 'rbconfig'
+rescue LoadError
+end
+
+RbConfig = Config unless Object.const_defined?(:RbConfig)
+
+# Default options
+options = {
+  :log_file   => "/var/log/bluepill.log",
+  :base_dir   => "/var/run/bluepill",
+  :privileged => true,
+  :timeout    => 10,
+  :attempts   => 1
+}
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: bluepill [app] cmd [options]"
+  opts.on('-l', "--logfile LOGFILE", "Path to logfile, defaults to #{options[:log_file]}") do |file|
+    options[:log_file] = file
+  end
+
+  opts.on('-c', "--base-dir DIR", "Directory to store bluepill socket and pid files, defaults to #{options[:base_dir]}") do |base_dir|
+    options[:base_dir] = base_dir
+  end
+
+  opts.on("-v", "--version") do
+    puts "bluepill, version #{Bluepill::VERSION}"
+    exit
+  end
+
+  opts.on("--[no-]privileged", "Allow/disallow to run #{$0} as non-privileged process. disallowed by default") do |v|
+    options[:privileged] = v
+  end
+
+  opts.on('-t', '--timeout Seconds', Integer, "Timeout for commands sent to the daemon, in seconds. Defaults to 10.") do |timeout|
+    options[:timeout] = timeout
+  end
+
+  opts.on('--attempts Count', Integer, "Attempts for commands sent to the daemon, in seconds. Defaults to 1.") do |attempts|
+    options[:attempts] = attempts
+  end
+
+  help = proc do
+    puts opts
+    puts
+    puts "Commands:"
+    puts "    load CONFIG_FILE\t\tLoads new instance of bluepill using the specified config file"
+    puts "    status\t\t\tLists the status of the proceses for the specified app"
+    puts "    start [TARGET]\t\tIssues the start command for the target process or group, defaults to all processes"
+    puts "    stop [TARGET]\t\tIssues the stop command for the target process or group, defaults to all processes"
+    puts "    restart [TARGET]\t\tIssues the restart command for the target process or group, defaults to all processes"
+    puts "    unmonitor [TARGET]\t\tStop monitoring target process or group, defaults to all processes"
+    puts "    log [TARGET]\t\tShow the log for the specified process or group, defaults to all for app"
+    puts "    quit\t\t\tStop bluepill"
+    puts
+    puts "See http://github.com/arya/bluepill for README"
+    exit
+  end
+
+  opts.on_tail('-h','--help', 'Show this message', &help)
+  help.call if ARGV.empty?
+end.parse!
+
+# Check for root
+if options[:privileged] && ::Process.euid != 0
+  $stderr.puts "You must run bluepill as root or use --no-privileged option."
+  exit(3)
+end
+
+APPLICATION_COMMANDS = %w(status start stop restart unmonitor quit log)
+
+controller = Bluepill::Controller.new(options.slice(:base_dir, :log_file))
+
+if controller.running_applications.include?(File.basename($0)) && File.symlink?($0)
+  # bluepill was called as a symlink with the name of the target application
+  options[:application] = File.basename($0)
+elsif controller.running_applications.include?(ARGV.first)
+  # the first arg is the application name
+  options[:application] = ARGV.shift
+elsif APPLICATION_COMMANDS.include?(ARGV.first)
+  if controller.running_applications.length == 1
+    # there is only one, let's just use that
+    options[:application] = controller.running_applications.first
+  elsif controller.running_applications.length > 1
+    # There is more than one, tell them the list and exit
+    $stderr.puts "You must specify an application name to run that command. Here's the list of running applications:"
+    controller.running_applications.each_with_index do |app, index|
+      $stderr.puts "  #{index + 1}. #{app}"
+    end
+    $stderr.puts "Usage: bluepill [app] cmd [options]"
+    exit(1)
+  else
+    # There are none running AND they aren't trying to start one
+    $stderr.puts "Error: There are no running bluepill daemons.\nTo start a bluepill daemon, use: bluepill load <config file>"
+    exit(2)
+  end
+end
+
+options[:command] = ARGV.shift
+
+if options[:command] == "load"
+  file = ARGV.shift
+  if File.exists?(file)
+    # Restart the ruby interpreter for the config file so that anything loaded here
+    # does not stay in memory for the daemon
+    ruby = File.join(RbConfig::CONFIG['bindir'], RbConfig::CONFIG['ruby_install_name'])
+    load_path = File.expand_path("#{File.dirname(__FILE__)}/../lib")
+    file_path = File.expand_path(file)
+
+    exec(ruby, "-I#{load_path}", '-rbluepill', file_path)
+    
+  else
+    $stderr.puts "Can't find file: #{file}"
+  end
+else
+  target = ARGV.shift
+  controller.handle_command(options[:application], options[:command], target)
+end
+

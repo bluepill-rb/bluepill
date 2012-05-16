@@ -5,7 +5,7 @@ module Bluepill
   class Application
     PROCESS_COMMANDS = [:start, :stop, :restart, :unmonitor, :status]
 
-    attr_accessor :name, :logger, :base_dir, :socket, :pid_file
+    attr_accessor :name, :logger, :base_dir, :socket, :pid_file, :kill_timeout
     attr_accessor :groups, :work_queue
     attr_accessor :pids_dir, :log_file
 
@@ -17,6 +17,7 @@ module Bluepill
       self.base_dir = options[:base_dir] || '/var/run/bluepill'
       self.pid_file = File.join(self.base_dir, 'pids', self.name + ".pid")
       self.pids_dir = File.join(self.base_dir, 'pids', self.name)
+      self.kill_timeout = options[:kill_timeout] || 10
 
       self.groups = {}
 
@@ -183,7 +184,7 @@ module Bluepill
             $stderr.puts "#{e.class}: #{e.message}"
             exit(4) unless e.is_a?(Errno::ESRCH)
           else
-            10.times do |i|
+            kill_timeout.times do |i|
               sleep 0.5
               break unless System.pid_alive?(previous_pid)
             end

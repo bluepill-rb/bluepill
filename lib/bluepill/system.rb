@@ -69,7 +69,7 @@ module Bluepill
 
         to_daemonize = lambda do
           # Setting end PWD env emulates bash behavior when dealing with symlinks
-          Dir.chdir(ENV["PWD"] = options[:working_dir]) if options[:working_dir]
+          Dir.chdir(ENV["PWD"] = options[:working_dir].to_s)  if options[:working_dir]
           options[:environment].each { |key, value| ENV[key.to_s] = value.to_s } if options[:environment]
 
           redirect_io(*options.values_at(:stdin, :stdout, :stderr))

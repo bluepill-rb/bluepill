@@ -115,7 +115,7 @@ module Bluepill
           # grandchild
           drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
 
-          Dir.chdir(ENV["PWD"] = options[:working_dir]) if options[:working_dir]
+          Dir.chdir(ENV["PWD"] = options[:working_dir].to_s) if options[:working_dir]
           options[:environment].each { |key, value| ENV[key.to_s] = value.to_s } if options[:environment]
 
           # close unused fds so ancestors wont hang. This line is the only reason we are not

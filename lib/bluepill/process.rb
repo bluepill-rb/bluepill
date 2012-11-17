@@ -9,6 +9,7 @@ require "daemons"
 module Bluepill
   class Process
     CONFIGURABLE_ATTRIBUTES = [
+      :pre_start_command,
       :start_command,
       :stop_command,
       :restart_command,
@@ -263,11 +264,10 @@ module Bluepill
     end
 
     def start_process
+      pre_start_process
       logger.warning "Executing start command: #{start_command}"
-
       if self.daemonize?
         System.daemonize(start_command, self.system_command_options)
-
       else
         # This is a self-daemonizing process
         with_timeout(start_grace_time) do
@@ -281,6 +281,16 @@ module Bluepill
       end
 
       self.skip_ticks_for(start_grace_time)
+    end
+
+    def pre_start_process
+      return unless pre_start_command
+      logger.warning "Executing pre start command: #{pre_start_command}"
+      result = System.execute_blocking(pre_start_command, self.system_command_options)
+      unless result[:exit_code].zero?
+        logger.warning "Pre start command execution returned non-zero exit code:"
+        logger.warning result.inspect
+      end
     end
 
     def stop_process

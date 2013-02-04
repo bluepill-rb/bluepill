@@ -254,23 +254,39 @@ We recommend that you _not_ do that and instead use the config options to captur
 The main benefit of using the config options is that Bluepill will be able to monitor the correct process instead of just watching the shell that spawned your actual server.
 
 ### CLI
-To start a bluepill process and load a config:
+
+#### Usage
+
+    bluepill [app_name] command [options]
+	
+For the "load" command, the _app_name_ is specified in the config file, and
+must not be provided on the command line.
+
+For all other commands, the _app_name_ is optional if there is only
+one bluepill daemon running. Otherwise, the _app_name_ must be
+provided, because the command will fail when there are multiple
+bluepill daemons running. The example commands below leaves out the
+_app_name_.
+
+#### Commands
+
+To start a bluepill daemon and load the config for an application:
 
     sudo bluepill load /path/to/production.pill
 
-To act on a process or group:
+To act on a process or group for an application:
 
     sudo bluepill <start|stop|restart|unmonitor> <process_or_group_name>
 
-To view process statuses:
+To view process statuses for an application:
 
     sudo bluepill status
 
-To view the log for a process or group:
+To view the log for a process or group for an application:
 
     sudo bluepill log <process_or_group_name>
 
-To quit bluepill:
+To quit the bluepill daemon for an application:
 
     sudo bluepill quit
 

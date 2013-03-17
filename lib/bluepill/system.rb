@@ -110,7 +110,7 @@ module Bluepill
     rescue IOError, Errno::ENOENT
     rescue Errno::EACCES
       retry if (tries += 1) < 3 
-      raise
+      $stderr.puts("Warning: permission denied trying to delete #{filename}"
     end
 
     # Returns the stdout, stderr and exit code of the cmd

@@ -27,7 +27,7 @@ module Bluepill
       unless times >= 10
         retry
       else
-        logger.warn("Timeout waiting for lock #{name}")
+        logger.info("Timeout waiting for lock #{name}")
         raise "Timeout waiting for lock #{name}"
       end
     ensure

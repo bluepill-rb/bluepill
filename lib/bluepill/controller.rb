@@ -1,5 +1,6 @@
 # -*- encoding: utf-8 -*-
 require 'fileutils'
+require 'bluepill/system'
 
 module Bluepill
   class Controller
@@ -90,8 +91,8 @@ module Bluepill
         if !pid || !System.pid_alive?(pid)
           pid_file = File.join(self.pids_dir, "#{app}.pid")
           sock_file = File.join(self.sockets_dir, "#{app}.sock")
-          File.unlink(pid_file) if File.exists?(pid_file)
-          File.unlink(sock_file) if File.exists?(sock_file)
+          System.delete_if_exists(pid_file)
+          System.delete_if_exists(sock_file)
         end
       end
     end

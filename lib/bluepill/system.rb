@@ -104,6 +104,11 @@ module Bluepill
       end
     end
 
+    def delete_if_exists(filename)
+      File.unlink(filename) if filename && File.exists?(filename)
+    rescue IOError, Errno::ENOENT
+    end
+
     # Returns the stdout, stderr and exit code of the cmd
     def execute_blocking(cmd, options = {})
       rd, wr = IO.pipe

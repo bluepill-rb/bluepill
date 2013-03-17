@@ -1,5 +1,6 @@
 # -*- encoding: utf-8 -*-
 require 'thread'
+require 'bluepill/system'
 require 'bluepill/process_journal'
 
 module Bluepill
@@ -150,8 +151,11 @@ module Bluepill
     def cleanup
       ProcessJournal.kill_all_from_all_journals
       ProcessJournal.clear_all_atomic_fs_locks
-      File.unlink(self.socket.path) if self.socket && File.exists?(self.socket.path)
-      File.unlink(self.pid_file) if self.pid_file && File.exists?(self.pid_file)
+      begin
+        System.delete_if_exists(self.socket.path) if self.socket
+      rescue IOError
+      end
+      System.delete_if_exists(self.pid_file)
     end
 
     def setup_signal_traps

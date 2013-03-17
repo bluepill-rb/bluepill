@@ -5,6 +5,7 @@ gem "state_machine"
 
 require "state_machine"
 require "daemons"
+require "bluepill/system"
 require "bluepill/process_journal"
 
 module Bluepill
@@ -434,8 +435,7 @@ module Bluepill
     end
 
     def unlink_pid
-      File.unlink(pid_file) if pid_file && File.exists?(pid_file)
-    rescue Errno::ENOENT
+      System.delete_if_exists(pid_file)
     end
 
      # Internal State Methods

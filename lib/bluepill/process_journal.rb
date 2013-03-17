@@ -9,14 +9,16 @@ module Bluepill
         @logger ||= new_logger
       end
     end
+
     def skip_pid?(pid)
       !pid.is_a?(Integer) || (-1..1).include?(pid)
     end
 
     # atomic operation on POSIX filesystems, since
     # f.flock(File::LOCK_SH) is not available on all platforms
-    def acquire_atomic_fs_lock(name='.bluepill_pid_journal')
+    def acquire_atomic_fs_lock(name)
       times = 0
+      name += '.lock'
       Dir.mkdir name, 0700
       logger.debug("Acquired lock #{name}")
       yield
@@ -34,20 +36,26 @@ module Bluepill
       clear_atomic_fs_lock(name)
     end
 
+    def clear_all_atomic_fs_locks
+      Dir['.*.lock'].each do |f|
+        f.delete if f.directory?
+      end
+    end
+
     def journal_filename(journal_name)
       ".bluepill_pids_journal.#{journal_name}"
     end
 
-    def journal(journal_name)
+    def journal(filename)
       logger.debug("journal PWD=#{Dir.pwd}")
-      result = File.open(journal_filename(journal_name), 'r').readlines.map(&:to_i).reject {|pid| skip_pid?(pid)}
+      result = File.open(filename, 'r').readlines.map(&:to_i).reject {|pid| skip_pid?(pid)}
       logger.debug("journal = #{result.join(' ')}")
       result
     rescue Errno::ENOENT
       []
     end
 
-    def clear_atomic_fs_lock(name='.bluepill_pids_journal.lock')
+    def clear_atomic_fs_lock(name)
       if File.directory?(name)
         Dir.rmdir(name)
         logger.debug("Cleared lock #{name}")
@@ -61,9 +69,10 @@ module Bluepill
     end
 
     def kill_all_from_journal(journal_name)
-      j = journal(journal_name)
+      filename = journal_filename(journal_name)
+      j = journal(filename)
       if j.length > 0
-        acquire_atomic_fs_lock do
+        acquire_atomic_fs_lock(filename) do
           j.each do |pid|
             begin
               ::Process.kill('TERM', pid)
@@ -84,7 +93,7 @@ module Bluepill
               end
             end
           end
-          File.delete(journal_name) # reset journal
+          File.delete(filename) # reset journal
           logger.debug('Journal cleanup completed')
         end
       else
@@ -98,10 +107,11 @@ module Bluepill
         return
       end
 
-      acquire_atomic_fs_lock do
-        unless journal(journal_name).include?(pid)
+      filename = journal_filename(journal_name)
+      acquire_atomic_fs_lock(filename) do
+        unless journal(filename).include?(pid)
           logger.debug("Saving pid #{pid} to process journal #{journal_name}")
-          File.open(journal_filename(journal_name), 'a+', 0600) { |f| f.puts(pid) }
+          File.open(filename, 'a+', 0600) { |f| f.puts(pid) }
           logger.info("Saved pid #{pid} to process journal #{journal_name}")
         else
           logger.debug("Skipping duplicate pid #{pid} already in journal #{journal_name}")

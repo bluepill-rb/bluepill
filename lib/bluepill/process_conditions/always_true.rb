@@ -6,7 +6,7 @@ module Bluepill
         @below = options[:below]
       end
 
-      def run(pid)
+      def run(pid, include_children)
         1
       end
 

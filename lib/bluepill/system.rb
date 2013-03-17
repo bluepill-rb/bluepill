@@ -21,6 +21,8 @@ module Bluepill
       begin
         ::Process.kill(0, pid)
         true
+      rescue Errno::EPERM # no permission, but it is definitely alive
+        true
       rescue Errno::ESRCH
         false
       end

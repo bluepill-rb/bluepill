@@ -5,6 +5,7 @@ gem "state_machine"
 
 require "state_machine"
 require "daemons"
+require "bluepill/process_journal"
 
 module Bluepill
   class Process
@@ -267,7 +268,15 @@ module Bluepill
       pre_start_process
       logger.warning "Executing start command: #{start_command}"
       if self.daemonize?
-        System.daemonize(start_command, self.system_command_options)
+        daemon_id = System.daemonize(start_command, self.system_command_options)
+        if daemon_id > 0
+          ProcessJournal.append_pid_to_journal(daemon_id)
+          children.each {|child|
+            child_pid = child.actual_id
+            ProcessJournal.append_pid_to_journal(child_id)
+          } if self.monitor_children?
+        end
+        daemon_id
       else
         # This is a self-daemonizing process
         with_timeout(start_grace_time) do
@@ -414,6 +423,7 @@ module Bluepill
     end
 
     def actual_pid=(pid)
+      ProcessJournal.append_pid_to_journal(pid) # be sure to always log the pid
       @actual_pid = pid
     end
 
@@ -450,6 +460,7 @@ module Bluepill
 
       # Construct a new process wrapper for each new found children
       new_children_pids.each do |child_pid|
+        ProcessJournal.append_pid_to_journal(child_pid)
         name = "<child(pid:#{child_pid})>"
         logger = self.logger.prefix_with(name)
 

@@ -1,5 +1,6 @@
 # -*- encoding: utf-8 -*-
 require 'thread'
+require 'bluepill/process_journal'
 
 module Bluepill
   class Application
@@ -21,7 +22,7 @@ module Bluepill
 
       self.groups = {}
 
-      self.logger = Bluepill::Logger.new(:log_file => self.log_file, :stdout => foreground?).prefix_with(self.name)
+      self.logger = ProcessJournal.logger = Bluepill::Logger.new(:log_file => self.log_file, :stdout => foreground?).prefix_with(self.name)
 
       self.setup_signal_traps
       self.setup_pids_dir
@@ -116,6 +117,7 @@ module Bluepill
 
     def start_server
       self.kill_previous_bluepill
+      ProcessJournal.kill_all_from_journal
 
       Daemonize.daemonize unless foreground?
 
@@ -153,6 +155,7 @@ module Bluepill
     def setup_signal_traps
       terminator = Proc.new do
         puts "Terminating..."
+        ProcessJournal.kill_all_from_journal
         @running = false
       end
 

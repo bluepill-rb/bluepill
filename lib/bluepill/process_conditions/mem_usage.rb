@@ -11,9 +11,9 @@ module Bluepill
         @below = options[:below]
       end
 
-      def run(pid)
+      def run(pid, include_children)
         # rss is on the 5th col
-        System.memory_usage(pid).to_f
+        System.memory_usage(pid, include_children).to_f
       end
 
       def check(value)

@@ -118,6 +118,7 @@ module Bluepill
     def start_server
       self.kill_previous_bluepill
       ProcessJournal.kill_all_from_all_journals
+      ProcessJournal.clear_all_atomic_fs_locks
 
       Daemonize.daemonize unless foreground?
 
@@ -148,6 +149,7 @@ module Bluepill
 
     def cleanup
       ProcessJournal.kill_all_from_all_journals
+      ProcessJournal.clear_all_atomic_fs_locks
       File.unlink(self.socket.path) if self.socket
       File.unlink(self.pid_file) if File.exists?(self.pid_file)
     end

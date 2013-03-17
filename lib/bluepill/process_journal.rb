@@ -28,6 +28,7 @@ module Bluepill
         retry
       else
         logger.warn("Timeout waiting for lock #{name}")
+        raise "Timeout waiting for lock #{name}"
       end
     ensure
       clear_atomic_fs_lock(name)

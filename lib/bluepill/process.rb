@@ -305,6 +305,12 @@ module Bluepill
     end
 
     def stop_process
+      if monitor_children
+        System.get_children(self.actual_pid).each do |child_pid|
+          ProcessJournal.append_pid_to_journal(name, child_pid)
+        end
+      end
+
       if stop_command
         cmd = self.prepare_command(stop_command)
         logger.warning "Executing stop command: #{cmd}"

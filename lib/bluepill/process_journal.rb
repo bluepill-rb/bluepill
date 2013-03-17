@@ -84,7 +84,7 @@ module Bluepill
               ::Process.kill('TERM', pid)
               logger.info("Termed old process #{pid}")
             rescue Errno::ESRCH
-              logger.info("Unable to term missing process #{pid}")
+              logger.debug("Unable to term missing process #{pid}")
             end
           end
 
@@ -95,7 +95,7 @@ module Bluepill
                 ::Process.kill('KILL', pid)
                 logger.info("Killed old process #{pid}")
               rescue Errno::ESRCH
-                logger.info("Unable to kill missing process #{pid}")
+                logger.debug("Unable to kill missing process #{pid}")
               end
             end
           end
@@ -109,7 +109,7 @@ module Bluepill
 
     def append_pid_to_journal(journal_name, pid)
       if skip_pid?(pid)
-        logger.info("Skipping invalid pid #{pid} (class #{pid.class})")
+        logger.debug("Skipping invalid pid #{pid} (class #{pid.class})")
         return
       end
 
@@ -118,7 +118,8 @@ module Bluepill
         unless journal(filename).include?(pid)
           logger.debug("Saving pid #{pid} to process journal #{journal_name}")
           File.open(filename, 'a+', 0600) { |f| f.puts(pid) }
-          logger.info("Saved pid #{pid} to process journal #{journal_name}")
+          logger.info("Saved pid #{pid} to journal #{journal_name}")
+          logger.debug("Journal now = #{File.open(filename, 'r').read}")
         else
           logger.debug("Skipping duplicate pid #{pid} already in journal #{journal_name}")
         end

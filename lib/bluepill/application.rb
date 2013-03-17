@@ -117,7 +117,7 @@ module Bluepill
 
     def start_server
       self.kill_previous_bluepill
-      ProcessJournal.kill_all_from_journal
+      ProcessJournal.kill_all_from_all_journals
 
       Daemonize.daemonize unless foreground?
 
@@ -144,10 +144,10 @@ module Bluepill
         end
         sleep 1
       end
-      cleanup
     end
 
     def cleanup
+      ProcessJournal.kill_all_from_all_journals
       File.unlink(self.socket.path) if self.socket
       File.unlink(self.pid_file) if File.exists?(self.pid_file)
     end
@@ -155,7 +155,7 @@ module Bluepill
     def setup_signal_traps
       terminator = Proc.new do
         puts "Terminating..."
-        ProcessJournal.kill_all_from_journal
+        cleanup
         @running = false
       end
 

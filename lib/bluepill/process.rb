@@ -270,10 +270,10 @@ module Bluepill
       if self.daemonize?
         daemon_id = System.daemonize(start_command, self.system_command_options)
         if daemon_id > 0
-          ProcessJournal.append_pid_to_journal(daemon_id)
+          ProcessJournal.append_pid_to_journal(name, daemon_id)
           children.each {|child|
             child_pid = child.actual_id
-            ProcessJournal.append_pid_to_journal(child_id)
+            ProcessJournal.append_pid_to_journal(name, child_id)
           } if self.monitor_children?
         end
         daemon_id
@@ -423,7 +423,7 @@ module Bluepill
     end
 
     def actual_pid=(pid)
-      ProcessJournal.append_pid_to_journal(pid) # be sure to always log the pid
+      ProcessJournal.append_pid_to_journal(name, pid) # be sure to always log the pid
       @actual_pid = pid
     end
 

@@ -33,13 +33,13 @@ module Bluepill
       clear_atomic_fs_lock(name)
     end
 
-    def journal_filename
-      '.bluepill_pids_journal'
+    def journal_filename(journal_name)
+      ".bluepill_pids_journal.#{journal_name}"
     end
 
-    def journal
+    def journal(journal_name)
       logger.debug("journal PWD=#{Dir.pwd}")
-      result = File.open(journal_filename, 'r').readlines.map(&:to_i).reject {|pid| skip_pid?(pid)}
+      result = File.open(journal_filename(journal_name), 'r').readlines.map(&:to_i).reject {|pid| skip_pid?(pid)}
       logger.debug("journal = #{result.join(' ')}")
       result
     rescue Errno::ENOENT
@@ -53,8 +53,14 @@ module Bluepill
       end
     end
 
-    def kill_all_from_journal
-      j = journal
+    def kill_all_from_all_journals
+      Dir[".bluepill_pids_journal.*"].map {|x| x.sub(/^\.bluepill_pids_journal\./,"") }.each do |journal_name|
+        kill_all_from_journal(journal_name)
+      end
+    end
+
+    def kill_all_from_journal(journal_name)
+      j = journal(journal_name)
       if j.length > 0
         acquire_atomic_fs_lock do
           j.each do |pid|
@@ -85,19 +91,19 @@ module Bluepill
       end
     end
 
-    def append_pid_to_journal(pid)
+    def append_pid_to_journal(journal_name, pid)
       if skip_pid?(pid)
         logger.info("Skipping invalid pid #{pid} (class #{pid.class})")
         return
       end
 
       acquire_atomic_fs_lock do
-        unless journal.include?(pid)
-          logger.debug("Saving pid #{pid} to process journal")
-          File.open(journal_filename, 'a+', 0600) { |f| f.puts(pid) }
-          logger.info("Saved pid #{pid} to process journal")
+        unless journal(journal_name).include?(pid)
+          logger.debug("Saving pid #{pid} to process journal #{journal_name}")
+          File.open(journal_filename(journal_name), 'a+', 0600) { |f| f.puts(pid) }
+          logger.info("Saved pid #{pid} to process journal #{journal_name}")
         else
-          logger.debug("Skipping duplicate pid #{pid} already in journal")
+          logger.debug("Skipping duplicate pid #{pid} already in journal #{journal_name}")
         end
       end
     end

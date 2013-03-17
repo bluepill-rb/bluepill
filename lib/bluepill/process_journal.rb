@@ -84,7 +84,7 @@ module Bluepill
               end
             end
           end
-          File.delete(journal_filename) # reset journal
+          File.delete(journal_name) # reset journal
           logger.debug('Journal cleanup completed')
         end
       else

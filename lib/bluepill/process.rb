@@ -265,6 +265,7 @@ module Bluepill
     end
 
     def start_process
+      ProcessJournal.kill_all_from_journal(name) # be sure nothing else is running from previous runs
       pre_start_process
       logger.warning "Executing start command: #{start_command}"
       if self.daemonize?
@@ -344,6 +345,7 @@ module Bluepill
         logger.warning "Executing default stop command. Sending TERM signal to #{actual_pid}"
         signal_process("TERM")
       end
+      ProcessJournal.kill_all_from_journal(name) # finish cleanup
       self.unlink_pid # TODO: we only write the pid file if we daemonize, should we only unlink it if we daemonize?
 
       self.skip_ticks_for(stop_grace_time)

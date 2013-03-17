@@ -150,8 +150,8 @@ module Bluepill
     def cleanup
       ProcessJournal.kill_all_from_all_journals
       ProcessJournal.clear_all_atomic_fs_locks
-      File.unlink(self.socket.path) if self.socket
-      File.unlink(self.pid_file) if File.exists?(self.pid_file)
+      File.unlink(self.socket.path) if self.socket && File.exists?(self.socket.path)
+      File.unlink(self.pid_file) if self.pid_file && File.exists?(self.pid_file)
     end
 
     def setup_signal_traps

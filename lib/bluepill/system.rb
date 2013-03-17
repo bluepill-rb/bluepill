@@ -105,8 +105,12 @@ module Bluepill
     end
 
     def delete_if_exists(filename)
+      tries = 0
       File.unlink(filename) if filename && File.exists?(filename)
     rescue IOError, Errno::ENOENT
+    rescue Errno::EACCES
+      retry if (tries += 1) < 3 
+      raise
     end
 
     # Returns the stdout, stderr and exit code of the cmd

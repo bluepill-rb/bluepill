@@ -89,7 +89,7 @@ module Bluepill
                 ::Process.kill('KILL', pid)
                 logger.info("Killed old process #{pid}")
               rescue Errno::ESRCH
-                logger.warn("Unable to kill missing process #{pid}")
+                logger.info("Unable to kill missing process #{pid}")
               end
             end
           end

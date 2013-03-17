@@ -69,7 +69,7 @@ module Bluepill
               ::Process.kill('TERM', pid)
               logger.info("Termed old process #{pid}")
             rescue Errno::ESRCH
-              logger.warn("Unable to term missing process #{pid}")
+              logger.info("Unable to term missing process #{pid}")
             end
           end
 

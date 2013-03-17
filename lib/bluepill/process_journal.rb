@@ -65,7 +65,7 @@ module Bluepill
     def kill_all_from_all_journals
       Dir[".bluepill_pids_journal.*"].map { |x|
         x.sub(/^\.bluepill_pids_journal\./,"")
-      }.filter { |y|
+      }.reject { |y|
         y =~ /\.lock$/
       }.each do |journal_name|
         kill_all_from_journal(journal_name)

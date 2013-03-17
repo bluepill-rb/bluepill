@@ -43,7 +43,7 @@ module Bluepill
       return unless ps[pid]
       mem_used = ps[pid][IDX_MAP[:rss]].to_f
       get_children(pid).each { |child_pid|
-        mem_used += ps[child_pid][IDX_MAP[:pcpu]].to_f if ps[child_pid]
+        mem_used += ps[child_pid][IDX_MAP[:rss]].to_f if ps[child_pid]
       } if include_children
       mem_used
     end

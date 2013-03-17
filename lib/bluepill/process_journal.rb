@@ -1,3 +1,5 @@
+require 'bluepill/system'
+
 module Bluepill
   module ProcessJournal
     extend self
@@ -38,7 +40,7 @@ module Bluepill
 
     def clear_all_atomic_fs_locks
       Dir['.*.lock'].each do |f|
-        f.delete if f.directory?
+        System.delete_if_exists(f) if f.directory?
       end
     end
 
@@ -97,7 +99,7 @@ module Bluepill
               end
             end
           end
-          File.delete(filename) # reset journal
+          System.delete_if_exists(filename) # reset journal
           logger.debug('Journal cleanup completed')
         end
       else

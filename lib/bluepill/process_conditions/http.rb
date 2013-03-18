@@ -18,7 +18,7 @@ module Bluepill
         @read_timeout = (options[:read_timeout] || options[:timeout] || 5).to_i
       end
 
-      def run(pid)
+      def run(pid, include_children)
         session = Net::HTTP.new(@uri.host, @uri.port)
         if @uri.scheme == 'https'
           require 'net/https'

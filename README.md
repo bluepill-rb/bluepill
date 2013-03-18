@@ -149,6 +149,17 @@ You can also set an app-wide uid/gid:
     end
 ```
 
+To track resources of child processes, use :include_children:
+```ruby
+    Bluepill.application("app_name") do |app|
+      app.process("process_name") do |process|
+        process.start_command = "/usr/bin/some_start_command"
+        process.pid_file = "/tmp/some_pid_file.pid"
+        process.checks :mem_usage, :every => 1.seconds, :below => 5.megabytes, :times => [3,5], :include_children => true
+      end
+    end
+```
+
 To check for flapping:
 
 ```ruby

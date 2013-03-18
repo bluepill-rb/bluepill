@@ -15,6 +15,7 @@ module Bluepill
       @every  = options.delete(:every)
       @times  = options.delete(:times) || [1,1]
       @times  = [@times, @times] unless @times.is_a?(Array) # handles :times => 5
+      @include_children = options.delete(:include_children) || false
 
       self.clear_history!
 
@@ -25,7 +26,7 @@ module Bluepill
       if @last_ran_at.nil? || (@last_ran_at + @every) <= tick_number
         @last_ran_at = tick_number
 
-        value = @process_condition.run(pid)
+        value = @process_condition.run(pid, @include_children)
         @history << HistoryValue.new(@process_condition.format_value(value), @process_condition.check(value))
         self.logger.info(self.to_s)
 

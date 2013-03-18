@@ -6,9 +6,9 @@ module Bluepill
         @below = options[:below]
       end
 
-      def run(pid)
+      def run(pid, include_children)
         # third col in the ps axu output
-        System.cpu_usage(pid).to_f
+        System.cpu_usage(pid, include_children).to_f
       end
 
       def check(value)

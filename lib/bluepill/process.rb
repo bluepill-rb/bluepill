@@ -5,6 +5,8 @@ gem "state_machine"
 
 require "state_machine"
 require "daemons"
+require "bluepill/system"
+require "bluepill/process_journal"
 
 module Bluepill
   class Process
@@ -264,10 +266,19 @@ module Bluepill
     end
 
     def start_process
+      ProcessJournal.kill_all_from_journal(name) # be sure nothing else is running from previous runs
       pre_start_process
       logger.warning "Executing start command: #{start_command}"
       if self.daemonize?
-        System.daemonize(start_command, self.system_command_options)
+        daemon_id = System.daemonize(start_command, self.system_command_options)
+        if daemon_id > 0
+          ProcessJournal.append_pid_to_journal(name, daemon_id)
+          children.each {|child|
+            child_pid = child.actual_id
+            ProcessJournal.append_pid_to_journal(name, child_id)
+          } if self.monitor_children?
+        end
+        daemon_id
       else
         # This is a self-daemonizing process
         with_timeout(start_grace_time) do
@@ -294,6 +305,12 @@ module Bluepill
     end
 
     def stop_process
+      if monitor_children
+        System.get_children(self.actual_pid).each do |child_pid|
+          ProcessJournal.append_pid_to_journal(name, child_pid)
+        end
+      end
+
       if stop_command
         cmd = self.prepare_command(stop_command)
         logger.warning "Executing stop command: #{cmd}"
@@ -335,6 +352,7 @@ module Bluepill
         logger.warning "Executing default stop command. Sending TERM signal to #{actual_pid}"
         signal_process("TERM")
       end
+      ProcessJournal.kill_all_from_journal(name) # finish cleanup
       self.unlink_pid # TODO: we only write the pid file if we daemonize, should we only unlink it if we daemonize?
 
       self.skip_ticks_for(stop_grace_time)
@@ -414,6 +432,7 @@ module Bluepill
     end
 
     def actual_pid=(pid)
+      ProcessJournal.append_pid_to_journal(name, pid) # be sure to always log the pid
       @actual_pid = pid
     end
 
@@ -422,8 +441,7 @@ module Bluepill
     end
 
     def unlink_pid
-      File.unlink(pid_file) if pid_file && File.exists?(pid_file)
-    rescue Errno::ENOENT
+      System.delete_if_exists(pid_file)
     end
 
      # Internal State Methods
@@ -450,6 +468,7 @@ module Bluepill
 
       # Construct a new process wrapper for each new found children
       new_children_pids.each do |child_pid|
+        ProcessJournal.append_pid_to_journal(name, child_pid)
         name = "<child(pid:#{child_pid})>"
         logger = self.logger.prefix_with(name)
 

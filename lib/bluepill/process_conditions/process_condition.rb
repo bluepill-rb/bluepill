@@ -6,7 +6,7 @@ module Bluepill
         @options = options
       end
 
-      def run(pid)
+      def run(pid, include_children)
         raise "Implement in subclass!"
       end
 

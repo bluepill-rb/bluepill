@@ -21,17 +21,31 @@ module Bluepill
       begin
         ::Process.kill(0, pid)
         true
+      rescue Errno::EPERM # no permission, but it is definitely alive
+        true
       rescue Errno::ESRCH
         false
       end
     end
 
-    def cpu_usage(pid)
-      ps_axu[pid] && ps_axu[pid][IDX_MAP[:pcpu]].to_f
+    def cpu_usage(pid, include_children)
+      ps = ps_axu
+      return unless ps[pid]
+      cpu_used = ps[pid][IDX_MAP[:pcpu]].to_f
+      get_children(pid).each { |child_pid|
+        cpu_used += ps[child_pid][IDX_MAP[:pcpu]].to_f if ps[child_pid]
+      } if include_children
+      cpu_used 
     end
 
-    def memory_usage(pid)
-      ps_axu[pid] && ps_axu[pid][IDX_MAP[:rss]].to_f
+    def memory_usage(pid, include_children)
+      ps = ps_axu
+      return unless ps[pid]
+      mem_used = ps[pid][IDX_MAP[:rss]].to_f
+      get_children(pid).each { |child_pid|
+        mem_used += ps[child_pid][IDX_MAP[:rss]].to_f if ps[child_pid]
+      } if include_children
+      mem_used
     end
 
     def get_children(parent_pid)
@@ -39,7 +53,8 @@ module Bluepill
       ps_axu.each_pair do |pid, chunks|
         child_pids << chunks[IDX_MAP[:pid]].to_i if chunks[IDX_MAP[:ppid]].to_i == parent_pid.to_i
       end
-      child_pids
+      grand_children = child_pids.map{|pid| get_children(pid)}.flatten
+      child_pids.concat grand_children 
     end
 
     # Returns the pid of the child that executes the cmd
@@ -87,6 +102,15 @@ module Bluepill
 
         exit
       end
+    end
+
+    def delete_if_exists(filename)
+      tries = 0
+      File.unlink(filename) if filename && File.exists?(filename)
+    rescue IOError, Errno::ENOENT
+    rescue Errno::EACCES
+      retry if (tries += 1) < 3 
+      $stderr.puts("Warning: permission denied trying to delete #{filename}")
     end
 
     # Returns the stdout, stderr and exit code of the cmd

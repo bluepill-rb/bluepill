@@ -1,5 +1,7 @@
 # -*- encoding: utf-8 -*-
 require 'thread'
+require 'bluepill/system'
+require 'bluepill/process_journal'
 
 module Bluepill
   class Application
@@ -21,7 +23,7 @@ module Bluepill
 
       self.groups = {}
 
-      self.logger = Bluepill::Logger.new(:log_file => self.log_file, :stdout => foreground?).prefix_with(self.name)
+      self.logger = ProcessJournal.logger = Bluepill::Logger.new(:log_file => self.log_file, :stdout => foreground?).prefix_with(self.name)
 
       self.setup_signal_traps
       self.setup_pids_dir
@@ -116,6 +118,9 @@ module Bluepill
 
     def start_server
       self.kill_previous_bluepill
+      ProcessJournal.kill_all_from_all_journals
+      ProcessJournal.clear_all_atomic_fs_locks
+      ::Process.setpgid(0, 0)
 
       Daemonize.daemonize unless foreground?
 
@@ -142,17 +147,22 @@ module Bluepill
         end
         sleep 1
       end
-      cleanup
     end
 
     def cleanup
-      File.unlink(self.socket.path) if self.socket
-      File.unlink(self.pid_file) if File.exists?(self.pid_file)
+      ProcessJournal.kill_all_from_all_journals
+      ProcessJournal.clear_all_atomic_fs_locks
+      begin
+        System.delete_if_exists(self.socket.path) if self.socket
+      rescue IOError
+      end
+      System.delete_if_exists(self.pid_file)
     end
 
     def setup_signal_traps
       terminator = Proc.new do
         puts "Terminating..."
+        cleanup
         @running = false
       end
 

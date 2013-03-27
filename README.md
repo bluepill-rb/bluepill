@@ -72,6 +72,23 @@ To watch memory usage, we just add one more line:
     end
  ```
 
+To watch the modification time of a file, e.g. a log file to ensure the process is actually working add one more line:
+
+```ruby
+    Bluepill.application("app_name") do |app|
+      app.process("process_name") do |process|
+        process.start_command = "/usr/bin/some_start_command"
+        process.pid_file = "/tmp/some_pid_file.pid"
+
+        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3        
+        process.checks :mem_usage, :every => 10.seconds, :below => 100.megabytes, :times => [3,5]
+        process.checks :file_time, :every => 60.seconds, :below => 3.minutes, :filename => "/tmp/some_file.log", :times => 2
+      end
+    end
+ ```
+
+
+
 We can tell bluepill to give a process some grace time to start/stop/restart before resuming monitoring:
 
 ```ruby

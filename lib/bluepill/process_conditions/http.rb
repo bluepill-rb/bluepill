@@ -29,7 +29,7 @@ module Bluepill
         session.read_timeout = @read_timeout
         hide_net_http_bug do
           session.start do |http|
-            http.get(@uri.path)
+            http.get(@uri.request_uri)
           end
         end
       rescue

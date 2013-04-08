@@ -274,8 +274,7 @@ module Bluepill
         if daemon_id > 0
           ProcessJournal.append_pid_to_journal(name, daemon_id)
           children.each {|child|
-            child_pid = child.actual_id
-            ProcessJournal.append_pid_to_journal(name, child_id)
+            ProcessJournal.append_pid_to_journal(name, child.actual_id)
           } if self.monitor_children?
         end
         daemon_id

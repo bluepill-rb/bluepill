@@ -6,9 +6,16 @@ module Bluepill
 
     class << self
       attr_reader :logger
+      attr_reader :journal_base_dir
 
       def logger=(new_logger)
         @logger ||= new_logger
+      end
+
+      def base_dir=(base_dir)
+        @journal_base_dir ||= File.join(base_dir, "journals")
+        FileUtils.mkdir_p(@journal_base_dir) unless File.exists?(@journal_base_dir)
+        FileUtils.chmod(0777, @journal_base_dir)
       end
     end
 
@@ -49,15 +56,15 @@ module Bluepill
     end
 
     def pid_journal_filename(journal_name)
-      ".bluepill_pids_journal.#{journal_name}"
+      File.join(@journal_base_dir, ".bluepill_pids_journal.#{journal_name}")
     end
 
     def pgid_journal_filename(journal_name)
-      ".bluepill_pgids_journal.#{journal_name}"
+      File.join(@journal_base_dir, ".bluepill_pgids_journal.#{journal_name}")
     end
 
     def pid_journal(filename)
-      logger.debug("pid journal PWD=#{Dir.pwd}")
+      logger.debug("pid journal file: #{filename}")
       result = File.open(filename, 'r').readlines.map(&:to_i).reject {|pid| skip_pid?(pid)}
       logger.debug("pid journal = #{result.join(' ')}")
       result
@@ -66,7 +73,7 @@ module Bluepill
     end
 
     def pgid_journal(filename)
-      logger.debug("pgid journal PWD=#{Dir.pwd}")
+      logger.debug("pgid journal file: #{filename}")
       result = File.open(filename, 'r').readlines.map(&:to_i).reject {|pgid| skip_pgid?(pgid)}
       logger.debug("pgid journal = #{result.join(' ')}")
       result

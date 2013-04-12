@@ -1,12 +1,12 @@
 describe Bluepill::System do
   describe :pid_alive? do
     it "should be true if process responds to zero signal" do
-      mock(::Process).kill(0, 555)
+      Process.should_receive(:kill).with(0, 555).and_return(0)
       Bluepill::System.should be_pid_alive(555)
     end
 
     it "should be false if process throws exception on zero signal" do
-      mock(::Process).kill(0, 555) { raise Errno::ESRCH.new  }
+      Process.should_receive(:kill).with(0, 555).and_raise(Errno::ESRCH)
       Bluepill::System.should_not be_pid_alive(555)
     end
   end

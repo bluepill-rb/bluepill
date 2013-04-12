@@ -39,7 +39,9 @@ module Bluepill
 
       :supplementary_groups,
 
-      :stop_signals
+      :stop_signals,
+
+      :on_start_timeout,
     ]
 
     attr_accessor :name, :watches, :triggers, :logger, :skip_ticks_until, :process_running
@@ -124,6 +126,7 @@ module Bluepill
       @cache_actual_pid = true
       @start_grace_time = @stop_grace_time = @restart_grace_time = 3
       @environment = {}
+      @on_start_timeout = "start"
 
       CONFIGURABLE_ATTRIBUTES.each do |attribute_name|
         self.send("#{attribute_name}=", options[attribute_name]) if options.has_key?(attribute_name)
@@ -270,7 +273,7 @@ module Bluepill
 
       else
         # This is a self-daemonizing process
-        with_timeout(start_grace_time) do
+        with_timeout(start_grace_time, on_start_timeout) do
           result = System.execute_blocking(start_command, self.system_command_options)
 
           unless result[:exit_code].zero?
@@ -288,7 +291,7 @@ module Bluepill
         cmd = self.prepare_command(stop_command)
         logger.warning "Executing stop command: #{cmd}"
 
-        with_timeout(stop_grace_time) do
+        with_timeout(stop_grace_time, "stop") do
           result = System.execute_blocking(cmd, self.system_command_options)
 
           unless result[:exit_code].zero?
@@ -336,7 +339,7 @@ module Bluepill
 
         logger.warning "Executing restart command: #{cmd}"
 
-        with_timeout(restart_grace_time) do
+        with_timeout(restart_grace_time, "restart") do
           result = System.execute_blocking(cmd, self.system_command_options)
 
           unless result[:exit_code].zero?
@@ -467,13 +470,16 @@ module Bluepill
       }
     end
 
-    def with_timeout(secs, &blk)
-      Timeout.timeout(secs.to_f, &blk)
-
-    rescue Timeout::Error
-      logger.err "Execution is taking longer than expected. Unmonitoring."
-      logger.err "Did you forget to tell bluepill to daemonize this process?"
-      self.dispatch!("unmonitor")
+    def with_timeout(secs, next_state = nil, &blk)
+      # Attempt to execute the passed block. If the block takes
+      # too long, transition to the indicated next state.
+      begin
+        Timeout.timeout(secs.to_f, &blk)
+      rescue Timeout::Error
+        logger.err "Execution is taking longer than expected."
+        logger.err "Did you forget to tell bluepill to daemonize this process?"
+        dispatch!(next_state)
+      end
     end
   end
 end

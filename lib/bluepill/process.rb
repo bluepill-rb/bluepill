@@ -42,7 +42,12 @@ module Bluepill
 
       :supplementary_groups,
 
-      :stop_signals
+      :stop_signals,
+
+      :group_start_noblock,
+      :group_restart_noblock,
+      :group_stop_noblock,
+      :group_unmonitor_noblock
     ]
 
     attr_accessor :name, :watches, :triggers, :logger, :skip_ticks_until, :process_running
@@ -127,6 +132,7 @@ module Bluepill
       @cache_actual_pid = true
       @start_grace_time = @stop_grace_time = @restart_grace_time = 3
       @environment = {}
+      @group_start_noblock = @group_stop_noblock = @group_restart_noblock = @group_unmonitor_noblock = true
 
       CONFIGURABLE_ATTRIBUTES.each do |attribute_name|
         self.send("#{attribute_name}=", options[attribute_name]) if options.has_key?(attribute_name)

@@ -36,9 +36,17 @@ module Bluepill
           self.processes.each do |process|
             next if process_name && process_name != process.name
             affected << [self.name, process.name].join(":")
-            threads << Thread.new { process.handle_user_command("#{event}") }
+            noblock = process.group_#{event}_noblock
+            if noblock
+              self.logger.debug("Command #{event} running in non-blocking mode.")
+              threads << Thread.new { process.handle_user_command("#{event}") }
+            else
+              self.logger.info("Command #{event} running in blocking mode.")
+              thread = Thread.new { process.handle_user_command("#{event}") }
+              thread.join
+            end
           end
-          threads.each { |t| t.join }
+          threads.each { |t| t.join } unless threads.nil?
           affected
         end
       END

@@ -41,7 +41,7 @@ module Bluepill
               self.logger.debug("Command #{event} running in non-blocking mode.")
               threads << Thread.new { process.handle_user_command("#{event}") }
             else
-              self.logger.info("Command #{event} running in blocking mode.")
+              self.logger.debug("Command #{event} running in blocking mode.")
               thread = Thread.new { process.handle_user_command("#{event}") }
               thread.join
             end

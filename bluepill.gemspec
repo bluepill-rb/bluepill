@@ -21,9 +21,10 @@ Gem::Specification.new do |s|
 
   s.add_development_dependency 'bundler', '>= 1.0.10'
   s.add_development_dependency 'rake', '!= 0.9.0'
-  s.add_development_dependency 'rspec-core', '~> 2.0'
-  s.add_development_dependency 'rspec-expectations', '~> 2.0'
-  s.add_development_dependency 'rr', '~> 1.0'
+  s.add_development_dependency 'rspec', '~> 2.12.0'
+  s.add_development_dependency 'rspec-core', '~> 2.12.0'
+  s.add_development_dependency 'rspec-expectations', '~> 2.12.0'
+  s.add_development_dependency 'rspec-mocks', '~> 2.12.0'
   s.add_development_dependency 'faker', '~> 0.9'
   s.add_development_dependency 'yard', '~> 0.7'
 

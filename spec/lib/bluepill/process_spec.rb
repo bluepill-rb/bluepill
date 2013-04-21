@@ -1,9 +1,15 @@
 describe Bluepill::Process do
+  before(:all) do
+    Bluepill::ProcessJournal.base_dir = './.bluepill'
+    Bluepill::ProcessJournal.logger = Bluepill::Logger.new(:log_file => 'bluepill.log', :stdout => false).prefix_with('rspec')
+  end
+
   subject do
     Bluepill::Process.new(:proc_name, [],
       :logger => Bluepill::Logger.new,
     )
   end
+
   describe "#initialize" do
     context "defaults" do
       [

@@ -45,6 +45,12 @@ module Bluepill
       :stop_signals,
 
       :on_start_timeout,
+
+      :group_start_noblock,
+      :group_restart_noblock,
+      :group_stop_noblock,
+      :group_unmonitor_noblock
+
     ]
 
     attr_accessor :name, :watches, :triggers, :logger, :skip_ticks_until, :process_running
@@ -130,6 +136,7 @@ module Bluepill
       @start_grace_time = @stop_grace_time = @restart_grace_time = 3
       @environment = {}
       @on_start_timeout = "start"
+      @group_start_noblock = @group_stop_noblock = @group_restart_noblock = @group_unmonitor_noblock = true
 
       CONFIGURABLE_ATTRIBUTES.each do |attribute_name|
         self.send("#{attribute_name}=", options[attribute_name]) if options.has_key?(attribute_name)
@@ -471,10 +478,10 @@ module Bluepill
       # Construct a new process wrapper for each new found children
       new_children_pids.each do |child_pid|
         ProcessJournal.append_pid_to_journal(name, child_pid)
-        name = "<child(pid:#{child_pid})>"
-        logger = self.logger.prefix_with(name)
+        child_name = "<child(pid:#{child_pid})>"
+        logger = self.logger.prefix_with(child_name)
 
-        child = self.child_process_factory.create_child_process(name, child_pid, logger)
+        child = self.child_process_factory.create_child_process(child_name, child_pid, logger)
         @children << child
       end
     end

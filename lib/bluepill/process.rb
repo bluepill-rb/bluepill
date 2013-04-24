@@ -281,7 +281,7 @@ module Bluepill
       logger.warning "Executing start command: #{start_command}"
       if self.daemonize?
         daemon_id = System.daemonize(start_command, self.system_command_options)
-        if daemon_id > 0
+        if daemon_id
           ProcessJournal.append_pid_to_journal(name, daemon_id)
           children.each {|child|
             ProcessJournal.append_pid_to_journal(name, child.actual_id)

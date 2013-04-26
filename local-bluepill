@@ -17,7 +17,7 @@ RbConfig = Config unless Object.const_defined?(:RbConfig)
 # Default options
 options = {
   :log_file   => "/var/log/bluepill.log",
-  :base_dir   => "/var/run/bluepill",
+  :base_dir   => ENV['BLUEPILL_BASE_DIR'] || (::Process.euid != 0 ? File.join(ENV['HOME'], '.bluepill') : "/var/run/bluepill"),
   :privileged => true,
   :timeout    => 10,
   :attempts   => 1
@@ -116,6 +116,7 @@ if options[:command] == "load"
     ruby = File.join(RbConfig::CONFIG['bindir'], RbConfig::CONFIG['ruby_install_name'])
     load_path = File.expand_path("#{File.dirname(__FILE__)}/lib")
     file_path = File.expand_path(file)
+    ENV['BLUEPILL_BASE_DIR'] = options[:base_dir]
 
     exec(ruby, "-I#{load_path}", '-rbluepill', file_path)
     

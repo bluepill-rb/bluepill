@@ -12,4 +12,10 @@ require 'rspec/core'
 
 $LOAD_PATH.unshift(File.expand_path('../lib', File.dirname(__FILE__)))
 
+module Process
+  def self.euid
+    raise "Process.euid should be stubbed"
+  end
+end
+
 require 'bluepill'

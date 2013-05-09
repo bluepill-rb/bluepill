@@ -33,4 +33,13 @@ describe Bluepill::System do
       Bluepill::System.store.should be_empty
     end
   end
+
+  describe :parse_etime do
+    it "should parse etime format" do
+      Bluepill::System.parse_elapsed_time("400-00:04:01").should be_equal(34560241)
+      Bluepill::System.parse_elapsed_time("02:04:02").should be_equal(7442)
+      Bluepill::System.parse_elapsed_time("20:03").should be_equal(1203)
+      Bluepill::System.parse_elapsed_time("invalid").should be_equal(0)
+    end
+  end
 end

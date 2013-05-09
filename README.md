@@ -87,6 +87,19 @@ To watch the modification time of a file, e.g. a log file to ensure the process 
     end
  ```
 
+To restart process if it's running too long:
+
+```ruby
+    Bluepill.application("app_name") do |app|
+      app.process("process_name") do |process|
+        process.start_command = "/usr/bin/some_start_command"
+        process.pid_file = "/tmp/some_pid_file.pid"
+
+        process.checks :running_time, :every => 10.minutes, :below => 24.hours
+      end
+    end
+ ```
+
 
 
 We can tell bluepill to give a process some grace time to start/stop/restart before resuming monitoring:

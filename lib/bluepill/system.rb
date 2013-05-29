@@ -196,7 +196,7 @@ module Bluepill
         wr.write Marshal.dump(result)
         wr.close
 
-        exit
+        ::Process.exit!
       end
     end
 

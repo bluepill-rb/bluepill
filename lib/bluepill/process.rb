@@ -386,7 +386,7 @@ module Bluepill
       else
         logger.warning "No restart_command specified. Must stop and start to restart"
         self.stop_process
-        # the tick will bring it back.
+        self.start_process
       end
     end
 

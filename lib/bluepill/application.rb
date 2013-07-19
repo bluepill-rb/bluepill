@@ -122,7 +122,11 @@ module Bluepill
       self.kill_previous_bluepill
       ProcessJournal.kill_all_from_all_journals
       ProcessJournal.clear_all_atomic_fs_locks
-      ::Process.setpgid(0, 0) rescue Errno::EPERM nil
+
+      begin
+        ::Process.setpgid(0, 0)
+      rescue Errno::EPERM
+      end
 
       Daemonize.daemonize unless foreground?
 

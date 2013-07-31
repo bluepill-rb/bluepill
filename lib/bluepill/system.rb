@@ -15,7 +15,8 @@ module Bluepill
       :ppid => 1,
       :pcpu => 2,
       :rss => 3,
-      :etime => 4
+      :etime => 4,
+      :command => 5
     }
 
     def pid_alive?(pid)
@@ -53,6 +54,12 @@ module Bluepill
       ps = ps_axu
       return unless ps[pid]
       parse_elapsed_time(ps[pid][IDX_MAP[:etime]])
+    end
+
+    def command(pid)
+      ps = ps_axu
+      return unless ps[pid]
+      ps[pid][IDX_MAP[:command]]
     end
 
     def get_children(parent_pid)
@@ -212,13 +219,15 @@ module Bluepill
       # TODO: need a mutex here
       store[:ps_axu] ||= begin
         # BSD style ps invocation
-        lines = `ps axo pid,ppid,pcpu,rss,etime`.split("\n")
+        lines = `ps axo pid,ppid,pcpu,rss,etime,command`.split("\n")
 
         lines.inject(Hash.new) do |mem, line|
           chunks = line.split(/\s+/)
           chunks.delete_if {|c| c.strip.empty? }
           pid = chunks[IDX_MAP[:pid]].strip.to_i
-          mem[pid] = chunks
+          command = chunks.slice!(IDX_MAP[:command], chunks.length).join ' '
+          chunks[IDX_MAP[:command]] = command
+          mem[pid] = chunks.flatten
           mem
         end
       end

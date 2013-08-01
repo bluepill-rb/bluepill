@@ -153,32 +153,38 @@ module Bluepill
         cmd_err_read, cmd_err_write = IO.pipe
 
         pid = fork {
-          # grandchild
-          drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
+          begin
+            # grandchild
+            drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
 
-          Dir.chdir(ENV["PWD"] = options[:working_dir].to_s) if options[:working_dir]
-          options[:environment].each { |key, value| ENV[key.to_s] = value.to_s } if options[:environment]
+            Dir.chdir(ENV["PWD"] = options[:working_dir].to_s) if options[:working_dir]
+            options[:environment].each { |key, value| ENV[key.to_s] = value.to_s } if options[:environment]
 
-          # close unused fds so ancestors wont hang. This line is the only reason we are not
-          # using something like popen3. If this fd is not closed, the .read call on the parent
-          # will never return because "wr" would still be open in the "exec"-ed cmd
-          wr.close
+            # close unused fds so ancestors wont hang. This line is the only reason we are not
+            # using something like popen3. If this fd is not closed, the .read call on the parent
+            # will never return because "wr" would still be open in the "exec"-ed cmd
+            wr.close
 
-          # we do not care about stdin of cmd
-          STDIN.reopen("/dev/null")
+            # we do not care about stdin of cmd
+            STDIN.reopen("/dev/null")
 
-          # point stdout of cmd to somewhere we can read
-          cmd_out_read.close
-          STDOUT.reopen(cmd_out_write)
-          cmd_out_write.close
+            # point stdout of cmd to somewhere we can read
+            cmd_out_read.close
+            STDOUT.reopen(cmd_out_write)
+            cmd_out_write.close
 
-          # same thing for stderr
-          cmd_err_read.close
-          STDERR.reopen(cmd_err_write)
-          cmd_err_write.close
+            # same thing for stderr
+            cmd_err_read.close
+            STDERR.reopen(cmd_err_write)
+            cmd_err_write.close
 
-          # finally, replace grandchild with cmd
-          ::Kernel.exec(*Shellwords.shellwords(cmd))
+            # finally, replace grandchild with cmd
+            ::Kernel.exec(*Shellwords.shellwords(cmd))
+          rescue Exception => e
+            cmd_err_write.puts "Exception in grandchild: #{e.to_s}."
+            cmd_err_write.puts e.backtrace
+            exit 1
+          end
         }
 
         # we do not use these ends of the pipes in the child

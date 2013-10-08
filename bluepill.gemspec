@@ -19,12 +19,12 @@ Gem::Specification.new do |s|
   s.add_dependency 'activesupport', '>= 3.0.0', '< 4.0.0'
   s.add_dependency 'i18n', '>= 0.5.0'
 
-  s.add_development_dependency 'bundler', '>= 1.0.10'
-  s.add_development_dependency 'rake', '!= 0.9.0'
-  s.add_development_dependency 'rspec', '~> 2.14'
+  s.add_development_dependency 'bundler', '~> 1.3'
   s.add_development_dependency 'faker', '~> 1.2'
+  s.add_development_dependency 'maruku', '~> 0.7'
+  s.add_development_dependency 'rake', '~> 10.0'
+  s.add_development_dependency 'rspec', '~> 2.14'
   s.add_development_dependency 'yard', '~> 0.8'
-  s.add_development_dependency 'redcarpet', '>= 1.17.2'
 
   s.files            = `git ls-files`.split("\n")
   s.test_files       = `git ls-files -- {test,spec,features}/*`.split("\n")

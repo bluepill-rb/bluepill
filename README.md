@@ -356,8 +356,8 @@ You can run bluepill in the foreground:
 Note that You must define only one application per config when using foreground mode.
 
 ## Links
-Code: [http://github.com/arya/bluepill](http://github.com/arya/bluepill)
-Bugs/Features: [http://github.com/arya/bluepill/issues](http://github.com/arya/bluepill/issues)
+Code: [http://github.com/bluepill-rb/bluepill](http://github.com/bluepill-rb/bluepill)
+Bugs/Features: [http://github.com/bluepill-rb/bluepill/issues](http://github.com/bluepill-rb/bluepill/issues)
 Mailing List: [http://groups.google.com/group/bluepill-rb](http://groups.google.com/group/bluepill-rb)
 
 [rubygems]: http://rubygems.org/gems/bluepill

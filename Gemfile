@@ -1,8 +1,10 @@
 source 'https://rubygems.org'
 
-gem 'rake'
+# Specify your gem's dependencies in bluepill.gemspec
+gemspec
 
 gem 'activesupport', '~> 3.0', :platforms => :ruby_18
+gem 'rake'
 
 group :doc do
   # YARD helper for ruby 1.8 (already embedded into ruby 1.9)
@@ -16,6 +18,3 @@ group :test do
   gem 'rspec', '>= 2.14'
   gem 'simplecov', '>= 0.4', :platforms => :ruby_19
 end
-
-# Specify your gem's dependencies in bluepill.gemspec
-gemspec

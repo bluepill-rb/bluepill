@@ -18,3 +18,5 @@ group :test do
   gem 'rspec', '>= 2.14'
   gem 'simplecov', '>= 0.4', :platforms => :ruby_19
 end
+
+gem "coveralls", :require => false, :platforms => [:mri_19, :mri_20], :group => :development

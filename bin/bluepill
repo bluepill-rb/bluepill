@@ -58,7 +58,7 @@ OptionParser.new do |opts|
     puts "    log [TARGET]\t\tShow the log for the specified process or group, defaults to all for app"
     puts "    quit\t\t\tStop bluepill"
     puts
-    puts "See http://github.com/arya/bluepill for README"
+    puts "See http://github.com/bluepill-rb/bluepill#readme"
     exit
   end
 

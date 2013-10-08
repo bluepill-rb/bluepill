@@ -2,6 +2,8 @@ source 'https://rubygems.org'
 
 gem 'rake'
 
+gem 'activesupport', '~> 3.0', :platforms => :ruby_18
+
 group :doc do
   # YARD helper for ruby 1.8 (already embedded into ruby 1.9)
   gem 'ripper', :platforms => :mri_18

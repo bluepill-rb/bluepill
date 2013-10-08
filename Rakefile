@@ -1,5 +1,3 @@
-# encoding: utf-8
-
 begin
   require 'bundler'
   Bundler::GemHelper.install_tasks
@@ -36,3 +34,5 @@ rescue LoadError
   $stderr.puts "Please install YARD with: gem install yard"
 end
 
+task :test => :spec
+task :default => :spec

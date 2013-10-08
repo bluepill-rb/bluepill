@@ -114,7 +114,7 @@ if options[:command] == "load"
     ENV['BLUEPILL_BASE_DIR'] = options[:base_dir]
 
     exec(ruby, "-I#{load_path}", '-rbluepill', file_path)
-    
+
   else
     $stderr.puts "Can't find file: #{file}"
   end

@@ -3,6 +3,11 @@ if RUBY_VERSION >= '1.9'
     require 'simplecov'
     SimpleCov.start
   end
+  begin
+    require 'coveralls'
+    Coveralls.wear!
+  rescue LoadError
+  end
 else
   require 'rubygems'
 end

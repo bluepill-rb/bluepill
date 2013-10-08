@@ -17,12 +17,12 @@ describe Bluepill::System do
     end
 
     it "should return same Hash or every call" do
-      Bluepill::System.store.should be_equal(Bluepill::System.store) 
+      Bluepill::System.store.should be_equal(Bluepill::System.store)
     end
 
     it "should store assigned pairs" do
       Bluepill::System.store[:somekey] = 10
-      Bluepill::System.store[:somekey].should be_eql(10) 
+      Bluepill::System.store[:somekey].should be_eql(10)
     end
   end
 

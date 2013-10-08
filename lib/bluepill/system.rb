@@ -37,7 +37,7 @@ module Bluepill
       get_children(pid).each { |child_pid|
         cpu_used += ps[child_pid][IDX_MAP[:pcpu]].to_f if ps[child_pid]
       } if include_children
-      cpu_used 
+      cpu_used
     end
 
     def memory_usage(pid, include_children)
@@ -68,7 +68,7 @@ module Bluepill
         child_pids << chunks[IDX_MAP[:pid]].to_i if chunks[IDX_MAP[:ppid]].to_i == parent_pid.to_i
       end
       grand_children = child_pids.map{|pid| get_children(pid)}.flatten
-      child_pids.concat grand_children 
+      child_pids.concat grand_children
     end
 
     # Returns the pid of the child that executes the cmd
@@ -125,7 +125,7 @@ module Bluepill
         File.unlink(filename) if filename && File.exists?(filename)
       rescue IOError, Errno::ENOENT
       rescue Errno::EACCES
-        retry if (tries += 1) < 3 
+        retry if (tries += 1) < 3
         $stderr.puts("Warning: permission denied trying to delete #{filename}")
       end
     end

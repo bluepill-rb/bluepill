@@ -1,5 +1,5 @@
 # Bluepill
-Bluepill is a simple process monitoring tool written in Ruby. 
+Bluepill is a simple process monitoring tool written in Ruby.
 
 ## Installation
 It&apos;s hosted on [rubygems.org][rubygems].
@@ -50,7 +50,7 @@ Now if we want to do something more meaningful, like actually monitor the proces
       app.process("process_name") do |process|
         process.start_command = "/usr/bin/some_start_command"
         process.pid_file = "/tmp/some_pid_file.pid"
-        
+
         process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3
       end
     end
@@ -66,7 +66,7 @@ To watch memory usage, we just add one more line:
         process.start_command = "/usr/bin/some_start_command"
         process.pid_file = "/tmp/some_pid_file.pid"
 
-        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3        
+        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3
         process.checks :mem_usage, :every => 10.seconds, :below => 100.megabytes, :times => [3,5]
       end
     end
@@ -80,7 +80,7 @@ To watch the modification time of a file, e.g. a log file to ensure the process 
         process.start_command = "/usr/bin/some_start_command"
         process.pid_file = "/tmp/some_pid_file.pid"
 
-        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3        
+        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3
         process.checks :mem_usage, :every => 10.seconds, :below => 100.megabytes, :times => [3,5]
         process.checks :file_time, :every => 60.seconds, :below => 3.minutes, :filename => "/tmp/some_file.log", :times => 2
       end
@@ -113,7 +113,7 @@ We can tell bluepill to give a process some grace time to start/stop/restart bef
         process.stop_grace_time = 5.seconds
         process.restart_grace_time = 8.seconds
 
-        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3        
+        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3
         process.checks :mem_usage, :every => 10.seconds, :below => 100.megabytes, :times => [3,5]
       end
     end
@@ -143,7 +143,7 @@ If you want to run the process as someone other than root:
         process.uid = "deploy"
         process.gid = "deploy"
 
-        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3        
+        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3
         process.checks :mem_usage, :every => 10.seconds, :below => 100.megabytes, :times => [3,5]
       end
     end
@@ -257,7 +257,7 @@ And lastly, to monitor child processes:
     process.monitor_children do |child_process|
       child_process.checks :cpu_usage, :every => 10, :below => 5, :times => 3
       child_process.checks :mem_usage, :every => 10, :below => 100.megabytes, :times => [3, 5]
-      
+
       child_process.stop_command = "kill -QUIT {{PID}}"
     end
 ```
@@ -283,10 +283,10 @@ We recommend that you _not_ do that and instead use the config options to captur
     Bluepill.application("app_name") do |app|
       app.process("process_name") do |process|
         process.start_command = "/usr/bin/env SOME_VAR=1 /usr/bin/some_start_command"
-        
+
         process.working_dir = "/tmp/some_dir"
         process.stdout = process.stderr = "/tmp/server.log"
-        
+
         process.pid_file = "/tmp/some_pid_file.pid"
       end
     end
@@ -299,7 +299,7 @@ The main benefit of using the config options is that Bluepill will be able to mo
 #### Usage
 
     bluepill [app_name] command [options]
-	
+
 For the "load" command, the _app_name_ is specified in the config file, and
 must not be provided on the command line.
 
@@ -331,7 +331,7 @@ To quit the bluepill daemon for an application:
 
     sudo bluepill quit
 
-### Logging  
+### Logging
 By default, bluepill uses syslog local6 facility as described in the installation section. But if for any reason you don&apos;t want to use syslog, you can use a log file. You can do this by setting the :log\_file option in the config:
 
 ```ruby
@@ -341,7 +341,7 @@ By default, bluepill uses syslog local6 facility as described in the installatio
 ```
 
 Keep in mind that you still need to set up log rotation (described in the installation section) to keep the log file from growing huge.
-    
+
 ### Extra options
 You can run bluepill in the foreground:
 
@@ -354,8 +354,8 @@ You can run bluepill in the foreground:
 Note that You must define only one application per config when using foreground mode.
 
 ## Links
-Code: [http://github.com/arya/bluepill](http://github.com/arya/bluepill)  
-Bugs/Features: [http://github.com/arya/bluepill/issues](http://github.com/arya/bluepill/issues)  
+Code: [http://github.com/arya/bluepill](http://github.com/arya/bluepill)
+Bugs/Features: [http://github.com/arya/bluepill/issues](http://github.com/arya/bluepill/issues)
 Mailing List: [http://groups.google.com/group/bluepill-rb](http://groups.google.com/group/bluepill-rb)
 
 

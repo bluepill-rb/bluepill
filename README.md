@@ -1,7 +1,7 @@
 # Bluepill
 Bluepill is a simple process monitoring tool written in Ruby.
 
-[![Build Status](https://travis-ci.org/arya/bluepill.png)](https://travis-ci.org/arya/bluepill)
+[![Build Status](https://travis-ci.org/bluepill-rb/bluepill.png)](https://travis-ci.org/bluepill-rb/bluepill)
 
 ## Installation
 It&apos;s hosted on [rubygems.org][rubygems].

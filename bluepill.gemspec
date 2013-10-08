@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Arya Asemanfar", "Gary Tsang", "Rohith Ravi"]
   s.email       = ["entombedvirus@gmail.com"]
-  s.homepage    = "http://github.com/arya/bluepill"
+  s.homepage    = "http://github.com/bluepill-rb/bluepill"
   s.summary     = %q{A process monitor written in Ruby with stability and minimalism in mind.}
   s.description = %q{Bluepill keeps your daemons up while taking up as little resources as possible. After all you probably want the resources of your server to be used by whatever daemons you are running rather than the thing that's supposed to make sure they are brought back up, should they die or misbehave.}
 

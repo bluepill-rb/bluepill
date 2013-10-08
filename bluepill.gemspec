@@ -23,7 +23,8 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rake', '!= 0.9.0'
   s.add_development_dependency 'rspec', '~> 2.14'
   s.add_development_dependency 'faker', '~> 1.2'
-  s.add_development_dependency 'yard', '~> 0.7'
+  s.add_development_dependency 'yard', '~> 0.8'
+  s.add_development_dependency 'redcarpet', '>= 1.17.2'
 
   s.files            = `git ls-files`.split("\n")
   s.test_files       = `git ls-files -- {test,spec,features}/*`.split("\n")

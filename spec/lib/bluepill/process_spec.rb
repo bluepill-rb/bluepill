@@ -5,9 +5,7 @@ describe Bluepill::Process do
   end
 
   subject do
-    Bluepill::Process.new(:proc_name, [],
-      :logger => Bluepill::Logger.new,
-    )
+    Bluepill::Process.new(:proc_name, [], :logger => Bluepill::Logger.new)
   end
 
   describe "#initialize" do
@@ -41,13 +39,13 @@ describe Bluepill::Process do
       subject.logger.stub(:warning)
       subject.stub(:daemonize?) { false }
 
-      subject.should_receive(:with_timeout)
-        .with(3, "freakout")
-        .and_yield
+      subject.should_receive(:with_timeout).
+        with(3, "freakout").
+        and_yield
 
-      Bluepill::System.should_receive(:execute_blocking)
-        .with("/etc/init.d/script start", subject.system_command_options)
-        .and_return(exit_code: 0)
+      Bluepill::System.should_receive(:execute_blocking).
+        with("/etc/init.d/script start", subject.system_command_options).
+        and_return(:exit_code => 0)
 
       subject.start_process
     end
@@ -56,13 +54,13 @@ describe Bluepill::Process do
       it "functions" do
         subject.stub(:stop_command) { "/etc/init.d/script stop" }
         subject.logger.stub(:warning)
-        subject.should_receive(:with_timeout)
-          .with(3, "stop")
-          .and_yield
+        subject.should_receive(:with_timeout).
+          with(3, "stop").
+          and_yield
 
-        Bluepill::System.should_receive(:execute_blocking)
-          .with("/etc/init.d/script stop", subject.system_command_options)
-          .and_return(exit_code: 0)
+        Bluepill::System.should_receive(:execute_blocking).
+          with("/etc/init.d/script stop", subject.system_command_options).
+          and_return(:exit_code => 0)
 
         subject.stop_process
       end
@@ -72,13 +70,13 @@ describe Bluepill::Process do
       it "functions" do
         subject.stub(:restart_command) { "/etc/init.d/script restart" }
         subject.logger.stub(:warning)
-        subject.should_receive(:with_timeout)
-          .with(3, "restart")
-          .and_yield
+        subject.should_receive(:with_timeout).
+          with(3, "restart").
+          and_yield
 
-        Bluepill::System.should_receive(:execute_blocking)
-          .with("/etc/init.d/script restart", subject.system_command_options)
-          .and_return(exit_code: 0)
+        Bluepill::System.should_receive(:execute_blocking).
+          with("/etc/init.d/script restart", subject.system_command_options).
+          and_return(:exit_code => 0)
 
         subject.restart_process
       end

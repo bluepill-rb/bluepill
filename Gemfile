@@ -19,4 +19,9 @@ group :test do
   gem 'simplecov', '>= 0.4', :platforms => :ruby_19
 end
 
-gem "coveralls", :require => false, :platforms => [:mri_19, :mri_20], :group => :development
+gem 'coveralls', :require => false, :platforms => [:mri_19, :mri_20], :group => :development
+
+platforms :rbx do
+  gem 'rubinius-coverage', '~> 2.0'
+  gem 'rubysl', '~> 2.0'
+end

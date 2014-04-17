@@ -6,6 +6,8 @@ module Bluepill
   class Controller
     attr_accessor :base_dir, :log_file, :sockets_dir, :pids_dir
 
+    PROCESS_COMMANDS = [:status, :quit, :log]
+
     def initialize(options = {})
       self.log_file = options[:log_file]
       self.base_dir = options[:base_dir]
@@ -21,42 +23,56 @@ module Bluepill
     end
 
     def handle_command(application, command, *args)
-      case command.to_sym
-      when :status
-        puts self.send_to_daemon(application, :status, *args)
-      when *Application::PROCESS_COMMANDS
-        # these need to be sent to the daemon and the results printed out
-        affected = self.send_to_daemon(application, command, *args)
-        if affected.empty?
-          puts "No processes effected"
-        else
-          puts "Sent #{command} to:"
-          affected.each do |process|
-            puts "  #{process}"
-          end
-        end
-      when :quit
-        pid = pid_for(application)
-        if System.pid_alive?(pid)
-          ::Process.kill("TERM", pid)
-          puts "Killing bluepilld[#{pid}]"
-        else
-          puts "bluepilld[#{pid}] not running"
-        end
-      when :log
-        log_file_location = self.send_to_daemon(application, :log_file)
-        log_file_location = self.log_file if log_file_location.to_s.strip.empty?
-
-        requested_pattern = args.first
-        grep_pattern = self.grep_pattern(application, requested_pattern)
-
-        tail = "tail -n 100 -f #{log_file_location} | grep -E '#{grep_pattern}'"
-        puts "Tailing log for #{requested_pattern}..."
-        Kernel.exec(tail)
+      if Application::PROCESS_COMMANDS.include?(command.to_sym)
+        command_delegated(application, command, *args)
+      elsif PROCESS_COMMANDS.include?(command.to_sym)
+        send("#{command.to_sym}_command_handled".to_sym, application, *args)
       else
-        $stderr.puts "Unknown command `%s` (or application `%s` has not been loaded yet)" % [command, command]
-        exit(1)
+        command_not_handled(command)
       end
+    end
+
+    def command_delegated(application, command, *args)
+      affected = self.send_to_daemon(application, command, *args)
+      if affected.empty?
+        puts "No processes effected"
+      else
+        puts "Sent #{command} to:"
+        affected.each do |process|
+          puts "  #{process}"
+        end
+      end
+    end
+
+    def status_command_handled(application, *args)
+      puts self.send_to_daemon(application, :status, *args)
+    end
+
+    def quit_command_handled(application, *args)
+      pid = pid_for(application)
+      if System.pid_alive?(pid)
+        ::Process.kill("TERM", pid)
+        puts "Killing bluepilld[#{pid}]"
+      else
+        puts "bluepilld[#{pid}] not running"
+      end
+    end
+
+    def log_command_handled(application, *args)
+      log_file_location = self.send_to_daemon(application, :log_file)
+      log_file_location = self.log_file if log_file_location.to_s.strip.empty?
+
+      requested_pattern = args.first
+      grep_pattern = self.grep_pattern(application, requested_pattern)
+
+      tail = "tail -n 100 -f #{log_file_location} | grep -E '#{grep_pattern}'"
+      puts "Tailing log for #{requested_pattern}..."
+      Kernel.exec(tail)
+    end
+
+    def command_not_handled(command)
+      $stderr.puts "Unknown command `%s` (or application `%s` has not been loaded yet)" % [command, command]
+      exit(1)
     end
 
     def send_to_daemon(application, command, *args)

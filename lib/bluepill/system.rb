@@ -181,8 +181,8 @@ module Bluepill
             # finally, replace grandchild with cmd
             ::Kernel.exec(*Shellwords.shellwords(cmd))
           rescue Exception => e
-            cmd_err_write.puts "Exception in grandchild: #{e.to_s}."
-            cmd_err_write.puts e.backtrace
+            (cmd_err_write.closed? ? STDERR : cmd_err_write).puts "Exception in grandchild: #{e.to_s}."
+            (cmd_err_write.closed? ? STDERR : cmd_err_write).puts e.backtrace
             exit 1
           end
         }

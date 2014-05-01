@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
   s.license     = 'MIT'
 
   s.add_dependency 'activesupport', ['>= 3', '< 4.1']
-  s.add_dependency 'daemons', '~> 1.1'
+  s.add_dependency 'blue-daemons', '~> 1.1.11'
   s.add_dependency 'i18n', '~> 0.5'
   s.add_dependency 'state_machine', '~> 1.1'
 

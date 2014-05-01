@@ -114,7 +114,7 @@ module Bluepill
         wr.write daemon_id
         wr.close
 
-        exit
+        ::Process::exit!(true)
       end
     end
 

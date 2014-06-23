@@ -15,7 +15,7 @@ end
 
 group :test do
   gem 'faker', '>= 1.2'
-  gem 'rspec', '>= 2.14'
+  gem 'rspec', '>= 3'
   gem 'simplecov', '>= 0.4', :platforms => :ruby_19
 end
 

@@ -23,12 +23,12 @@ describe Bluepill::Process do
 
       describe '#monitor_children' do
         subject { super().monitor_children }
-        it { should be_false }
+        it { should be false }
       end
 
       describe '#cache_actual_pid' do
         subject { super().cache_actual_pid }
-        it { should be_true }
+        it { should be true }
       end
 
       describe '#start_grace_time' do

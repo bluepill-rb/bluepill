@@ -14,9 +14,9 @@ group :doc do
 end
 
 group :test do
+  gem 'coveralls', :require => false, :platforms => [:mri_19, :mri_20, :mri_21]
   gem 'faker', '>= 1.2'
+  gem 'rest-client', '~> 1.6.0', :platforms => [:jruby, :ruby_18]
   gem 'rspec', '>= 3'
   gem 'simplecov', '>= 0.4', :platforms => :ruby_19
 end
-
-gem 'coveralls', :require => false, :platforms => [:mri_19, :mri_20], :group => :development

@@ -3,7 +3,12 @@ source 'https://rubygems.org'
 # Specify your gem's dependencies in bluepill.gemspec
 gemspec
 
-gem 'activesupport', '~> 3.0', :platforms => [:ruby_18, :jruby]
+if RUBY_PLATFORM =~ /jruby|java/ || RUBY_VERSION =~ /1.8|1.9.2/
+  gem 'activesupport', '~> 3.0'
+else
+  gem 'activesupport', '~> 4.1'
+end
+
 gem 'rake'
 
 group :doc do

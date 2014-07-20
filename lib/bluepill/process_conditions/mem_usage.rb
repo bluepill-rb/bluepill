@@ -17,7 +17,7 @@ module Bluepill
       end
 
       def check(value)
-        value.kilobytes < @below
+        value.kilobytes < @below rescue true
       end
 
       def format_value(value)

@@ -26,7 +26,13 @@ module Bluepill
       if @last_ran_at.nil? || (@last_ran_at + @every) <= tick_number
         @last_ran_at = tick_number
 
-        value = @process_condition.run(pid, @include_children)
+        begin
+          value = @process_condition.run(pid, @include_children)
+        rescue Exception => e
+          self.logger.err(e.backtrace)
+          raise e
+        end
+
         @history << HistoryValue.new(@process_condition.format_value(value), @process_condition.check(value))
         self.logger.info(self.to_s)
 

@@ -200,7 +200,14 @@ module Bluepill
     end
 
     def notify_triggers(transition)
-      self.triggers.each {|trigger| trigger.notify(transition)}
+      self.triggers.each do |trigger|
+        begin
+          trigger.notify(transition)
+        rescue Exception => e
+          self.logger.err e.backtrace
+          raise e
+        end
+      end
     end
 
     # Watch related methods

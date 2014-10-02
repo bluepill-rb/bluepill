@@ -12,25 +12,18 @@ module Bluepill
       UNIXSocket.open(socket_path(base_dir, name), &block)
     end
 
-    def client_command(base_dir, name, command)
-      res = nil
-      MAX_ATTEMPTS.times do |current_attempt|
-        begin
-          client(base_dir, name) do |socket|
-            Timeout.timeout(TIMEOUT) do
-              socket.puts command
-              res = Marshal.load(socket.read)
-            end
-          end
-          break
-        rescue EOFError, Timeout::Error
-          if current_attempt == MAX_ATTEMPTS - 1
-            abort("Socket Timeout: Server may not be responding")
-          end
-          puts "Retry #{current_attempt + 1} of #{MAX_ATTEMPTS}"
+    def client_command(base_dir, name, command, retry_limit=MAX_ATTEMPTS, timeout=TIMEOUT)
+      client(base_dir, name) do |socket|
+        Timeout.timeout(timeout) do
+          socket.puts command
+          Marshal.load(socket.read)
         end
       end
-      res
+    rescue EOFError, Timeout::Error
+      retry_limit -= 1
+      abort("Socket Timeout: Server may not be responding") if retry_limit == 0
+      puts "Retry #{current_attempt + 1} of #{MAX_ATTEMPTS}"
+      retry
     end
 
     def server(base_dir, name)

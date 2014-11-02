@@ -5,7 +5,7 @@ module Bluepill
 
       PARAMS = [:times, :within, :retry_in]
 
-      attr_accessor *PARAMS
+      attr_accessor(*PARAMS)
       attr_reader :timeline
 
       def initialize(process, options = {})
@@ -20,10 +20,9 @@ module Bluepill
       end
 
       def notify(transition)
-        if TRIGGER_STATES.include?(transition.to_name)
-          self.timeline << Time.now.to_i
-          self.check_flapping
-        end
+        return unless TRIGGER_STATES.include?(transition.to_name)
+        timeline << Time.now.to_i
+        check_flapping
       end
 
       def reset!
@@ -33,22 +32,20 @@ module Bluepill
 
       def check_flapping
         # The process has not flapped if we haven't encountered enough incidents
-        return unless (@timeline.compact.length == self.times)
+        return unless @timeline.compact.length == times
 
         # Check if the incident happend within the timeframe
-        duration = (@timeline.last - @timeline.first) <= self.within
+        return unless @timeline.last - @timeline.first <= within
 
-        if duration
-          self.logger.info "Flapping detected: retrying in #{self.retry_in} seconds"
+        logger.info "Flapping detected: retrying in #{retry_in} seconds"
 
-          self.schedule_event(:start, self.retry_in) unless self.retry_in == 0 # retry_in zero means "do not retry, ever"
-          self.schedule_event(:unmonitor, 0)
+        schedule_event(:start, retry_in) unless retry_in.zero? # retry_in zero means "do not retry, ever"
+        schedule_event(:unmonitor, 0)
 
-          @timeline.clear
+        @timeline.clear
 
-          # This will prevent a transition from happening in the process state_machine
-          throw :halt
-        end
+        # This will prevent a transition from happening in the process state_machine
+        throw :halt
       end
     end
   end

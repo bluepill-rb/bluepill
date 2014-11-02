@@ -10,9 +10,9 @@ module Bluepill
       @name = name
 
       @logger = options.delete(:logger)
-      @fires  = options.has_key?(:fires) ? Array(options.delete(:fires)) : [:restart]
+      @fires  = options.key?(:fires) ? Array(options.delete(:fires)) : [:restart]
       @every  = options.delete(:every)
-      @times  = options.delete(:times) || [1,1]
+      @times  = options.delete(:times) || [1, 1]
       @times  = [@times, @times] unless @times.is_a?(Array) # handles :times => 5
       @include_children = options.delete(:include_children) || false
 
@@ -27,13 +27,13 @@ module Bluepill
 
         begin
           value = @process_condition.run(pid, @include_children)
-        rescue Exception => e
-          self.logger.err(e.backtrace)
+        rescue => e
+          logger.err(e.backtrace)
           raise e
         end
 
         @history << HistoryValue.new(@process_condition.format_value(value), @process_condition.check(value))
-        self.logger.info(self.to_s)
+        logger.info(to_s)
 
         return @fires if self.fired?
       end
@@ -45,11 +45,11 @@ module Bluepill
     end
 
     def fired?
-      @history.count {|v| not v.critical} >= @times.first
+      @history.count { |v| !v.critical } >= @times.first
     end
 
     def to_s
-      data = @history.collect {|v| "#{v.value}#{'*' unless v.critical}"}.join(", ")
+      data = @history.collect { |v| "#{v.value}#{'*' unless v.critical}" }.join(', ')
       "#{@name}: [#{data}]\n"
     end
   end

@@ -23,5 +23,6 @@ group :test do
   gem 'faker', '>= 1.2'
   gem 'rest-client', '~> 1.6.0', :platforms => [:jruby, :ruby_18]
   gem 'rspec', '>= 3'
+  gem 'rubocop', '>= 0.27', :platforms => [:ruby_19, :ruby_20, :ruby_21]
   gem 'simplecov', '>= 0.4', :platforms => :ruby_19
 end

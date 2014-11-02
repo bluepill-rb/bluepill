@@ -4,14 +4,14 @@ module Bluepill
 
     def initialize(options = {})
       @options  = options
-      @logger   = options[:logger] || self.create_logger
+      @logger   = options[:logger] || create_logger
       @prefix   = options[:prefix]
       @stdout   = options[:stdout]
       @prefixes = {}
     end
 
     LOG_METHODS.each do |method|
-      eval <<-END
+      class_eval <<-END
         def #{method}(msg, prefix = [])
           if @logger.is_a?(self.class)
             @logger.#{method}(msg, [@prefix] + prefix)
@@ -39,7 +39,8 @@ module Bluepill
       end
     end
 
-    protected
+  protected
+
     def create_logger
       if @options[:log_file]
         LoggerAdapter.new(@options[:log_file])

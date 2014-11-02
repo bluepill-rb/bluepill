@@ -19,15 +19,15 @@ module Bluepill
     end
 
     def reset!
-      self.cancel_all_events
+      cancel_all_events
     end
 
-    def notify(transition)
-      raise "Implement in subclass"
+    def notify(_transition)
+      fail 'Implement in subclass'
     end
 
     def dispatch!(event)
-      self.process.dispatch!(event, self.class.name.split("::").last)
+      process.dispatch!(event, self.class.name.split('::').last)
     end
 
     def schedule_event(event, delay)
@@ -37,7 +37,7 @@ module Bluepill
           sleep delay.to_f
           trigger.dispatch!(event)
           trigger.mutex.synchronize do
-            trigger.scheduled_events.delete_if { |_, thread| thread == Thread.current }
+            trigger.scheduled_events.delete_if { |_, t| t == Thread.current }
           end
         rescue StandardError => e
           trigger.logger.err(e)
@@ -45,15 +45,14 @@ module Bluepill
         end
       end
 
-      self.scheduled_events.push([event, thread])
+      scheduled_events.push([event, thread])
     end
 
     def cancel_all_events
-      self.logger.info "Canceling all scheduled events"
-      self.mutex.synchronize do
-        self.scheduled_events.each {|_, thread| thread.kill}
+      logger.info 'Canceling all scheduled events'
+      mutex.synchronize do
+        scheduled_events.each { |_, thread| thread.kill }
       end
     end
-
   end
 end

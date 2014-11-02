@@ -1,10 +1,10 @@
 # fixes problem with loading on systems with rubyist-aasm installed
-gem "state_machine"
+gem 'state_machine'
 
-require "state_machine"
-require "daemons"
-require "bluepill/system"
-require "bluepill/process_journal"
+require 'state_machine'
+require 'daemons'
+require 'bluepill/system'
+require 'bluepill/process_journal'
 
 module Bluepill
   class Process
@@ -47,12 +47,12 @@ module Bluepill
       :group_start_noblock,
       :group_restart_noblock,
       :group_stop_noblock,
-      :group_unmonitor_noblock
+      :group_unmonitor_noblock,
 
     ]
 
     attr_accessor :name, :watches, :triggers, :logger, :skip_ticks_until, :process_running
-    attr_accessor *CONFIGURABLE_ATTRIBUTES
+    attr_accessor(*CONFIGURABLE_ATTRIBUTES)
     attr_reader :children, :statistics
 
     state_machine :initial => :unmonitored do
@@ -122,9 +122,9 @@ module Bluepill
 
       checks.each do |name, opts|
         if Trigger[name]
-          self.add_trigger(name, opts)
+          add_trigger(name, opts)
         else
-          self.add_watch(name, opts)
+          add_watch(name, opts)
         end
       end
 
@@ -133,11 +133,11 @@ module Bluepill
       @cache_actual_pid = true
       @start_grace_time = @stop_grace_time = @restart_grace_time = 3
       @environment = {}
-      @on_start_timeout = "start"
+      @on_start_timeout = 'start'
       @group_start_noblock = @group_stop_noblock = @group_restart_noblock = @group_unmonitor_noblock = true
 
       CONFIGURABLE_ATTRIBUTES.each do |attribute_name|
-        self.send("#{attribute_name}=", options[attribute_name]) if options.has_key?(attribute_name)
+        send("#{attribute_name}=", options[attribute_name]) if options.key?(attribute_name)
       end
 
       # Let state_machine do its initialization stuff
@@ -157,52 +157,49 @@ module Bluepill
       # run state machine transitions
       super
 
-      if self.up?
-        self.run_watches
+      return unless self.up?
+      run_watches
 
-        if self.monitor_children?
-          refresh_children!
-          children.each {|child| child.tick}
-        end
-      end
+      return unless self.monitor_children?
+      refresh_children!
+      children.each(&:tick)
     end
 
     def logger=(logger)
       @logger = logger
-      self.watches.each {|w| w.logger = logger }
-      self.triggers.each {|t| t.logger = logger }
+      watches.each { |w| w.logger = logger }
+      triggers.each { |t| t.logger = logger }
     end
 
     # State machine methods
     def dispatch!(event, reason = nil)
       @event_mutex.synchronize do
         @statistics.record_event(event, reason)
-        self.send("#{event}")
+        send("#{event}")
       end
     end
 
     def record_transition(transition)
-      unless transition.loopback?
-        @transitioned = true
+      return if transition.loopback?
+      @transitioned = true
 
-        # When a process changes state, we should clear the memory of all the watches
-        self.watches.each { |w| w.clear_history! }
+      # When a process changes state, we should clear the memory of all the watches
+      watches.each(&:clear_history!)
 
-        # Also, when a process changes state, we should re-populate its child list
-        if self.monitor_children?
-          self.logger.warning "Clearing child list"
-          self.children.clear
-        end
-        logger.info "Going from #{transition.from_name} => #{transition.to_name}"
+      # Also, when a process changes state, we should re-populate its child list
+      if self.monitor_children?
+        logger.warning 'Clearing child list'
+        children.clear
       end
+      logger.info "Going from #{transition.from_name} => #{transition.to_name}"
     end
 
     def notify_triggers(transition)
-      self.triggers.each do |trigger|
+      triggers.each do |trigger|
         begin
           trigger.notify(transition)
-        rescue Exception => e
-          self.logger.err e.backtrace
+        rescue => e
+          logger.err e.backtrace
           raise e
         end
       end
@@ -210,18 +207,18 @@ module Bluepill
 
     # Watch related methods
     def add_watch(name, options = {})
-      self.watches << ConditionWatch.new(name, options.merge(:logger => self.logger))
+      watches << ConditionWatch.new(name, options.merge(:logger => logger))
     end
 
     def add_trigger(name, options = {})
-      self.triggers << Trigger[name].new(self, options.merge(:logger => self.logger))
+      triggers << Trigger[name].new(self, options.merge(:logger => logger))
     end
 
     def run_watches
       now = Time.now.to_i
 
-      threads = self.watches.collect do |watch|
-        [watch, Thread.new { Thread.current[:events] = watch.run(self.actual_pid, now) }]
+      threads = watches.collect do |watch|
+        [watch, Thread.new { Thread.current[:events] = watch.run(actual_pid, now) }]
       end
 
       @transitioned = false
@@ -251,22 +248,22 @@ module Bluepill
 
     def handle_user_command(cmd)
       case cmd
-      when "start"
+      when 'start'
         if self.process_running?(true)
-          logger.warning("Refusing to re-run start command on an already running process.")
+          logger.warning('Refusing to re-run start command on an already running process.')
         else
-          dispatch!(:start, "user initiated")
+          dispatch!(:start, 'user initiated')
         end
-      when "stop"
+      when 'stop'
         stop_process
-        dispatch!(:unmonitor, "user initiated")
-      when "restart"
+        dispatch!(:unmonitor, 'user initiated')
+      when 'restart'
         restart_process
-      when "unmonitor"
+      when 'unmonitor'
         # When the user issues an unmonitor cmd, reset any triggers so that
         # scheduled events gets cleared
-        triggers.each {|t| t.reset! }
-        dispatch!(:unmonitor, "user initiated")
+        triggers.each(&:reset!)
+        dispatch!(:unmonitor, 'user initiated')
       end
     end
 
@@ -276,7 +273,7 @@ module Bluepill
 
       @process_running ||= signal_process(0)
       # the process isn't running, so we should clear the PID
-      self.clear_pid unless @process_running
+      clear_pid unless @process_running
       @process_running
     end
 
@@ -285,55 +282,54 @@ module Bluepill
       pre_start_process
       logger.warning "Executing start command: #{start_command}"
       if self.daemonize?
-        daemon_id = System.daemonize(start_command, self.system_command_options)
+        daemon_id = System.daemonize(start_command, system_command_options)
         if daemon_id
           ProcessJournal.append_pid_to_journal(name, daemon_id)
-          children.each {|child|
+          children.each do|child|
             ProcessJournal.append_pid_to_journal(name, child.actual_id)
-          } if self.monitor_children?
+          end if self.monitor_children?
         end
         daemon_id
       else
         # This is a self-daemonizing process
         with_timeout(start_grace_time, on_start_timeout) do
-          result = System.execute_blocking(start_command, self.system_command_options)
+          result = System.execute_blocking(start_command, system_command_options)
 
           unless result[:exit_code].zero?
-            logger.warning "Start command execution returned non-zero exit code:"
+            logger.warning 'Start command execution returned non-zero exit code:'
             logger.warning result.inspect
           end
         end
       end
 
-      self.skip_ticks_for(start_grace_time)
+      skip_ticks_for(start_grace_time)
     end
 
     def pre_start_process
       return unless pre_start_command
       logger.warning "Executing pre start command: #{pre_start_command}"
-      result = System.execute_blocking(pre_start_command, self.system_command_options)
-      unless result[:exit_code].zero?
-        logger.warning "Pre start command execution returned non-zero exit code:"
-        logger.warning result.inspect
-      end
+      result = System.execute_blocking(pre_start_command, system_command_options)
+      return if result[:exit_code].zero?
+      logger.warning 'Pre start command execution returned non-zero exit code:'
+      logger.warning result.inspect
     end
 
     def stop_process
       if monitor_children
-        System.get_children(self.actual_pid).each do |child_pid|
+        System.get_children(actual_pid).each do |child_pid|
           ProcessJournal.append_pid_to_journal(name, child_pid)
         end
       end
 
       if stop_command
-        cmd = self.prepare_command(stop_command)
+        cmd = prepare_command(stop_command)
         logger.warning "Executing stop command: #{cmd}"
 
-        with_timeout(stop_grace_time, "stop") do
-          result = System.execute_blocking(cmd, self.system_command_options)
+        with_timeout(stop_grace_time, 'stop') do
+          result = System.execute_blocking(cmd, system_command_options)
 
           unless result[:exit_code].zero?
-            logger.warning "Stop command execution returned non-zero exit code:"
+            logger.warning 'Stop command execution returned non-zero exit code:'
             logger.warning result.inspect
           end
         end
@@ -353,9 +349,9 @@ module Bluepill
 
             logger.debug "Sleeping for #{delay} seconds"
             sleep delay
-            #break unless signal_process(0) #break unless the process can be reached
+            # break unless signal_process(0) #break unless the process can be reached
             unless process.signal_process(0)
-              logger.debug "Process has terminated."
+              logger.debug 'Process has terminated.'
               break
             end
             logger.info "Sending signal #{signal} to #{process.actual_pid}"
@@ -364,55 +360,55 @@ module Bluepill
         end
       else
         logger.warning "Executing default stop command. Sending TERM signal to #{actual_pid}"
-        signal_process("TERM")
+        signal_process('TERM')
       end
       ProcessJournal.kill_all_from_journal(name) # finish cleanup
-      self.unlink_pid # TODO: we only write the pid file if we daemonize, should we only unlink it if we daemonize?
+      unlink_pid # TODO: we only write the pid file if we daemonize, should we only unlink it if we daemonize?
 
-      self.skip_ticks_for(stop_grace_time)
+      skip_ticks_for(stop_grace_time)
     end
 
     def restart_process
       if restart_command
-        cmd = self.prepare_command(restart_command)
+        cmd = prepare_command(restart_command)
 
         logger.warning "Executing restart command: #{cmd}"
 
-        with_timeout(restart_grace_time, "restart") do
-          result = System.execute_blocking(cmd, self.system_command_options)
+        with_timeout(restart_grace_time, 'restart') do
+          result = System.execute_blocking(cmd, system_command_options)
 
           unless result[:exit_code].zero?
-            logger.warning "Restart command execution returned non-zero exit code:"
+            logger.warning 'Restart command execution returned non-zero exit code:'
             logger.warning result.inspect
           end
         end
 
-        self.skip_ticks_for(restart_grace_time)
+        skip_ticks_for(restart_grace_time)
       else
-        logger.warning "No restart_command specified. Must stop and start to restart"
-        self.stop_process
-        self.start_process
+        logger.warning 'No restart_command specified. Must stop and start to restart'
+        stop_process
+        start_process
       end
     end
 
     def clean_threads
-      @threads.each { |t| t.kill }
+      @threads.each(&:kill)
       @threads.clear
     end
 
     def daemonize?
-      !!self.daemonize
+      !!daemonize
     end
 
     def monitor_children?
-      !!self.monitor_children
+      !!monitor_children
     end
 
     def signal_process(code)
       code = code.to_s.upcase if code.is_a?(String) || code.is_a?(Symbol)
       ::Process.kill(code, actual_pid)
       true
-    rescue Exception => e
+    rescue => e
       logger.err "Failed to signal process #{actual_pid} with code #{code}: #{e}"
       false
     end
@@ -429,7 +425,7 @@ module Bluepill
       return @actual_pid if cache_actual_pid? && @actual_pid
       @actual_pid = begin
         if pid_file
-          if File.exists?(pid_file)
+          if File.exist?(pid_file)
             str = File.read(pid_file)
             str.to_i if str.size > 0
           else
@@ -441,7 +437,7 @@ module Bluepill
     end
 
     def pid_from_command
-      pid = %x{#{pid_command}}.strip
+      pid = `#{pid_command}`.strip
       (pid =~ /\A\d+\z/) ? pid.to_i : nil
     end
 
@@ -458,26 +454,26 @@ module Bluepill
       System.delete_if_exists(pid_file)
     end
 
-     # Internal State Methods
+    # Internal State Methods
     def skip_ticks_for(seconds)
       # TODO: should this be addative or longest wins?
       #       i.e. if two calls for skip_ticks_for come in for 5 and 10, should it skip for 10 or 15?
-      self.skip_ticks_until = (self.skip_ticks_until || Time.now.to_i) + seconds.to_i
+      self.skip_ticks_until = (skip_ticks_until || Time.now.to_i) + seconds.to_i
     end
 
     def skipping_ticks?
-      self.skip_ticks_until && self.skip_ticks_until > Time.now.to_i
+      skip_ticks_until && skip_ticks_until > Time.now.to_i
     end
 
     def refresh_children!
       # First prune the list of dead children
-      @children.delete_if {|child| !child.process_running?(true) }
+      @children.delete_if { |child| !child.process_running?(true) }
 
       # Add new found children to the list
-      new_children_pids = System.get_children(self.actual_pid) - @children.map {|child| child.actual_pid}
+      new_children_pids = System.get_children(actual_pid) - @children.map(&:actual_pid)
 
       unless new_children_pids.empty?
-        logger.info "Existing children: #{@children.collect{|c| c.actual_pid}.join(",")}. Got new children: #{new_children_pids.inspect} for #{actual_pid}"
+        logger.info "Existing children: #{@children.collect(&:actual_pid).join(',')}. Got new children: #{new_children_pids.inspect} for #{actual_pid}"
       end
 
       # Construct a new process wrapper for each new found children
@@ -486,41 +482,38 @@ module Bluepill
         child_name = "<child(pid:#{child_pid})>"
         logger = self.logger.prefix_with(child_name)
 
-        child = self.child_process_factory.create_child_process(child_name, child_pid, logger)
+        child = child_process_factory.create_child_process(child_name, child_pid, logger)
         @children << child
       end
     end
 
     def prepare_command(command)
-      command.to_s.gsub("{{PID}}", actual_pid.to_s)
+      command.to_s.gsub('{{PID}}', actual_pid.to_s)
     end
 
     def system_command_options
       {
-        :uid         => self.uid,
-        :gid         => self.gid,
-        :working_dir => self.working_dir,
-        :environment => self.environment,
-        :pid_file    => self.pid_file,
-        :logger      => self.logger,
-        :stdin       => self.stdin,
-        :stdout      => self.stdout,
-        :stderr      => self.stderr,
-        :supplementary_groups => self.supplementary_groups
+        :uid         => uid,
+        :gid         => gid,
+        :working_dir => working_dir,
+        :environment => environment,
+        :pid_file    => pid_file,
+        :logger      => logger,
+        :stdin       => stdin,
+        :stdout      => stdout,
+        :stderr      => stderr,
+        :supplementary_groups => supplementary_groups,
       }
     end
 
     def with_timeout(secs, next_state = nil, &blk)
       # Attempt to execute the passed block. If the block takes
       # too long, transition to the indicated next state.
-      begin
-        Timeout.timeout(secs.to_f, &blk)
-      rescue Timeout::Error
-        logger.err "Execution is taking longer than expected."
-        logger.err "Did you forget to tell bluepill to daemonize this process?"
-        dispatch!(next_state)
-      end
+      Timeout.timeout(secs.to_f, &blk)
+    rescue Timeout::Error
+      logger.err 'Execution is taking longer than expected.'
+      logger.err 'Did you forget to tell bluepill to daemonize this process?'
+      dispatch!(next_state)
     end
   end
 end
-

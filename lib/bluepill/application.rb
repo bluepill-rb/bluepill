@@ -17,17 +17,17 @@ module Bluepill
       self.log_file = options[:log_file]
       self.base_dir = ProcessJournal.base_dir = options[:base_dir] ||
         ENV['BLUEPILL_BASE_DIR'] ||
-        (::Process.euid != 0 ? File.join(ENV['HOME'], '.bluepill') : "/var/run/bluepill")
-      self.pid_file = File.join(self.base_dir, 'pids', self.name + ".pid")
-      self.pids_dir = File.join(self.base_dir, 'pids', self.name)
+        (::Process.euid != 0 ? File.join(ENV['HOME'], '.bluepill') : '/var/run/bluepill')
+      self.pid_file = File.join(base_dir, 'pids', self.name + '.pid')
+      self.pids_dir = File.join(base_dir, 'pids', self.name)
       self.kill_timeout = options[:kill_timeout] || 10
 
       self.groups = {}
 
-      self.logger = ProcessJournal.logger = Bluepill::Logger.new(:log_file => self.log_file, :stdout => foreground?).prefix_with(self.name)
+      self.logger = ProcessJournal.logger = Bluepill::Logger.new(:log_file => log_file, :stdout => foreground?).prefix_with(self.name)
 
-      self.setup_signal_traps
-      self.setup_pids_dir
+      setup_signal_traps
+      setup_pids_dir
 
       @mutex = Mutex.new
     end
@@ -41,14 +41,12 @@ module Bluepill
     end
 
     def load
-      begin
-        self.start_server
-      rescue StandardError => e
-        $stderr.puts "Failed to start bluepill:"
-        $stderr.puts "%s `%s`" % [e.class.name, e.message]
-        $stderr.puts e.backtrace
-        exit(5)
-      end
+      start_server
+    rescue StandardError => e
+      $stderr.puts('Failed to start bluepill:')
+      $stderr.puts(format('%s `%s`', e.class.name, e.message))
+      $stderr.puts(e.backtrace)
+      exit(5)
     end
 
     PROCESS_COMMANDS.each do |command|
@@ -62,26 +60,27 @@ module Bluepill
     def add_process(process, group_name = nil)
       group_name = group_name.to_s if group_name
 
-      self.groups[group_name] ||= Group.new(group_name, :logger => self.logger.prefix_with(group_name))
-      self.groups[group_name].add_process(process)
+      groups[group_name] ||= Group.new(group_name, :logger => logger.prefix_with(group_name))
+      groups[group_name].add_process(process)
     end
 
     def version
       Bluepill::VERSION
     end
 
-    protected
+  protected
+
     def send_to_process_or_group(method, group_name, process_name)
       if group_name.nil? && process_name.nil?
-        self.groups.values.collect do |group|
+        groups.values.collect do |group|
           group.send(method)
         end.flatten
-      elsif self.groups.key?(group_name)
-        self.groups[group_name].send(method, process_name)
+      elsif groups.key?(group_name)
+        groups[group_name].send(method, process_name)
       elsif process_name.nil?
         # they must be targeting just by process name
         process_name = group_name
-        self.groups.values.collect do |group|
+        groups.values.collect do |group|
           group.send(method, process_name)
         end.flatten
       else
@@ -94,18 +93,18 @@ module Bluepill
       @listener_thread = Thread.new do
         loop do
           begin
-            client = self.socket.accept
+            client = socket.accept
             client.close_on_exec = true  if client.respond_to?(:close_on_exec=)
-            command, *args = client.readline.strip.split(":")
+            command, *args = client.readline.strip.split(':')
             response = begin
-              mutex { self.send(command, *args) }
-            rescue Exception => e
+              mutex { send(command, *args) }
+            rescue => e
               e
             end
             client.write(Marshal.dump(response))
           rescue StandardError => e
-            logger.err("Got exception in cmd listener: %s `%s`" % [e.class.name, e.message])
-            e.backtrace.each {|l| logger.err(l)}
+            logger.err(format('Got exception in cmd listener: %s `%s`', e.class.name, e.message))
+            e.backtrace.each { |l| logger.err(l) }
           ensure
             begin
               client.close
@@ -118,7 +117,7 @@ module Bluepill
     end
 
     def start_server
-      self.kill_previous_bluepill
+      kill_previous_bluepill
       ProcessJournal.kill_all_from_all_journals
       ProcessJournal.clear_all_atomic_fs_locks
 
@@ -129,18 +128,17 @@ module Bluepill
 
       Daemonize.daemonize unless foreground?
 
-      self.logger.reopen
+      logger.reopen
 
-      $0 = "bluepilld: #{self.name}"
+      $0 = "bluepilld: #{name}"
 
-      self.groups.each {|_, group| group.determine_initial_state }
+      groups.each { |_, group| group.determine_initial_state }
 
+      write_pid_file
+      self.socket = Bluepill::Socket.server(base_dir, name)
+      start_listener
 
-      self.write_pid_file
-      self.socket = Bluepill::Socket.server(self.base_dir, self.name)
-      self.start_listener
-
-      self.run
+      run
     end
 
     def run
@@ -148,7 +146,7 @@ module Bluepill
       while @running
         mutex do
           System.reset_data
-          self.groups.each { |_, group| group.tick }
+          groups.each { |_, group| group.tick }
         end
         sleep 1
       end
@@ -158,63 +156,59 @@ module Bluepill
       ProcessJournal.kill_all_from_all_journals
       ProcessJournal.clear_all_atomic_fs_locks
       begin
-        System.delete_if_exists(self.socket.path) if self.socket
+        System.delete_if_exists(socket.path) if socket
       rescue IOError
       end
-      System.delete_if_exists(self.pid_file)
+      System.delete_if_exists(pid_file)
     end
 
     def setup_signal_traps
-      terminator = Proc.new do
-        puts "Terminating..."
+      terminator = proc do
+        puts 'Terminating...'
         cleanup
         @running = false
       end
 
-      Signal.trap("TERM", &terminator)
-      Signal.trap("INT", &terminator)
+      Signal.trap('TERM', &terminator)
+      Signal.trap('INT', &terminator)
 
-      Signal.trap("HUP") do
-        self.logger.reopen if self.logger
+      Signal.trap('HUP') do
+        logger.reopen if logger
       end
     end
 
     def setup_pids_dir
-      FileUtils.mkdir_p(self.pids_dir) unless File.exists?(self.pids_dir)
+      FileUtils.mkdir_p(pids_dir) unless File.exist?(pids_dir)
       # we need everybody to be able to write to the pids_dir as processes managed by
       # bluepill will be writing to this dir after they've dropped privileges
-      FileUtils.chmod(0777, self.pids_dir)
+      FileUtils.chmod(0777, pids_dir)
     end
 
     def kill_previous_bluepill
-      if File.exists?(self.pid_file)
-        previous_pid = File.read(self.pid_file).to_i
-        if System.pid_alive?(previous_pid)
-          begin
-            ::Process.kill(0, previous_pid)
-            puts "Killing previous bluepilld[#{previous_pid}]"
-            ::Process.kill(2, previous_pid)
-          rescue Exception => e
-            $stderr.puts "Encountered error trying to kill previous bluepill:"
-            $stderr.puts "#{e.class}: #{e.message}"
-            exit(4) unless e.is_a?(Errno::ESRCH)
-          else
-            kill_timeout.times do |i|
-              sleep 0.5
-              break unless System.pid_alive?(previous_pid)
-            end
+      return unless File.exist?(pid_file)
+      previous_pid = File.read(pid_file).to_i
+      return unless System.pid_alive?(previous_pid)
+      ::Process.kill(0, previous_pid)
+      puts "Killing previous bluepilld[#{previous_pid}]"
+      ::Process.kill(2, previous_pid)
+    rescue => e
+      $stderr.puts 'Encountered error trying to kill previous bluepill:'
+      $stderr.puts "#{e.class}: #{e.message}"
+      exit(4) unless e.is_a?(Errno::ESRCH)
+    else
+      kill_timeout.times do |_i|
+        sleep 0.5
+        break unless System.pid_alive?(previous_pid)
+      end
 
-            if System.pid_alive?(previous_pid)
-              $stderr.puts "Previous bluepilld[#{previous_pid}] didn't die"
-              exit(4)
-            end
-          end
-        end
+      if System.pid_alive?(previous_pid)
+        $stderr.puts "Previous bluepilld[#{previous_pid}] didn't die"
+        exit(4)
       end
     end
 
     def write_pid_file
-      File.open(self.pid_file, 'w') { |x| x.write(::Process.pid) }
+      File.open(pid_file, 'w') { |x| x.write(::Process.pid) }
     end
   end
 end

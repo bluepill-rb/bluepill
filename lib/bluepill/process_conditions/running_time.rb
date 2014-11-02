@@ -5,7 +5,7 @@ module Bluepill
         @below = options[:below]
       end
 
-      def run(pid, include_children)
+      def run(pid, _include_children)
         System.running_time(pid)
       end
 

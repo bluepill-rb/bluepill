@@ -10,7 +10,7 @@ module Bluepill
       def push(value)
         super(value)
 
-        self.shift if self.length > @capacity
+        shift if length > @capacity
         self
       end
       alias_method :<<, :push

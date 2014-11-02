@@ -8,19 +8,16 @@ if RUBY_VERSION >= '1.9'
     Coveralls.wear!
   rescue LoadError
   end
-else
-  require 'rubygems'
 end
-
-require 'faker'
-require 'rspec/core'
 
 $LOAD_PATH.unshift(File.expand_path('../lib', File.dirname(__FILE__)))
 
+require 'bluepill'
+require 'faker'
+require 'rspec/core'
+
 module Process
   def self.euid
-    raise "Process.euid should be stubbed"
+    fail 'Process.euid should be stubbed'
   end
 end
-
-require 'bluepill'

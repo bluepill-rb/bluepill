@@ -1,8 +1,8 @@
 module Bluepill
   class AppProxy
-    APP_ATTRIBUTES = [:working_dir, :uid, :gid, :environment, :auto_start ]
+    APP_ATTRIBUTES = [:working_dir, :uid, :gid, :environment, :auto_start]
 
-    attr_accessor *APP_ATTRIBUTES
+    attr_accessor(*APP_ATTRIBUTES)
     attr_reader :app
 
     def initialize(app_name, options)
@@ -11,7 +11,7 @@ module Bluepill
 
     def process(process_name, &process_block)
       attributes = {}
-      APP_ATTRIBUTES.each { |a| attributes[a] = self.send(a) }
+      APP_ATTRIBUTES.each { |a| attributes[a] = send(a) }
 
       process_factory = ProcessFactory.new(attributes, process_block)
 

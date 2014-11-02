@@ -1,6 +1,6 @@
 require 'rubygems'
 
-require 'bundler/setup' if ENV['BUNDLE_GEMFILE'] && File.exists?(ENV['BUNDLE_GEMFILE'])
+require 'bundler/setup' if ENV['BUNDLE_GEMFILE'] && File.exist?(ENV['BUNDLE_GEMFILE'])
 
 require 'thread'
 require 'monitor'
@@ -21,18 +21,18 @@ require 'bluepill/dsl/app_proxy'
 require 'bluepill/application'
 require 'bluepill/controller'
 require 'bluepill/socket'
-require "bluepill/process"
-require "bluepill/process_statistics"
-require "bluepill/group"
-require "bluepill/logger"
-require "bluepill/condition_watch"
+require 'bluepill/process'
+require 'bluepill/process_statistics'
+require 'bluepill/group'
+require 'bluepill/logger'
+require 'bluepill/condition_watch'
 require 'bluepill/trigger'
 require 'bluepill/triggers/flapping'
-require "bluepill/dsl"
-require "bluepill/system"
+require 'bluepill/dsl'
+require 'bluepill/system'
 
-require "bluepill/process_conditions"
+require 'bluepill/process_conditions'
 
-require "bluepill/util/rotational_array"
+require 'bluepill/util/rotational_array'
 
-require "bluepill/version"
+require 'bluepill/version'

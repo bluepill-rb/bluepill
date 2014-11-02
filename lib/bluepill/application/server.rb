@@ -2,7 +2,7 @@ module Bluepill
   module Application
     module ServerMethods
       def status
-        self.processes.collect do |process|
+        processes.collect do |process|
           "#{process.name} #{process.state}"
         end.join("\n")
       end

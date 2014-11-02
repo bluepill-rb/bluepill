@@ -5,11 +5,11 @@ module Bluepill
         @below = options[:below]
       end
 
-      def run(pid, include_children)
+      def run(_pid, _include_children)
         1
       end
 
-      def check(value)
+      def check(_value)
         true
       end
     end

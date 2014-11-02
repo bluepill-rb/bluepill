@@ -10,20 +10,16 @@ module Bluepill
     end
 
     def add_process(process)
-      process.logger = self.logger.prefix_with(process.name)
-      self.processes << process
+      process.logger = logger.prefix_with(process.name)
+      processes << process
     end
 
     def tick
-      self.processes.each do |process|
-        process.tick
-      end
+      processes.each(&:tick)
     end
 
     def determine_initial_state
-      self.processes.each do |process|
-        process.determine_initial_state
-      end
+      processes.each(&:determine_initial_state)
     end
 
     # proxied events
@@ -54,26 +50,25 @@ module Bluepill
     def status(process_name = nil)
       lines = []
       if process_name.nil?
-        prefix = self.name ? "  " : ""
-        lines << "#{self.name}:" if self.name
+        prefix = name ? '  ' : ''
+        lines << "#{name}:" if name
 
-        self.processes.each do |process|
-          lines << "%s%s(pid:%s): %s" % [prefix, process.name, process.actual_pid, process.state]
-          if process.monitor_children?
-            process.children.each do |child|
-              lines << "  %s%s: %s" % [prefix, child.name, child.state]
-            end
+        processes.each do |process|
+          next unless process.monitor_children?
+          lines << format('%s%s(pid:%s): %s', prefix, process.name, process.actual_pid, process.state)
+          process.children.each do |child|
+            lines << format('  %s%s: %s', prefix, child.name, child.state)
           end
         end
+
       else
-        self.processes.each do |process|
+        processes.each do |process|
           next if process_name != process.name
-          lines << "%s%s(pid:%s): %s" % [prefix, process.name, process.actual_pid, process.state]
+          lines << format('%s%s(pid:%s): %s', prefix, process.name, process.actual_pid, process.state)
           lines << process.statistics.to_s
         end
       end
-      lines << ""
+      lines << ''
     end
-
   end
 end

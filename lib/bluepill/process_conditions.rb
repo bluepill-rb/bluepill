@@ -6,8 +6,7 @@ module Bluepill
   end
 end
 
-require "bluepill/process_conditions/process_condition"
+require 'bluepill/process_conditions/process_condition'
 Dir["#{File.dirname(__FILE__)}/process_conditions/*.rb"].each do |pc|
   require pc
 end
-

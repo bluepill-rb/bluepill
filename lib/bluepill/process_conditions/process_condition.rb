@@ -5,12 +5,12 @@ module Bluepill
         @options = options
       end
 
-      def run(pid, include_children)
-        raise "Implement in subclass!"
+      def run(_pid, _include_children)
+        fail 'Implement in subclass!'
       end
 
-      def check(value)
-        raise "Implement in subclass!"
+      def check(_value)
+        fail 'Implement in subclass!'
       end
 
       def format_value(value)

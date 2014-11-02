@@ -15,7 +15,7 @@
 require 'socket'
 
 port = ARGV[0].to_i
-port = 4242 if port == 0
+port = 4242 if port.zero?
 
 acceptor = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
 address = Socket.pack_sockaddr_in(port, '127.0.0.1')
@@ -23,31 +23,44 @@ acceptor.bind(address)
 acceptor.listen(10)
 
 children = []
-trap('EXIT') { acceptor.close; children.each {|c| Process.kill('QUIT', c)} }
-
+trap('EXIT') do
+  acceptor.close
+  children.each { |c| Process.kill('QUIT', c) }
+end
 
 3.times do
   children << fork do
-    trap('QUIT') {$0 = "forking_server| QUIT received shutting down gracefully..."; sleep 5; exit}
-    trap('INT') {$0 = "forking_server| INT received shutting down UN-gracefully..."; sleep 3; exit}
+    trap('QUIT') do
+      $0 = 'forking_server| QUIT received shutting down gracefully...'
+      sleep 5
+      exit
+    end
+    trap('INT') do
+      $0 = 'forking_server| INT received shutting down UN-gracefully...'
+      sleep 3
+      exit
+    end
 
-    puts "child #$$ accepting on shared socket (localhost:#{port})"
-    loop {
-      socket, addr = acceptor.accept
-      socket.write "child #$$ echo> "
+    puts "child #{$PROCESS_ID} accepting on shared socket (localhost:#{port})"
+    loop do
+      socket, _ = acceptor.accept
+      socket.write "child #{$PROCESS_ID} echo> "
       socket.flush
       message = socket.gets
       socket.write message
       socket.close
-      puts "child #$$ echo'd: '#{message.strip}'"
+      puts "child #{$PROCESS_ID} echo'd: '#{message.strip}'"
 
       # cause a spike in mem usage
-      temp = "*" * (100 * 1024)
-    }
+      '*' * 2**20
+    end
     exit
   end
 end
 
-trap('INT') { puts "\nbailing" ; exit }
+trap('INT') do
+  puts "\nbailing"
+  exit
+end
 
 Process.waitall

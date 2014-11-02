@@ -6,7 +6,7 @@ module Bluepill
     # process.cache_actual_pid = false
 
     class ZombieProcess < ProcessCondition
-      def run(pid, include_children)
+      def run(pid, _include_children)
         System.command(pid)
       end
 

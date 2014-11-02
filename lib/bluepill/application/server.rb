@@ -1,8 +1,6 @@
-# -*- encoding: utf-8 -*-
 module Bluepill
   module Application
     module ServerMethods
-
       def status
         self.processes.collect do |process|
           "#{process.name} #{process.state}"

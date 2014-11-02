@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 module Bluepill
   class ProcessStatistics
     STRFTIME = "%m/%d/%Y %H:%I:%S".freeze

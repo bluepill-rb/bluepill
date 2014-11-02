@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 module Bluepill
   class ProcessProxy
     attr_reader :attributes, :watches, :name

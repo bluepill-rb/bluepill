@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 module Bluepill
   class Group
     attr_accessor :name, :processes, :logger

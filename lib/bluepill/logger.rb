@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 module Bluepill
   class Logger
     LOG_METHODS = [:emerg, :alert, :crit, :err, :warning, :notice, :info, :debug]

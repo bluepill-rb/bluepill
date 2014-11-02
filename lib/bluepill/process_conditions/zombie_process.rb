@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 module Bluepill
   module ProcessConditions
     # Process must have cache_actual_pid set to false to function correctly:

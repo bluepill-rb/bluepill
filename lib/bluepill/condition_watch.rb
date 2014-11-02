@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 module Bluepill
   class HistoryValue < Struct.new(:value, :critical)
   end

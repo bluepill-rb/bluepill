@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 require 'thread'
 require 'bluepill/system'
 require 'bluepill/process_journal'

@@ -478,7 +478,7 @@ module Bluepill
 
       # Construct a new process wrapper for each new found children
       new_children_pids.each do |child_pid|
-        ProcessJournal.append_pid_to_journal(name, child_pid)
+        ProcessJournal.append_pid_to_journal(name, child_pid) if daemonize?
         child_name = "<child(pid:#{child_pid})>"
         logger = self.logger.prefix_with(child_name)
 

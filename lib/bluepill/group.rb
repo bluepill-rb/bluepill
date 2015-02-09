@@ -54,8 +54,8 @@ module Bluepill
         lines << "#{name}:" if name
 
         processes.each do |process|
-          next unless process.monitor_children?
           lines << format('%s%s(pid:%s): %s', prefix, process.name, process.actual_pid, process.state)
+          next unless process.monitor_children?
           process.children.each do |child|
             lines << format('  %s%s: %s', prefix, child.name, child.state)
           end

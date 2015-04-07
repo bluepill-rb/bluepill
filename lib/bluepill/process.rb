@@ -390,7 +390,7 @@ module Bluepill
         start_process
       end
     end
-    
+
     def cleanup_process
       ProcessJournal.kill_all_from_journal(name) # finish cleanup
       unlink_pid # TODO: we only write the pid file if we daemonize, should we only unlink it if we daemonize?

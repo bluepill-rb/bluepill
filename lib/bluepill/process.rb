@@ -333,7 +333,7 @@ module Bluepill
             logger.warning result.inspect
           end
         end
-
+        cleanup_process
       elsif stop_signals
         # issue stop signals with configurable delay between each
         logger.warning "Sending stop signals to #{actual_pid}"
@@ -357,13 +357,13 @@ module Bluepill
             logger.info "Sending signal #{signal} to #{process.actual_pid}"
             process.signal_process(signal)
           end
+          cleanup_process
         end
       else
         logger.warning "Executing default stop command. Sending TERM signal to #{actual_pid}"
         signal_process('TERM')
+        cleanup_process
       end
-      ProcessJournal.kill_all_from_journal(name) # finish cleanup
-      unlink_pid # TODO: we only write the pid file if we daemonize, should we only unlink it if we daemonize?
 
       skip_ticks_for(stop_grace_time)
     end
@@ -389,6 +389,11 @@ module Bluepill
         stop_process
         start_process
       end
+    end
+    
+    def cleanup_process
+      ProcessJournal.kill_all_from_journal(name) # finish cleanup
+      unlink_pid # TODO: we only write the pid file if we daemonize, should we only unlink it if we daemonize?
     end
 
     def clean_threads

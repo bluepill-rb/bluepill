@@ -9,6 +9,8 @@ else
   gem 'activesupport', '~> 4.1'
 end
 
+gem 'i18n', '~> 0.6.11', :platforms => [:ruby_18]
+
 gem 'rake'
 
 group :doc do

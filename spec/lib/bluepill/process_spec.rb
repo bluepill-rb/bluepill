@@ -131,5 +131,4 @@ describe Bluepill::Process do
       subject.with_timeout(3, 'state_override', &block)
     end
   end
-
 end

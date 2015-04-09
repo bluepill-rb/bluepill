@@ -226,7 +226,7 @@ module Bluepill
         # BSD style ps invocation
         lines = `ps axo pid,ppid,pcpu,rss,etime,command`.split("\n")
 
-        lines.inject(Hash.new) do |mem, line|
+        lines.inject({}) do |mem, line|
           chunks = line.split(/\s+/)
           chunks.delete_if { |c| c.strip.empty? }
           pid = chunks[IDX_MAP[:pid]].strip.to_i

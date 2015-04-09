@@ -7,11 +7,7 @@ module Bluepill
       end
 
       def run(_pid, _include_children)
-        if File.exist?(@filename)
-          Time.now - File.mtime(@filename)
-        else
-          nil
-        end
+        Time.now - File.mtime(@filename) if File.exist?(@filename)
       rescue
         $ERROR_INFO
       end

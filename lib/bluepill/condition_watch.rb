@@ -1,6 +1,5 @@
 module Bluepill
-  class HistoryValue < Struct.new(:value, :critical)
-  end
+  HistoryValue = Struct.new(:value, :critical)
 
   class ConditionWatch
     attr_accessor :logger, :name

@@ -43,7 +43,7 @@ end
 
     puts "child #{$PROCESS_ID} accepting on shared socket (localhost:#{port})"
     loop do
-      socket, _ = acceptor.accept
+      socket, = acceptor.accept
       socket.write "child #{$PROCESS_ID} echo> "
       socket.flush
       message = socket.gets

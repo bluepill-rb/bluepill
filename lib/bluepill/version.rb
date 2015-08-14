@@ -9,12 +9,12 @@ module Bluepill
 
     # @return [Integer]
     def minor
-      0
+      1
     end
 
     # @return [Integer]
     def patch
-      70
+      0
     end
 
     # @return [Integer, NilClass]

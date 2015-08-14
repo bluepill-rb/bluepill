@@ -374,11 +374,9 @@ implementations:
 * Ruby 1.9.3
 * Ruby 2.0.0
 * Ruby 2.1
-* [JRuby][]
-* [Rubinius][]
-
-[jruby]: http://jruby.org/
-[rubinius]: http://rubini.us/
+* Ruby 2.2
+* JRuby 1.7
+* JRuby 9.0.0.0
 
 If something doesn't work on one of these interpreters, please open an issue.
 

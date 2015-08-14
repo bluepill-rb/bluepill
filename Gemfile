@@ -10,7 +10,6 @@ else
 end
 
 gem 'i18n', '~> 0.6.11', :platforms => [:ruby_18]
-
 gem 'rake'
 
 group :doc do
@@ -21,10 +20,10 @@ group :doc do
 end
 
 group :test do
-  gem 'coveralls', :require => false, :platforms => [:mri_19, :mri_20, :mri_21]
+  gem 'coveralls', :require => false, :platforms => [:mri_19, :mri_20, :mri_21, :mri_22]
   gem 'faker', '>= 1.2'
   gem 'rest-client', '~> 1.6.0', :platforms => [:jruby, :ruby_18]
   gem 'rspec', '>= 3'
-  gem 'rubocop', '>= 0.27', :platforms => [:ruby_19, :ruby_20, :ruby_21]
+  gem 'rubocop', '>= 0.27', :platforms => [:ruby_19, :ruby_20, :ruby_21, :ruby_22]
   gem 'simplecov', '>= 0.4', :platforms => :ruby_19
 end

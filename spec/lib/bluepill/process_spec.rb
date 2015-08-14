@@ -1,11 +1,11 @@
 describe Bluepill::Process do
   before(:all) do
     Bluepill::ProcessJournal.base_dir = './.bluepill'
-    Bluepill::ProcessJournal.logger = Bluepill::Logger.new(:log_file => 'bluepill.log', :stdout => false).prefix_with('rspec')
+    Bluepill::ProcessJournal.logger = Bluepill::Logger.new(log_file: 'bluepill.log', stdout: false).prefix_with('rspec')
   end
 
   subject do
-    Bluepill::Process.new(:proc_name, [], :logger => Bluepill::Logger.new)
+    Bluepill::Process.new(:proc_name, [], logger: Bluepill::Logger.new)
   end
 
   describe '#initialize' do
@@ -58,7 +58,7 @@ describe Bluepill::Process do
     end
 
     context 'overrides' do
-      subject { Bluepill::Process.new(:proc_name, [], :start_grace_time => 17) }
+      subject { Bluepill::Process.new(:proc_name, [], start_grace_time: 17) }
 
       describe '#start_grace_time' do
         subject { super().start_grace_time }
@@ -80,7 +80,7 @@ describe Bluepill::Process do
 
       expect(Bluepill::System).to receive(:execute_blocking).
         with('/etc/init.d/script start', subject.system_command_options).
-        and_return(:exit_code => 0)
+        and_return(exit_code: 0)
 
       subject.start_process
     end
@@ -95,7 +95,7 @@ describe Bluepill::Process do
 
         expect(Bluepill::System).to receive(:execute_blocking).
           with('/etc/init.d/script stop', subject.system_command_options).
-          and_return(:exit_code => 0)
+          and_return(exit_code: 0)
 
         subject.stop_process
       end
@@ -111,7 +111,7 @@ describe Bluepill::Process do
 
         expect(Bluepill::System).to receive(:execute_blocking).
           with('/etc/init.d/script restart', subject.system_command_options).
-          and_return(:exit_code => 0)
+          and_return(exit_code: 0)
 
         subject.restart_process
       end

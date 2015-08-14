@@ -22,7 +22,7 @@ describe Bluepill::Application do
     end
 
     context 'when option base_dir is specified' do
-      let(:options) { {:base_dir => '/var/bluepill'} }
+      let(:options) { {base_dir: '/var/bluepill'} }
 
       describe '#base_dir' do
         subject { super().base_dir }
@@ -39,7 +39,7 @@ describe Bluepill::Application do
       end
 
       context 'and option base_dir is specified' do
-        let(:options) { {:base_dir => '/var/bluepill'} }
+        let(:options) { {base_dir: '/var/bluepill'} }
 
         describe '#base_dir' do
           subject { super().base_dir }

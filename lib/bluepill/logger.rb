@@ -28,7 +28,7 @@ module Bluepill
     end
 
     def prefix_with(prefix)
-      @prefixes[prefix] ||= self.class.new(:logger => self, :prefix => prefix)
+      @prefixes[prefix] ||= self.class.new(logger: self, prefix: prefix)
     end
 
     def reopen
@@ -52,7 +52,7 @@ module Bluepill
 
     class LoggerAdapter < ::Logger
       LOGGER_EQUIVALENTS =
-        {:debug => :debug, :err => :error, :warning => :warn, :info => :info, :emerg => :fatal, :alert => :warn, :crit => :fatal, :notice => :info}
+        {debug: :debug, err: :error, warning: :warn, info: :info, emerg: :fatal, alert: :warn, crit: :fatal, notice: :info}
 
       LOG_METHODS.each do |method|
         next if method == LOGGER_EQUIVALENTS[method]

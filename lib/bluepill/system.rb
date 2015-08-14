@@ -11,12 +11,12 @@ module Bluepill
 
     # The position of each field in ps output
     IDX_MAP = {
-      :pid => 0,
-      :ppid => 1,
-      :pcpu => 2,
-      :rss => 3,
-      :etime => 4,
-      :command => 5,
+      pid: 0,
+      ppid: 1,
+      pcpu: 2,
+      rss: 3,
+      etime: 4,
+      command: 5,
     }
 
     def pid_alive?(pid)
@@ -142,7 +142,7 @@ module Bluepill
 
         ::Process.waitpid(child)
 
-        cmd_status.strip != '' ? Marshal.load(cmd_status) : {:exit_code => 0, :stdout => '', :stderr => ''}
+        cmd_status.strip != '' ? Marshal.load(cmd_status) : {exit_code: 0, stdout: '', stderr: ''}
       else
         # child
         rd.close
@@ -195,9 +195,9 @@ module Bluepill
 
         # collect stdout, stderr and exitcode
         result = {
-          :stdout => cmd_out_read.read,
-          :stderr => cmd_err_read.read,
-          :exit_code => $CHILD_STATUS.exitstatus,
+          stdout: cmd_out_read.read,
+          stderr: cmd_err_read.read,
+          exit_code: $CHILD_STATUS.exitstatus,
         }
 
         # We're done with these ends of the pipes as well
@@ -226,14 +226,13 @@ module Bluepill
         # BSD style ps invocation
         lines = `ps axo pid,ppid,pcpu,rss,etime,command`.split("\n")
 
-        lines.inject({}) do |mem, line|
+        lines.each_with_object({}) do |line, mem|
           chunks = line.split(/\s+/)
           chunks.delete_if { |c| c.strip.empty? }
           pid = chunks[IDX_MAP[:pid]].strip.to_i
           command = chunks.slice!(IDX_MAP[:command], chunks.length).join ' '
           chunks[IDX_MAP[:command]] = command
           mem[pid] = chunks.flatten
-          mem
         end
       end
     end

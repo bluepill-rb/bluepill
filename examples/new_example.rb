@@ -31,7 +31,7 @@ Bluepill.application(:sample_app) do
       gid 'staff'
 
       # checks :cpu_usage, :every => 10, :below => 0.5, :times => [5, 5]
-      checks :flapping, :times => 2, :within => 30.seconds, :retry_in => 7.seconds
+      checks :flapping, times: 2, within: 30.seconds, retry_in: 7.seconds
 
       monitor_children do
         # checks :cpu_usage,

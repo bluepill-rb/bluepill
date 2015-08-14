@@ -1,14 +1,12 @@
-if RUBY_VERSION >= '1.9'
-  require 'simplecov'
-  require 'coveralls'
+require 'simplecov'
+require 'coveralls'
 
-  SimpleCov.formatters = [SimpleCov::Formatter::HTMLFormatter, Coveralls::SimpleCov::Formatter]
+SimpleCov.formatters = [SimpleCov::Formatter::HTMLFormatter, Coveralls::SimpleCov::Formatter]
 
-  SimpleCov.start do
-    add_filter '/spec/'
-    add_filter '/vendor/'
-    minimum_coverage(41.06)
-  end
+SimpleCov.start do
+  add_filter '/spec/'
+  add_filter '/vendor/'
+  minimum_coverage(41.06)
 end
 
 $LOAD_PATH.unshift(File.expand_path('../lib', File.dirname(__FILE__)))

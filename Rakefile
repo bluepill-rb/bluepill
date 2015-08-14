@@ -25,5 +25,5 @@ rescue LoadError
   $stderr.puts 'Please install YARD with: gem install yard'
 end
 
-task :test => :spec
-task :default => [:spec, :rubocop]
+task test: :spec
+task default: [:spec, :rubocop]

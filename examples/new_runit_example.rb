@@ -10,7 +10,7 @@ require 'logger'
 
 # Note that this syntax supported from bluepill 0.0.50
 
-Bluepill.application(:runit_man, :foreground => true) do
+Bluepill.application(:runit_man, foreground: true) do
   process('runit-man') do
     pid_file '/etc/service/runit-man/supervise/pid'
 
@@ -22,7 +22,7 @@ Bluepill.application(:runit_man, :foreground => true) do
     restart_grace_time 7.seconds
     stop_grace_time 7.seconds
 
-    checks :http, :within => 30.seconds, :retry_in => 7.seconds, :every => 30.seconds,
-                  :url => 'http://localhost:4567/', :kind => :success, :pattern => /html/, :timeout => 3.seconds
+    checks :http, within: 30.seconds, retry_in: 7.seconds, every: 30.seconds,
+                  url: 'http://localhost:4567/', kind: :success, pattern: /html/, timeout: 3.seconds
   end
 end

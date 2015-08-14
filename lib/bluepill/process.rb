@@ -55,7 +55,7 @@ module Bluepill
     attr_accessor(*CONFIGURABLE_ATTRIBUTES)
     attr_reader :children, :statistics
 
-    state_machine :initial => :unmonitored do
+    state_machine initial: :unmonitored do
       # These are the idle states, i.e. only an event (either external or internal) will trigger a transition.
       # The distinction between down and unmonitored is that down
       # means we know it is not running and unmonitored is that we don't care if it's running.
@@ -65,22 +65,22 @@ module Bluepill
       state :starting, :stopping, :restarting
 
       event :tick do
-        transition :starting => :up, :if => :process_running?
-        transition :starting => :down, :unless => :process_running?
+        transition starting: :up, if: :process_running?
+        transition starting: :down, unless: :process_running?
 
-        transition :up => :up, :if => :process_running?
-        transition :up => :down, :unless => :process_running?
+        transition up: :up, if: :process_running?
+        transition up: :down, unless: :process_running?
 
         # The process failed to die after entering the stopping state. Change the state to reflect
         # reality.
-        transition :stopping => :up, :if => :process_running?
-        transition :stopping => :down, :unless => :process_running?
+        transition stopping: :up, if: :process_running?
+        transition stopping: :down, unless: :process_running?
 
-        transition :down => :up, :if => :process_running?
-        transition :down => :starting, :unless => :process_running?
+        transition down: :up, if: :process_running?
+        transition down: :starting, unless: :process_running?
 
-        transition :restarting => :up, :if => :process_running?
-        transition :restarting => :down, :unless => :process_running?
+        transition restarting: :up, if: :process_running?
+        transition restarting: :down, unless: :process_running?
       end
 
       event :start do
@@ -88,7 +88,7 @@ module Bluepill
       end
 
       event :stop do
-        transition :up => :stopping
+        transition up: :stopping
       end
 
       event :unmonitor do
@@ -100,7 +100,7 @@ module Bluepill
       end
 
       before_transition any => any, :do => :notify_triggers
-      before_transition :stopping => any, :do => :clean_threads
+      before_transition stopping: any, do: :clean_threads
 
       after_transition any => :starting, :do => :start_process
       after_transition any => :stopping, :do => :stop_process
@@ -207,11 +207,11 @@ module Bluepill
 
     # Watch related methods
     def add_watch(name, options = {})
-      watches << ConditionWatch.new(name, options.merge(:logger => logger))
+      watches << ConditionWatch.new(name, options.merge(logger: logger))
     end
 
     def add_trigger(name, options = {})
-      triggers << Trigger[name].new(self, options.merge(:logger => logger))
+      triggers << Trigger[name].new(self, options.merge(logger: logger))
     end
 
     def run_watches
@@ -223,15 +223,13 @@ module Bluepill
 
       @transitioned = false
 
-      threads.inject([]) do |events, (watch, thread)|
+      threads.each_with_object([]) do |(watch, thread), events|
         thread.join
-        if thread[:events].size > 0
-          logger.info "#{watch.name} dispatched: #{thread[:events].join(',')}"
-          thread[:events].each do |event|
-            events << [event, watch.to_s]
-          end
+        next if thread[:events].size.zero?
+        logger.info "#{watch.name} dispatched: #{thread[:events].join(',')}"
+        thread[:events].each do |event|
+          events << [event, watch.to_s]
         end
-        events
       end.each do |event, reason| # rubocop:disable Style/MultilineBlockChain
         break if @transitioned
         self.dispatch!(event, reason)
@@ -493,16 +491,16 @@ module Bluepill
 
     def system_command_options
       {
-        :uid => uid,
-        :gid => gid,
-        :working_dir => working_dir,
-        :environment => environment,
-        :pid_file => pid_file,
-        :logger => logger,
-        :stdin => stdin,
-        :stdout => stdout,
-        :stderr => stderr,
-        :supplementary_groups => supplementary_groups,
+        uid: uid,
+        gid: gid,
+        working_dir: working_dir,
+        environment: environment,
+        pid_file: pid_file,
+        logger: logger,
+        stdin: stdin,
+        stdout: stdout,
+        stderr: stderr,
+        supplementary_groups: supplementary_groups,
       }
     end
 

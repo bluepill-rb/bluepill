@@ -9,7 +9,7 @@ module Bluepill
       attr_reader :timeline
 
       def initialize(process, options = {})
-        options.reverse_merge!(:times => 5, :within => 1, :retry_in => 5)
+        options.reverse_merge!(times: 5, within: 1, retry_in: 5)
 
         options.each_pair do |name, val|
           instance_variable_set("@#{name}", val) if PARAMS.include?(name)

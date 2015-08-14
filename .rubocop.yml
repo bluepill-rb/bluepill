@@ -1,11 +1,39 @@
-inherit_from: .rubocop_todo.yml
-
 FileName:
   Exclude:
     - local-bluepill
 
+Lint/HandleExceptions:
+  Exclude:
+    - bin/bluepill
+    - lib/bluepill/application.rb
+    - lib/bluepill/process_journal.rb
+    - lib/bluepill/system.rb
+    - local-bluepill
+    - spec/spec_helper.rb
+
+Metrics/AbcSize:
+  Enabled: false
+
 Metrics/BlockNesting:
   Max: 3
+
+Metrics/ClassLength:
+  CountComments: false
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
+  Enabled: false
+
+Metrics/MethodLength:
+  CountComments: false
+  Enabled: false
+
+Metrics/ModuleLength:
+  CountComments: false
+  Enabled: false
+
+Metrics/PerceivedComplexity:
+  Enabled: false
 
 Metrics/LineLength:
   AllowURI: true
@@ -15,15 +43,17 @@ Metrics/ParameterLists:
   Max: 4
   CountKeywordArgs: true
 
-Metrics/AbcSize:
-  Enabled: false
-
 Style/AccessModifierIndentation:
   EnforcedStyle: outdent
+
+Style/ClassVars:
+  Exclude:
+    - lib/bluepill/dsl/process_factory.rb
 
 Style/CollectionMethods:
   PreferredMethods:
     map:      'collect'
+    map!:     'collect!'
     reduce:   'inject'
     find:     'detect'
     find_all: 'select'
@@ -40,17 +70,15 @@ Style/DoubleNegation:
 Style/EachWithObject:
   Enabled: false
 
-Style/Encoding:
-  Enabled: false
-
 Style/HashSyntax:
   EnforcedStyle: hash_rockets
 
+Style/GuardClause:
+  Exclude:
+    - lib/bluepill/dsl/process_factory.rb
+
 Style/Lambda:
   Enabled: false
-
-Style/RaiseArgs:
-  EnforcedStyle: compact
 
 Style/SpaceInsideHashLiteralBraces:
   EnforcedStyle: no_space

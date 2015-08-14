@@ -65,7 +65,7 @@ module Bluepill
 
     def pid_journal(filename)
       logger.debug("pid journal file: #{filename}")
-      result = File.open(filename, 'r').readlines.map(&:to_i).reject { |pid| skip_pid?(pid) }
+      result = File.open(filename, 'r').readlines.collect(&:to_i).reject { |pid| skip_pid?(pid) }
       logger.debug("pid journal = #{result.join(' ')}")
       result
     rescue Errno::ENOENT
@@ -74,7 +74,7 @@ module Bluepill
 
     def pgid_journal(filename)
       logger.debug("pgid journal file: #{filename}")
-      result = File.open(filename, 'r').readlines.map(&:to_i).reject { |pgid| skip_pgid?(pgid) }
+      result = File.open(filename, 'r').readlines.collect(&:to_i).reject { |pgid| skip_pgid?(pgid) }
       logger.debug("pgid journal = #{result.join(' ')}")
       result
     rescue Errno::ENOENT
@@ -88,7 +88,7 @@ module Bluepill
     end
 
     def kill_all_from_all_journals
-      pids = Dir['.bluepill_pids_journal.*'].map { |p| p.sub(/^\.bluepill_pids_journal\./, '') }
+      pids = Dir['.bluepill_pids_journal.*'].collect { |p| p.sub(/^\.bluepill_pids_journal\./, '') }
       pids.reject! { |p| p =~ /\.lock$/ }
       pids.each do |journal_name|
         kill_all_from_journal(journal_name)

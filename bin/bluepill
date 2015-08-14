@@ -11,11 +11,11 @@ RbConfig = Config unless Object.const_defined?(:RbConfig)
 
 # Default options
 options = {
-  :log_file   => '/var/log/bluepill.log',
-  :base_dir   => ENV['BLUEPILL_BASE_DIR'] || (::Process.euid != 0 ? File.join(ENV['HOME'], '.bluepill') : '/var/run/bluepill'),
+  :log_file => '/var/log/bluepill.log',
+  :base_dir => ENV['BLUEPILL_BASE_DIR'] || (::Process.euid != 0 ? File.join(ENV['HOME'], '.bluepill') : '/var/run/bluepill'),
   :privileged => true,
-  :timeout    => 10,
-  :attempts   => 1,
+  :timeout => 10,
+  :attempts => 1,
 }
 
 OptionParser.new do |opts|

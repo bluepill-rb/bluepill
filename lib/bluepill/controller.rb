@@ -16,7 +16,7 @@ module Bluepill
     end
 
     def running_applications
-      Dir[File.join(sockets_dir, '*.sock')].map { |x| File.basename(x, '.sock') }
+      Dir[File.join(sockets_dir, '*.sock')].collect { |x| File.basename(x, '.sock') }
     end
 
     def handle_command(application, command, *args)

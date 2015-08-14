@@ -15,7 +15,7 @@ module Bluepill
     end
 
     def to_s
-      str = events.reverse.map do |(event, reason, time)|
+      str = events.reverse.collect do |(event, reason, time)|
         "  #{event} at #{time.strftime(STRFTIME)} - #{reason || 'unspecified'}"
       end.join("\n")
 

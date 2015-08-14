@@ -65,7 +65,7 @@ module Bluepill
       ps_axu.each_pair do |_pid, chunks|
         child_pids << chunks[IDX_MAP[:pid]].to_i if chunks[IDX_MAP[:ppid]].to_i == parent_pid.to_i
       end
-      grand_children = child_pids.map { |pid| get_children(pid) }.flatten
+      grand_children = child_pids.collect { |pid| get_children(pid) }.flatten
       child_pids.concat grand_children
     end
 
@@ -96,7 +96,7 @@ module Bluepill
 
         to_daemonize = lambda do
           # Setting end PWD env emulates bash behavior when dealing with symlinks
-          Dir.chdir(ENV['PWD'] = options[:working_dir].to_s)  if options[:working_dir]
+          Dir.chdir(ENV['PWD'] = options[:working_dir].to_s) if options[:working_dir]
           options[:environment].each { |key, value| ENV[key.to_s] = value.to_s } if options[:environment]
 
           redirect_io(*options.values_at(:stdin, :stdout, :stderr))
@@ -258,7 +258,7 @@ module Bluepill
       uid_num = Etc.getpwnam(uid).uid if uid
       gid_num = Etc.getgrnam(gid).gid if gid
       supplementary_groups ||= []
-      group_nums = supplementary_groups.map do |group|
+      group_nums = supplementary_groups.collect do |group|
         Etc.getgrnam(group).gid
       end
       ::Process.groups = [gid_num] if gid

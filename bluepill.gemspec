@@ -19,6 +19,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'bundler', '~> 1.3'
 
   s.files            = %w(CONTRIBUTING.md DESIGN.md LICENSE README.md bluepill.gemspec) + Dir['bin/*'] + Dir['lib/**/*.rb']
-  s.executables      = Dir['bin/*'].map { |f| File.basename(f) }
+  s.executables      = Dir['bin/*'].collect { |f| File.basename(f) }
   s.require_paths    = ['lib']
 end

@@ -129,7 +129,7 @@ module Bluepill
       end
 
       # These defaults are overriden below if it's configured to be something else.
-      @monitor_children =  false
+      @monitor_children = false
       @cache_actual_pid = true
       @start_grace_time = @stop_grace_time = @restart_grace_time = 3
       @environment = {}
@@ -232,7 +232,7 @@ module Bluepill
           end
         end
         events
-      end.each do |(event, reason)|
+      end.each do |event, reason| # rubocop:disable Style/MultilineBlockChain
         break if @transitioned
         self.dispatch!(event, reason)
       end
@@ -470,7 +470,7 @@ module Bluepill
       @children.delete_if { |child| !child.process_running?(true) }
 
       # Add new found children to the list
-      new_children_pids = System.get_children(actual_pid) - @children.map(&:actual_pid)
+      new_children_pids = System.get_children(actual_pid) - @children.collect(&:actual_pid)
 
       unless new_children_pids.empty?
         logger.info "Existing children: #{@children.collect(&:actual_pid).join(',')}. Got new children: #{new_children_pids.inspect} for #{actual_pid}"
@@ -493,15 +493,15 @@ module Bluepill
 
     def system_command_options
       {
-        :uid         => uid,
-        :gid         => gid,
+        :uid => uid,
+        :gid => gid,
         :working_dir => working_dir,
         :environment => environment,
-        :pid_file    => pid_file,
-        :logger      => logger,
-        :stdin       => stdin,
-        :stdout      => stdout,
-        :stderr      => stderr,
+        :pid_file => pid_file,
+        :logger => logger,
+        :stdin => stdin,
+        :stdout => stdout,
+        :stderr => stderr,
         :supplementary_groups => supplementary_groups,
       }
     end

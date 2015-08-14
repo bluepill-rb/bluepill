@@ -1,12 +1,13 @@
 if RUBY_VERSION >= '1.9'
-  if ENV['ENABLE_SIMPLECOV']
-    require 'simplecov'
-    SimpleCov.start
-  end
-  begin
-    require 'coveralls'
-    Coveralls.wear!
-  rescue LoadError
+  require 'simplecov'
+  require 'coveralls'
+
+  SimpleCov.formatters = [SimpleCov::Formatter::HTMLFormatter, Coveralls::SimpleCov::Formatter]
+
+  SimpleCov.start do
+    add_filter '/spec/'
+    add_filter '/vendor/'
+    minimum_coverage(41.06)
   end
 end
 

@@ -20,10 +20,10 @@ group :doc do
 end
 
 group :test do
-  gem 'coveralls', :require => false, :platforms => [:mri_19, :mri_20, :mri_21, :mri_22]
+  gem 'coveralls', :require => false
   gem 'faker', '>= 1.2'
   gem 'rest-client', '~> 1.6.0', :platforms => [:jruby, :ruby_18]
   gem 'rspec', '>= 3'
-  gem 'rubocop', '>= 0.27', :platforms => [:ruby_19, :ruby_20, :ruby_21, :ruby_22]
-  gem 'simplecov', '>= 0.4', :platforms => :ruby_19
+  gem 'rubocop', '>= 0.33', :platforms => [:jruby, :ruby_19, :ruby_20, :ruby_21, :ruby_22]
+  gem 'simplecov', '>= 0.4'
 end

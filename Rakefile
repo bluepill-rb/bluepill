@@ -1,31 +1,18 @@
-begin
-  require 'bundler'
-  Bundler::GemHelper.install_tasks
-rescue LoadError
-  $stderr.puts 'Bundler not installed. You should install it with: gem install bundler'
-end
-
 $LOAD_PATH << File.expand_path('./lib', File.dirname(__FILE__))
 require 'bluepill/version'
 
+require 'bundler'
+Bundler::GemHelper.install_tasks
+
 require 'rspec/core/rake_task'
-
 RSpec::Core::RakeTask.new
-
-if RUBY_VERSION >= '1.9'
-  RSpec::Core::RakeTask.new(:cov) do |t|
-    ENV['ENABLE_SIMPLECOV'] = '1'
-    t.ruby_opts = '-w'
-    t.rcov_opts = '-Ilib --exclude "spec/*,gems/*"'
-  end
-end
 
 begin
   require 'rubocop/rake_task'
   RuboCop::RakeTask.new
 rescue LoadError
   task :rubocop do
-    $stderr.puts 'Rubocop is disabled'
+    $stderr.puts 'RuboCop is disabled'
   end
 end
 

@@ -65,7 +65,7 @@ module Bluepill
     end
 
     def version
-      Bluepill::VERSION
+      Bluepill::Version
     end
 
   protected

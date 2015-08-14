@@ -107,8 +107,8 @@ module Bluepill
 
     def verify_version!(application)
       version = Socket.client_command(base_dir, application, 'version')
-      if version != Bluepill::VERSION
-        abort("The running version of your daemon seems to be out of date.\nDaemon Version: #{version}, CLI Version: #{Bluepill::VERSION}")
+      if version != Bluepill::Version
+        abort("The running version of your daemon seems to be out of date.\nDaemon Version: #{version}, CLI Version: #{Bluepill::Version}")
       end
     rescue ArgumentError
       abort('The running version of your daemon seems to be out of date.')

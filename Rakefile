@@ -32,7 +32,7 @@ end
 begin
   require 'yard'
   YARD::Rake::YardocTask.new do |yard|
-    yard.options << "--title='bluepill #{Bluepill::VERSION}'"
+    yard.options << "--title='bluepill #{Bluepill::Version}'"
   end
 rescue LoadError
   $stderr.puts 'Please install YARD with: gem install yard'

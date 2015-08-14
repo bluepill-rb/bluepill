@@ -30,23 +30,23 @@ Bluepill.application(:sample_app) do
       uid 'rohith'
       gid 'staff'
 
-      # checks :cpu_usage, :every => 10, :below => 0.5, :times => [5, 5]
+      # checks :cpu_usage, every: 10, below: 0.5, times: [5, 5]
       checks :flapping, times: 2, within: 30.seconds, retry_in: 7.seconds
 
       monitor_children do
         # checks :cpu_usage,
-        #   :every => 10,
-        #   :below => 0.5,
-        #   :times => [5, 5]
+        #   every: 10,
+        #   below: 0.5,
+        #   times: [5, 5]
 
         # checks :mem_usage,
-        #   :every => 3,
-        #   :below => 600.kilobytes,
-        #   :times => [3, 5],
-        #   :fires => [:stop]
+        #   every: 3,
+        #   below: 600.kilobytes,
+        #   times: [3, 5],
+        #   fires: [:stop]
 
         stop_command 'kill -QUIT {{PID}}'
-        # checks :flapping, :times => 2, :within => 30.seconds, :retry_in => 7.seconds
+        # checks :flapping, times: 2, within: 30.seconds, retry_in: 7.seconds
       end
     end
   end
@@ -62,7 +62,7 @@ Bluepill.application(:sample_app) do
       uid 'rohith'
       gid 'staff'
 
-      # checks :always_true, :every => 10
+      # checks :always_true, every: 10
     end
   end
 
@@ -81,7 +81,7 @@ Bluepill.application(:sample_app) do
       daemonize!
       pid_file "/tmp/noperm/p_#{group}_#{i}.pid"
 
-      # checks :always_true, :every => 5
+      # checks :always_true, every: 5
     end
   end
 end

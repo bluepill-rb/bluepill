@@ -12,7 +12,7 @@ module Bluepill
       @fires  = options.key?(:fires) ? Array(options.delete(:fires)) : [:restart]
       @every  = options.delete(:every)
       @times  = options.delete(:times) || [1, 1]
-      @times  = [@times, @times] unless @times.is_a?(Array) # handles :times => 5
+      @times  = [@times, @times] unless @times.is_a?(Array) # handles times: 5
       @include_children = options.delete(:include_children) || false
 
       self.clear_history!

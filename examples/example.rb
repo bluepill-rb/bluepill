@@ -28,23 +28,23 @@ Bluepill.application(:sample_app) do |app|
       process.uid = 'rohith'
       process.gid = 'staff'
 
-      # process.checks :cpu_usage, :every => 10, :below => 0.5, :times => [5, 5]
+      # process.checks :cpu_usage, every: 10, below: 0.5, times: [5, 5]
       process.checks :flapping, times: 2, within: 30.seconds, retry_in: 7.seconds
 
       process.monitor_children do |child_process|
         # child_process.checks :cpu_usage,
-        #   :every => 10,
-        #   :below => 0.5,
-        #   :times => [5, 5]
+        #   every: 10,
+        #   below: 0.5,
+        #   times: [5, 5]
 
         # child_process.checks :mem_usage,
-        #   :every => 3,
-        #   :below => 600.kilobytes,
-        #   :times => [3, 5],
-        #   :fires => [:stop]
+        #   every: 3,
+        #   below: 600.kilobytes,
+        #   times: [3, 5],
+        #   fires: [:stop]
 
         child_process.stop_command = 'kill -QUIT {{PID}}'
-        # child_process.checks :flapping, :times => 2, :within => 30.seconds, :retry_in => 7.seconds
+        # child_process.checks :flapping, times: 2, within: 30.seconds, retry_in: 7.seconds
       end
     end
   end
@@ -60,7 +60,7 @@ Bluepill.application(:sample_app) do |app|
       process.uid = 'rohith'
       process.gid = 'staff'
 
-      # process.checks :always_true, :every => 10
+      # process.checks :always_true, every: 10
     end
   end
 
@@ -79,7 +79,7 @@ Bluepill.application(:sample_app) do |app|
       process.daemonize = true
       process.pid_file = "/tmp/noperm/p_#{process.group}_#{i}.pid"
 
-      # process.checks :always_true, :every => 5
+      # process.checks :always_true, every: 5
     end
   end
 end

@@ -99,14 +99,14 @@ module Bluepill
         transition [:up, :down] => :restarting
       end
 
-      before_transition any => any, :do => :notify_triggers
+      before_transition any => any, do: :notify_triggers
       before_transition stopping: any, do: :clean_threads
 
-      after_transition any => :starting, :do => :start_process
-      after_transition any => :stopping, :do => :stop_process
-      after_transition any => :restarting, :do => :restart_process
+      after_transition any => :starting, do: :start_process
+      after_transition any => :stopping, do: :stop_process
+      after_transition any => :restarting, do: :restart_process
 
-      after_transition any => any, :do => :record_transition
+      after_transition any => any, do: :record_transition
     end
 
     def initialize(process_name, checks, options = {})

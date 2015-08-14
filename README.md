@@ -33,24 +33,24 @@ Bluepill organizes processes into 3 levels: application -> group -> process. Eac
 The minimum config file looks something like this:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+  end
+end
 ```
 
 Note that since we specified a PID file and start command, bluepill assumes the process will daemonize itself. If we wanted bluepill to daemonize it for us, we can do (note we still need to specify a PID file):
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-        process.daemonize = true
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+    process.daemonize = true
+  end
+end
 ```
 
 If you don&apos;t specify a stop command, a TERM signal will be sent by default. Similarly, the default restart action is to issue stop and then start.
@@ -58,14 +58,13 @@ If you don&apos;t specify a stop command, a TERM signal will be sent by default.
 Now if we want to do something more meaningful, like actually monitor the process, we do:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-
-        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+    process.checks :cpu_usage, every: 10.seconds, below: 5, times: 3
+  end
+end
 ```
 
 We added a line that checks every 10 seconds to make sure the cpu usage of this process is below 5 percent; 3 failed checks results in a restart. We can specify a two-element array for the _times_ option to say that it 3 out of 5 failed attempts results in a restart.
@@ -73,163 +72,155 @@ We added a line that checks every 10 seconds to make sure the cpu usage of this 
 To watch memory usage, we just add one more line:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-
-        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3
-        process.checks :mem_usage, :every => 10.seconds, :below => 100.megabytes, :times => [3,5]
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+    process.checks :cpu_usage, every: 10.seconds, below: 5, times: 3
+    process.checks :mem_usage, every: 10.seconds, below: 100.megabytes, times: [3,5]
+  end
+end
  ```
 
 To watch the modification time of a file, e.g. a log file to ensure the process is actually working add one more line:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-
-        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3
-        process.checks :mem_usage, :every => 10.seconds, :below => 100.megabytes, :times => [3,5]
-        process.checks :file_time, :every => 60.seconds, :below => 3.minutes, :filename => "/tmp/some_file.log", :times => 2
-      end
-    end
- ```
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+    process.checks :cpu_usage, every: 10.seconds, below: 5, times: 3
+    process.checks :mem_usage, every: 10.seconds, below: 100.megabytes, times: [3,5]
+    process.checks :file_time, every: 60.seconds, below: 3.minutes, filename: "/tmp/some_file.log", times: 2
+  end
+end
+```
 
 To restart process if it's running too long:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-
-        process.checks :running_time, :every => 10.minutes, :below => 24.hours
-      end
-    end
- ```
-
-
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+    process.checks :running_time, every: 10.minutes, below: 24.hours
+  end
+end
+```
 
 We can tell bluepill to give a process some grace time to start/stop/restart before resuming monitoring:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-        process.start_grace_time = 3.seconds
-        process.stop_grace_time = 5.seconds
-        process.restart_grace_time = 8.seconds
-
-        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3
-        process.checks :mem_usage, :every => 10.seconds, :below => 100.megabytes, :times => [3,5]
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+    process.start_grace_time = 3.seconds
+    process.stop_grace_time = 5.seconds
+    process.restart_grace_time = 8.seconds
+    process.checks :cpu_usage, every: 10.seconds, below: 5, times: 3
+    process.checks :mem_usage, every: 10.seconds, below: 100.megabytes, times: [3,5]
+  end
+end
 ```
 
 We can group processes by name:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      5.times do |i|
-        app.process("process_name_#{i}") do |process|
-          process.group = "mongrels"
-          process.start_command = "/usr/bin/some_start_command"
-          process.pid_file = "/tmp/some_pid_file.pid"
-        end
-      end
+Bluepill.application("app_name") do |app|
+  5.times do |i|
+    app.process("process_name_#{i}") do |process|
+      process.group = "mongrels"
+      process.start_command = "/usr/bin/some_start_command"
+      process.pid_file = "/tmp/some_pid_file.pid"
     end
+  end
+end
 ```
 
 If you want to run the process as someone other than root:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-        process.uid = "deploy"
-        process.gid = "deploy"
-
-        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3
-        process.checks :mem_usage, :every => 10.seconds, :below => 100.megabytes, :times => [3,5]
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+    process.uid = "deploy"
+    process.gid = "deploy"
+    process.checks :cpu_usage, every: 10.seconds, below: 5, times: 3
+    process.checks :mem_usage, every: 10.seconds, below: 100.megabytes, times: [3,5]
+  end
+end
 ```
 
 If you want to include one or more supplementary groups:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-        process.uid = "deploy"
-        process.gid = "deploy"
-        process.supplementary_groups = ['rvm']
-
-        process.checks :cpu_usage, :every => 10.seconds, :below => 5, :times => 3
-        process.checks :mem_usage, :every => 10.seconds, :below => 100.megabytes, :times => [3,5]
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+    process.uid = "deploy"
+    process.gid = "deploy"
+    process.supplementary_groups = ['rvm']
+    process.checks :cpu_usage, every: 10.seconds, below: 5, times: 3
+    process.checks :mem_usage, every: 10.seconds, below: 100.megabytes, times: [3,5]
+  end
+end
 ```
 
 You can also set an app-wide uid/gid:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.uid = "deploy"
-      app.gid = "deploy"
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.uid = "deploy"
+  app.gid = "deploy"
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+  end
+end
 ```
 
-To track resources of child processes, use :include_children:
+To track resources of child processes, use `:include_children`:
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-        process.checks :mem_usage, :every => 1.seconds, :below => 5.megabytes, :times => [3,5], :include_children => true
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+    process.checks :mem_usage, every: 1.seconds, below: 5.megabytes, times: [3,5], include_children: true
+  end
+end
 ```
 
 To check for flapping:
 
 ```ruby
-    process.checks :flapping, :times => 2, :within => 30.seconds, :retry_in => 7.seconds
+process.checks :flapping, times: 2, within: 30.seconds, retry_in: 7.seconds
 ```
 
-To set the working directory to _cd_ into when starting the command:
+To set the working directory to `cd` into when starting the command:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-        process.working_dir = "/path/to/some_directory"
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+    process.working_dir = "/path/to/some_directory"
+  end
+end
 ```
 
 You can also have an app-wide working directory:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.working_dir = "/path/to/some_directory"
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.working_dir = "/path/to/some_directory"
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+  end
+end
 ```
 
 Note: We also set the PWD in the environment to the working dir you specify. This is useful for when the working dir is a symlink. Unicorn in particular will cd into the environment variable in PWD when it re-execs to deal with a change in the symlink.
@@ -238,25 +229,25 @@ By default, bluepill will send a SIGTERM to your process when stopping.
 To change the stop command:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-        process.stop_command = "/user/bin/some_stop_command"
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+    process.stop_command = "/user/bin/some_stop_command"
+  end
+end
 ```
 
 If you'd like to send a signal or signals to your process to stop it:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/some_start_command"
-        process.pid_file = "/tmp/some_pid_file.pid"
-        process.stop_signals = [:quit, 30.seconds, :term, 5.seconds, :kill]
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+    process.stop_signals = [:quit, 30.seconds, :term, 5.seconds, :kill]
+  end
+end
 ```
 
 We added a line that will send a SIGQUIT, wait 30 seconds and check to
@@ -266,42 +257,39 @@ to see if the process is still up, and finally send a SIGKILL.
 And lastly, to monitor child processes:
 
 ```ruby
-    process.monitor_children do |child_process|
-      child_process.checks :cpu_usage, :every => 10, :below => 5, :times => 3
-      child_process.checks :mem_usage, :every => 10, :below => 100.megabytes, :times => [3, 5]
-
-      child_process.stop_command = "kill -QUIT {{PID}}"
-    end
+process.monitor_children do |child_process|
+  child_process.checks :cpu_usage, every: 10, below: 5, times: 3
+  child_process.checks :mem_usage, every: 10, below: 100.megabytes, times: [3, 5]
+  child_process.stop_command = "kill -QUIT {{PID}}"
+end
 ```
 
 Note {{PID}} will be substituted for the pid of process in both the stop and restart commands.
 
 ### A Note About Output Redirection
 
-While you can specify shell tricks like the following in the start_command of a process:
+While you can specify shell tricks like the following in the `start_command` of a process:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "cd /tmp/some_dir && SOME_VAR=1 /usr/bin/some_start_command > /tmp/server.log 2>&1"
-        process.pid_file = "/tmp/some_pid_file.pid"
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "cd /tmp/some_dir && SOME_VAR=1 /usr/bin/some_start_command > /tmp/server.log 2>&1"
+    process.pid_file = "/tmp/some_pid_file.pid"
+  end
+end
 ```
 
 We recommend that you _not_ do that and instead use the config options to capture output from your daemons. Like so:
 
 ```ruby
-    Bluepill.application("app_name") do |app|
-      app.process("process_name") do |process|
-        process.start_command = "/usr/bin/env SOME_VAR=1 /usr/bin/some_start_command"
-
-        process.working_dir = "/tmp/some_dir"
-        process.stdout = process.stderr = "/tmp/server.log"
-
-        process.pid_file = "/tmp/some_pid_file.pid"
-      end
-    end
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/env SOME_VAR=1 /usr/bin/some_start_command"
+    process.working_dir = "/tmp/some_dir"
+    process.stdout = process.stderr = "/tmp/server.log"
+    process.pid_file = "/tmp/some_pid_file.pid"
+  end
+end
 ```
 
 The main benefit of using the config options is that Bluepill will be able to monitor the correct process instead of just watching the shell that spawned your actual server.
@@ -347,9 +335,9 @@ To quit the bluepill daemon for an application:
 By default, bluepill uses syslog local6 facility as described in the installation section. But if for any reason you don&apos;t want to use syslog, you can use a log file. You can do this by setting the :log\_file option in the config:
 
 ```ruby
-    Bluepill.application("app_name", :log_file => "/path/to/bluepill.log") do |app|
-      # ...
-    end
+Bluepill.application("app_name", log_file: "/path/to/bluepill.log") do |app|
+  # ...
+end
 ```
 
 Keep in mind that you still need to set up log rotation (described in the installation section) to keep the log file from growing huge.
@@ -358,9 +346,9 @@ Keep in mind that you still need to set up log rotation (described in the instal
 You can run bluepill in the foreground:
 
 ```ruby
-    Bluepill.application("app_name", :foreground => true) do |app|
-      # ...
-    end
+Bluepill.application("app_name", foreground: true) do |app|
+  # ...
+end
 ```
 
 Note that You must define only one application per config when using foreground mode.

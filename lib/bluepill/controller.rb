@@ -86,6 +86,7 @@ module Bluepill
     def cleanup_bluepill_directory
       running_applications.each do |app|
         pid = pid_for(app)
+        next unless pid
         next if pid || System.pid_alive?(pid)
         pid_file = File.join(pids_dir, "#{app}.pid")
         sock_file = File.join(sockets_dir, "#{app}.sock")

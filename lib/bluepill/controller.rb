@@ -23,17 +23,6 @@ module Bluepill
       case command.to_sym
       when :status
         puts send_to_daemon(application, :status, *args)
-      when *Application::PROCESS_COMMANDS
-        # these need to be sent to the daemon and the results printed out
-        affected = send_to_daemon(application, command, *args)
-        if affected.empty?
-          puts 'No processes effected'
-        else
-          puts "Sent #{command} to:"
-          affected.each do |process|
-            puts "  #{process}"
-          end
-        end
       when :quit
         pid = pid_for(application)
         if System.pid_alive?(pid)
@@ -52,6 +41,17 @@ module Bluepill
         tail = "tail -n 100 -f #{log_file_location} | grep -E '#{grep_pattern}'"
         puts "Tailing log for #{requested_pattern}..."
         Kernel.exec(tail)
+      when *Application::PROCESS_COMMANDS
+        # these need to be sent to the daemon and the results printed out
+        affected = send_to_daemon(application, command, *args)
+        if affected.empty?
+          puts 'No processes effected'
+        else
+          puts "Sent #{command} to:"
+          affected.each do |process|
+            puts "  #{process}"
+          end
+        end
       else
         $stderr.puts(format('Unknown command `%s` (or application `%s` has not been loaded yet)', command, command))
         exit(1)

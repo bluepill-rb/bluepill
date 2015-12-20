@@ -71,6 +71,9 @@ Style/GuardClause:
   Exclude:
     - lib/bluepill/dsl/process_factory.rb
 
+Style/MultilineOperationIndentation:
+  Enabled: false
+
 Style/SpaceInsideHashLiteralBraces:
   EnforcedStyle: no_space
 

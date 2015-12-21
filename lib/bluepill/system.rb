@@ -197,7 +197,7 @@ module Bluepill
         result = {
           stdout: cmd_out_read.read,
           stderr: cmd_err_read.read,
-          exit_code: $CHILD_STATUS.exitstatus,
+          exit_code: $?.exitstatus,
         }
 
         # We're done with these ends of the pipes as well

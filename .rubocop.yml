@@ -43,6 +43,9 @@ Metrics/ParameterLists:
   Max: 4
   CountKeywordArgs: true
 
+Style/SpecialGlobalVars:
+  Enabled: false
+
 Style/AccessModifierIndentation:
   EnforcedStyle: outdent
 

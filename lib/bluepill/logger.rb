@@ -1,6 +1,6 @@
 module Bluepill
   class Logger
-    LOG_METHODS = [:emerg, :alert, :crit, :err, :warning, :notice, :info, :debug]
+    LOG_METHODS = [:emerg, :alert, :crit, :err, :warning, :notice, :info, :debug].freeze
 
     def initialize(options = {})
       @options  = options
@@ -52,7 +52,7 @@ module Bluepill
 
     class LoggerAdapter < ::Logger
       LOGGER_EQUIVALENTS =
-        {debug: :debug, err: :error, warning: :warn, info: :info, emerg: :fatal, alert: :warn, crit: :fatal, notice: :info}
+        {debug: :debug, err: :error, warning: :warn, info: :info, emerg: :fatal, alert: :warn, crit: :fatal, notice: :info}.freeze
 
       LOG_METHODS.each do |method|
         next if method == LOGGER_EQUIVALENTS[method]

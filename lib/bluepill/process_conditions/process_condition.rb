@@ -6,11 +6,11 @@ module Bluepill
       end
 
       def run(_pid, _include_children)
-        fail 'Implement in subclass!'
+        raise 'Implement in subclass!'
       end
 
       def check(_value)
-        fail 'Implement in subclass!'
+        raise 'Implement in subclass!'
       end
 
       def format_value(value)

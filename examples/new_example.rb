@@ -4,7 +4,7 @@ require 'logger'
 
 # Note that this syntax supported from bluepill 0.0.50
 
-ROOT_DIR = '/tmp/bp'
+ROOT_DIR = '/tmp/bp'.freeze
 
 # Watch with
 # watch -n0.2 'ps axu | egrep "(CPU|forking|bluepill|sleep)" | grep -v grep | sort'

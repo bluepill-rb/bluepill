@@ -4,7 +4,7 @@ require 'bluepill/process_journal'
 
 module Bluepill
   class Application
-    PROCESS_COMMANDS = [:start, :stop, :restart, :unmonitor, :status]
+    PROCESS_COMMANDS = [:start, :stop, :restart, :unmonitor, :status].freeze
 
     attr_accessor :name, :logger, :base_dir, :socket, :pid_file, :kill_timeout
     attr_accessor :groups, :work_queue

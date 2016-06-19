@@ -1,9 +1,9 @@
 module Bluepill
   module Triggers
     class Flapping < Bluepill::Trigger
-      TRIGGER_STATES = [:starting, :restarting]
+      TRIGGER_STATES = [:starting, :restarting].freeze
 
-      PARAMS = [:times, :within, :retry_in]
+      PARAMS = [:times, :within, :retry_in].freeze
 
       attr_accessor(*PARAMS)
       attr_reader :timeline

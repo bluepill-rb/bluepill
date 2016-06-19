@@ -2,7 +2,7 @@ require 'rubygems'
 require 'bluepill'
 require 'logger'
 
-ROOT_DIR = '/tmp/bp'
+ROOT_DIR = '/tmp/bp'.freeze
 
 # Watch with
 # watch -n0.2 'ps axu | egrep "(CPU|forking|bluepill|sleep)" | grep -v grep | sort'

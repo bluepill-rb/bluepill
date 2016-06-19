@@ -1,4 +1,4 @@
-#! /usr/bin/env ruby
+#!/usr/bin/env ruby
 require 'optparse'
 require 'bluepill'
 
@@ -72,7 +72,7 @@ if options[:privileged] && ::Process.euid != 0
   exit(3)
 end
 
-APPLICATION_COMMANDS = %w(status start stop restart unmonitor quit log)
+APPLICATION_COMMANDS = %w(status start stop restart unmonitor quit log).freeze
 
 controller = Bluepill::Controller.new(options.slice(:base_dir, :log_file))
 

@@ -1,4 +1,4 @@
-#! /usr/bin/env ruby
+#!/usr/bin/env ruby
 
 # This is a modified version found at http://tomayko.com/writings/unicorn-is-unix
 # It is modified to trigger various states like increase memory consumption so that

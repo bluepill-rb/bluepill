@@ -17,6 +17,6 @@ require 'rspec/core'
 
 module Process
   def self.euid
-    fail 'Process.euid should be stubbed'
+    raise 'Process.euid should be stubbed'
   end
 end

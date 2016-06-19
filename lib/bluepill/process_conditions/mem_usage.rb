@@ -1,10 +1,10 @@
 module Bluepill
   module ProcessConditions
     class MemUsage < ProcessCondition
-      MB = 1024**2
-      FORMAT_STR = '%d%s'
-      MB_LABEL = 'MB'
-      KB_LABEL = 'KB'
+      MB         = (1024**2).freeze
+      FORMAT_STR = '%d%s'.freeze
+      MB_LABEL   = 'MB'.freeze
+      KB_LABEL   = 'KB'.freeze
 
       def initialize(options = {})
         @below = options[:below]

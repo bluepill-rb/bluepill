@@ -5,7 +5,7 @@ module Bluepill
   # This class represents the system that bluepill is running on.. It's mainly used to memoize
   # results of running ps auxx etc so that every watch in the every process will not result in a fork
   module System
-    APPEND_MODE = 'a'
+    APPEND_MODE = 'a'.freeze
 
   module_function
 
@@ -17,7 +17,7 @@ module Bluepill
       rss: 3,
       etime: 4,
       command: 5,
-    }
+    }.freeze
 
     def pid_alive?(pid)
       ::Process.kill(0, pid)

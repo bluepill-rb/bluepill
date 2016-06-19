@@ -49,7 +49,7 @@ module Bluepill
       :group_stop_noblock,
       :group_unmonitor_noblock,
 
-    ]
+    ].freeze
 
     attr_accessor :name, :watches, :triggers, :logger, :skip_ticks_until, :process_running
     attr_accessor(*CONFIGURABLE_ATTRIBUTES)
@@ -175,7 +175,7 @@ module Bluepill
     def dispatch!(event, reason = nil)
       @event_mutex.synchronize do
         @statistics.record_event(event, reason)
-        send("#{event}")
+        send(event.to_s)
       end
     end
 
@@ -283,7 +283,7 @@ module Bluepill
         daemon_id = System.daemonize(start_command, system_command_options)
         if daemon_id
           ProcessJournal.append_pid_to_journal(name, daemon_id)
-          children.each do|child|
+          children.each do |child|
             ProcessJournal.append_pid_to_journal(name, child.actual_pid)
           end if self.monitor_children?
         end

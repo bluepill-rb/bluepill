@@ -23,7 +23,7 @@ module Bluepill
     end
 
     def notify(_transition)
-      fail 'Implement in subclass'
+      raise 'Implement in subclass'
     end
 
     def dispatch!(event)

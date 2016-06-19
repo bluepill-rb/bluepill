@@ -1,6 +1,6 @@
 module Bluepill
   class AppProxy
-    APP_ATTRIBUTES = [:working_dir, :uid, :gid, :environment, :auto_start]
+    APP_ATTRIBUTES = [:working_dir, :uid, :gid, :environment, :auto_start].freeze
 
     attr_accessor(*APP_ATTRIBUTES)
     attr_reader :app

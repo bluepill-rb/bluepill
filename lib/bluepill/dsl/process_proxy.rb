@@ -18,7 +18,7 @@ module Bluepill
         @attributes[Regexp.last_match[1].to_sym] = args.first
       elsif args.size == 1
         @attributes[name.to_sym] = args.first
-      elsif args.size == 0 && name.to_s =~ /^(.*)!$/
+      elsif args.empty? && name.to_s =~ /^(.*)!$/
         @attributes[Regexp.last_match[1].to_sym] = true
       elsif args.empty? && @attributes.key?(name.to_sym)
         @attributes[name.to_sym]

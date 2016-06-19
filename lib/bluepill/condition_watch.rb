@@ -15,7 +15,7 @@ module Bluepill
       @times  = [@times, @times] unless @times.is_a?(Array) # handles times: 5
       @include_children = options.delete(:include_children) || false
 
-      self.clear_history!
+      clear_history!
 
       @process_condition = ProcessConditions[@name].new(options)
     end
@@ -34,7 +34,7 @@ module Bluepill
         @history << HistoryValue.new(@process_condition.format_value(value), @process_condition.check(value))
         logger.info(to_s)
 
-        return @fires if self.fired?
+        return @fires if fired?
       end
       EMPTY_ARRAY
     end

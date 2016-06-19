@@ -145,22 +145,22 @@ module Bluepill
     end
 
     def tick
-      return if self.skipping_ticks?
+      return if skipping_ticks?
       self.skip_ticks_until = nil
 
       # clear the memoization per tick
       @process_running = nil
 
       # Deal with thread cleanup here since the stopping state isn't used
-      clean_threads if self.unmonitored?
+      clean_threads if unmonitored?
 
       # run state machine transitions
       super
 
-      return unless self.up?
+      return unless up?
       run_watches
 
-      return unless self.monitor_children?
+      return unless monitor_children?
       refresh_children!
       children.each(&:tick)
     end
@@ -187,7 +187,7 @@ module Bluepill
       watches.each(&:clear_history!)
 
       # Also, when a process changes state, we should re-populate its child list
-      if self.monitor_children?
+      if monitor_children?
         logger.warning 'Clearing child list'
         children.clear
       end
@@ -232,22 +232,22 @@ module Bluepill
         end
       end.each do |event, reason| # rubocop:disable Style/MultilineBlockChain
         break if @transitioned
-        self.dispatch!(event, reason)
+        dispatch!(event, reason)
       end
     end
 
     def determine_initial_state
-      if self.process_running?(true)
+      if process_running?(true)
         self.state = 'up'
-      else
-        self.state = (auto_start == false) ? 'unmonitored' : 'down' # we need to check for false value
+        return
       end
+      self.state = (auto_start == false) ? 'unmonitored' : 'down' # we need to check for false value
     end
 
     def handle_user_command(cmd)
       case cmd
       when 'start'
-        if self.process_running?(true)
+        if process_running?(true)
           logger.warning('Refusing to re-run start command on an already running process.')
         else
           dispatch!(:start, 'user initiated')
@@ -279,13 +279,13 @@ module Bluepill
       ProcessJournal.kill_all_from_journal(name) # be sure nothing else is running from previous runs
       pre_start_process
       logger.warning "Executing start command: #{start_command}"
-      if self.daemonize?
+      if daemonize?
         daemon_id = System.daemonize(start_command, system_command_options)
         if daemon_id
           ProcessJournal.append_pid_to_journal(name, daemon_id)
           children.each do |child|
             ProcessJournal.append_pid_to_journal(name, child.actual_pid)
-          end if self.monitor_children?
+          end if monitor_children?
         end
         daemon_id
       else
@@ -430,7 +430,7 @@ module Bluepill
         if pid_file
           if File.exist?(pid_file)
             str = File.read(pid_file)
-            str.to_i if str.size > 0
+            str.to_i unless str.empty?
           else
             logger.warning("pid_file #{pid_file} does not exist or cannot be read")
             nil

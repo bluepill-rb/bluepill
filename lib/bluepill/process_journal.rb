@@ -103,7 +103,7 @@ module Bluepill
     def kill_all_pgids_from_journal(journal_name)
       filename = pgid_journal_filename(journal_name)
       j = pgid_journal(filename)
-      if j.length > 0
+      if !j.empty?
         acquire_atomic_fs_lock(filename) do
           j.each do |pgid|
             begin
@@ -136,7 +136,7 @@ module Bluepill
     def kill_all_pids_from_journal(journal_name)
       filename = pid_journal_filename(journal_name)
       j = pid_journal(filename)
-      if j.length > 0
+      if !j.empty?
         acquire_atomic_fs_lock(filename) do
           j.each do |pid|
             begin

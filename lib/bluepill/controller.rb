@@ -61,7 +61,7 @@ module Bluepill
     def send_to_daemon(application, command, *args)
       verify_version!(application)
 
-      command = ([command, *args]).join(':')
+      command = [command, *args].join(':')
       response = Socket.client_command(base_dir, application, command)
       if response.is_a?(Exception)
         $stderr.puts 'Received error from server:'

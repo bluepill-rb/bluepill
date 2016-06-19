@@ -17,7 +17,7 @@ module Bluepill
       child_process_block = @attributes.delete(:child_process_block)
       @attributes[:child_process_factory] = ProcessFactory.new(@attributes, child_process_block) if @attributes[:monitor_children]
 
-      self.validate_process! process
+      validate_process! process
       process.to_process
     end
 
@@ -28,7 +28,7 @@ module Bluepill
       attributes[:logger] = logger
 
       child = ProcessProxy.new(name, attributes, @process_block)
-      self.validate_child_process! child
+      validate_child_process! child
       process = child.to_process
 
       process.determine_initial_state

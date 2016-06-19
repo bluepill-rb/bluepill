@@ -27,7 +27,7 @@ module Bluepill
     rescue Errno::ESRCH
       false
     rescue
-        false # other falsy (no pid)
+      false # other falsy (no pid)
     end
 
     def cpu_usage(pid, include_children)

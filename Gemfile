@@ -3,7 +3,7 @@ source 'https://rubygems.org'
 # Specify your gem's dependencies in bluepill.gemspec
 gemspec
 
-gem 'activesupport', '~> 4.2'
+gem 'activesupport', '~> 4.2' if RUBY_VERSION < '2.2.2'
 gem 'rake'
 
 group :doc do

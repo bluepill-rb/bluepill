@@ -17,6 +17,6 @@ group :test do
   gem 'coveralls', require: false
   gem 'faker', '>= 1.2'
   gem 'rspec', '>= 3'
-  gem 'rubocop', '>= 0.33'
+  gem 'rubocop', '0.40.0'
   gem 'simplecov', '>= 0.4'
 end

@@ -4,6 +4,8 @@ source 'https://rubygems.org'
 gemspec
 
 gem 'activesupport', '~> 4.2' if RUBY_VERSION < '2.2.2'
+gem 'tins', '~> 1.6.0' if RUBY_VERSION < '2.0'
+gem 'term-ansicolor', '~> 1.3.2' if RUBY_VERSION < '2.0'
 gem 'rake'
 
 group :doc do

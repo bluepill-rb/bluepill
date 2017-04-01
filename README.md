@@ -342,7 +342,8 @@ end
 
 Keep in mind that you still need to set up log rotation (described in the installation section) to keep the log file from growing huge.
 
-### Extra options
+### Foreground mode
+
 You can run bluepill in the foreground:
 
 ```ruby
@@ -352,6 +353,8 @@ end
 ```
 
 Note that You must define only one application per config when using foreground mode.
+
+JRuby allows you to run bluepill only in the foreground.
 
 ## Links
 

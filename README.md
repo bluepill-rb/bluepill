@@ -354,7 +354,8 @@ end
 
 Note that You must define only one application per config when using foreground mode.
 
-JRuby allows you to run bluepill only in the foreground.
+
+y allows you to run bluepill only in the foreground.
 
 ## Links
 
@@ -372,8 +373,8 @@ implementations:
 * Ruby 2.0.0
 * Ruby 2.1
 * Ruby 2.2
-* JRuby 1.7
-* JRuby 9.0.0.0
+* JRuby 1.7 (only in the foreground)
+* JRuby 9.0.0.0 (only in the foreground)
 
 If something doesn't work on one of these interpreters, please open an issue.
 

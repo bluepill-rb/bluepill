@@ -10,8 +10,7 @@ require 'logger'
 
 require 'active_support'
 require 'active_support/inflector'
-require 'active_support/core_ext/hash'
-require 'active_support/core_ext/numeric'
+require 'active_support/core_ext'
 require 'active_support/duration'
 
 require 'bluepill/dsl/process_proxy'

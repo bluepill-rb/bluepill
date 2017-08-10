@@ -355,7 +355,7 @@ end
 Note that You must define only one application per config when using foreground mode.
 
 
-y allows you to run bluepill only in the foreground.
+JRuby allows you to run bluepill only in the foreground.
 
 ## Links
 

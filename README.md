@@ -1,5 +1,5 @@
 # Bluepill
-Bluepill is a simple process monitoring tool written in Ruby.
+Bluepill is a simple process monitoring tool written in Ruby.  This fork adds Rails 6 support.
 
 [![Gem Version](https://badge.fury.io/rb/bluepill.svg)][gem]
 [![Build Status](https://travis-ci.org/bluepill-rb/bluepill.svg?branch=master)][travis]

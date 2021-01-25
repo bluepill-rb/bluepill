@@ -14,9 +14,9 @@ Bluepill is a simple process monitoring tool written in Ruby.  This fork adds Ra
 [coveralls]: https://coveralls.io/github/bluepill-rb/bluepill?branch=master
 
 ## Installation
-It&apos;s hosted on [rubygems.org][rubygems].
+Add the following to your gemfile:
 
-    sudo gem install bluepill
+    gem 'bluepill', git: "https://github.com/derekzak/bluepill.git"
 
 In order to take advantage of logging with syslog, you also need to setup your syslog to log the local6 facility. Edit the appropriate config file for your syslogger (/etc/syslog.conf for syslog) and add a line for local6:
 

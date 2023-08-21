@@ -13,7 +13,7 @@ Gem::Specification.new do |spec|
   spec.description = "Bluepill keeps your daemons up while taking up as little resources as possible. After all you probably want the resources of your server to be used by whatever daemons you are running rather than the thing that's supposed to make sure they are brought back up, should they die or misbehave."
   spec.license     = 'MIT'
 
-  spec.add_dependency 'activesupport', ['>= 3.2', '< 6']
+  spec.add_dependency 'activesupport', ['>= 3.2', '< 7']
   spec.add_dependency 'blue-daemons', '~> 1.1'
   spec.add_dependency 'state_machine', '~> 1.1'
   spec.add_development_dependency 'bundler', '~> 1.3'

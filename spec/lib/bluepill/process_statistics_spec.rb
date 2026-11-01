@@ -21,4 +21,11 @@ describe Bluepill::ProcessStatistics do
     expect(@stats.to_s).to match(/some reason/)
     expect(@stats.to_s).to match(/event history/)
   end
+
+  it 'should list the most recent event first' do
+    allow(Time).to receive(:now).and_return(Time.local(2016, 1, 2, 3, 4, 5))
+    @stats.record_event('first event', 'some reason')
+    @stats.record_event('second event', nil)
+    expect(@stats.to_s).to eq("event history:\n  second event at 01/02/2016 03:03:05 - unspecified\n  first event at 01/02/2016 03:03:05 - some reason")
+  end
 end

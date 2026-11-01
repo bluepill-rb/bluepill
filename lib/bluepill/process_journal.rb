@@ -41,9 +41,12 @@ module Bluepill
       sleep 1
       if times < 10
         retry
+      # :nocov:
+      # Unreachable: retry reruns the method body, which resets times to 0
       else
         logger.info("Timeout waiting for lock #{name}")
         raise "Timeout waiting for lock #{name}"
+        # :nocov:
       end
     ensure
       clear_atomic_fs_lock(name)

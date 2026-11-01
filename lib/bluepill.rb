@@ -1,6 +1,10 @@
 require 'rubygems'
 
+# This runs once, when bluepill is first loaded, so only one of its branches
+# can ever be covered in a single test run.
+# :nocov:
 require 'bundler/setup' if ENV['BUNDLE_GEMFILE'] && File.exist?(ENV['BUNDLE_GEMFILE'])
+# :nocov:
 
 require 'thread'
 require 'monitor'

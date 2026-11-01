@@ -1,0 +1,176 @@
+describe Bluepill::ProcessFactory do
+  around do |example|
+    process_keys = Bluepill::ProcessFactory.class_variable_get(:@@process_keys)
+    pid_files = Bluepill::ProcessFactory.class_variable_get(:@@pid_files)
+    Bluepill::ProcessFactory.class_variable_set(:@@process_keys, {})
+    Bluepill::ProcessFactory.class_variable_set(:@@pid_files, {})
+    begin
+      example.run
+    ensure
+      Bluepill::ProcessFactory.class_variable_set(:@@process_keys, process_keys)
+      Bluepill::ProcessFactory.class_variable_set(:@@pid_files, pid_files)
+    end
+  end
+
+  # Fixnum was removed in Ruby 3.2, but the stop_signals validation still
+  # references it.
+  before do
+    stub_const('Fixnum', Integer) unless Object.const_defined?(:Fixnum)
+  end
+
+  def create(name, block, attributes = {})
+    Bluepill::ProcessFactory.new(attributes, block).create_process(name, '/pids')
+  end
+
+  def expect_config_error(message)
+    expect do
+      expect { yield }.to raise_error(SystemExit) { |e| expect(e.status).to eq(6) }
+    end.to output(message).to_stderr
+  end
+
+  describe '#create_process' do
+    it 'creates a process' do
+      process = create('web', proc { start_command 'run' })
+      expect(process).to be_a(Bluepill::Process)
+      expect(process.name).to eq('web')
+      expect(process.start_command).to eq('run')
+    end
+
+    it 'assigns a default pid file from the process name' do
+      process = create('web server', proc { start_command 'run' })
+      expect(process.pid_file).to eq('/pids/web_server.pid')
+    end
+
+    it 'assigns a default pid file from the group and process name' do
+      process = create('web', proc { start_command 'run' }, group: 'my group')
+      expect(process.pid_file).to eq('/pids/my_group_web.pid')
+    end
+
+    it 'keeps an explicit pid file' do
+      process = create('web', proc { start_command 'run' }, pid_file: '/var/web.pid')
+      expect(process.pid_file).to eq('/var/web.pid')
+    end
+
+    it 'exposes its attributes' do
+      factory = Bluepill::ProcessFactory.new({uid: 'user'}, proc {})
+      expect(factory.attributes).to eq(uid: 'user')
+    end
+
+    it 'creates a child process factory when monitoring children' do
+      child_block = proc { stop_command 'halt' }
+      process = create('web', proc do |p|
+        p.start_command 'run'
+        p.monitor_children(&child_block)
+      end)
+      expect(process.monitor_children).to be true
+      expect(process.child_process_factory).to be_a(Bluepill::ProcessFactory)
+      expect(process.child_process_factory.attributes).not_to have_key(:child_process_block)
+    end
+
+    it 'does not create a child process factory otherwise' do
+      process = create('web', proc { start_command 'run' })
+      expect(process.child_process_factory).to be_nil
+    end
+
+    context 'validation' do
+      it 'rejects duplicate process names in a group' do
+        create('web', proc { start_command 'run' }, group: 'servers')
+        expect_config_error("Config Error: You have two entries for the process name 'web' in the group 'servers'\n") do
+          create('web', proc { start_command 'run' }, group: 'servers')
+        end
+      end
+
+      it 'rejects duplicate process names without a group' do
+        create('web', proc { start_command 'run' })
+        expect_config_error("Config Error: You have two entries for the process name 'web'\n") do
+          create('web', proc { start_command 'run' }, pid_file: '/other.pid')
+        end
+      end
+
+      it 'requires a start command' do
+        expect_config_error("Config Error: You must specify a start_command for 'web'\n") do
+          create('web', proc {})
+        end
+      end
+
+      it 'rejects duplicate pid files' do
+        create('web', proc { start_command 'run' }, pid_file: '/shared.pid')
+        expect_config_error("Config Error: You have two entries with the pid file: /shared.pid\n") do
+          create('worker', proc { start_command 'run' }, pid_file: ' /shared.pid ')
+        end
+      end
+
+      context 'stop_signals' do
+        def create_with_signals(signals, grace_time)
+          create('web', proc do
+            start_command 'run'
+            stop_signals signals
+            stop_grace_time grace_time unless grace_time.nil?
+          end)
+        end
+
+        it 'accepts valid stop signals' do
+          process = create_with_signals([:quit, 5, :term], 10)
+          expect(process.stop_signals).to eq([:quit, 5, :term])
+        end
+
+        it 'requires signals to be symbols' do
+          expect_config_error(/Expected a symbol \(signal\) at position 2 instead of 'term'/) do
+            create_with_signals([:quit, 5, 'term'], 10)
+          end
+        end
+
+        it 'requires delays to be numbers' do
+          expect_config_error(/Expected a number \(delay\) at position 1 instead of 'five'/) do
+            create_with_signals([:quit, 'five', :term], 10)
+          end
+        end
+
+        it 'requires an odd number of elements' do
+          expect_config_error("Config Error: Invalid stop_signals!  Expected an odd number of elements.\n") do
+            create_with_signals([:quit, 5], 10)
+          end
+        end
+
+        it 'requires a stop_grace_time' do
+          expect_config_error(/Stop_grace_time should be greater than the sum of stop_signals delays/) do
+            create_with_signals([:quit, 5, :term], nil)
+          end
+        end
+
+        it 'requires stop_grace_time to exceed the sum of the delays' do
+          expect_config_error(/Stop_grace_time should be greater than the sum of stop_signals delays/) do
+            create_with_signals([:quit, 5, :term, 5, :kill], 10)
+          end
+        end
+      end
+    end
+  end
+
+  describe '#create_child_process' do
+    let(:logger) { instance_double(Bluepill::Logger) }
+    let(:attributes) { {start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 3, uid: 'user'} }
+
+    it 'creates a child process with the grace times of its parent' do
+      expect_any_instance_of(Bluepill::Process).to receive(:determine_initial_state)
+      factory = Bluepill::ProcessFactory.new(attributes, proc { stop_command 'halt' })
+      child = factory.create_child_process('child', 123, logger)
+
+      expect(child).to be_a(Bluepill::Process)
+      expect(child.name).to eq('child')
+      expect(child.actual_pid).to eq(123)
+      expect(child.logger).to eq(logger)
+      expect(child.stop_command).to eq('halt')
+      expect([child.start_grace_time, child.stop_grace_time, child.restart_grace_time]).to eq([1, 2, 3])
+      expect(child.uid).to be_nil
+    end
+
+    it 'requires a stop command' do
+      factory = Bluepill::ProcessFactory.new(attributes, proc {})
+      message = "Config Error: Invalid child process monitor for child\nYou must specify a stop command to monitor child processes.\n"
+      expect_config_error(message) do
+        factory.create_child_process('child', 123, logger)
+      end
+    end
+  end
+end

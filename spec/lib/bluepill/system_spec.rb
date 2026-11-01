@@ -1,3 +1,4 @@
+require 'pathname'
 require 'tmpdir'
 
 describe Bluepill::System do
@@ -24,23 +25,23 @@ describe Bluepill::System do
 
   describe :pid_alive? do
     it 'should be true if process responds to zero signal' do
-      expect(Process).to receive(:kill).with(0, 555).and_return(0)
-      expect(Bluepill::System).to be_pid_alive(555)
+      expect(Process).to receive(:kill).with(0, 555).and_return(1)
+      expect(Bluepill::System.pid_alive?(555)).to be true
     end
 
     it 'should be false if process throws exception on zero signal' do
       expect(Process).to receive(:kill).with(0, 555).and_raise(Errno::ESRCH)
-      expect(Bluepill::System).not_to be_pid_alive(555)
+      expect(Bluepill::System.pid_alive?(555)).to be false
     end
 
     it 'should be true if there is no permission to signal the process' do
       expect(Process).to receive(:kill).with(0, 555).and_raise(Errno::EPERM)
-      expect(Bluepill::System).to be_pid_alive(555)
+      expect(Bluepill::System.pid_alive?(555)).to be true
     end
 
     it 'should be false if signaling raises any other error' do
       expect(Process).to receive(:kill).with(0, nil).and_raise(TypeError)
-      expect(Bluepill::System).not_to be_pid_alive(nil)
+      expect(Bluepill::System.pid_alive?(nil)).to be false
     end
   end
 
@@ -73,16 +74,21 @@ describe Bluepill::System do
     end
 
     it 'should return the memory usage of the process' do
-      expect(Bluepill::System.memory_usage(2, false)).to eq(200.0)
+      expect(Bluepill::System.memory_usage(2, false)).to eql(200.0)
     end
 
     it 'should include the memory usage of all descendants' do
-      expect(Bluepill::System.memory_usage(1, true)).to eq(1000.0)
+      expect(Bluepill::System.memory_usage(1, true)).to eql(1000.0)
     end
 
     it 'should skip children that are missing from ps output' do
       allow(Bluepill::System).to receive(:get_children).with(1).and_return([2, 99])
-      expect(Bluepill::System.memory_usage(1, true)).to eq(300.0)
+      expect(Bluepill::System.memory_usage(1, true)).to eql(300.0)
+    end
+
+    it 'should parse the memory usage of children as floats' do
+      stub_ps(1 => ps[1], 2 => ['2', '1', '2.5', '200.5', '02:00', 'child one'])
+      expect(Bluepill::System.memory_usage(1, true)).to eql(300.5)
     end
   end
 
@@ -118,7 +124,7 @@ describe Bluepill::System do
     end
 
     it 'should return an empty array for a process without children' do
-      expect(Bluepill::System.get_children('3')).to eq([])
+      expect(Bluepill::System.get_children(3)).to eq([])
     end
 
     it 'should return an empty array if ps could not be run' do
@@ -166,6 +172,11 @@ describe Bluepill::System do
         expect(rd).to have_received(:close)
       end
 
+      it 'should return any positive pid' do
+        allow(rd).to receive(:read).and_return('1')
+        expect(Bluepill::System.daemonize('cmd')).to eq(1)
+      end
+
       it 'should return nil if the child did not report a pid' do
         allow(rd).to receive(:read).and_return('')
         expect(Bluepill::System.daemonize('cmd')).to be_nil
@@ -194,9 +205,11 @@ describe Bluepill::System do
         allow(Bluepill::System).to receive(:redirect_io)
         allow(Bluepill::System).to receive(:exit)
         allow(Kernel).to receive(:exec)
+        allow(Bluepill::System).to receive(:exec).and_raise('exec must be called on Kernel')
         allow(Dir).to receive(:chdir)
         allow(ENV).to receive(:[]=)
         allow(Process).to receive(:exit!)
+        allow(Bluepill::System).to receive(:exit!).and_raise('exit! must be called on Process')
         allow(File).to receive(:open).with(pid_file, 'w').and_yield(file)
         allow(file).to receive(:write)
         allow(Daemonize).to receive(:call_as_daemon) do |block, _, _|
@@ -211,6 +224,28 @@ describe Bluepill::System do
         expect { Bluepill::System.daemonize('cmd', options) }.to raise_error(SystemExit)
         expect(rd).to have_received(:close)
         expect(Bluepill::System).to have_received(:drop_privileges).with('user', 'group', ['extra'])
+        expect(Daemonize).not_to have_received(:call_as_daemon)
+      end
+
+      it 'should run without options' do
+        expect(Bluepill::System).to receive(:can_write_pid_file).with(nil, nil).and_return(false)
+        expect(Bluepill::System).to receive(:exit).with(no_args).and_raise(SystemExit)
+        expect { Bluepill::System.daemonize('cmd') }.to raise_error(SystemExit)
+        expect(Bluepill::System).to have_received(:drop_privileges).with(nil, nil, nil)
+      end
+
+      it 'should not redirect io that is not configured' do
+        allow(Bluepill::System).to receive(:can_write_pid_file).and_return(true)
+        Bluepill::System.daemonize('cmd', pid_file: pid_file, logger: logger)
+        expect(Bluepill::System).to have_received(:redirect_io).with(nil, nil, nil)
+      end
+
+      it 'should write any positive pid to the pid file' do
+        allow(Bluepill::System).to receive(:can_write_pid_file).and_return(true)
+        allow(Daemonize).to receive(:call_as_daemon).and_return(1)
+        Bluepill::System.daemonize('cmd', options)
+        expect(file).to have_received(:write).with(1)
+        expect(wr).to have_received(:write).with(1)
       end
 
       it 'should exec the command as a daemon and report its pid' do
@@ -238,7 +273,7 @@ describe Bluepill::System do
 
       it 'should change directory and set the environment' do
         allow(Bluepill::System).to receive(:can_write_pid_file).and_return(true)
-        options[:working_dir] = '/tmp/work'
+        options[:working_dir] = Pathname.new('/tmp/work')
         options[:environment] = {FOO: 1}
         Bluepill::System.daemonize('cmd', options)
         expect(ENV).to have_received(:[]=).with('PWD', '/tmp/work')
@@ -349,6 +384,7 @@ describe Bluepill::System do
         allow(STDERR).to receive(:reopen)
         allow(STDERR).to receive(:puts)
         allow(Kernel).to receive(:exec)
+        allow(Bluepill::System).to receive(:exec).and_raise('exec must be called on Kernel')
         allow(Process).to receive(:waitpid2).with(456).and_return([456, status])
         allow(Process).to receive(:exit!)
       end
@@ -364,10 +400,18 @@ describe Bluepill::System do
         expect(STDOUT).to have_received(:reopen).with(out_wr)
         expect(STDERR).to have_received(:reopen).with(err_wr)
         expect(Kernel).to have_received(:exec).with('echo', 'hello world')
+        expect(out_wr).to have_received(:close).twice
+        expect(err_wr).to have_received(:close).twice
         expect(out_rd).to have_received(:close).twice
         expect(err_rd).to have_received(:close).twice
         expect(wr).to have_received(:write).with(Marshal.dump(stdout: 'out', stderr: 'err', exit_code: 2))
         expect(Process).to have_received(:exit!).with(no_args)
+      end
+
+      it 'should run without options' do
+        Bluepill::System.execute_blocking('cmd')
+        expect(Bluepill::System).to have_received(:drop_privileges).with(nil, nil, nil)
+        expect(Kernel).to have_received(:exec).with('cmd')
       end
 
       it 'should still exit if the parent stopped waiting for the result' do
@@ -378,7 +422,7 @@ describe Bluepill::System do
       end
 
       it 'should change directory and set the environment' do
-        options[:working_dir] = '/tmp/work'
+        options[:working_dir] = Pathname.new('/tmp/work')
         options[:environment] = {FOO: 1}
         Bluepill::System.execute_blocking('cmd', options)
         expect(ENV).to have_received(:[]=).with('PWD', '/tmp/work')
@@ -482,6 +526,10 @@ describe Bluepill::System do
       expect(Bluepill::System.parse_elapsed_time('20:03')).to be_equal(1203)
       expect(Bluepill::System.parse_elapsed_time('invalid')).to be_equal(0)
     end
+
+    it 'should parse fields with a leading zero as decimal' do
+      expect(Bluepill::System.parse_elapsed_time('08-09:08:09')).to be_equal(724_089)
+    end
   end
 
   describe :drop_privileges do
@@ -537,6 +585,15 @@ describe Bluepill::System do
         expect(Process::Sys).to have_received(:setuid).with(501)
         expect(ENV).to have_received(:[]=).with('HOME', home)
       end
+
+      it 'should leave HOME unset if neither the user nor the environment has one' do
+        allow(Etc).to receive(:getpwnam).with('user').and_return(double(uid: 501))
+        allow(Etc).to receive(:getpwuid).with(501).and_return(nil)
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with('HOME').and_return(nil)
+        Bluepill::System.drop_privileges('user', nil, [])
+        expect(ENV).to have_received(:[]=).with('HOME', nil)
+      end
     end
   end
 
@@ -554,7 +611,12 @@ describe Bluepill::System do
     it 'should log the error and be false if the pid file cannot be written' do
       Dir.mktmpdir do |dir|
         pid_file = File.join(dir, 'missing', 'test.pid')
-        expect(logger).to receive(:warning).with(/\AErrno::ENOENT - /)
+        message = begin
+          FileUtils.touch(pid_file)
+        rescue Errno::ENOENT => e
+          "Errno::ENOENT - #{e.message}"
+        end
+        expect(logger).to receive(:warning).with(message)
         expect(logger).to receive(:warning).at_least(:once).with(kind_of(String))
         expect(Bluepill::System.can_write_pid_file(pid_file, logger)).to be false
       end

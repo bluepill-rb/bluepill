@@ -166,13 +166,13 @@ module Bluepill
     end
 
     def append_pid_to_journal(journal_name, pid)
-      begin
-        append_pgid_to_journal(journal_name, ::Process.getpgid(pid))
-      rescue Errno::ESRCH
-      end
       if skip_pid?(pid)
         logger.debug("Skipping invalid pid #{pid} (class #{pid.class})")
         return
+      end
+      begin
+        append_pgid_to_journal(journal_name, ::Process.getpgid(pid))
+      rescue Errno::ESRCH
       end
 
       filename = pid_journal_filename(journal_name)

@@ -245,12 +245,14 @@ describe Bluepill::ProcessJournal do
       expect(File.exist?(journal.pgid_journal_filename('app'))).to be false
     end
 
-    it 'skips invalid pids' do
-      expect(::Process).to receive(:getpgid).with(1).and_return(1)
-      expect(logger).to receive(:debug).with(/\ASkipping invalid pgid 1 /)
-      expect(logger).to receive(:debug).with(/\ASkipping invalid pid 1 /)
-      journal.append_pid_to_journal('app', 1)
-      expect(File.exist?(filename)).to be false
+    [nil, 0, 1, '42'].each do |pid|
+      it "skips the invalid pid #{pid.inspect} without journaling a process group" do
+        expect(::Process).not_to receive(:getpgid)
+        expect(logger).to receive(:debug).with("Skipping invalid pid #{pid} (class #{pid.class})")
+        journal.append_pid_to_journal('app', pid)
+        expect(File.exist?(filename)).to be false
+        expect(File.exist?(journal.pgid_journal_filename('app'))).to be false
+      end
     end
   end
 end

@@ -21,5 +21,11 @@ describe Bluepill do
       expect(yielded.app).to eq(app)
       expect(app).to have_received(:load)
     end
+
+    it 'defaults to no options' do
+      expect(Bluepill::Application).to receive(:new).with('app_name', {}).and_return(app)
+      Bluepill.application(:app_name) {}
+      expect(app).to have_received(:load)
+    end
   end
 end

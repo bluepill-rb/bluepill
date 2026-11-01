@@ -31,28 +31,31 @@ module Bluepill
       process.dispatch!(event, self.class.name.split('::').last)
     end
 
+    # Dispatches event after delay seconds in a new thread, and returns it
     def schedule_event(event, delay)
-      # TODO: maybe wrap this in a ScheduledEvent class with methods like cancel
-      thread = Thread.new(self) do |trigger|
-        begin
-          sleep delay.to_f
-          trigger.dispatch!(event)
-          trigger.mutex.synchronize do
-            trigger.scheduled_events.delete_if { |_, t| t == Thread.current }
+      mutex.synchronize do
+        thread = Thread.new(self) do |trigger|
+          begin
+            sleep delay.to_f
+            trigger.dispatch!(event)
+            trigger.mutex.synchronize do
+              trigger.scheduled_events.delete_if { |_, t| t == Thread.current }
+            end
+          rescue StandardError => e
+            trigger.logger.err(e)
+            trigger.logger.err(e.backtrace.join("\n"))
           end
-        rescue StandardError => e
-          trigger.logger.err(e)
-          trigger.logger.err(e.backtrace.join("\n"))
         end
+        scheduled_events.push([event, thread])
+        thread
       end
-
-      scheduled_events.push([event, thread])
     end
 
     def cancel_all_events
       logger.info 'Canceling all scheduled events'
       mutex.synchronize do
         scheduled_events.collect(&:last).each(&:kill)
+        scheduled_events.clear
       end
     end
   end

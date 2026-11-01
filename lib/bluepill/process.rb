@@ -347,8 +347,8 @@ module Bluepill
 
     # Internal State Methods
     def skip_ticks_for(seconds)
-      # TODO: should this be addative or longest wins?
-      #       i.e. if two calls for skip_ticks_for come in for 5 and 10, should it skip for 10 or 15?
+      # The times add up, so a stop followed by a start, which is how
+      # restart_process works without a restart_command, waits out both grace times
       self.skip_ticks_until = (skip_ticks_until || Time.now.to_i) + seconds.to_i
     end
 

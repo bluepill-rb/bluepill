@@ -81,7 +81,10 @@ module Bluepill
 
     def cleanup_process
       ProcessJournal.kill_all_from_journal(name) # finish cleanup
-      unlink_pid # TODO: we only write the pid file if we daemonize, should we only unlink it if we daemonize?
+      # Bluepill only writes the pid file for processes it daemonizes, but it
+      # removes it for every process, so a stopped process never leaves a stale
+      # pid behind for a later process to reuse
+      unlink_pid
     end
 
     def prepare_command(command)

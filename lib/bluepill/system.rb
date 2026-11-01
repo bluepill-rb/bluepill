@@ -96,19 +96,23 @@ module Bluepill
       store.clear unless store.empty?
     end
 
-    def ps_axu
-      # TODO: need a mutex here
-      store[:ps_axu] ||= begin
-        # BSD style ps invocation
-        lines = `ps axo pid,ppid,pcpu,rss,etime,command`.split("\n")
+    # Watches run in their own threads, so only let one of them run ps per tick
+    PS_MUTEX = Mutex.new
 
-        lines.each_with_object({}) do |line, mem|
-          chunks = line.split(/\s+/)
-          chunks.delete_if { |c| c.strip.empty? }
-          pid = chunks[IDX_MAP[:pid]].strip.to_i
-          command = chunks.slice!(IDX_MAP[:command], chunks.length).join ' '
-          chunks[IDX_MAP[:command]] = command
-          mem[pid] = chunks.flatten
+    def ps_axu
+      PS_MUTEX.synchronize do
+        store[:ps_axu] ||= begin
+          # BSD style ps invocation
+          lines = `ps axo pid,ppid,pcpu,rss,etime,command`.split("\n")
+
+          lines.each_with_object({}) do |line, mem|
+            chunks = line.split(/\s+/)
+            chunks.delete_if { |c| c.strip.empty? }
+            pid = chunks[IDX_MAP[:pid]].strip.to_i
+            command = chunks.slice!(IDX_MAP[:command], chunks.length).join ' '
+            chunks[IDX_MAP[:command]] = command
+            mem[pid] = chunks.flatten
+          end
         end
       end
     end

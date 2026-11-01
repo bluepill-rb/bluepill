@@ -400,6 +400,15 @@ describe Bluepill::System do
       expect(Bluepill::System.ps_axu).to eq(expected)
       expect(Bluepill::System.ps_axu).to eq(expected)
     end
+
+    it 'should only run ps once when called from several threads at once' do
+      expect(Bluepill::System).to receive(:`).once do
+        sleep 0.05
+        output
+      end
+      threads = Array.new(5) { Thread.new { Bluepill::System.ps_axu } }
+      expect(threads.collect(&:value).uniq.size).to eq(1)
+    end
   end
 
   describe :parse_etime do

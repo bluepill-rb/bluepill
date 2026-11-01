@@ -42,10 +42,9 @@ describe Bluepill::Trigger do
     end
 
     it 'dispatches the event after the delay' do
-      subject.schedule_event(:start, 5)
-      event, thread = subject.scheduled_events.first
+      thread = subject.schedule_event(:start, 5)
       thread.join
-      expect(event).to eq(:start)
+      expect(subject.scheduled_events).to eq([])
       expect(subject).to have_received(:sleep).with(5.0)
       expect(process).to have_received(:dispatch!).with(:start, 'Trigger')
     end
@@ -54,8 +53,7 @@ describe Bluepill::Trigger do
       error = RuntimeError.new('boom')
       error.set_backtrace(['line 1', 'line 2'])
       allow(process).to receive(:dispatch!).and_raise(error)
-      subject.schedule_event(:start, 0)
-      subject.scheduled_events.first.last.join
+      subject.schedule_event(:start, 0).join
       expect(logger).to have_received(:err).with(error)
       expect(logger).to have_received(:err).with("line 1\nline 2")
     end
@@ -68,6 +66,7 @@ describe Bluepill::Trigger do
       subject.reset!
       expect(logger).to have_received(:info).with('Canceling all scheduled events')
       expect(thread).to have_received(:kill)
+      expect(subject.scheduled_events).to eq([])
     end
   end
 end

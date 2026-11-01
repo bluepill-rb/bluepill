@@ -264,33 +264,32 @@ end
 
 Note {{PID}} will be substituted for the pid of process in both the stop and restart commands.
 
-### A Note About Output Redirection
+### Commands Don't Run in a Shell
 
-While you can specify shell tricks like the following in the `start_command` of a process:
+Bluepill splits each command (`start_command`, `pre_start_command`, `stop_command`, and `restart_command`) into words and runs it directly, without a shell. So shell syntax like `cd ... &&`, `VAR=value`, `|`, `>`, `2>&1`, and `*` globs doesn't work.
 
-```ruby
-Bluepill.application("app_name") do |app|
-  app.process("process_name") do |process|
-    process.start_command = "cd /tmp/some_dir && SOME_VAR=1 /usr/bin/some_start_command > /tmp/server.log 2>&1"
-    process.pid_file = "/tmp/some_pid_file.pid"
-  end
-end
-```
-
-We recommend that you _not_ do that and instead use the config options to capture output from your daemons. Like so:
+Use the config options instead:
 
 ```ruby
 Bluepill.application("app_name") do |app|
   app.process("process_name") do |process|
-    process.start_command = "/usr/bin/env SOME_VAR=1 /usr/bin/some_start_command"
+    process.start_command = "/usr/bin/some_start_command"
     process.working_dir = "/tmp/some_dir"
+    process.environment = {"SOME_VAR" => "1"}
     process.stdout = process.stderr = "/tmp/server.log"
     process.pid_file = "/tmp/some_pid_file.pid"
+    process.daemonize = true
   end
 end
 ```
 
-The main benefit of using the config options is that Bluepill will be able to monitor the correct process instead of just watching the shell that spawned your actual server.
+`stdout`, `stderr`, and `stdin` only apply to processes that bluepill daemonizes. A daemonized process starts in `/` unless you set `working_dir`, so use absolute paths or set `working_dir`.
+
+If you really need a shell, run one explicitly, and use `exec` so bluepill monitors your server instead of the shell that started it:
+
+```ruby
+process.start_command = "sh -c 'exec /usr/bin/some_start_command < /tmp/input'"
+```
 
 ### CLI
 

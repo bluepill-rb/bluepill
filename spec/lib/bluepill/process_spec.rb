@@ -566,6 +566,19 @@ describe Bluepill::Process do
       expect(subject).to receive(:start_process).ordered
       subject.restart_process
     end
+
+    it 'waits for the stop signals to finish before starting' do
+      subject.actual_pid = 5
+      subject.stop_signals = [:quit, 1, :kill]
+      allow(Bluepill::System).to receive(:delete_if_exists)
+      allow(subject).to receive(:sleep) { Kernel.sleep(0.1) }
+      events = []
+      allow(::Process).to receive(:kill) { |signal, _pid| events << signal }
+      allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal) { events << :cleanup }
+      allow(subject).to receive(:start_process) { events << :start }
+      subject.restart_process
+      expect(events).to eq ['QUIT', 0, 'KILL', :cleanup, :start]
+    end
   end
 
   describe '#clean_threads' do

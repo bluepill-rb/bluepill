@@ -75,6 +75,9 @@ module Bluepill
       else
         logger.warning 'No restart_command specified. Must stop and start to restart'
         stop_process
+        # Stop signals run in a thread. Wait for them, or start_process would
+        # kill the stopping process from the journal before its delays are up.
+        @threads.each(&:join)
         start_process
       end
     end

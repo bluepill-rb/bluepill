@@ -20,4 +20,9 @@ group :test do
   gem 'rubocop', '~> 1.92' if RUBY_VERSION >= '2.7'
   gem 'simplecov', '>= 0.4'
   gem 'steep', '~> 2.1', require: false if RUBY_VERSION >= '3.3' && RUBY_ENGINE == 'ruby'
+  # Mutant needs Ruby 3.3 or newer and doesn't support JRuby
+  if RUBY_VERSION >= '3.3' && RUBY_ENGINE == 'ruby'
+    gem 'mutant', '~> 0.17', require: false
+    gem 'mutant-rspec', '~> 0.17', require: false
+  end
 end

@@ -67,6 +67,10 @@ jobs:
       - name: Type check with Steep
         if: contains(fromJSON('["3.3", "3.4", "4.0"]'), matrix.ruby)
         run: bundle exec rake steep
+      # The Gemfile only installs mutant on Ruby 3.3 and newer
+      - name: Mutation test with mutant
+        if: contains(fromJSON('["3.3", "3.4", "4.0"]'), matrix.ruby)
+        run: bundle exec rake mutant
       - name: Upload coverage to Coveralls
         if: matrix.ruby == '4.0'
         uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8

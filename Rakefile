@@ -51,6 +51,21 @@ if steep
   end
 end
 
+# Mutant needs Ruby 3.3 or newer, so the Gemfile only installs it there
+begin
+  require 'mutant/version'
+  mutant = true
+rescue LoadError
+  mutant = false
+end
+
+if mutant
+  desc 'Run mutation tests with mutant'
+  task :mutant do
+    sh 'mutant run'
+  end
+end
+
 begin
   require 'yard'
   YARD::Rake::YardocTask.new do |yard|
@@ -63,4 +78,5 @@ end
 task test: :spec
 default_tasks = [:spec, :rubocop]
 default_tasks << :steep if steep
+default_tasks << :mutant if mutant
 task default: default_tasks

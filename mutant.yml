@@ -1,0 +1,21 @@
+---
+usage: opensource
+environment_variables:
+  MUTANT: "true"
+integration:
+  name: rspec
+includes:
+  - lib
+requires:
+  - bluepill
+coverage_criteria:
+  # A mutation whose specs hang or whose process dies before it reports
+  # counts as killed. Mutant counts it alive unless told.
+  process_abort: true
+  timeout: true
+mutation:
+  operators: full
+  timeout: 20.0
+matcher:
+  subjects:
+    - Bluepill*

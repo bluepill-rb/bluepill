@@ -44,7 +44,7 @@ module Bluepill
         return true  unless @pattern
         return false unless value.class.body_permitted?
 
-        @pattern =~ value.body
+        !(@pattern =~ value.body).nil?
       end
 
     private

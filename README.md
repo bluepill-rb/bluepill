@@ -2,13 +2,17 @@
 Bluepill is a simple process monitoring tool written in Ruby.
 
 [![Gem Version](https://badge.fury.io/rb/bluepill.svg)][gem]
-[![Build Status](https://github.com/bluepill-rb/bluepill/actions/workflows/ci.yml/badge.svg?branch=master)][ci]
+[![Test](https://github.com/bluepill-rb/bluepill/actions/workflows/test.yml/badge.svg?branch=master)][test]
+[![Lint](https://github.com/bluepill-rb/bluepill/actions/workflows/lint.yml/badge.svg?branch=master)][lint]
+[![Mutant](https://github.com/bluepill-rb/bluepill/actions/workflows/mutant.yml/badge.svg?branch=master)][mutant]
 [![Maintainability](https://qlty.sh/gh/bluepill-rb/projects/bluepill/maintainability.svg)][qlty]
 [![Coverage Status](https://coveralls.io/repos/github/bluepill-rb/bluepill/badge.svg?branch=master)][coveralls]
 [![Duel](https://raw.githubusercontent.com/sferik/duel-ruby/main/assets/badge.svg)](https://github.com/sferik/duel-ruby)
 
 [gem]: https://rubygems.org/gems/bluepill
-[ci]: https://github.com/bluepill-rb/bluepill/actions/workflows/ci.yml
+[test]: https://github.com/bluepill-rb/bluepill/actions/workflows/test.yml
+[lint]: https://github.com/bluepill-rb/bluepill/actions/workflows/lint.yml
+[mutant]: https://github.com/bluepill-rb/bluepill/actions/workflows/mutant.yml
 [qlty]: https://qlty.sh/gh/bluepill-rb/projects/bluepill
 [coveralls]: https://coveralls.io/github/bluepill-rb/bluepill?branch=master
 

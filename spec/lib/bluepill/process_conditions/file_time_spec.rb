@@ -12,6 +12,26 @@ describe Bluepill::ProcessConditions::FileTime do
 
   subject { Bluepill::ProcessConditions::FileTime.new(below: 60, filename: filename) }
 
+  describe '#initialize' do
+    it 'can be created without options' do
+      expect(Bluepill::ProcessConditions::FileTime.new).to be_a(Bluepill::ProcessConditions::FileTime)
+    end
+
+    it 'stores its options' do
+      expect(subject.instance_variable_get(:@options)).to eq(below: 60, filename: filename)
+    end
+
+    it 'checks against the given limit' do
+      expect(subject.check(59)).to be true
+      expect(subject.check(60)).to be false
+    end
+
+    it 'watches the given file' do
+      File.open(filename, 'w') {}
+      expect(subject.run(123, false)).to be_a(Float)
+    end
+  end
+
   describe '#run' do
     it 'returns the time since the file was modified' do
       File.open(filename, 'w') {}

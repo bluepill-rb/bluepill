@@ -5,6 +5,10 @@ describe Bluepill::ProcessConditions::RunningTime do
     expect(Bluepill::ProcessConditions::RunningTime.new).to be_a(Bluepill::ProcessConditions::RunningTime)
   end
 
+  it 'stores its options' do
+    expect(subject.instance_variable_get(:@options)).to eq(below: 60)
+  end
+
   it 'returns the running time of the process' do
     expect(Bluepill::System).to receive(:running_time).with(123).and_return(30)
     expect(subject.run(123, false)).to eq(30)

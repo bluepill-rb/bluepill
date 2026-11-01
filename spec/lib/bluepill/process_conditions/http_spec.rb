@@ -10,6 +10,26 @@ describe Bluepill::ProcessConditions::Http do
   end
 
   describe '#initialize' do
+    it 'requires a url' do
+      expect { Bluepill::ProcessConditions::Http.new }.to raise_error(URI::InvalidURIError)
+    end
+
+    it 'stores its options' do
+      expect(http.instance_variable_get(:@options)).to eq(url: 'http://example.com:8080/status?full=1')
+    end
+
+    it 'parses the url' do
+      expect(http.instance_variable_get(:@uri)).to eq(URI.parse('http://example.com:8080/status?full=1'))
+    end
+
+    it 'has no pattern by default' do
+      expect(http.instance_variable_get(:@pattern)).to be_nil
+    end
+
+    it 'accepts a pattern' do
+      expect(http(pattern: /ok/).instance_variable_get(:@pattern)).to eq(/ok/)
+    end
+
     it 'expects a successful response by default' do
       expect(http.instance_variable_get(:@kind)).to eq(Net::HTTPSuccess)
     end
@@ -39,7 +59,13 @@ describe Bluepill::ProcessConditions::Http do
     end
 
     it 'accepts separate open and read timeouts' do
-      condition = http(timeout: 10, open_timeout: '2', read_timeout: 3.5)
+      condition = http(timeout: 10, open_timeout: 2, read_timeout: 3.5)
+      expect(condition.instance_variable_get(:@open_timeout)).to eq(2)
+      expect(condition.instance_variable_get(:@read_timeout)).to eq(3)
+    end
+
+    it 'accepts timeouts as strings' do
+      condition = http(open_timeout: '2.5', read_timeout: '3.5')
       expect(condition.instance_variable_get(:@open_timeout)).to eq(2)
       expect(condition.instance_variable_get(:@read_timeout)).to eq(3)
     end
@@ -63,10 +89,13 @@ describe Bluepill::ProcessConditions::Http do
     end
 
     it 'requests the url over https without verifying the certificate' do
+      condition = http(url: 'https://example.com/status?full=1')
+      allow(condition).to receive(:require).and_call_original
       allow(session).to receive(:use_ssl=)
       allow(session).to receive(:verify_mode=)
       expect(Net::HTTP).to receive(:new).with('example.com', 443).and_return(session)
-      expect(http(url: 'https://example.com/status?full=1').run(123, false)).to eq(ok)
+      expect(condition.run(123, false)).to eq(ok)
+      expect(condition).to have_received(:require).with('net/https')
       expect(session).to have_received(:use_ssl=).with(true)
       expect(session).to have_received(:verify_mode=).with(OpenSSL::SSL::VERIFY_NONE)
     end
@@ -86,7 +115,13 @@ describe Bluepill::ProcessConditions::Http do
         allow(session).to receive(:start).and_raise(NoMethodError.new("undefined method `closed?' for nil:NilClass"))
         error = http.run(123, false)
         expect(error).to be_a(Errno::ECONNREFUSED)
-        expect(error.message).to match(%r{Connection refused attempting to contact http://example.com:8080})
+        expect(error.message).to eq('Connection refused - Connection refused attempting to contact http://example.com:8080')
+      end
+
+      it 'finds the Net::HTTP closed? bug anywhere in the message' do
+        message = "private method: undefined method `closed?' for nil:NilClass (NoMethodError)"
+        allow(session).to receive(:start).and_raise(NoMethodError.new(message))
+        expect(http.run(123, false)).to be_a(Errno::ECONNREFUSED)
       end
 
       it 'returns other NoMethodErrors' do

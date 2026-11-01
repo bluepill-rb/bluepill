@@ -26,3 +26,12 @@ Or only on the subjects you changed since `master`:
     bundle exec mutant run --since master
 
 CI only mutates the subjects that a push or pull request changes, split into shards that run in parallel. To mutate every subject in CI, run the Mutant workflow from the Actions tab.
+
+Performance
+-----------
+
+[Duel](https://github.com/sferik/duel-ruby) guards against changes that make bluepill slower. The benchmarks in `duel/` cover what bluepill does every tick: parsing `ps`, finding children, running checks, ticking processes, and logging. Duel needs Ruby 3.4 or newer. To compare your branch with `master`:
+
+    bundle exec duel
+
+A pull request that makes a benchmark slower, allocate more, or leave more objects alive fails the Perf workflow. To check that new benchmarks pass on unchanged code, run `bundle exec duel --force`, and to run some of them, add `--filter "^watch:"`.

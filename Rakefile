@@ -105,3 +105,11 @@ default_tasks = [:spec, :rubocop]
 default_tasks << :steep if steep
 default_tasks << :mutant if mutant
 task default: default_tasks
+
+# Duel needs Ruby 3.4 or newer, so the Gemfile only installs it there
+begin
+  require 'duel/rake_task'
+  Duel::RakeTask.new
+rescue LoadError
+  nil
+end

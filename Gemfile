@@ -10,6 +10,17 @@ gem 'syslog' if RUBY_VERSION >= '3.4'
 gem 'term-ansicolor', '~> 1.3.2' if RUBY_VERSION < '2.0'
 gem 'tins', '~> 1.6.0' if RUBY_VERSION < '2.0'
 
+# Duel, with its plugin that counts the objects a benchmark leaves alive,
+# and StackProf for its profiles of regressions, need Ruby 3.4 or newer on
+# MRI
+group :development do
+  if RUBY_VERSION >= '3.4' && RUBY_ENGINE == 'ruby'
+    gem 'duel', require: false
+    gem 'duel-retained', require: false
+    gem 'stackprof', require: false
+  end
+end
+
 group :doc do
   gem 'maruku', '>= 0.7'
   gem 'yard', '>= 0.8'

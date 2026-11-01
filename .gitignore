@@ -12,3 +12,4 @@ bluepill.log
 .gem_rbs_collection/
 
 .mutant/
+tmp/

@@ -1,4 +1,11 @@
+inherit_mode:
+  merge:
+    - Include
+
 AllCops:
+  # Duel's configuration is a dotfile, which RuboCop skips unless it's named
+  Include:
+    - .duel.rb
   # The gem still supports Ruby 1.9.3, and 2.0 is the oldest Ruby that
   # RuboCop can check against. CI runs the specs on 1.9.3 to catch syntax
   # that 1.9 does not support.

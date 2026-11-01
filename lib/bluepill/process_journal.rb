@@ -117,7 +117,7 @@ module Bluepill
             end
           end
 
-          if j.count { |pgid| System.pid_alive?(pgid) } > 1
+          if j.any? { |pgid| System.pid_alive?(pgid) }
             sleep(1)
             j.each do |pgid|
               begin
@@ -150,7 +150,7 @@ module Bluepill
             end
           end
 
-          if j.count { |pid| System.pid_alive?(pid) } > 1
+          if j.any? { |pid| System.pid_alive?(pid) }
             sleep(1)
             j.each do |pid|
               begin

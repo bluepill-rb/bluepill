@@ -180,7 +180,18 @@ describe Bluepill::ProcessJournal do
         expect(File.exist?("#{filename}.lock")).to be false
       end
 
-      it 'kills the journaled ids when more than one survives' do
+      it 'kills a single id that survives TERM' do
+        write_journal(filename, [42])
+        allow(Bluepill::System).to receive(:pid_alive?).with(42).and_return(true)
+        expect(::Process).to receive(:kill).with('TERM', sign * 42)
+        expect(journal).to receive(:sleep).with(1)
+        expect(::Process).to receive(:kill).with('KILL', sign * 42)
+        expect(logger).to receive(:info).with("Killed old #{label} 42")
+        journal.send(method, 'app')
+        expect(File.exist?(filename)).to be false
+      end
+
+      it 'kills the journaled ids when any survive' do
         write_journal(filename, [42, 43])
         allow(Bluepill::System).to receive(:pid_alive?).and_return(true)
         expect(journal).to receive(:sleep).with(1)

@@ -24,8 +24,8 @@ jobs:
           persist-credentials: false
       - uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
         with:
-          # Sigstore signing fails on Ruby 4.0, whose json 3 rejects options
-          # that protobug 0.1.0 passes to JSON.parse. Use 3.4 until it's fixed.
+          # Ruby 4.0's default json is 3, which Sigstore signing can't use (see
+          # the signing step). Use 3.4, whose default json is 2.
           ruby-version: '3.4'
       # Install gems fresh instead of from the Actions cache, so a poisoned
       # cache can't end up in a published gem
@@ -40,8 +40,15 @@ jobs:
         run: |
           bundle exec rake build
           test -f "pkg/bluepill-${GITHUB_REF_NAME#v}.gem"
+      # protobug 0.1.0 passes JSON.parse options that json 3 rejects, and
+      # sigstore 0.2.3 still requires it. Installing gems can pull in json 3
+      # even on Ruby 3.4, so load sigstore-cli with json 2 activated.
       - name: Sign gem with Sigstore
-        run: gem exec sigstore-cli sign pkg/*.gem --bundle pkg/bluepill.gem.sigstore.json
+        run: |
+          gem install sigstore-cli -v 0.2.3 --no-document
+          ruby -e 'gem "json", "< 3"' \
+            -e 'load Gem.bin_path("sigstore-cli", "sigstore-cli", "0.2.3")' \
+            sign pkg/*.gem --bundle pkg/bluepill.gem.sigstore.json
       - name: Push gem
         run: gem push pkg/*.gem --attestation pkg/bluepill.gem.sigstore.json
       - name: Wait for release

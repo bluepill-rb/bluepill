@@ -22,7 +22,7 @@ module Bluepill
       def notify(transition)
         return unless TRIGGER_STATES.include?(transition.to_name)
 
-        timeline << Time.now.to_i
+        timeline << Integer(Time.now)
         check_flapping
       end
 
@@ -33,7 +33,7 @@ module Bluepill
 
       def check_flapping
         # The process has not flapped if we haven't encountered enough incidents
-        return unless @timeline.compact.length == times
+        return unless @timeline.length == times
 
         # Check if the incident happend within the timeframe
         return unless @timeline.last - @timeline.first <= within

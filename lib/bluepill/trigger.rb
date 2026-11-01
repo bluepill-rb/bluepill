@@ -34,16 +34,16 @@ module Bluepill
     # Dispatches event after delay seconds in a new thread, and returns it
     def schedule_event(event, delay)
       mutex.synchronize do
-        thread = Thread.new(self) do |trigger|
+        thread = Thread.new do
           begin
             sleep delay.to_f
-            trigger.dispatch!(event)
-            trigger.mutex.synchronize do
-              trigger.scheduled_events.delete_if { |_, t| t == Thread.current }
+            dispatch!(event)
+            mutex.synchronize do
+              scheduled_events.delete_if { |_, t| t.equal?(Thread.current) }
             end
           rescue StandardError => e
-            trigger.logger.err(e)
-            trigger.logger.err(Array(e.backtrace).join("\n"))
+            logger.err(e)
+            logger.err(e.backtrace.to_a.join("\n"))
           end
         end
         scheduled_events.push([event, thread])

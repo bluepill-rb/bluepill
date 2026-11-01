@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The command listener stopped answering after `accept` failed once.
 - Several watches could run `ps` at the same time on the same tick.
 - Each reset of a trigger left its canceled events in memory.
+- A start, stop or restart command killed by a signal could crash the daemon, since the command has no exit code.
 
 ## [0.1.3] - 2017-04-06
 

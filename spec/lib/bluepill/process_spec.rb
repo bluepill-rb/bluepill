@@ -390,6 +390,13 @@ describe Bluepill::Process do
       subject.start_process
     end
 
+    it 'warns when a signal killed the command' do
+      allow(Bluepill::System).to receive(:execute_blocking).and_return(exit_code: nil)
+      expect(logger).to receive(:warning).with('Start command execution returned non-zero exit code:')
+      expect(logger).to receive(:warning).with({exit_code: nil}.inspect)
+      subject.start_process
+    end
+
     it 'kills a stop signal thread left from an earlier stop' do
       allow(Bluepill::System).to receive(:execute_blocking).and_return(exit_code: 0)
       stop_thread = Thread.new { sleep }

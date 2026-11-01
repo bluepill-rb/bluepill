@@ -41,8 +41,17 @@ load File.expand_path('../lib/bluepill/version.rb', File.dirname(__FILE__))
 require 'bluepill'
 require 'rspec/core'
 
+# Specs must stub Process.euid before bluepill code uses it. Other callers,
+# such as FileUtils.remove_entry_secure on Ruby 1.9, get the real value.
 module Process
-  def self.euid
-    raise 'Process.euid should be stubbed'
+  LIB_DIR = File.expand_path('../lib', File.dirname(__FILE__))
+
+  class << self
+    alias_method :unstubbed_euid, :euid
+
+    def euid
+      raise 'Process.euid should be stubbed' if caller.first.start_with?(LIB_DIR)
+      unstubbed_euid
+    end
   end
 end

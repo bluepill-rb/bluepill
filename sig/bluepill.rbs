@@ -834,8 +834,6 @@ module Bluepill
     end
 
     class AlwaysTrue < ProcessCondition[Integer]
-      @below: Numeric?
-
       def run: (Integer? pid, boolish include_children) -> Integer
 
       def check: (Integer value) -> true

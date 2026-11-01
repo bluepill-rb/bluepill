@@ -9,14 +9,14 @@ module Bluepill
         @uri = URI.parse(options[:url]) #: URI::HTTP
         @kind = case options[:kind]
                 when Integer
-                  Net::HTTPResponse::CODE_TO_OBJ[options[:kind].to_s]
+                  Net::HTTPResponse::CODE_TO_OBJ[options.fetch(:kind).to_s]
                 when String, Symbol
-                  Net.const_get("HTTP#{options[:kind].to_s.camelize}")
+                  Net.const_get("HTTP#{options.fetch(:kind).to_s.camelize}")
                 else
                   Net::HTTPSuccess
                 end
 
-        @pattern = options[:pattern] || nil
+        @pattern = options[:pattern]
         @open_timeout = (options[:open_timeout] || options[:timeout] || 5).to_i
         @read_timeout = (options[:read_timeout] || options[:timeout] || 5).to_i
       end
@@ -24,7 +24,7 @@ module Bluepill
       def run(_pid, _include_children)
         host = @uri.host #: String
         session = Net::HTTP.new(host, @uri.port)
-        if @uri.scheme == 'https'
+        if @uri.scheme.eql?('https')
           require 'net/https'
           session.use_ssl = true
           session.verify_mode = OpenSSL::SSL::VERIFY_NONE
@@ -45,8 +45,6 @@ module Bluepill
         return true  unless @pattern
 
         response = value #: Net::HTTPResponse
-        return false unless response.class.body_permitted?
-
         !(@pattern =~ response.body).nil?
       end
 
@@ -55,7 +53,7 @@ module Bluepill
       def hide_net_http_bug
         yield
       rescue NoMethodError => e
-        raise(Errno::ECONNREFUSED, "Connection refused attempting to contact #{@uri.scheme}://#{@uri.host}:#{@uri.port}") if e.to_s =~ /#{Regexp.escape("undefined method `closed?' for nil:NilClass")}/
+        raise(Errno::ECONNREFUSED, "Connection refused attempting to contact #{@uri.scheme}://#{@uri.host}:#{@uri.port}") if e.to_s.include?("undefined method `closed?' for nil:NilClass")
 
         raise
       end

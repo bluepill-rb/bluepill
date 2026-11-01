@@ -194,7 +194,7 @@ module Bluepill
 
     def cleanup_process: () -> void
 
-    def prepare_command: (_ToS command) -> String
+    def prepare_command: (String command) -> String
 
     def system_command_options: () -> System::command_options
 
@@ -203,9 +203,9 @@ module Bluepill
 
     def run_command: (String cmd, String description) -> void
 
-    def send_stop_signals: (Process process, Array[Symbol | Integer] signals) -> void
+    def send_stop_signals: (Array[Symbol | Integer] signals) -> void
 
-    def wait_for_stop: (Process process, seconds seconds) -> void
+    def wait_for_stop: (seconds seconds) -> void
   end
 
   # What state_machine passes to transition callbacks and triggers
@@ -355,9 +355,9 @@ module Bluepill
 
     def notify_triggers: (_Transition transition) -> void
 
-    def add_watch: (Symbol name, ?Hash[Symbol, untyped] options) -> Array[ConditionWatch]
+    def add_watch: (Symbol name, Hash[Symbol, untyped] options) -> Array[ConditionWatch]
 
-    def add_trigger: (Symbol name, ?Hash[Symbol, untyped] options) -> Array[Trigger]
+    def add_trigger: (Symbol name, Hash[Symbol, untyped] options) -> Array[Trigger]
 
     def run_watches: () -> void
 

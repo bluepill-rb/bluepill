@@ -139,7 +139,7 @@ module Bluepill
       @group_start_noblock = @group_stop_noblock = @group_restart_noblock = @group_unmonitor_noblock = true
 
       CONFIGURABLE_ATTRIBUTES.each do |attribute_name|
-        send("#{attribute_name}=", options[attribute_name]) if options.key?(attribute_name)
+        public_send("#{attribute_name}=", options.fetch(attribute_name)) if options.key?(attribute_name)
       end
 
       # Let state_machine do its initialization stuff
@@ -181,7 +181,7 @@ module Bluepill
     def dispatch!(event, reason = nil)
       @event_mutex.synchronize do
         @statistics.record_event(event, reason)
-        send(event.to_s)
+        public_send(event)
       end
     end
 
@@ -207,35 +207,35 @@ module Bluepill
           trigger.notify(transition)
         rescue StandardError => e
           logger.err e.backtrace
-          raise e
+          raise
         end
       end
     end
 
     # Watch related methods
-    def add_watch(name, options = {})
+    def add_watch(name, options)
       watches << ConditionWatch.new(name, options.merge(logger: logger))
     end
 
-    def add_trigger(name, options = {})
+    def add_trigger(name, options)
       triggers << Trigger[name].new(self, options.merge(logger: logger))
     end
 
     def run_watches
-      now = Time.now.to_i
+      now = Integer(Time.now)
 
       threads = watches.collect do |watch|
-        [watch, Thread.new { Thread.current[:events] = watch.run(actual_pid, now) }] #: [ConditionWatch, Thread]
+        [watch, Thread.new { watch.run(actual_pid, now) }] #: [ConditionWatch, Thread]
       end
 
       @transitioned = false
 
       threads.each_with_object([]) do |(watch, thread), events|
-        thread.join
-        next if thread[:events].empty?
+        watch_events = thread.value #: Array[Symbol]
+        next if watch_events.empty?
 
-        logger.info "#{watch.name} dispatched: #{thread[:events].join(',')}"
-        thread[:events].each do |event|
+        logger.info "#{watch.name} dispatched: #{watch_events.join(',')}"
+        watch_events.each do |event|
           events << [event, watch.to_s]
         end
       end.each do |event, reason| # rubocop:disable Style/MultilineBlockChain
@@ -250,7 +250,7 @@ module Bluepill
         self.state = 'up'
         return
       end
-      self.state = auto_start == false ? 'unmonitored' : 'down' # we need to check for false value
+      self.state = auto_start.equal?(false) ? 'unmonitored' : 'down' # we need to check for false value
     end
 
     def handle_user_command(cmd)
@@ -298,11 +298,11 @@ module Bluepill
     end
 
     def signal_process(code)
-      code = code.to_s.upcase if code.is_a?(String) || code.is_a?(Symbol)
+      code = code.to_s.upcase if code.is_a?(String) || code.instance_of?(Symbol)
       pid = actual_pid
       # kill with a pid of 0 or less signals a whole process group, which
       # could include bluepill itself, so only signal a real pid
-      raise ArgumentError, "invalid pid #{pid.inspect}" unless pid.is_a?(Integer) && pid > 0
+      raise "invalid pid #{pid.inspect}" unless pid && pid > 0
 
       ::Process.kill(code, pid)
       true
@@ -333,8 +333,8 @@ module Bluepill
     end
 
     def pid_from_command
-      pid = `#{pid_command}`.strip
-      positive_pid(pid.to_i) if pid =~ /\A\d+\z/
+      # Output that is not just digits reads as nil, so as 0
+      positive_pid(`#{pid_command}`.strip[/\A\d+\z/].to_i)
     end
 
     # An empty or garbled pid file reads as 0, which is never a real process
@@ -359,11 +359,11 @@ module Bluepill
     def skip_ticks_for(seconds)
       # The times add up, so a stop followed by a start, which is how
       # restart_process works without a restart_command, waits out both grace times
-      self.skip_ticks_until = (skip_ticks_until || Time.now.to_i) + seconds.to_i
+      self.skip_ticks_until = (skip_ticks_until || Integer(Time.now)) + Integer(seconds)
     end
 
     def skipping_ticks?
-      skip_ticks_until && skip_ticks_until > Time.now.to_i
+      skip_ticks_until && skip_ticks_until > Integer(Time.now)
     end
 
     def refresh_children!
@@ -373,7 +373,7 @@ module Bluepill
       # Add new found children to the list
       new_children_pids = System.get_children(actual_pid) - @children.collect(&:actual_pid)
 
-      logger.info "Existing children: #{@children.collect(&:actual_pid).join(',')}. Got new children: #{new_children_pids.inspect} for #{actual_pid}" unless new_children_pids.empty?
+      logger.info "Existing children: #{@children.collect(&:actual_pid).join(',')}. Got new children: #{new_children_pids} for #{actual_pid}" unless new_children_pids.empty?
 
       # Construct a new process wrapper for each new found children
       # monitor_children sets the factory
@@ -381,9 +381,9 @@ module Bluepill
       new_children_pids.each do |child_pid|
         ProcessJournal.append_pid_to_journal(name, child_pid) if daemonize?
         child_name = "<child(pid:#{child_pid})>"
-        logger = self.logger.prefix_with(child_name)
+        child_logger = logger.prefix_with(child_name)
 
-        child = factory.create_child_process(child_name, child_pid, logger)
+        child = factory.create_child_process(child_name, child_pid, child_logger)
         @children << child
       end
     end

@@ -13,13 +13,11 @@ module Bluepill
         daemon_id = System.daemonize(command, system_command_options)
         if daemon_id
           ProcessJournal.append_pid_to_journal(name, daemon_id)
-          if monitor_children?
-            children.each do |child|
-              ProcessJournal.append_pid_to_journal(name, child.actual_pid)
-            end
+          # Only refresh_children! fills children, and only when monitoring them
+          children.each do |child|
+            ProcessJournal.append_pid_to_journal(name, child.actual_pid)
           end
         end
-        daemon_id
       else
         # This is a self-daemonizing process
         with_timeout(start_grace_time, on_start_timeout) do
@@ -55,7 +53,7 @@ module Bluepill
       elsif stop_signals
         # issue stop signals with configurable delay between each
         logger.warning "Sending stop signals to #{actual_pid}"
-        @threads << Thread.new(self, stop_signals.clone) { |process, signals| send_stop_signals(process, signals) }
+        @threads << Thread.new(stop_signals.clone) { |signals| send_stop_signals(signals) }
       else
         logger.warning "Executing default stop command. Sending TERM signal to #{actual_pid}"
         signal_process('TERM')
@@ -95,7 +93,7 @@ module Bluepill
     end
 
     def prepare_command(command)
-      command.to_s.gsub('{{PID}}', actual_pid.to_s)
+      command.gsub('{{PID}}', actual_pid.to_s)
     end
 
     def system_command_options
@@ -116,7 +114,7 @@ module Bluepill
     def with_timeout(secs, next_state, &blk)
       # Attempt to execute the passed block. If the block takes
       # too long, transition to the indicated next state.
-      Timeout.timeout(secs.to_f, &blk)
+      Timeout.timeout(secs, &blk)
     rescue Timeout::Error
       logger.err 'Execution is taking longer than expected.'
       logger.err 'Did you forget to tell bluepill to daemonize this process?'
@@ -126,7 +124,7 @@ module Bluepill
     def run_command(cmd, description)
       result = System.execute_blocking(cmd, system_command_options)
       # The exit code is nil when a signal killed the command
-      exit_code = result[:exit_code]
+      exit_code = result.fetch(:exit_code)
       return if exit_code && exit_code.zero?
 
       logger.warning "#{description} command execution returned non-zero exit code:"
@@ -136,11 +134,11 @@ module Bluepill
     # Sends the first signal, then each later one after its delay, as long as
     # the process is still running. Then gives the last signal the rest of
     # stop_grace_time to work before cleaning up.
-    def send_stop_signals(process, signals)
-      remaining = process.stop_grace_time
+    def send_stop_signals(signals)
+      remaining = stop_grace_time
       signal = signals.shift
-      logger.info "Sending signal #{signal} to #{process.actual_pid}"
-      process.signal_process(signal) # send first signal
+      logger.info "Sending signal #{signal} to #{actual_pid}"
+      signal_process(signal) # send first signal
 
       until signals.empty?
         # we already checked to make sure signals had an odd number of items
@@ -151,14 +149,14 @@ module Bluepill
         logger.debug "Sleeping for #{delay} seconds"
         sleep delay
         # break unless signal_process(0) #break unless the process can be reached
-        unless process.signal_process(0)
+        unless signal_process(0)
           logger.debug 'Process has terminated.'
           return cleanup_process
         end
-        logger.info "Sending signal #{signal} to #{process.actual_pid}"
-        process.signal_process(signal)
+        logger.info "Sending signal #{signal} to #{actual_pid}"
+        signal_process(signal)
       end
-      wait_for_stop(process, remaining)
+      wait_for_stop(remaining)
       cleanup_process
     end
 
@@ -166,9 +164,9 @@ module Bluepill
     # of the grace time: ticks resume up to a second early (they count whole
     # seconds) and can kill this thread, and the cleanup itself takes up to
     # another second.
-    def wait_for_stop(process, seconds)
+    def wait_for_stop(seconds)
       (seconds - 2).ceil.times do
-        break unless process.signal_process(0)
+        break unless signal_process(0)
 
         sleep 1
       end

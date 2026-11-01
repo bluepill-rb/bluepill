@@ -46,3 +46,12 @@ jobs:
         run: gem push pkg/*.gem --attestation pkg/bluepill.gem.sigstore.json
       - name: Wait for release
         run: gem exec rubygems-await pkg/*.gem
+      # Use this version's section of CHANGELOG.md as the release notes
+      - name: Create GitHub release
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '/^## \[/ { p = index($0, "## [" v "]") == 1; next } p' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 ||
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"
+        env:
+          GH_TOKEN: ${{ github.token }}

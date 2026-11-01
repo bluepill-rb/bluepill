@@ -7,7 +7,7 @@ describe Bluepill::Application do
   before(:each) do
     allow(logger).to receive(:prefix_with).and_return(logger)
     allow(Bluepill::Logger).to receive(:new).and_return(logger)
-    allow(Bluepill::ProcessJournal).to receive(:base_dir=)
+    allow(Bluepill::ProcessJournal).to receive(:setup)
     allow(Bluepill::ProcessJournal).to receive(:logger=)
     allow(Signal).to receive(:trap) { |signal, &block| traps[signal] = block }
   end
@@ -61,8 +61,8 @@ describe Bluepill::Application do
         it { should eq(options[:base_dir]) }
       end
 
-      it 'shares the base dir with the process journal' do
-        expect(Bluepill::ProcessJournal).to receive(:base_dir=).with('/var/bluepill')
+      it "gives the process journal the base dir and the app's name" do
+        expect(Bluepill::ProcessJournal).to receive(:setup).with('/var/bluepill', 'test')
         subject
       end
 

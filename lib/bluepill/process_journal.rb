@@ -4,8 +4,14 @@ module Bluepill
   # Remember the pids and process groups of the processes bluepill starts
   #
   # Each process has a pid journal and a process group journal, files in the
-  # journal directory with one id a line. When bluepill starts again, it
-  # kills whatever an earlier run left in them.
+  # app's journal directory with one id a line. Before bluepill starts a
+  # process, it kills whatever an earlier run left in that process's
+  # journals.
+  #
+  # Each app has a journal directory of its own, so two apps with a process
+  # of the same name don't share a journal. Bluepill 0.1 and earlier kept
+  # every app's journals in one directory, and those are still read and
+  # cleared, so upgrading doesn't leave their processes behind.
   #
   # @api private
   module ProcessJournal
@@ -17,12 +23,19 @@ module Bluepill
       # @api private
       attr_reader :logger
 
-      # Return the directory the journals are in
+      # Return the directory the app's journals are in
+      #
+      # @return [String] the app's directory in the journals directory
+      #
+      # @api private
+      attr_reader :journal_base_dir
+
+      # Return the directory every app's journals were in before 0.2
       #
       # @return [String] the journals directory under bluepill's base dir
       #
       # @api private
-      attr_reader :journal_base_dir
+      attr_reader :legacy_journal_dir
 
       # Set the logger the journal writes to, unless it already has one
       #
@@ -37,20 +50,25 @@ module Bluepill
         @logger ||= new_logger
       end
 
-      # Set the journal directory from bluepill's base dir, and create it
+      # Set the app's journal directory from bluepill's base dir, and create it
       #
-      # Only the first base dir is kept. The directory is made world-writable
-      # so processes that run as other users can lock their journals.
+      # Only the first base dir and app are kept. The directories are made
+      # world-writable so processes that run as other users can lock their
+      # journals.
       #
       # @param [String] base_dir bluepill's base directory
+      # @param [#to_s] app_name the app's name
       #
       # @return [void]
       #
       # @api private
-      def base_dir=(base_dir)
-        @journal_base_dir ||= File.join(base_dir, 'journals')
-        FileUtils.mkdir_p(@journal_base_dir) unless File.exist?(@journal_base_dir)
-        FileUtils.chmod(0o777, @journal_base_dir)
+      def setup(base_dir, app_name)
+        @legacy_journal_dir ||= File.join(base_dir, 'journals')
+        @journal_base_dir ||= File.join(@legacy_journal_dir, app_name.to_s)
+        [@legacy_journal_dir, @journal_base_dir].each do |dir|
+          FileUtils.mkdir_p(dir) unless File.exist?(dir)
+          FileUtils.chmod(0o777, dir)
+        end
       end
     end
 
@@ -131,23 +149,25 @@ module Bluepill
     # Return the path of a process's pid journal
     #
     # @param [String] journal_name the process's name
+    # @param [String] dir the journal directory
     #
     # @return [String] the journal's path
     #
     # @api private
-    def self.pid_journal_filename(journal_name)
-      File.join(journal_base_dir, ".bluepill_pids_journal.#{journal_name}")
+    def self.pid_journal_filename(journal_name, dir = journal_base_dir)
+      File.join(dir, ".bluepill_pids_journal.#{journal_name}")
     end
 
     # Return the path of a process's process group journal
     #
     # @param [String] journal_name the process's name
+    # @param [String] dir the journal directory
     #
     # @return [String] the journal's path
     #
     # @api private
-    def self.pgid_journal_filename(journal_name)
-      File.join(journal_base_dir, ".bluepill_pgids_journal.#{journal_name}")
+    def self.pgid_journal_filename(journal_name, dir = journal_base_dir)
+      File.join(dir, ".bluepill_pgids_journal.#{journal_name}")
     end
 
     # Return the valid pids in a pid journal
@@ -222,7 +242,10 @@ module Bluepill
       kill_all_pgids_from_journal(journal_name)
     end
 
-    # Kill the process groups that a process's journal lists
+    # Kill the process groups that a process's journals list
+    #
+    # That's the app's journal, and the one that bluepill 0.1 and earlier
+    # shared between apps.
     #
     # @param [String] journal_name the process's name
     #
@@ -230,11 +253,16 @@ module Bluepill
     #
     # @api private
     def self.kill_all_pgids_from_journal(journal_name)
-      filename = pgid_journal_filename(journal_name)
-      kill_all_from_journal_file(filename, pgid_journal(filename), 'process group', -1)
+      journal_dirs.each do |dir|
+        filename = pgid_journal_filename(journal_name, dir)
+        kill_all_from_journal_file(filename, pgid_journal(filename), 'process group', -1)
+      end
     end
 
-    # Kill the processes that a process's journal lists
+    # Kill the processes that a process's journals list
+    #
+    # That's the app's journal, and the one that bluepill 0.1 and earlier
+    # shared between apps.
     #
     # @param [String] journal_name the process's name
     #
@@ -242,8 +270,19 @@ module Bluepill
     #
     # @api private
     def self.kill_all_pids_from_journal(journal_name)
-      filename = pid_journal_filename(journal_name)
-      kill_all_from_journal_file(filename, pid_journal(filename), 'process', 1)
+      journal_dirs.each do |dir|
+        filename = pid_journal_filename(journal_name, dir)
+        kill_all_from_journal_file(filename, pid_journal(filename), 'process', 1)
+      end
+    end
+
+    # Return the directories a process's journals can be in
+    #
+    # @return [Array<String>] the app's, and then the one before 0.2
+    #
+    # @api private
+    def self.journal_dirs
+      [journal_base_dir, legacy_journal_dir]
     end
 
     # Kill the ids a journal lists, and then delete the journal

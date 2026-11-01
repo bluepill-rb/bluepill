@@ -45,6 +45,55 @@ describe Bluepill::System do
     end
   end
 
+  describe :started_at do
+    before { allow(Time).to receive(:now).and_return(Time.at(1_000_000)) }
+
+    it "subtracts the process's elapsed time from now" do
+      expect(IO).to receive(:popen).with(%w[ps -o etime= -p 555], err: File::NULL).and_return("  1-02:03:04\n")
+      expect(Bluepill::System.started_at(555)).to eq 1_000_000 - 93_784
+    end
+
+    it 'is nil without such a process' do
+      expect(IO).to receive(:popen).with(%w[ps -o etime= -p 555], err: File::NULL).and_return('')
+      expect(Bluepill::System.started_at(555)).to be_nil
+    end
+
+    it 'is nil when ps prints only a newline' do
+      expect(IO).to receive(:popen).with(%w[ps -o etime= -p 555], err: File::NULL).and_return("\n")
+      expect(Bluepill::System.started_at(555)).to be_nil
+    end
+
+    it "is nil if ps can't run" do
+      expect(IO).to receive(:popen).and_raise(Errno::ENOENT)
+      expect(Bluepill::System.started_at(555)).to be_nil
+    end
+
+    it 'only passes ps a pid' do
+      expect { Bluepill::System.started_at('1; rm -rf /') }.to raise_error(ArgumentError)
+    end
+
+    it 'reads what ps prints' do
+      pid = ::Process.spawn('sleep', '10')
+      begin
+        expect(Bluepill::System.started_at(pid)).to be_within(2).of(Integer(Time.now))
+      ensure
+        ::Process.kill('KILL', pid)
+        begin
+          ::Process.wait(pid)
+        rescue Errno::ECHILD
+          nil # JRuby 1.7 reaps it already
+        end
+      end
+    end
+  end
+
+  describe :boot_time do
+    it 'is when pid 1 started' do
+      expect(Bluepill::System).to receive(:started_at).with(1).and_return(42)
+      expect(Bluepill::System.boot_time).to eq 42
+    end
+  end
+
   describe :cpu_usage do
     before(:each) { stub_ps(ps) }
 

@@ -46,6 +46,37 @@ module Bluepill
       false # no such process (ESRCH), or no pid
     end
 
+    # Return when a process started, in seconds since the epoch
+    #
+    # It's read from ps's elapsed time for the process, so it's accurate to
+    # about a second, and works wherever ps does.
+    #
+    # @param [Integer] pid the process's pid
+    #
+    # @return [Integer, nil] when it started, or nil if there's no such
+    #   process
+    #
+    # @api private
+    def self.started_at(pid)
+      # ps says why on stderr when there's no such process
+      elapsed = IO.popen(['ps', '-o', 'etime=', '-p', Integer(pid).to_s], err: File::NULL, &:read).rstrip
+      Integer(Time.now) - parse_elapsed_time(elapsed) unless elapsed.empty?
+    rescue SystemCallError
+      nil
+    end
+
+    # Return when the machine booted, in seconds since the epoch
+    #
+    # That's when its first process, pid 1, started. In a container, it's
+    # when the container started, which is when its pids start over.
+    #
+    # @return [Integer, nil] when it booted, or nil if ps can't tell
+    #
+    # @api private
+    def self.boot_time
+      started_at(1)
+    end
+
     # Return a process's CPU usage, from this tick's ps table
     #
     # @param [Integer, nil] pid the process's pid

@@ -8,6 +8,14 @@ module Bluepill
   # process, it kills whatever an earlier run left in that process's
   # journals.
   #
+  # A pid can belong to another process by then: after a reboot, or once
+  # pids wrap around. So each line also has when the process started, and
+  # bluepill only kills a pid that still belongs to a process that started
+  # then. A process group whose leader has exited is only killed if it was
+  # journaled since the machine booted. Lines without a start time, from
+  # bluepill 0.1 and earlier, are only trusted if the journal was written
+  # since the machine booted.
+  #
   # Each app has a journal directory of its own, so two apps with a process
   # of the same name don't share a journal. Bluepill 0.1 and earlier kept
   # every app's journals in one directory, and those are still read and
@@ -170,6 +178,36 @@ module Bluepill
       File.join(dir, ".bluepill_pgids_journal.#{journal_name}")
     end
 
+    # Return the ids in a journal, each with when its process started
+    #
+    # @param [String] filename the journal's path
+    #
+    # @return [Array<Array(Integer, Integer)>, Array<Array(Integer, nil)>]
+    #   each id, with when its process started, or nil for a line from
+    #   bluepill 0.1 and earlier, which has none
+    #
+    # @raise [Errno::ENOENT] if there's no journal
+    #
+    # @api private
+    def self.journal_entries(filename)
+      File.readlines(filename).collect do |line|
+        id, started = line.split
+        [id.to_i, started && started.to_i]
+      end
+    end
+
+    # Return a journal line for an id: the id, and when its process started
+    #
+    # @param [Integer] id a pid, or a process group id, whose leader's start
+    #   is recorded
+    #
+    # @return [String] the line, without a start time if ps can't tell
+    #
+    # @api private
+    def self.journal_line(id)
+      [id, System.started_at(id)].compact.join(' ')
+    end
+
     # Return the valid pids in a pid journal
     #
     # @param [String] filename the journal's path
@@ -179,7 +217,7 @@ module Bluepill
     # @api private
     def self.pid_journal(filename)
       logger.debug("pid journal file: #{filename}")
-      result = File.readlines(filename).collect(&:to_i).reject { |pid| skip_pid?(pid) }
+      result = journal_entries(filename).collect(&:first).reject { |pid| skip_pid?(pid) }
       logger.debug("pid journal = #{result.join(' ')}")
       result
     rescue Errno::ENOENT
@@ -196,7 +234,7 @@ module Bluepill
     # @api private
     def self.pgid_journal(filename)
       logger.debug("pgid journal file: #{filename}")
-      result = File.readlines(filename).collect(&:to_i).reject { |pgid| skip_pgid?(pgid) }
+      result = journal_entries(filename).collect(&:first).reject { |pgid| skip_pgid?(pgid) }
       logger.debug("pgid journal = #{result.join(' ')}")
       result
     rescue Errno::ENOENT
@@ -287,8 +325,10 @@ module Bluepill
 
     # Kill the ids a journal lists, and then delete the journal
     #
-    # Sends TERM, waits a second for any survivors, then sends KILL to those
-    # still alive. A negative sign targets process groups instead of pids.
+    # Only kills the ids that still belong to what bluepill journaled (see
+    # journaled_ids). Sends TERM, waits a second for any survivors, then
+    # sends KILL to those still alive. A negative sign targets process groups
+    # instead of pids.
     #
     # @param [String] filename the journal's path
     # @param [Array<Integer>] ids the pids or process group ids in it
@@ -305,6 +345,7 @@ module Bluepill
       end
 
       acquire_atomic_fs_lock(filename) do
+        ids = journaled_ids(filename, ids, label)
         signal_journaled('TERM', ids, label, sign)
         survivors = ids.select { |id| System.pid_alive?(sign * id) }
         unless survivors.empty?
@@ -314,6 +355,42 @@ module Bluepill
         end
         System.delete_if_exists(filename) # reset journal
         logger.debug('Journal cleanup completed')
+      end
+    end
+
+    # Return the ids that still belong to what bluepill journaled
+    #
+    # An id whose process is running is kept only if that process started
+    # when the journal says, give or take 2 seconds, since ps's elapsed time
+    # is only accurate to a second. One whose process has exited (a process
+    # group whose leader is gone) is kept only if it was journaled since the
+    # machine booted, and so is one without a start time.
+    #
+    # @param [String] filename the journal's path
+    # @param [Array<Integer>] ids the valid ids in it
+    # @param [String] label what the ids are, for the log
+    #
+    # @return [Array<Integer>] the ids that are safe to signal, or none if
+    #   the journal was cleared since its ids were read
+    #
+    # @api private
+    def self.journaled_ids(filename, ids, label)
+      # Journals only grow until they're cleared, under the lock this runs in
+      return [] unless File.exist?(filename)
+
+      started = Hash[journal_entries(filename)]
+      boot = System.boot_time
+      written = Integer(File.mtime(filename))
+      ids.select do |id|
+        now = System.started_at(id)
+        journaled = started.fetch(id)
+        ours = if now && journaled
+                 (now - journaled).abs <= 2
+               else
+                 !boot.nil? && (journaled || written) >= boot - 2
+               end
+        logger.info("Skipping old #{label} #{id}, which isn't the one bluepill started") unless ours
+        ours
       end
     end
 
@@ -352,6 +429,8 @@ module Bluepill
         logger.debug("Skipping invalid pgid #{pgid} (class #{pgid.class})")
         return
       end
+      # skip_pgid? made sure it's an Integer
+      valid_pgid = pgid #: Integer
 
       filename = pgid_journal_filename(journal_name)
       acquire_atomic_fs_lock(filename) do
@@ -359,7 +438,7 @@ module Bluepill
           logger.debug("Skipping duplicate pgid #{pgid} already in journal #{journal_name}")
         else
           logger.debug("Saving pgid #{pgid} to process journal #{journal_name}")
-          File.open(filename, 'a+', 0o600) { |f| f.puts(pgid) }
+          File.open(filename, 'a+', 0o600) { |f| f.puts(journal_line(valid_pgid)) }
           logger.info("Saved pgid #{pgid} to journal #{journal_name}")
           logger.debug("Journal now = #{File.read(filename)}")
         end
@@ -392,7 +471,7 @@ module Bluepill
           logger.debug("Skipping duplicate pid #{pid} already in journal #{journal_name}")
         else
           logger.debug("Saving pid #{pid} to process journal #{journal_name}")
-          File.open(filename, 'a+', 0o600) { |f| f.puts(pid) }
+          File.open(filename, 'a+', 0o600) { |f| f.puts(journal_line(valid_pid)) }
           logger.info("Saved pid #{pid} to journal #{journal_name}")
           logger.debug("Journal now = #{File.read(filename)}")
         end

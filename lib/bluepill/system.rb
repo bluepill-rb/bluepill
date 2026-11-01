@@ -107,8 +107,9 @@ module Bluepill
     def ps_axu
       ps = PS_MUTEX.synchronize do
         store[:ps_axu] ||= begin
-          # BSD style ps invocation
-          lines = `ps axo pid,ppid,pcpu,rss,etime,command`.split("\n")
+          # POSIX options, so this also works with System V ps on Solaris and SmartOS.
+          # Use -A because -e shows the environment on FreeBSD and OpenBSD.
+          lines = `ps -Ao pid,ppid,pcpu,rss,etime,args`.split("\n")
 
           lines.each_with_object({}) do |line, mem|
             chunks = line.split(/\s+/)

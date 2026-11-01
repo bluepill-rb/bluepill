@@ -235,6 +235,8 @@ module Bluepill
     # @api private
     def add_process(process, group_name = nil)
       group_name = group_name.to_s if group_name
+      process.app_name = name
+      process.group_name = group_name
 
       groups[group_name] ||= Group.new(group_name, logger: logger.prefix_with(group_name))
       groups.fetch(group_name).add_process(process)

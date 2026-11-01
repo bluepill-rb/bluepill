@@ -60,6 +60,18 @@ describe Bluepill::AppProxy do
       expect(groups).to eq([['rvm'], ['ssl-cert']])
     end
 
+    it "gives every process the app's notify_command, unless it sets its own" do
+      commands = []
+      allow(app).to receive(:add_process) { |process, _| commands << process.notify_command }
+      subject.notify_command = 'alert'
+      subject.process('web') { start_command 'run' }
+      subject.process('worker') do
+        start_command 'run'
+        notify_command 'page'
+      end
+      expect(commands).to eq(%w[alert page])
+    end
+
     it 'adds a process without a group' do
       subject.process('worker') { start_command 'run' }
       expect(app).to have_received(:add_process).with(kind_of(Bluepill::Process), nil)

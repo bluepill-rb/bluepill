@@ -251,6 +251,38 @@ end
 
 Bluepill waits for the `pre_start_command` to finish, and logs a warning if it exits with a non-zero status, but starts the process either way. It runs in the same `working_dir`, with the same `environment`, `uid`, and `gid`, as the process.
 
+Bluepill has four more hooks, named after systemd's `ExecStartPost`, `ExecStop`, and `ExecStopPost`:
+
+```ruby
+Bluepill.application("app_name") do |app|
+  # Runs on every change of state, for every process in the app
+  app.notify_command = "/usr/local/bin/alert-on-call"
+
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+
+    # Runs when the process comes up after a start or a restart
+    process.post_start_command = "renice 20 {{PID}}"
+    # Runs before the stop, which waits for it
+    process.pre_stop_command = "/usr/bin/leave-load-balancer"
+    # Runs after the process has stopped and bluepill has cleaned up
+    process.post_stop_command = "/usr/bin/remove-socket {{PID}}"
+  end
+end
+```
+
+- `post_start_command` runs once the process reaches `up` after a start or a restart, not as soon as `start_command` returns, so a server that daemonizes itself has written its pid file by then.
+- `notify_command` runs on every change of state, such as `up` to `down`, or `down` to `starting`. It gets the details in environment variables: `BLUEPILL_APP`, `BLUEPILL_GROUP`, `BLUEPILL_PROCESS`, `BLUEPILL_FROM` and `BLUEPILL_TO` (the old and new state), `BLUEPILL_REASON` (such as the check that failed, `Flapping`, or `user initiated`), and `BLUEPILL_PID`. Use it to send an alert when bluepill restarts a process or gives up on one. Set it on the app for every process, or on one process.
+- `pre_stop_command` runs before the stop signals or `stop_command`, for example to take a server out of a load balancer or to drain a queue. The stop waits for it to finish, and then goes ahead either way.
+- `post_stop_command` runs after the process has stopped and bluepill has cleaned up, for example to remove a socket or a lock file.
+
+`{{PID}}` in a hook is replaced with the process's pid, or, in `post_stop_command`, with the pid of the process that just stopped. Like `pre_start_command`, the hooks run in the process's `working_dir`, with its `environment`, `uid`, and `gid`, and without a shell. `post_start_command`, `notify_command`, and `post_stop_command` run in the background, so a slow hook never holds up monitoring. Bluepill waits up to `hook_timeout` (30 seconds by default) for a hook, and logs one that fails or times out, but a hook never changes the process's state or stops bluepill from starting or stopping it:
+
+```ruby
+process.hook_timeout = 10.seconds
+```
+
 By default, bluepill will send a SIGTERM to your process when stopping.
 To change the stop command:
 
@@ -334,7 +366,7 @@ end
 
 ### Commands Don't Run in a Shell
 
-Bluepill splits each command (`start_command`, `pre_start_command`, `stop_command`, and `restart_command`) into words and runs it directly, without a shell. So shell syntax like `cd ... &&`, `VAR=value`, `|`, `>`, `2>&1`, and `*` globs doesn't work.
+Bluepill splits each command (`start_command`, `stop_command`, `restart_command`, and the hooks, such as `pre_start_command`) into words and runs it directly, without a shell. So shell syntax like `cd ... &&`, `VAR=value`, `|`, `>`, `2>&1`, and `*` globs doesn't work.
 
 Use the config options instead:
 

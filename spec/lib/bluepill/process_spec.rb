@@ -24,7 +24,9 @@ describe Bluepill::Process do
       [
         :start_command, :stop_command, :restart_command, :stdout, :stderr, :stdin,
         :daemonize, :pid_file, :working_dir, :uid, :gid, :child_process_factory,
-        :pid_command, :auto_start, :supplementary_groups, :stop_signals
+        :pid_command, :auto_start, :supplementary_groups, :stop_signals,
+        :post_start_command, :pre_stop_command, :post_stop_command, :notify_command,
+        :app_name, :group_name
       ].each do |attr|
         describe attr do
           subject { super().send(attr) }
@@ -35,6 +37,11 @@ describe Bluepill::Process do
       describe '#monitor_children' do
         subject { super().monitor_children }
         it { should be false }
+      end
+
+      describe '#hook_timeout' do
+        subject { super().hook_timeout }
+        it { should eq 30 }
       end
 
       describe '#cache_actual_pid' do
@@ -996,6 +1003,238 @@ describe Bluepill::Process do
         stderr: 'err',
         supplementary_groups: ['extra']
       )
+    end
+  end
+
+  describe '#clear_pid' do
+    it 'keeps the last pid for notify_command' do
+      subject.actual_pid = 5
+      subject.clear_pid
+      subject.clear_pid
+      expect(subject.instance_variable_get(:@actual_pid)).to be_nil
+      expect(subject.instance_variable_get(:@last_pid)).to eq 5
+    end
+  end
+
+  describe '#run_hook' do
+    let(:options) { subject.system_command_options }
+
+    it "runs the command with the pid, and the process's options and environment" do
+      subject.environment = {'A' => '1'}
+      expect(Bluepill::System).to receive(:execute_blocking).
+        with('renice 20 7 7', options.merge(environment: {'A' => '1', 'B' => '2'})).
+        and_return(exit_code: 0)
+      expect(logger).to receive(:info).with('Executing post start command: renice 20 7 7')
+      expect(logger).not_to receive(:warning)
+      subject.run_hook('renice 20 {{PID}} {{PID}}', 'Post start', 7, 'B' => '2')
+    end
+
+    it 'adds nothing to the environment by default' do
+      expect(Bluepill::System).to receive(:execute_blocking).with('drain', options).and_return(exit_code: 0)
+      subject.run_hook('drain', 'Pre stop', 7)
+    end
+
+    it 'runs without an environment of its own' do
+      subject.environment = nil
+      expect(Bluepill::System).to receive(:execute_blocking).
+        with('alert', hash_including(environment: {'B' => '2'})).
+        and_return(exit_code: 0)
+      subject.run_hook('alert', 'Notify', nil, 'B' => '2')
+    end
+
+    it 'logs a non-zero exit code' do
+      allow(Bluepill::System).to receive(:execute_blocking).and_return(exit_code: 1)
+      expect(logger).to receive(:warning).with('Notify command execution returned non-zero exit code:')
+      subject.run_hook('alert', 'Notify', 7)
+    end
+
+    it 'stops waiting after hook_timeout' do
+      subject.hook_timeout = 5
+      expect(Timeout).to receive(:timeout).with(5).and_raise(Timeout::Error)
+      expect(logger).to receive(:warning).with('Pre stop command took longer than 5 seconds: drain {{PID}}')
+      subject.run_hook('drain {{PID}}', 'Pre stop', 7)
+    end
+
+    it 'times out a command that runs too long' do
+      subject.hook_timeout = 0.05
+      allow(Bluepill::System).to receive(:execute_blocking) { sleep 1 }
+      expect(logger).to receive(:warning).with('Post stop command took longer than 0.05 seconds: cleanup')
+      subject.run_hook('cleanup', 'Post stop', 7)
+    end
+
+    it 'logs a command that fails to run, without raising' do
+      allow(Bluepill::System).to receive(:execute_blocking).and_raise(Errno::EAGAIN, 'fork')
+      expect(logger).to receive(:err).with('Post stop command failed: Resource temporarily unavailable - fork')
+      expect { subject.run_hook('cleanup', 'Post stop', 7) }.not_to raise_error
+    end
+  end
+
+  describe '#run_hook_in_background' do
+    it 'runs the hook in a thread of its own' do
+      expect(subject).to receive(:run_hook).with('alert', 'Notify', 5, {'A' => '1'}) { Thread.current }
+      thread = subject.run_hook_in_background('alert', 'Notify', 5, {'A' => '1'})
+      expect(thread.value).not_to eq Thread.current
+    end
+
+    it 'adds nothing to the environment by default' do
+      expect(subject).to receive(:run_hook).with('renice', 'Post start', 5, {})
+      subject.run_hook_in_background('renice', 'Post start', 5).join
+    end
+  end
+
+  describe '#post_start_process' do
+    let(:thread) { instance_double(Thread) }
+
+    it 'does nothing without a post start command' do
+      expect(subject).not_to receive(:run_hook_in_background)
+      expect(subject.post_start_process).to be_nil
+    end
+
+    it 'runs the post start command with the pid in the background' do
+      subject.actual_pid = 5
+      subject.post_start_command = 'renice 20 {{PID}}'
+      expect(subject).to receive(:run_hook_in_background).with('renice 20 {{PID}}', 'Post start', 5).and_return(thread)
+      expect(subject.post_start_process).to be thread
+    end
+
+    it 'runs when the process comes up after a start or a restart' do
+      allow(subject).to receive(:process_running?).and_return(true)
+      expect(subject).to receive(:post_start_process).twice
+      %w[starting restarting].each do |state|
+        subject.state = state
+        subject.tick
+        expect(subject).to be_up
+      end
+    end
+
+    it "doesn't run when a process comes back up by itself, or stays up" do
+      allow(subject).to receive(:process_running?).and_return(true)
+      expect(subject).not_to receive(:post_start_process)
+      %w[down up stopping].each do |state|
+        subject.state = state
+        subject.tick
+      end
+    end
+  end
+
+  describe '#pre_stop_process' do
+    before { subject.actual_pid = 5 }
+
+    it 'runs the pre stop command, and waits for it, before stopping' do
+      subject.pre_stop_command = 'drain {{PID}}'
+      allow(Bluepill::System).to receive(:delete_if_exists)
+      expect(subject).to receive(:run_hook).with('drain {{PID}}', 'Pre stop', 5).ordered
+      expect(::Process).to receive(:kill).with('TERM', 5).ordered
+      subject.stop_process
+    end
+
+    it 'does nothing without a pre stop command' do
+      allow(Bluepill::System).to receive(:delete_if_exists)
+      expect(subject).not_to receive(:run_hook)
+      subject.stop_process
+    end
+  end
+
+  describe '#post_stop_process' do
+    let(:thread) { instance_double(Thread) }
+
+    before do
+      subject.actual_pid = 5
+      allow(Bluepill::System).to receive(:delete_if_exists)
+    end
+
+    it 'runs the post stop command in the background, after cleaning up' do
+      subject.post_stop_command = 'rm /tmp/{{PID}}.sock'
+      expect(Bluepill::System).to receive(:delete_if_exists).ordered
+      expect(subject).to receive(:run_hook_in_background).with('rm /tmp/{{PID}}.sock', 'Post stop', 5).ordered
+      subject.stop_process
+    end
+
+    it 'gives the pid of the process that stopped, after bluepill forgets it' do
+      subject.post_stop_command = 'rm /tmp/{{PID}}.sock'
+      allow(subject).to receive(:run_hook_in_background)
+      subject.stop_process
+      subject.clear_pid
+      expect(subject).to receive(:run_hook_in_background).with('rm /tmp/{{PID}}.sock', 'Post stop', 5).and_return(thread)
+      expect(subject.post_stop_process).to be thread
+    end
+
+    it 'does nothing without a post stop command' do
+      expect(subject).not_to receive(:run_hook_in_background)
+      subject.stop_process
+      expect(subject.post_stop_process).to be_nil
+    end
+  end
+
+  describe '#notify_transition' do
+    let(:transition) { double('transition', from_name: :up, to_name: :restarting, loopback?: false) }
+    let(:thread) { instance_double(Thread) }
+
+    before { subject.notify_command = 'alert' }
+
+    it 'runs the notify command in the background, with the details in its environment' do
+      subject.app_name = 'app'
+      subject.group_name = 'web'
+      subject.actual_pid = 5
+      subject.instance_variable_set(:@transition_reason, 'mem_usage: [1.2GB*]')
+      expect(subject).to receive(:run_hook_in_background).with(
+        'alert', 'Notify', 5,
+        {
+          'BLUEPILL_APP' => 'app',
+          'BLUEPILL_GROUP' => 'web',
+          'BLUEPILL_PROCESS' => 'proc_name',
+          'BLUEPILL_FROM' => 'up',
+          'BLUEPILL_TO' => 'restarting',
+          'BLUEPILL_REASON' => 'mem_usage: [1.2GB*]',
+          'BLUEPILL_PID' => '5',
+        }
+      ).and_return(thread)
+      expect(subject.notify_transition(transition)).to be thread
+    end
+
+    it 'gives the last pid of a process that died, and empty values for what it lacks' do
+      subject.actual_pid = 5
+      subject.clear_pid
+      expect(subject).to receive(:run_hook_in_background).with(
+        'alert', 'Notify', 5,
+        hash_including('BLUEPILL_APP' => '', 'BLUEPILL_GROUP' => '', 'BLUEPILL_REASON' => '', 'BLUEPILL_PID' => '5')
+      )
+      subject.notify_transition(transition)
+    end
+
+    it 'gives no pid before the process has one' do
+      expect(subject).to receive(:run_hook_in_background).with('alert', 'Notify', nil, hash_including('BLUEPILL_PID' => ''))
+      subject.notify_transition(transition)
+    end
+
+    it 'does nothing for a loopback' do
+      allow(transition).to receive(:loopback?).and_return(true)
+      expect(subject).not_to receive(:run_hook_in_background)
+      expect(subject.notify_transition(transition)).to be_nil
+    end
+
+    it 'does nothing without a notify command' do
+      subject.notify_command = nil
+      expect(subject).not_to receive(:run_hook_in_background)
+      expect(subject.notify_transition(transition)).to be_nil
+    end
+
+    it "runs on each change of state, with the event's reason" do
+      subject.state = 'up'
+      allow(subject).to receive(:stop_process)
+      expect(subject).to receive(:run_hook_in_background).with(
+        'alert', 'Notify', nil,
+        hash_including('BLUEPILL_FROM' => 'up', 'BLUEPILL_TO' => 'stopping', 'BLUEPILL_REASON' => 'user initiated')
+      )
+      subject.dispatch!(:stop, 'user initiated')
+      expect(subject.instance_variable_get(:@transition_reason)).to be_nil
+    end
+
+    it 'forgets the reason even when the transition raises' do
+      subject.state = 'up'
+      allow(subject).to receive(:stop_process).and_raise('boom')
+      expect { subject.dispatch!(:stop, 'user initiated') }.to raise_error('boom')
+      expect(subject.instance_variable_get(:@transition_reason)).to be_nil
     end
   end
 end

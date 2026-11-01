@@ -14,7 +14,7 @@ module Bluepill
   class AppProxy
     # The attributes that every process of the application gets, unless the
     # process sets its own
-    APP_ATTRIBUTES = [:working_dir, :uid, :gid, :supplementary_groups, :environment, :auto_start].freeze
+    APP_ATTRIBUTES = [:working_dir, :uid, :gid, :supplementary_groups, :environment, :auto_start, :notify_command].freeze
 
     # The directory that the application's processes start in
     #
@@ -79,6 +79,19 @@ module Bluepill
     #
     # @api public
     attr_accessor :auto_start
+
+    # The command the application's processes run on every change of state
+    #
+    # A process can set its own. See Process#notify_command for the
+    # environment variables it gets.
+    #
+    # @example
+    #   app.notify_command = '/usr/local/bin/alert'
+    #
+    # @return [String, nil] the command, without a shell
+    #
+    # @api public
+    attr_accessor :notify_command
 
     # Return the application that the config describes
     #

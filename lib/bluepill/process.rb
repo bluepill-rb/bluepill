@@ -20,6 +20,12 @@ module Bluepill
       :stop_command,
       :restart_command,
 
+      :post_start_command,
+      :pre_stop_command,
+      :post_stop_command,
+      :notify_command,
+      :hook_timeout,
+
       :stdout,
       :stderr,
       :stdin,
@@ -116,6 +122,75 @@ module Bluepill
     #
     # @api private
     attr_accessor :start_command
+
+    # Return the command run each time the process comes up after a start
+    #
+    # It runs when the process reaches up, after a start or a restart, so a
+    # server that daemonizes itself has written its pid file by then.
+    # <tt>{{PID}}</tt> in it is replaced with the process's pid. It runs in
+    # the background, and a failure is only logged.
+    #
+    # @return [String, nil]
+    #
+    # @api private
+    attr_accessor :post_start_command
+
+    # Return the command run before the process is stopped, if any
+    #
+    # The stop waits for it to finish, for up to hook_timeout, and then goes
+    # ahead either way. <tt>{{PID}}</tt> in it is replaced with the
+    # process's pid.
+    #
+    # @return [String, nil]
+    #
+    # @api private
+    attr_accessor :pre_stop_command
+
+    # Return the command run after the process has stopped, if any
+    #
+    # It runs in the background once bluepill has cleaned up after the
+    # process. <tt>{{PID}}</tt> in it is replaced with the pid that stopped.
+    #
+    # @return [String, nil]
+    #
+    # @api private
+    attr_accessor :post_stop_command
+
+    # Return the command run each time the process changes state, if any
+    #
+    # It runs in the background, with BLUEPILL_APP, BLUEPILL_GROUP,
+    # BLUEPILL_PROCESS, BLUEPILL_FROM, BLUEPILL_TO, BLUEPILL_REASON and
+    # BLUEPILL_PID in its environment. An app can set it for all its
+    # processes.
+    #
+    # @return [String, nil]
+    #
+    # @api private
+    attr_accessor :notify_command
+
+    # Return how long a hook command may run before bluepill stops waiting
+    #
+    # It applies to post_start_command, pre_stop_command, post_stop_command
+    # and notify_command. The default is 30 seconds.
+    #
+    # @return [Integer, Float]
+    #
+    # @api private
+    attr_accessor :hook_timeout
+
+    # Return the name of the app the process belongs to
+    #
+    # @return [String, nil]
+    #
+    # @api private
+    attr_accessor :app_name
+
+    # Return the name of the group the process belongs to, if any
+    #
+    # @return [String, nil]
+    #
+    # @api private
+    attr_accessor :group_name
 
     # Return the command that stops the process, if any
     #
@@ -410,6 +485,10 @@ module Bluepill
       restarting: [:up, :down],
     }.freeze
 
+    # The states that a start or restart moves a process through on its
+    # way up, after which post_start_command runs
+    STARTS = [:starting, :restarting].freeze
+
     # Where every other event moves a process from each state it can leave
     TRANSITIONS = {
       start: {unmonitored: :starting, down: :starting},
@@ -468,6 +547,7 @@ module Bluepill
       @start_grace_time = @stop_grace_time = @restart_grace_time = 3
       @environment = {}
       @on_start_timeout = 'start'
+      @hook_timeout = 30
       @group_start_noblock = @group_stop_noblock = @group_restart_noblock = @group_unmonitor_noblock = true
       @state = 'unmonitored'
 
@@ -654,7 +734,9 @@ module Bluepill
     # Run the callbacks after a transition
     #
     # They start, stop or restart the process for the state it reached, and
-    # then record the transition.
+    # then record the transition. Then they run post_start_command when a
+    # start or restart brought the process up, and notify_command when its
+    # state changed, in that order, as state_machine ran them.
     #
     # @param [Transition] transition the move that happened
     #
@@ -668,6 +750,8 @@ module Bluepill
       when :restarting then restart_process
       end
       record_transition(transition)
+      post_start_process if transition.to_name.equal?(:up) && STARTS.include?(transition.from_name)
+      notify_transition(transition)
     end
 
     # Set the logger, for the process and for its watches and triggers
@@ -694,7 +778,13 @@ module Bluepill
     def dispatch!(event, reason = nil)
       @event_mutex.synchronize do
         @statistics.record_event(event, reason)
-        public_send(event)
+        # The reason, for notify_command
+        @transition_reason = reason
+        begin
+          public_send(event)
+        ensure
+          @transition_reason = nil
+        end
       end
     end
 
@@ -995,10 +1085,14 @@ module Bluepill
 
     # Forget the process's pid
     #
+    # The last pid is kept for notify_command, since a process that has died
+    # has no pid by the time its state changes.
+    #
     # @return [nil]
     #
     # @api private
     def clear_pid
+      @last_pid = @actual_pid if @actual_pid
       @actual_pid = nil
     end
 

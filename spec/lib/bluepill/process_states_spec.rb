@@ -33,8 +33,11 @@ describe Bluepill::Process do
     allow(process).to receive(:record_transition) do |transition|
       calls << [:record_transition, transition.from_name, transition.to_name, transition.loopback?, process.state]
     end
-    [:clean_threads, :start_process, :stop_process, :restart_process, :run_watches].each do |callback|
+    [:clean_threads, :start_process, :stop_process, :restart_process, :run_watches, :post_start_process].each do |callback|
       allow(process).to receive(callback) { calls << [callback, process.state] }
+    end
+    allow(process).to receive(:notify_transition) do |transition|
+      calls << [:notify_transition, transition.from_name, transition.to_name, transition.loopback?, process.state]
     end
   end
 
@@ -47,6 +50,8 @@ describe Bluepill::Process do
     expected << [:stop_process, to] if to == 'stopping'
     expected << [:restart_process, to] if to == 'restarting'
     expected << [:record_transition, from.to_sym, to.to_sym, loopback, to]
+    expected << [:post_start_process, to] if to == 'up' && %w[starting restarting].include?(from)
+    expected << [:notify_transition, from.to_sym, to.to_sym, loopback, to]
   end
 
   it 'starts unmonitored' do

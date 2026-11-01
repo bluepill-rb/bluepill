@@ -228,7 +228,7 @@ describe Bluepill::Application do
     end
 
     describe '#add_process' do
-      let(:process) { double('process') }
+      let(:process) { double('process', :app_name= => nil, :group_name= => nil) }
 
       it 'adds the process to a new group named after the group name' do
         group_logger = instance_double(Bluepill::Logger)
@@ -245,6 +245,15 @@ describe Bluepill::Application do
         app.add_process(process)
         app.add_process(process)
         expect(app.groups).to eq(nil => group)
+      end
+
+      it "tells the process its app's and group's names, for notify_command" do
+        allow(logger).to receive(:prefix_with).and_return(logger)
+        allow(Bluepill::Group).to receive(:new).and_return(group)
+        allow(group).to receive(:add_process)
+        expect(process).to receive(:app_name=).with('test')
+        expect(process).to receive(:group_name=).with('web')
+        app.add_process(process, :web)
       end
     end
 

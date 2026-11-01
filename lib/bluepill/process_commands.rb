@@ -63,6 +63,10 @@ module Bluepill
     #
     # @api private
     def stop_process
+      # The pid, for post_stop_command, before cleanup forgets it
+      @stopping_pid = actual_pid
+      pre_stop_process
+
       if monitor_children
         System.get_children(actual_pid).each do |child_pid|
           ProcessJournal.append_pid_to_journal(name, child_pid)
@@ -128,6 +132,106 @@ module Bluepill
     def cleanup_process
       ProcessJournal.kill_all_from_journal(name) # finish cleanup
       unlink_pid
+      post_stop_process
+    end
+
+    # Run the pre_stop_command, if there is one, and wait for it
+    #
+    # The stop waits for up to hook_timeout, and goes ahead either way.
+    #
+    # @return [void]
+    #
+    # @api private
+    def pre_stop_process
+      command = pre_stop_command
+      run_hook(command, 'Pre stop', @stopping_pid) if command
+    end
+
+    # Run the post_stop_command in the background, if there is one
+    #
+    # @return [Thread, nil] the thread that runs it
+    #
+    # @api private
+    def post_stop_process
+      command = post_stop_command
+      run_hook_in_background(command, 'Post stop', @stopping_pid) if command
+    end
+
+    # Run the post_start_command in the background, if there is one
+    #
+    # @return [Thread, nil] the thread that runs it
+    #
+    # @api private
+    def post_start_process
+      command = post_start_command
+      run_hook_in_background(command, 'Post start', actual_pid) if command
+    end
+
+    # Run the notify_command in the background, after a change of state
+    #
+    # The command gets the details in environment variables. A loopback, such
+    # as up to up, isn't a change, so it runs nothing.
+    #
+    # @param [#from_name, #to_name, #loopback?] transition the transition
+    #
+    # @return [Thread, nil] the thread that runs it
+    #
+    # @api private
+    def notify_transition(transition)
+      command = notify_command
+      return if command.nil? || transition.loopback?
+
+      pid = @actual_pid || @last_pid
+      env = {
+        'BLUEPILL_APP' => app_name.to_s,
+        'BLUEPILL_GROUP' => group_name.to_s,
+        'BLUEPILL_PROCESS' => name.to_s,
+        'BLUEPILL_FROM' => transition.from_name.to_s,
+        'BLUEPILL_TO' => transition.to_name.to_s,
+        'BLUEPILL_REASON' => @transition_reason.to_s,
+        'BLUEPILL_PID' => pid.to_s,
+      }
+      run_hook_in_background(command, 'Notify', pid, env)
+    end
+
+    # Run a hook command in a thread of its own
+    #
+    # @param [String] command the command
+    # @param [String] description what the hook is, for the log
+    # @param [Integer, nil] pid what <tt>{{PID}}</tt> in the command becomes
+    # @param [Hash{String => String}] env more environment variables
+    #
+    # @return [Thread] the thread that runs it
+    #
+    # @api private
+    def run_hook_in_background(command, description, pid, env = {})
+      Thread.new { run_hook(command, description, pid, env) }
+    end
+
+    # Run a hook command, and wait for it for up to hook_timeout
+    #
+    # The command runs like the process's other commands, with its
+    # working_dir, environment, uid and gid. A hook that fails or times out
+    # is logged, and never changes what bluepill does with the process.
+    #
+    # @param [String] command the command
+    # @param [String] description what the hook is, for the log
+    # @param [Integer, nil] pid what <tt>{{PID}}</tt> in the command becomes
+    # @param [Hash{String => String}] env more environment variables
+    #
+    # @return [void]
+    #
+    # @api private
+    def run_hook(command, description, pid, env = {})
+      cmd = command.gsub('{{PID}}', pid.to_s)
+      logger.info "Executing #{description.downcase} command: #{cmd}"
+      options = system_command_options
+      options[:environment] = (environment || {}).merge(env)
+      Timeout.timeout(hook_timeout) { run_command(cmd, description, options) }
+    rescue Timeout::Error
+      logger.warning "#{description} command took longer than #{hook_timeout} seconds: #{command}"
+    rescue StandardError => e
+      logger.err "#{description} command failed: #{e}"
     end
 
     # Return a command with <tt>{{PID}}</tt> replaced by the process's pid
@@ -189,12 +293,14 @@ module Bluepill
     # @param [String] cmd the command
     # @param [String] description what the command is, for the log, such as
     #   Start
+    # @param [Hash{Symbol => Object}] options how to run it, as
+    #   system_command_options returns
     #
     # @return [void]
     #
     # @api private
-    def run_command(cmd, description)
-      result = System.execute_blocking(cmd, system_command_options)
+    def run_command(cmd, description, options = system_command_options)
+      result = System.execute_blocking(cmd, options)
       # The exit code is nil when a signal killed the command
       exit_code = result.fetch(:exit_code)
       return if exit_code && exit_code.zero?

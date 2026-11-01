@@ -177,6 +177,13 @@ module Bluepill
       %a{pure} def stdout: () -> String?
       %a{pure} def stderr: () -> String?
       %a{pure} def supplementary_groups: () -> Array[String]?
+      %a{pure} def post_start_command: () -> String?
+      %a{pure} def pre_stop_command: () -> String?
+      %a{pure} def post_stop_command: () -> String?
+      %a{pure} def notify_command: () -> String?
+      %a{pure} def hook_timeout: () -> seconds
+      %a{pure} def app_name: () -> String?
+      %a{pure} def group_name: () -> String?
       def daemonize?: () -> bool
       def monitor_children?: () -> bool
       def actual_pid: () -> Integer?
@@ -188,6 +195,10 @@ module Bluepill
     end
 
     @threads: Array[Thread]
+    @stopping_pid: Integer?
+    @actual_pid: Integer?
+    @last_pid: Integer?
+    @transition_reason: String?
 
     def start_process: () -> Integer
 
@@ -199,6 +210,18 @@ module Bluepill
 
     def cleanup_process: () -> void
 
+    def pre_stop_process: () -> void
+
+    def post_stop_process: () -> Thread?
+
+    def post_start_process: () -> Thread?
+
+    def notify_transition: (_Transition transition) -> Thread?
+
+    def run_hook_in_background: (String command, String description, Integer? pid, ?Hash[String, String] env) -> Thread
+
+    def run_hook: (String command, String description, Integer? pid, ?Hash[String, String] env) -> void
+
     def prepare_command: (String command) -> String
 
     def system_command_options: () -> System::command_options
@@ -206,7 +229,7 @@ module Bluepill
     # Runs the block, and dispatches next_state if it takes longer than secs
     def with_timeout: [T] (seconds secs, String | Symbol next_state) { (Numeric secs) -> T } -> (T | bool)
 
-    def run_command: (String cmd, String description) -> void
+    def run_command: (String cmd, String description, ?System::command_options options) -> void
 
     def send_stop_signals: (Array[Symbol | Integer] signals) -> void
 
@@ -260,6 +283,11 @@ module Bluepill
     # Signal names alternating with delays in seconds
     attr_accessor stop_signals: Array[Symbol | Integer]?
     attr_accessor on_start_timeout: String | Symbol
+    attr_accessor post_start_command: String?
+    attr_accessor pre_stop_command: String?
+    attr_accessor post_stop_command: String?
+    attr_accessor notify_command: String?
+    attr_accessor hook_timeout: seconds
     attr_accessor group_start_noblock: bool
     attr_accessor group_restart_noblock: bool
     attr_accessor group_stop_noblock: bool
@@ -273,6 +301,11 @@ module Bluepill
     @threads: Array[Thread]
     @actual_pid: Integer?
     @transitioned: bool
+    @last_pid: Integer?
+    @transition_reason: String?
+
+    attr_accessor app_name: String?
+    attr_accessor group_name: String?
 
     # A process's move from one state to another
     class Transition
@@ -285,6 +318,8 @@ module Bluepill
     end
 
     TICKS: Hash[Symbol, Array[Symbol]]
+    STARTS: Array[Symbol]
+
     TRANSITIONS: Hash[Symbol, Hash[Symbol, Symbol]]
 
     attr_accessor state: String
@@ -622,6 +657,7 @@ module Bluepill
     attr_accessor supplementary_groups: Array[String]?
     attr_accessor environment: Hash[_ToS, _ToS]?
     attr_accessor auto_start: bool?
+    attr_accessor notify_command: String?
     attr_reader app: Application
 
     def initialize: (_ToS app_name, Hash[Symbol, untyped] options) -> void

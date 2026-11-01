@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Custom checks have a `logger`, which writes to bluepill's log with the app's and the process's names, and the README shows how to write one ([#7](https://github.com/bluepill-rb/bluepill/issues/7)).
 - A `log_level` option for `Bluepill.application`, which drops messages less severe than it, such as `log_level: :warning` ([#47](https://github.com/bluepill-rb/bluepill/issues/47)).
 - `supplementary_groups` can be set for the whole app, like `uid` and `gid` ([#28](https://github.com/bluepill-rb/bluepill/issues/28)).
+- `post_start_command`, `notify_command`, `pre_stop_command`, and `post_stop_command` hooks, with a `hook_timeout`. `notify_command` gets the app, group, process, old and new state, reason, and pid in environment variables, and an app can set it for all its processes ([#60](https://github.com/bluepill-rb/bluepill/issues/60)).
 
 ### Changed
 
@@ -22,17 +23,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- `ProcessJournal.kill_all_from_all_journals`, which was meant to kill every journaled process when bluepill started or quit, but looked in the wrong directory and never found any ([#59](https://github.com/bluepill-rb/bluepill/issues/59)). Bluepill still kills what a process's journal lists before it starts that process, and `bluepill load` keeps monitoring the processes that are already running instead of restarting them.
 - The `state_machine` dependency, whose last release was in 2013. A process's states and events are now a small transition table in `Bluepill::Process`, which moves between the same states, in the same order of callbacks. With all three dependencies gone, bluepill has no runtime dependencies. This isn't a breaking change ([#61](https://github.com/bluepill-rb/bluepill/issues/61)).
 - The `activesupport` dependency, which loaded about 300 files into the daemon for six small methods. `10.seconds`, `2.minutes`, `100.megabytes` and the rest of the durations and sizes that configs use now come from bluepill, as plain numbers of seconds and bytes. Bluepill only adds them where they aren't defined already, so a config that loads ActiveSupport keeps its versions, which bluepill still accepts. This isn't a breaking change ([#61](https://github.com/bluepill-rb/bluepill/issues/61)).
 - The `blue-daemons` dependency. Bluepill now has its own copy of the few functions it used from it, as `Bluepill::Daemonize`, so an app that also uses the `daemons` gem no longer gets whichever of the two loads first. This isn't a breaking change ([#61](https://github.com/bluepill-rb/bluepill/issues/61)).
-- `ProcessJournal.kill_all_from_all_journals`, which was meant to kill every journaled process when bluepill started or quit, but looked in the wrong directory and never found any ([#59](https://github.com/bluepill-rb/bluepill/issues/59)). Bluepill still kills what a process's journal lists before it starts that process, and `bluepill load` keeps monitoring the processes that are already running instead of restarting them.
 
 ### Fixed
 
-- The README's group example gave every process the same pid file, and its `stop_signals` example waited longer than its stop grace time, so bluepill refused to load either config.
 - Stale journal locks, which a daemon that died leaves behind, were never cleared, since bluepill looked for them in the current directory instead of the journal directory, and removed them as if they were files ([#59](https://github.com/bluepill-rb/bluepill/issues/59)). A stale lock made the next write to its journal wait 10 seconds and fail. Bluepill now clears the app's own locks when it starts and quits.
 - After a reboot, or once pids wrapped around, bluepill could kill an unrelated process whose pid it had journaled ([#3](https://github.com/bluepill-rb/bluepill/issues/3)). The journal now records when each process started, and bluepill only kills a pid whose process started then. A process group whose leader has exited, and a journal line from bluepill 0.1 and earlier, are only trusted if they were journaled since the machine booted.
 - Two apps with a process of the same name shared its journal, so starting the process in one app killed the other app's ([#34](https://github.com/bluepill-rb/bluepill/issues/34)). Each app now keeps its journals in a directory of its own, `journals/<app>`. Journals that bluepill 0.1 and earlier wrote are still read and cleared, so upgrading doesn't leave their processes running.
+- The README's group example gave every process the same pid file, and its `stop_signals` example waited longer than its stop grace time, so bluepill refused to load either config.
 
 ## [0.1.4] - 2026-11-01
 

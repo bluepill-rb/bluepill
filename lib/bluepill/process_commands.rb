@@ -211,8 +211,10 @@ module Bluepill
     # Run a hook command, and wait for it for up to hook_timeout
     #
     # The command runs like the process's other commands, with its
-    # working_dir, environment, uid and gid. A hook that fails or times out
-    # is logged, and never changes what bluepill does with the process.
+    # working_dir, environment, uid and gid. A hook that runs longer than
+    # hook_timeout is killed, with anything it started. A hook that fails or
+    # times out is logged, and never changes what bluepill does with the
+    # process.
     #
     # @param [String] command the command
     # @param [String] description what the hook is, for the log
@@ -227,7 +229,8 @@ module Bluepill
       logger.info "Executing #{description.downcase} command: #{cmd}"
       options = system_command_options
       options[:environment] = (environment || {}).merge(env)
-      Timeout.timeout(hook_timeout) { run_command(cmd, description, options) }
+      options[:timeout] = hook_timeout
+      run_command(cmd, description, options)
     rescue Timeout::Error
       logger.warning "#{description} command took longer than #{hook_timeout} seconds: #{command}"
     rescue StandardError => e

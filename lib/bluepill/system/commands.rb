@@ -72,16 +72,24 @@ module Bluepill
 
     # Run a command until it finishes, and return what it printed
     #
+    # With a :timeout, the command runs in a process group of its own, and
+    # if it hasn't finished in time, that whole group is killed, so a hung
+    # command and anything it started don't keep running.
+    #
     # @param [String] cmd the command, split into words without a shell
     # @param [Hash{Symbol => Object}] options :uid, :gid,
-    #   :supplementary_groups, :working_dir and :environment
+    #   :supplementary_groups, :working_dir, :environment and :timeout (in
+    #   seconds)
     #
     # @return [Hash{Symbol => Object}] its :stdout and :stderr Strings, and
     #   its :exit_code (nil if a signal ended it)
     #
+    # @raise [Timeout::Error] if it ran longer than the :timeout
+    #
     # @api private
     def self.execute_blocking(cmd, options = {})
       rd, wr = IO.pipe
+      timeout = options[:timeout]
 
       child = Daemonize.safefork
       if child
@@ -92,6 +100,9 @@ module Bluepill
         wr.close
         # @type var cmd_status: String
         begin
+          # The signatures for IO.select leave out its timeout
+          ready = timeout.nil? || IO.select([rd], nil, nil, timeout.to_f) # steep:ignore UnresolvedOverloading
+          kill_group_after(child, timeout, cmd) unless ready
           cmd_status = rd.read
         ensure
           rd.close
@@ -101,8 +112,31 @@ module Bluepill
         cmd_status.empty? ? {exit_code: 0, stdout: '', stderr: ''} : Marshal.load(cmd_status)
       else
         rd.close
+        # The command and what it starts can all be killed at once on a timeout
+        ::Process.setpgid(0, 0) if timeout
         run_blocking_child(cmd, options, wr)
       end
+    end
+
+    # Kill a command's process group, once it has run past its timeout
+    #
+    # @param [Integer] child the pid of the group's leader, which runs the
+    #   command
+    # @param [Numeric, ActiveSupport::Duration] timeout the seconds it was given
+    # @param [String] cmd the command, for the error
+    #
+    # @return [void] it never returns
+    #
+    # @raise [Timeout::Error] always
+    #
+    # @api private
+    def self.kill_group_after(child, timeout, cmd)
+      begin
+        ::Process.kill('KILL', -child)
+      rescue Errno::ESRCH
+        nil # it finished just now
+      end
+      raise Timeout::Error, "#{cmd} took longer than #{timeout} seconds"
     end
 
     # Run a command in a grandchild, report its result, and exit

@@ -810,6 +810,8 @@ module Bluepill
       ?pid_file: String?,
       ?logger: Logger,
       ?stdin: String?,
+      # Hooks are killed after this many seconds
+      ?timeout: seconds,
       ?stdout: String?,
       ?stderr: String?,
       ?supplementary_groups: Array[String]?
@@ -864,6 +866,8 @@ module Bluepill
     def self.daemonize: (String cmd, ?command_options options) -> Integer?
 
     def self.execute_blocking: (String cmd, ?command_options options) -> blocking_result
+
+    def self.kill_group_after: (Integer child, seconds? timeout, String cmd) -> bot
 
     def self.run_blocking_child: (String cmd, command_options options, IO result_pipe) -> bot
 

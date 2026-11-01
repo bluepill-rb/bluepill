@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Custom checks have a `logger`, which writes to bluepill's log with the app's and the process's names, and the README shows how to write one ([#7](https://github.com/bluepill-rb/bluepill/issues/7)).
 - A `log_level` option for `Bluepill.application`, which drops messages less severe than it, such as `log_level: :warning` ([#47](https://github.com/bluepill-rb/bluepill/issues/47)).
 - `supplementary_groups` can be set for the whole app, like `uid` and `gid` ([#28](https://github.com/bluepill-rb/bluepill/issues/28)).
-- `post_start_command`, `notify_command`, `pre_stop_command`, and `post_stop_command` hooks, with a `hook_timeout`. `notify_command` gets the app, group, process, old and new state, reason, and pid in environment variables, and an app can set it for all its processes ([#60](https://github.com/bluepill-rb/bluepill/issues/60)).
+- `post_start_command`, `notify_command`, `pre_stop_command`, and `post_stop_command` hooks. A hook that runs longer than `hook_timeout` is killed, with anything it started. `notify_command` gets the app, group, process, old and new state, reason, and pid in environment variables, and an app can set it for all its processes ([#60](https://github.com/bluepill-rb/bluepill/issues/60)).
 
 ### Changed
 

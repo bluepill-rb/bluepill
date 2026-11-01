@@ -400,12 +400,53 @@ describe Bluepill::System do
         expect(waiter).to have_received(:join)
       end
 
+      it "doesn't kill a command that finishes within its timeout" do
+        expect(IO).to receive(:select).with([rd], nil, nil, 2.5).and_return([[rd], [], []])
+        allow(rd).to receive(:read).and_return('')
+        expect(Process).not_to receive(:kill)
+        expect(Bluepill::System.execute_blocking('cmd', timeout: 2.5)).to eq(exit_code: 0, stdout: '', stderr: '')
+      end
+
+      it "kills the command's process group when it runs past its timeout" do
+        expect(IO).to receive(:select).with([rd], nil, nil, 2.0).and_return(nil)
+        expect(Process).to receive(:kill).with('KILL', -123)
+        expect(rd).not_to receive(:read)
+        expect { Bluepill::System.execute_blocking('cmd', timeout: 2) }.
+          to raise_error(Timeout::Error, 'cmd took longer than 2 seconds')
+        expect(rd).to have_received(:close)
+      end
+
+      it 'gives IO.select a timeout it can read, from a duration too' do
+        expect(IO).to receive(:select).with([rd], nil, nil, an_instance_of(Float)).and_return([[rd], [], []])
+        allow(rd).to receive(:read).and_return('')
+        Bluepill::System.execute_blocking('cmd', timeout: 2.seconds)
+      end
+
+      it 'times out even if the command has just finished' do
+        allow(IO).to receive(:select).and_return(nil)
+        allow(Process).to receive(:kill).with('KILL', -123).and_raise(Errno::ESRCH)
+        expect { Bluepill::System.execute_blocking('cmd', timeout: 2) }.to raise_error(Timeout::Error)
+      end
+
       it 'should reap the child and close the pipe if interrupted by a timeout' do
         allow(rd).to receive(:read).and_raise(Timeout::Error)
         expect { Bluepill::System.execute_blocking('cmd') }.to raise_error(Timeout::Error)
         expect(Process).to have_received(:detach).with(123)
         expect(rd).to have_received(:close)
         expect(waiter).not_to have_received(:join)
+      end
+    end
+
+    it 'kills a command that hangs, and what it started', if: RUBY_ENGINE == 'ruby' do
+      Dir.mktmpdir do |dir|
+        pid_file = File.join(dir, 'pid')
+        # The command starts a sleep of its own, and hangs
+        cmd = %(#{RbConfig.ruby} -e "File.write('#{pid_file}', Process.spawn('sleep', '30').to_s)\nsleep 30")
+        expect { Bluepill::System.execute_blocking(cmd, timeout: 2) }.to raise_error(Timeout::Error)
+        sleep_pid = Integer(File.read(pid_file))
+        # Killed, and reaped by init, since the command that started it is gone
+        Timeout.timeout(5) { sleep 0.1 while Bluepill::System.pid_alive?(sleep_pid) }
+        expect(Bluepill::System.pid_alive?(sleep_pid)).to be false
       end
     end
 
@@ -436,6 +477,16 @@ describe Bluepill::System do
         allow(Bluepill::System).to receive(:exec).and_raise('exec must be called on Kernel')
         allow(Process).to receive(:waitpid2).with(456).and_return([456, status])
         allow(Process).to receive(:exit!)
+      end
+
+      it 'leads a process group of its own with a timeout' do
+        expect(Process).to receive(:setpgid).with(0, 0)
+        Bluepill::System.execute_blocking('echo', timeout: 5)
+      end
+
+      it "stays in bluepill's process group without a timeout" do
+        expect(Process).not_to receive(:setpgid)
+        Bluepill::System.execute_blocking('echo')
       end
 
       it 'should exec the command and report its output and exit code' do

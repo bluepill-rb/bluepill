@@ -137,8 +137,8 @@ module Bluepill
 
     # Return the command run before the process is stopped, if any
     #
-    # The stop waits for it to finish, for up to hook_timeout, and then goes
-    # ahead either way. <tt>{{PID}}</tt> in it is replaced with the
+    # The stop waits for it to finish, for up to hook_timeout, when it's
+    # killed, and then goes ahead either way. <tt>{{PID}}</tt> in it is replaced with the
     # process's pid.
     #
     # @return [String, nil]
@@ -168,7 +168,7 @@ module Bluepill
     # @api private
     attr_accessor :notify_command
 
-    # Return how long a hook command may run before bluepill stops waiting
+    # Return how long a hook command may run before bluepill kills it
     #
     # It applies to post_start_command, pre_stop_command, post_stop_command
     # and notify_command. The default is 30 seconds.

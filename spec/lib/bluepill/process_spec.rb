@@ -1022,7 +1022,7 @@ describe Bluepill::Process do
     it "runs the command with the pid, and the process's options and environment" do
       subject.environment = {'A' => '1'}
       expect(Bluepill::System).to receive(:execute_blocking).
-        with('renice 20 7 7', options.merge(environment: {'A' => '1', 'B' => '2'})).
+        with('renice 20 7 7', options.merge(environment: {'A' => '1', 'B' => '2'}, timeout: 30)).
         and_return(exit_code: 0)
       expect(logger).to receive(:info).with('Executing post start command: renice 20 7 7')
       expect(logger).not_to receive(:warning)
@@ -1030,7 +1030,7 @@ describe Bluepill::Process do
     end
 
     it 'adds nothing to the environment by default' do
-      expect(Bluepill::System).to receive(:execute_blocking).with('drain', options).and_return(exit_code: 0)
+      expect(Bluepill::System).to receive(:execute_blocking).with('drain', options.merge(timeout: 30)).and_return(exit_code: 0)
       subject.run_hook('drain', 'Pre stop', 7)
     end
 
@@ -1048,18 +1048,13 @@ describe Bluepill::Process do
       subject.run_hook('alert', 'Notify', 7)
     end
 
-    it 'stops waiting after hook_timeout' do
+    it 'gives the command hook_timeout, and logs one that runs longer' do
       subject.hook_timeout = 5
-      expect(Timeout).to receive(:timeout).with(5).and_raise(Timeout::Error)
+      expect(Bluepill::System).to receive(:execute_blocking).
+        with('drain 7', hash_including(timeout: 5)).
+        and_raise(Timeout::Error)
       expect(logger).to receive(:warning).with('Pre stop command took longer than 5 seconds: drain {{PID}}')
       subject.run_hook('drain {{PID}}', 'Pre stop', 7)
-    end
-
-    it 'times out a command that runs too long' do
-      subject.hook_timeout = 0.05
-      allow(Bluepill::System).to receive(:execute_blocking) { sleep 1 }
-      expect(logger).to receive(:warning).with('Post stop command took longer than 0.05 seconds: cleanup')
-      subject.run_hook('cleanup', 'Post stop', 7)
     end
 
     it 'logs a command that fails to run, without raising' do

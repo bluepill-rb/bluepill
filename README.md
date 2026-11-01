@@ -277,7 +277,7 @@ end
 - `pre_stop_command` runs before the stop signals or `stop_command`, for example to take a server out of a load balancer or to drain a queue. The stop waits for it to finish, and then goes ahead either way.
 - `post_stop_command` runs after the process has stopped and bluepill has cleaned up, for example to remove a socket or a lock file.
 
-`{{PID}}` in a hook is replaced with the process's pid, or, in `post_stop_command`, with the pid of the process that just stopped. Like `pre_start_command`, the hooks run in the process's `working_dir`, with its `environment`, `uid`, and `gid`, and without a shell. `post_start_command`, `notify_command`, and `post_stop_command` run in the background, so a slow hook never holds up monitoring. Bluepill waits up to `hook_timeout` (30 seconds by default) for a hook, and logs one that fails or times out, but a hook never changes the process's state or stops bluepill from starting or stopping it:
+`{{PID}}` in a hook is replaced with the process's pid, or, in `post_stop_command`, with the pid of the process that just stopped. Like `pre_start_command`, the hooks run in the process's `working_dir`, with its `environment`, `uid`, and `gid`, and without a shell. `post_start_command`, `notify_command`, and `post_stop_command` run in the background, so a slow hook never holds up monitoring. A hook that runs longer than `hook_timeout` (30 seconds by default) is killed, with anything it started. Bluepill logs a hook that fails or times out, but a hook never changes the process's state or stops bluepill from starting or stopping it:
 
 ```ruby
 process.hook_timeout = 10.seconds

@@ -107,7 +107,8 @@ module Bluepill
             e.backtrace.each { |l| logger.err(l) }
           ensure
             begin
-              client.close
+              # Ruby before 3.0 never counts branches in ensure as covered
+              client && client.close
             rescue IOError
               # closed stream
             end

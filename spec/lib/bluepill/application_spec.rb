@@ -379,6 +379,15 @@ describe Bluepill::Application do
         listen
       end
 
+      it 'keeps listening when accepting a client fails' do
+        error = Errno::EMFILE.new
+        error.set_backtrace(['a.rb:1'])
+        allow(server_socket).to receive(:accept).and_raise(error)
+        expect(logger).to receive(:err).with("Got exception in cmd listener: Errno::EMFILE `#{error.message}`").ordered
+        expect(logger).to receive(:err).with('a.rb:1').ordered
+        expect { listen }.not_to raise_error
+      end
+
       it 'ignores an already closed client' do
         allow(app).to receive(:status).and_return([])
         allow(client).to receive(:close).and_raise(IOError)

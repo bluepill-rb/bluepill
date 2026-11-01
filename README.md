@@ -2,15 +2,13 @@
 Bluepill is a simple process monitoring tool written in Ruby.
 
 [![Gem Version](https://badge.fury.io/rb/bluepill.svg)][gem]
-[![Build Status](https://travis-ci.org/bluepill-rb/bluepill.svg?branch=master)][travis]
-[![Dependency Status](https://gemnasium.com/bluepill-rb/bluepill.svg)][gemnasium]
-[![Code Climate](https://codeclimate.com/github/bluepill-rb/bluepill/badges/gpa.svg)][codeclimate]
-[![Coverage Status](https://coveralls.io/repos/bluepill-rb/bluepill/badge.svg?branch=master&service=github)][coveralls]
+[![Build Status](https://github.com/bluepill-rb/bluepill/actions/workflows/ci.yml/badge.svg?branch=master)][ci]
+[![Maintainability](https://qlty.sh/gh/bluepill-rb/projects/bluepill/maintainability.svg)][qlty]
+[![Coverage Status](https://coveralls.io/repos/github/bluepill-rb/bluepill/badge.svg?branch=master)][coveralls]
 
 [gem]: https://rubygems.org/gems/bluepill
-[travis]: https://travis-ci.org/bluepill-rb/bluepill
-[gemnasium]: https://gemnasium.com/bluepill-rb/bluepill
-[codeclimate]: https://codeclimate.com/github/bluepill-rb/bluepill
+[ci]: https://github.com/bluepill-rb/bluepill/actions/workflows/ci.yml
+[qlty]: https://qlty.sh/gh/bluepill-rb/projects/bluepill
 [coveralls]: https://coveralls.io/github/bluepill-rb/bluepill?branch=master
 
 ## Installation
@@ -366,15 +364,16 @@ JRuby allows you to run bluepill only in the foreground.
 [rubygems]: http://rubygems.org/gems/bluepill
 
 ## Supported Ruby Versions
-This library aims to support and is [tested against][travis] the following Ruby
+This library aims to support and is [tested against][ci] the following Ruby
 implementations:
 
 * Ruby 1.9.3
-* Ruby 2.0.0
-* Ruby 2.1
-* Ruby 2.2
+* Ruby 2.0 through 2.7
+* Ruby 3.0 through 3.4
+* Ruby 4.0
 * JRuby 1.7 (only in the foreground)
-* JRuby 9.0.0.0 (only in the foreground)
+* JRuby 9.0 through 9.4 (only in the foreground)
+* JRuby 10.0 and 10.1 (only in the foreground)
 
 If something doesn't work on one of these interpreters, please open an issue.
 

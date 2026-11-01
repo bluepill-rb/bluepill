@@ -212,7 +212,7 @@ module Bluepill
     def wait_for_stop: (seconds seconds) -> void
   end
 
-  # What state_machine passes to transition callbacks and triggers
+  # What a process passes to its transition callbacks and triggers
   interface _Transition
     def from_name: () -> Symbol?
 
@@ -273,76 +273,50 @@ module Bluepill
     @actual_pid: Integer?
     @transitioned: bool
 
-    # Methods that state_machine defines, in a module it includes
-    interface _StateMachine
-      def state: () -> String
+    # A process's move from one state to another
+    class Transition
+      attr_reader from_name: Symbol
+      attr_reader to_name: Symbol
 
-      def state=: (String state) -> String
+      def initialize: (Symbol from_name, Symbol to_name) -> void
 
-      def state_name: () -> Symbol
-
-      def human_state_name: () -> String
-
-      def state?: (Symbol state) -> bool
-
-      def unmonitored?: () -> bool
-
-      def up?: () -> bool
-
-      def down?: () -> bool
-
-      def starting?: () -> bool
-
-      def stopping?: () -> bool
-
-      def restarting?: () -> bool
-
-      def state_events: () -> Array[Symbol]
-
-      def state_transitions: () -> Array[_Transition]
-
-      def fire_state_event: (Symbol | String event) -> bool
-
-      def can_tick?: () -> bool
-
-      def tick_transition: () -> _Transition?
-
-      def tick!: () -> true
-
-      def start: () -> bool
-
-      def can_start?: () -> bool
-
-      def start_transition: () -> _Transition?
-
-      def start!: () -> true
-
-      def stop: () -> bool
-
-      def can_stop?: () -> bool
-
-      def stop_transition: () -> _Transition?
-
-      def stop!: () -> true
-
-      def unmonitor: () -> bool
-
-      def can_unmonitor?: () -> bool
-
-      def unmonitor_transition: () -> _Transition?
-
-      def unmonitor!: () -> true
-
-      def restart: () -> bool
-
-      def can_restart?: () -> bool
-
-      def restart_transition: () -> _Transition?
-
-      def restart!: () -> true
+      def loopback?: () -> bool
     end
 
-    include _StateMachine
+    TICKS: Hash[Symbol, Array[Symbol]]
+    TRANSITIONS: Hash[Symbol, Hash[Symbol, Symbol]]
+
+    attr_accessor state: String
+
+    def unmonitored?: () -> bool
+
+    def up?: () -> bool
+
+    def down?: () -> bool
+
+    def starting?: () -> bool
+
+    def stopping?: () -> bool
+
+    def restarting?: () -> bool
+
+    def start: () -> bool
+
+    def stop: () -> bool
+
+    def unmonitor: () -> bool
+
+    def restart: () -> bool
+
+    # Moves the process to the state an event leads to, and returns whether
+    # it moved
+    def fire_event: (Symbol event) -> bool
+
+    def tick_target: (Symbol from) -> Symbol?
+
+    def before_transition: (Transition transition) -> true
+
+    def after_transition: (Transition transition) -> void
 
     # Methods bluepill defines
 

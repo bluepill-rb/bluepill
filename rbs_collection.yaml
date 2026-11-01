@@ -20,9 +20,7 @@ gems:
   - name: socket
   - name: timeout
   - name: uri
-  # These have no published signatures. sig-vendor has stubs instead.
-  - name: state_machine
-    ignore: true
+  # This has no published signatures. sig-vendor has a stub instead.
   - name: syslog
     ignore: true
   # Development tools that the signatures don't need

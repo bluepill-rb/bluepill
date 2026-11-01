@@ -1,7 +1,3 @@
-# fixes problem with loading on systems with rubyist-aasm installed
-gem 'state_machine'
-
-require 'state_machine'
 require 'bluepill/system'
 require 'bluepill/process_journal'
 require 'bluepill/process_commands'
@@ -357,59 +353,80 @@ module Bluepill
     # @api private
     attr_reader :logger
 
-    state_machine initial: :unmonitored do
-      # These are the idle states, i.e. only an event (either external or internal) will trigger a transition.
-      # The distinction between down and unmonitored is that down
-      # means we know it is not running and unmonitored is that we don't care if it's running.
-      state :unmonitored, :up, :down
+    # A process's move from one state to another, as triggers and the
+    # transition callbacks see it
+    #
+    # @api private
+    class Transition
+      # Return the state the process is leaving
+      #
+      # @return [Symbol]
+      #
+      # @api private
+      attr_reader :from_name
 
-      # These are transitionary states, we expect the process to change state after a certain period of time.
-      state :starting, :stopping, :restarting
+      # Return the state the process is going to
+      #
+      # @return [Symbol]
+      #
+      # @api private
+      attr_reader :to_name
 
-      event :tick do
-        transition starting: :up, if: :process_running?
-        transition starting: :down, unless: :process_running?
-
-        transition up: :up, if: :process_running?
-        transition up: :down, unless: :process_running?
-
-        # The process failed to die after entering the stopping state. Change the state to reflect
-        # reality.
-        transition stopping: :up, if: :process_running?
-        transition stopping: :down, unless: :process_running?
-
-        transition down: :up, if: :process_running?
-        transition down: :starting, unless: :process_running?
-
-        transition restarting: :up, if: :process_running?
-        transition restarting: :down, unless: :process_running?
+      # Create a transition between two states
+      #
+      # @param [Symbol] from_name the state the process is leaving
+      # @param [Symbol] to_name the state the process is going to
+      #
+      # @return [void]
+      #
+      # @api private
+      def initialize(from_name, to_name)
+        @from_name = from_name
+        @to_name = to_name
       end
 
-      event :start do
-        transition [:unmonitored, :down] => :starting
+      # Return whether the process stays in the same state
+      #
+      # @return [Boolean]
+      #
+      # @api private
+      def loopback?
+        from_name.equal?(to_name)
       end
-
-      event :stop do
-        transition up: :stopping
-      end
-
-      event :unmonitor do
-        transition any => :unmonitored
-      end
-
-      event :restart do
-        transition [:up, :down] => :restarting
-      end
-
-      before_transition any => any, do: :notify_triggers
-      before_transition stopping: any, do: :clean_threads
-
-      after_transition any => :starting, do: :start_process
-      after_transition any => :stopping, do: :stop_process
-      after_transition any => :restarting, do: :restart_process
-
-      after_transition any => any, do: :record_transition
     end
+
+    # Where a tick moves a process from each state: to the first state if
+    # it's running, or to the second if it isn't
+    #
+    # Unmonitored is the one state a tick doesn't change. Down means bluepill
+    # knows the process isn't running, and unmonitored means it doesn't
+    # care. A process that's stopping and still running failed to stop, so
+    # a tick shows it as up.
+    TICKS = {
+      starting: [:up, :down],
+      up: [:up, :down],
+      stopping: [:up, :down],
+      down: [:up, :starting],
+      restarting: [:up, :down],
+    }.freeze
+
+    # Where every other event moves a process from each state it can leave
+    TRANSITIONS = {
+      start: {unmonitored: :starting, down: :starting},
+      stop: {up: :stopping},
+      unmonitor: {
+        unmonitored: :unmonitored, up: :unmonitored, down: :unmonitored,
+        starting: :unmonitored, stopping: :unmonitored, restarting: :unmonitored
+      },
+      restart: {up: :restarting, down: :restarting},
+    }.freeze
+
+    # Return the process's state, such as "up"
+    #
+    # @return [String]
+    #
+    # @api private
+    attr_accessor :state
 
     # Create a process from its checks and options
     #
@@ -452,13 +469,11 @@ module Bluepill
       @environment = {}
       @on_start_timeout = 'start'
       @group_start_noblock = @group_stop_noblock = @group_restart_noblock = @group_unmonitor_noblock = true
+      @state = 'unmonitored'
 
       CONFIGURABLE_ATTRIBUTES.each do |attribute_name|
         public_send("#{attribute_name}=", options.fetch(attribute_name)) if options.key?(attribute_name)
       end
-
-      # Let state_machine do its initialization stuff
-      super() # no arguments intentional
     end
 
     # Check on the process once a tick
@@ -480,9 +495,7 @@ module Bluepill
       # Deal with thread cleanup here since the stopping state isn't used
       clean_threads if unmonitored?
 
-      # run state machine transitions. state_machine defines tick in a
-      # module it creates, which the signatures can't name.
-      super # steep:ignore UnexpectedSuper
+      fire_event(:tick)
 
       return unless up?
 
@@ -492,6 +505,169 @@ module Bluepill
 
       refresh_children!
       children.each(&:tick)
+    end
+
+    # Return whether the process is unmonitored
+    #
+    # @return [Boolean]
+    #
+    # @api private
+    def unmonitored?
+      state.eql?('unmonitored')
+    end
+
+    # Return whether the process is up
+    #
+    # @return [Boolean]
+    #
+    # @api private
+    def up?
+      state.eql?('up')
+    end
+
+    # Return whether the process is down
+    #
+    # @return [Boolean]
+    #
+    # @api private
+    def down?
+      state.eql?('down')
+    end
+
+    # Return whether the process is starting
+    #
+    # @return [Boolean]
+    #
+    # @api private
+    def starting?
+      state.eql?('starting')
+    end
+
+    # Return whether the process is stopping
+    #
+    # @return [Boolean]
+    #
+    # @api private
+    def stopping?
+      state.eql?('stopping')
+    end
+
+    # Return whether the process is restarting
+    #
+    # @return [Boolean]
+    #
+    # @api private
+    def restarting?
+      state.eql?('restarting')
+    end
+
+    # Start the process, if it's unmonitored or down
+    #
+    # @return [Boolean] whether the process moved to starting
+    #
+    # @api private
+    def start
+      fire_event(:start)
+    end
+
+    # Stop the process, if it's up
+    #
+    # @return [Boolean] whether the process moved to stopping
+    #
+    # @api private
+    def stop
+      fire_event(:stop)
+    end
+
+    # Stop monitoring the process, from any state
+    #
+    # @return [Boolean] whether the process moved to unmonitored
+    #
+    # @api private
+    def unmonitor
+      fire_event(:unmonitor)
+    end
+
+    # Restart the process, if it's up or down
+    #
+    # @return [Boolean] whether the process moved to restarting
+    #
+    # @api private
+    def restart
+      fire_event(:restart)
+    end
+
+    # Move the process to the state an event leads to from its state
+    #
+    # The before callbacks see the old state, and can throw :halt to cancel
+    # the move. The after callbacks see the new one.
+    #
+    # @param [Symbol] event :tick, :start, :stop, :unmonitor or :restart
+    #
+    # @return [Boolean] whether the process moved, false when the event
+    #   doesn't lead anywhere from its state or a callback halted it
+    #
+    # @api private
+    def fire_event(event)
+      from = state.to_sym
+      to = event.equal?(:tick) ? tick_target(from) : TRANSITIONS.fetch(event)[from]
+      return false unless to
+
+      transition = Transition.new(from, to)
+      return false unless catch(:halt) { before_transition(transition) }
+
+      self.state = to.to_s
+      after_transition(transition)
+      true
+    end
+
+    # Return where a tick moves the process from a state
+    #
+    # @param [Symbol] from the process's state
+    #
+    # @return [Symbol, nil] the next state, or nil for unmonitored
+    #
+    # @api private
+    def tick_target(from)
+      targets = TICKS[from]
+      return unless targets
+
+      process_running? ? targets.first : targets.last
+    end
+
+    # Run the callbacks before a transition
+    #
+    # They tell the triggers, and clean up the threads of a stop on the way
+    # out of stopping.
+    #
+    # @param [Transition] transition the move about to happen
+    #
+    # @return [true] so fire_event knows no callback halted
+    #
+    # @api private
+    def before_transition(transition)
+      notify_triggers(transition)
+      clean_threads if transition.from_name.equal?(:stopping)
+      true
+    end
+
+    # Run the callbacks after a transition
+    #
+    # They start, stop or restart the process for the state it reached, and
+    # then record the transition.
+    #
+    # @param [Transition] transition the move that happened
+    #
+    # @return [void]
+    #
+    # @api private
+    def after_transition(transition)
+      case transition.to_name
+      when :starting then start_process
+      when :stopping then stop_process
+      when :restarting then restart_process
+      end
+      record_transition(transition)
     end
 
     # Set the logger, for the process and for its watches and triggers

@@ -19,6 +19,7 @@ group :development do
     gem 'stackprof', require: false
     # Duel compares with older versions of bluepill, which load these
     gem 'blue-daemons', '~> 1.1', require: false
+    gem 'state_machine', '~> 1.1', require: false
   end
 end
 

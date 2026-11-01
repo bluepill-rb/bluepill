@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- The `state_machine` dependency, whose last release was in 2013. A process's states and events are now a small transition table in `Bluepill::Process`, which moves between the same states, in the same order of callbacks. With all three dependencies gone, bluepill has no runtime dependencies. This isn't a breaking change ([#61](https://github.com/bluepill-rb/bluepill/issues/61)).
 - The `activesupport` dependency, which loaded about 300 files into the daemon for six small methods. `10.seconds`, `2.minutes`, `100.megabytes` and the rest of the durations and sizes that configs use now come from bluepill, as plain numbers of seconds and bytes. Bluepill only adds them where they aren't defined already, so a config that loads ActiveSupport keeps its versions, which bluepill still accepts. This isn't a breaking change ([#61](https://github.com/bluepill-rb/bluepill/issues/61)).
 - The `blue-daemons` dependency. Bluepill now has its own copy of the few functions it used from it, as `Bluepill::Daemonize`, so an app that also uses the `daemons` gem no longer gets whichever of the two loads first. This isn't a breaking change ([#61](https://github.com/bluepill-rb/bluepill/issues/61)).
 

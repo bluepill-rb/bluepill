@@ -23,8 +23,6 @@ Gem::Specification.new do |spec|
     }
   end
 
-  spec.add_dependency 'state_machine', '~> 1.1'
-
   spec.required_ruby_version = '>= 1.9.3'
 
   # sig has the RBS signatures, and the standard libraries they use in manifest.yaml

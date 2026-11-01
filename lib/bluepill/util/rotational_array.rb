@@ -8,7 +8,7 @@ module Bluepill
       end
 
       def push(value)
-        super(value)
+        super
 
         shift if length > @capacity
         self

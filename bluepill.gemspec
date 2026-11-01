@@ -30,8 +30,8 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = '>= 1.9.3'
 
   # sig has the RBS signatures, and the standard libraries they use in manifest.yaml
+  spec.executables      = %w[bluepill bpsv]
   spec.files            = %w[CHANGELOG.md CONTRIBUTING.md DESIGN.md LICENSE README.md bluepill.gemspec sig/manifest.yaml] +
-    Dir['bin/*'] + Dir['lib/**/*.rb'] + Dir['sig/**/*.rbs']
-  spec.executables      = Dir['bin/*'].collect { |f| File.basename(f) }
+    spec.executables.collect { |f| "bin/#{f}" } + Dir['lib/**/*.rb'] + Dir['sig/**/*.rbs']
   spec.require_paths    = ['lib']
 end

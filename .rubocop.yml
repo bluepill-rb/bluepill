@@ -14,21 +14,11 @@ Naming/FileName:
   Exclude:
     - local-bluepill
 
-Lint/ScriptPermission:
-  Exclude:
-    - examples/**/*
-
-# The examples use 0.times and 1.times to show how to define several processes
-Lint/UselessTimes:
-  Exclude:
-    - examples/**/*
-
 Metrics/BlockLength:
   AllowedMethods:
     - state_machine
   Exclude:
     - bin/bluepill
-    - examples/**/*
     - spec/**/*
 
 # Marshal only reads data from bluepill's own socket and child processes

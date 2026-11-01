@@ -1,12 +1,7 @@
-#! /usr/bin/env ruby
-require 'rubygems'
-require 'bluepill'
-require 'logger'
-
 # ATTENTION:
 # You must declare only one application per config when foreground mode specified
 #
-# http://github.com/Undev/runit-man used as example of monitored application.
+# https://github.com/Undev/runit-man used as example of monitored application.
 
 Bluepill.application(:runit_man, foreground: true) do |app|
   app.process('runit-man') do |process|

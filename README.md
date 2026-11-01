@@ -342,6 +342,24 @@ To quit the bluepill daemon for an application:
 
     sudo bluepill quit
 
+#### bpsv
+
+`bpsv` runs a bluepill command on the process it's named after, so a
+symlink to it works like an init script. For a process named `unicorn`:
+
+    sudo ln -s "$(which bpsv)" /usr/local/bin/unicorn
+    sudo unicorn restart
+
+That runs `bluepill restart unicorn`. Like `bluepill` without an
+_app_name_, it only works when one bluepill daemon is running.
+
+### Examples
+
+[examples/sample_app.rb](examples/sample_app.rb) monitors a small forking
+echo server, and stops any worker that uses too much memory. Its comments
+show how to run it. [examples/runit.rb](examples/runit.rb) monitors a
+service managed by runit.
+
 ### Logging
 By default, bluepill uses syslog local6 facility as described in the installation section. But if for any reason you don&apos;t want to use syslog, you can use a log file. You can do this by setting the :log\_file option in the config:
 

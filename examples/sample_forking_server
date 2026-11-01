@@ -1,0 +1,66 @@
+#!/usr/bin/env ruby
+
+# A forking echo server to try bluepill with. See sample_app.rb.
+#
+# It starts three workers that share a socket on localhost (port 4242 by
+# default) and replaces any worker that exits. Each worker echoes a line
+# back and then holds on to 10 MB more memory, so a few requests push it
+# over the memory limit in sample_app.rb.
+#
+# Based on http://tomayko.com/writings/unicorn-is-unix
+
+require 'socket'
+
+port = ARGV[0].to_i
+port = 4242 if port.zero?
+
+acceptor = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
+acceptor.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
+acceptor.bind(Socket.pack_sockaddr_in(port, '127.0.0.1'))
+acceptor.listen(10)
+
+def start_worker(acceptor, port)
+  fork do
+    trap('QUIT') do
+      $0 = 'forking_server worker: QUIT received, shutting down gracefully'
+      sleep 5
+      exit
+    end
+    trap('INT') { exit }
+
+    $0 = 'forking_server worker'
+    puts "worker #{Process.pid} accepting on localhost:#{port}"
+    memory = []
+    loop do
+      socket, = acceptor.accept
+      socket.write "worker #{Process.pid} echo> "
+      socket.flush
+      message = socket.gets.to_s
+      socket.write message
+      socket.close
+      puts "worker #{Process.pid} echoed #{message.strip.inspect}"
+      memory << ('*' * (10 * 1024 * 1024))
+    end
+  end
+end
+
+$0 = 'forking_server master'
+workers = Array.new(3) { start_worker(acceptor, port) }
+
+trap('INT') do
+  workers.each do |pid|
+    begin
+      Process.kill('INT', pid)
+    rescue Errno::ESRCH
+      nil
+    end
+  end
+  exit
+end
+
+loop do
+  pid = Process.wait
+  workers.delete(pid)
+  puts "worker #{pid} exited, starting a new one"
+  workers << start_worker(acceptor, port)
+end

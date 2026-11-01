@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - `Bluepill::Application::Client` and `Bluepill::Application::Server`, which raised `TypeError` when loaded and weren't used.
+- The `sample_forking_server` executable. It was a test server for the examples, so it moved to `examples/` and is no longer installed with the gem.
 
 ### Fixed
 

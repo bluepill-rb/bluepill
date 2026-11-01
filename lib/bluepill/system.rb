@@ -193,13 +193,13 @@ module Bluepill
         cmd_err_write.close
 
         # wait for the cmd to finish executing and acknowledge it's death
-        ::Process.waitpid(pid)
+        _, status = ::Process.waitpid2(pid)
 
         # collect stdout, stderr and exitcode
         result = {
           stdout: cmd_out_read.read,
           stderr: cmd_err_read.read,
-          exit_code: $?.exitstatus,
+          exit_code: status.exitstatus,
         }
 
         # We're done with these ends of the pipes as well

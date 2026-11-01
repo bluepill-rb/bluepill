@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Several watches could run `ps` at the same time on the same tick.
 - Each reset of a trigger left its canceled events in memory.
 - A start, stop or restart command killed by a signal could crash the daemon, since the command has no exit code.
+- The `running_time` check could crash the daemon when `ps` didn't list the process.
 
 ## [0.1.3] - 2017-04-06
 

@@ -10,6 +10,11 @@ describe Bluepill::ProcessConditions::RunningTime do
     expect(subject.run(123, false)).to eq(30)
   end
 
+  it 'returns 0 for a process that ps does not list' do
+    expect(Bluepill::System).to receive(:running_time).with(123).and_return(nil)
+    expect(subject.run(123, false)).to eq(0)
+  end
+
   it 'passes when the running time is below the limit' do
     expect(subject.check(59)).to be true
   end

@@ -7,7 +7,8 @@ module Bluepill
       end
 
       def run(pid, _include_children)
-        System.running_time(pid)
+        # Like the other ps conditions, a process missing from ps reads as 0
+        System.running_time(pid).to_i
       end
 
       def check(value)

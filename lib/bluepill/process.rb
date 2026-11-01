@@ -298,10 +298,15 @@ module Bluepill
 
     def signal_process(code)
       code = code.to_s.upcase if code.is_a?(String) || code.is_a?(Symbol)
-      ::Process.kill(code, actual_pid)
+      pid = actual_pid
+      # kill with a pid of 0 or less signals a whole process group, which
+      # could include bluepill itself, so only signal a real pid
+      raise ArgumentError, "invalid pid #{pid.inspect}" unless pid.is_a?(Integer) && pid > 0
+
+      ::Process.kill(code, pid)
       true
     rescue StandardError => e
-      logger.err "Failed to signal process #{actual_pid} with code #{code}: #{e}"
+      logger.err "Failed to signal process #{pid} with code #{code}: #{e}"
       false
     end
 
@@ -318,8 +323,7 @@ module Bluepill
 
       @actual_pid = if pid_file
                       if File.exist?(pid_file)
-                        str = File.read(pid_file)
-                        str.to_i unless str.empty?
+                        positive_pid(File.read(pid_file).to_i)
                       else
                         logger.warning("pid_file #{pid_file} does not exist or cannot be read")
                         nil
@@ -329,7 +333,12 @@ module Bluepill
 
     def pid_from_command
       pid = `#{pid_command}`.strip
-      pid =~ /\A\d+\z/ ? pid.to_i : nil
+      positive_pid(pid.to_i) if pid =~ /\A\d+\z/
+    end
+
+    # An empty or garbled pid file reads as 0, which is never a real process
+    def positive_pid(pid)
+      pid if pid > 0
     end
 
     def actual_pid=(pid)

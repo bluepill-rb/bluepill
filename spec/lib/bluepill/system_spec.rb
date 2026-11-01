@@ -228,6 +228,14 @@ describe Bluepill::System do
         expect(Process).to have_received(:exit!).with(true)
       end
 
+      it 'should not write a pid of 0 to the pid file' do
+        allow(Bluepill::System).to receive(:can_write_pid_file).and_return(true)
+        allow(Daemonize).to receive(:call_as_daemon).and_return(0)
+        Bluepill::System.daemonize('cmd', options)
+        expect(File).not_to have_received(:open)
+        expect(wr).to have_received(:write).with(0)
+      end
+
       it 'should change directory and set the environment' do
         allow(Bluepill::System).to receive(:can_write_pid_file).and_return(true)
         options[:working_dir] = '/tmp/work'

@@ -641,6 +641,15 @@ describe Bluepill::Process do
       expect(logger).to receive(:err).with(/Failed to signal process 5 with code 0/)
       expect(subject.signal_process(0)).to be false
     end
+
+    it 'never signals a pid of 0 or less' do
+      [0, -1, nil].each do |pid|
+        subject.instance_variable_set(:@actual_pid, pid)
+        expect(logger).to receive(:err).with("Failed to signal process #{pid} with code 0: invalid pid #{pid.inspect}")
+        expect(subject.signal_process(0)).to be false
+      end
+      expect(::Process).not_to have_received(:kill)
+    end
   end
 
   describe '#actual_pid' do
@@ -648,6 +657,12 @@ describe Bluepill::Process do
       subject.pid_command = 'getpid'
       expect(subject).to receive(:`).with('getpid').and_return("123\n")
       expect(subject.actual_pid).to eq 123
+    end
+
+    it 'returns nil when the pid command prints 0' do
+      subject.pid_command = 'getpid'
+      allow(subject).to receive(:`).and_return("0\n")
+      expect(subject.actual_pid).to be_nil
     end
 
     it 'returns nil when the pid command output is not a number' do
@@ -688,6 +703,20 @@ describe Bluepill::Process do
       it 'is nil for an empty pid file' do
         File.open(subject.pid_file, 'w') {}
         expect(subject.actual_pid).to be_nil
+      end
+
+      it 'is nil for a pid file that does not hold a positive pid' do
+        subject.cache_actual_pid = false
+        ["0\n", "\n", 'garbage', '-5'].each do |content|
+          File.open(subject.pid_file, 'w') { |f| f.write(content) }
+          expect(subject.actual_pid).to be_nil
+        end
+      end
+
+      it 'is not running for a pid file that holds 0' do
+        File.open(subject.pid_file, 'w') { |f| f.write("0\n") }
+        allow(::Process).to receive(:kill).and_call_original
+        expect(subject.process_running?(true)).to be false
       end
 
       it 'warns when the pid file does not exist' do

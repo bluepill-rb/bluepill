@@ -63,6 +63,10 @@ jobs:
           gem install --local bundler-1.17.3.gem --no-document
           bundle install --jobs 4
       - run: bundle exec rake spec
+      # The Gemfile only installs Steep on Ruby 3.3 and newer
+      - name: Type check with Steep
+        if: contains(fromJSON('["3.3", "3.4", "4.0"]'), matrix.ruby)
+        run: bundle exec rake steep
       - name: Upload coverage to Coveralls
         if: matrix.ruby == '4.0'
         uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8

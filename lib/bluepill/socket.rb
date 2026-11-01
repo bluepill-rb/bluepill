@@ -21,7 +21,7 @@ module Bluepill
           end
           break
         rescue EOFError, Timeout::Error
-          abort('Socket Timeout: Server may not be responding') if current_attempt == MAX_ATTEMPTS - 1
+          abort('Socket Timeout: Server may not be responding') if current_attempt.eql?(MAX_ATTEMPTS - 1)
           puts "Retry #{current_attempt + 1} of #{MAX_ATTEMPTS}"
         end
       end
@@ -29,16 +29,16 @@ module Bluepill
     end
 
     def self.server(base_dir, name)
-      # @type var socket_path: String
-      socket_path = self.socket_path(base_dir, name)
-      UNIXServer.open(socket_path)
+      # @type var path: String
+      path = socket_path(base_dir, name)
+      UNIXServer.open(path)
     rescue Errno::EADDRINUSE
       begin
         # if sock file has been created, test to see if there is a server
-        UNIXSocket.open(socket_path)
+        UNIXSocket.open(path)
       rescue Errno::ECONNREFUSED
-        File.delete(socket_path)
-        UNIXServer.open(socket_path)
+        File.delete(path)
+        UNIXServer.open(path)
       else
         $stderr.puts('Server is already running!')
         exit(7)

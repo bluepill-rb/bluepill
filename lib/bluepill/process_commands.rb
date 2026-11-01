@@ -111,7 +111,7 @@ module Bluepill
       }
     end
 
-    def with_timeout(secs, next_state = nil, &blk)
+    def with_timeout(secs, next_state, &blk)
       # Attempt to execute the passed block. If the block takes
       # too long, transition to the indicated next state.
       Timeout.timeout(secs.to_f, &blk)

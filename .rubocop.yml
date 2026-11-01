@@ -29,7 +29,6 @@ Metrics/BlockLength:
   Exclude:
     - bin/bluepill
     - examples/**/*
-    - local-bluepill
     - spec/**/*
 
 # Marshal only reads data from bluepill's own socket and child processes
@@ -45,7 +44,6 @@ Lint/SuppressedException:
     - lib/bluepill/application.rb
     - lib/bluepill/process_journal.rb
     - lib/bluepill/system.rb
-    - local-bluepill
     - spec/spec_helper.rb
 
 Metrics/AbcSize:

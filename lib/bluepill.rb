@@ -31,11 +31,8 @@ require 'monitor'
 require 'timeout'
 require 'logger'
 
-require 'active_support'
-require 'active_support/inflector'
-require 'active_support/core_ext/hash'
-require 'active_support/core_ext/numeric'
-require 'active_support/duration'
+require 'bluepill/units'
+require 'bluepill/util/inflections'
 
 require 'bluepill/dsl/process_proxy'
 require 'bluepill/dsl/process_factory'

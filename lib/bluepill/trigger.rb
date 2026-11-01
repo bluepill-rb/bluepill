@@ -18,7 +18,7 @@ module Bluepill
     # @api private
     def self.inherited(klass)
       super
-      @implementations[klass.name.split('::').last.underscore.to_sym] = klass
+      @implementations[Util.underscore(klass.name.split('::').last).to_sym] = klass
     end
 
     # Return the trigger class a config names

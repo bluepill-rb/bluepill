@@ -237,7 +237,10 @@ module Bluepill
       ::Process.groups |= group_nums unless group_nums.empty?
       ::Process::Sys.setgid(gid_num) if gid_num
       ::Process::Sys.setuid(uid_num) if uid_num
-      ENV['HOME'] = Etc.getpwuid(uid_num).try(:dir) || ENV['HOME'] if uid_num
+      return unless uid_num
+
+      user = Etc.getpwuid(uid_num)
+      ENV['HOME'] = user.dir if user && user.dir
     end
 
     # Return whether the pid file can be written, logging why if it can't

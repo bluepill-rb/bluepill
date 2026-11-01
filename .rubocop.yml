@@ -113,6 +113,7 @@ Style/ClassVars:
     - lib/bluepill/dsl/process_factory.rb
     - spec/lib/bluepill/dsl/app_proxy_spec.rb
     - spec/lib/bluepill/dsl/process_factory_spec.rb
+    - spec/configs_spec.rb
 
 Style/CollectionMethods:
   Enabled: true

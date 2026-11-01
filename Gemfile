@@ -3,7 +3,6 @@ source 'https://rubygems.org'
 # Specify your gem's dependencies in bluepill.gemspec
 gemspec
 
-gem 'activesupport', '~> 4.2' if RUBY_VERSION < '2.2.2'
 gem 'json', '< 2.3' if RUBY_VERSION < '2.0'
 gem 'rake'
 gem 'syslog' if RUBY_VERSION >= '3.4'
@@ -18,6 +17,8 @@ group :development do
     gem 'duel', require: false
     gem 'duel-retained', require: false
     gem 'stackprof', require: false
+    # Duel compares with older versions of bluepill, which load these
+    gem 'blue-daemons', '~> 1.1', require: false
   end
 end
 
@@ -28,6 +29,9 @@ group :doc do
 end
 
 group :test do
+  # The specs check that configs written with ActiveSupport's durations
+  # and sizes still work. ActiveSupport 5 needs Ruby 2.2.2.
+  gem 'activesupport', RUBY_VERSION < '2.2.2' ? '~> 4.2' : '>= 3.2'
   gem 'rspec', '>= 3'
   gem 'rubocop', '~> 1.92' if RUBY_VERSION >= '2.7'
   gem 'simplecov', '>= 0.4'

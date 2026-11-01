@@ -10,12 +10,12 @@ sources:
 path: .gem_rbs_collection
 
 gems:
-  - name: activesupport
   - name: etc
   - name: fileutils
   - name: logger
   - name: monitor
   - name: net-http
+  - name: openssl
   - name: shellwords
   - name: socket
   - name: timeout
@@ -26,6 +26,8 @@ gems:
   - name: syslog
     ignore: true
   # Development tools that the signatures don't need
+  - name: activesupport
+    ignore: true
   - name: diff-lcs
     ignore: true
   - name: maruku

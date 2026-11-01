@@ -693,6 +693,43 @@ module Bluepill
     def to_process: () -> Process
   end
 
+  # The durations and sizes a config writes, as plain numbers of seconds
+  # and bytes. Numeric includes it, so its own methods come first.
+  # What Units needs of the number it's in
+  interface _Multipliable
+    def *: (Integer) -> Numeric
+  end
+
+  module Units : _Multipliable
+    MINUTE: Integer
+    HOUR: Integer
+    DAY: Integer
+    KILOBYTE: Integer
+    MEGABYTE: Integer
+    GIGABYTE: Integer
+
+    def seconds: () -> self
+    alias second seconds
+
+    def minutes: () -> Numeric
+    alias minute minutes
+
+    def hours: () -> Numeric
+    alias hour hours
+
+    def days: () -> Numeric
+    alias day days
+
+    def kilobytes: () -> Numeric
+    alias kilobyte kilobytes
+
+    def megabytes: () -> Numeric
+    alias megabyte megabytes
+
+    def gigabytes: () -> Numeric
+    alias gigabyte gigabytes
+  end
+
   # The parts of the daemons gem that bluepill uses
   module Daemonize
     class Error < RuntimeError
@@ -934,6 +971,14 @@ module Bluepill
   end
 
   module Util
+    # Turns a snake_case name into CamelCase, as ActiveSupport's camelize
+    # does
+    def self.camelize: (_ToS name) -> String
+
+    # Turns a CamelCase name into snake_case, as ActiveSupport's underscore
+    # does
+    def self.underscore: (String name) -> String
+
     # An array that drops its oldest element when it grows past its capacity
     class RotationalArray[Elem] < Array[Elem]
       @capacity: Integer
@@ -945,4 +990,14 @@ module Bluepill
       alias << push
     end
   end
+end
+
+# Numeric includes Units, so these do. Numeric itself has no * to type it
+# with.
+class Integer
+  include Bluepill::Units
+end
+
+class Float
+  include Bluepill::Units
 end

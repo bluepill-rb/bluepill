@@ -576,23 +576,21 @@ describe Bluepill::System do
         expect(ENV).to have_received(:[]=).with('HOME', '/home/user')
       end
 
-      it 'should keep the home directory if the user has none' do
+      it 'should keep the home directory if there is no such user' do
         allow(Etc).to receive(:getpwnam).with('user').and_return(double(uid: 501))
         allow(Etc).to receive(:getpwuid).with(501).and_return(nil)
         Bluepill::System.drop_privileges('user', nil, [])
         expect(Process).not_to have_received(:groups=)
         expect(Process::Sys).not_to have_received(:setgid)
         expect(Process::Sys).to have_received(:setuid).with(501)
-        expect(ENV).to have_received(:[]=).with('HOME', home)
+        expect(ENV).not_to have_received(:[]=)
       end
 
-      it 'should leave HOME unset if neither the user nor the environment has one' do
+      it 'should keep the home directory if the user has none' do
         allow(Etc).to receive(:getpwnam).with('user').and_return(double(uid: 501))
-        allow(Etc).to receive(:getpwuid).with(501).and_return(nil)
-        allow(ENV).to receive(:[]).and_call_original
-        allow(ENV).to receive(:[]).with('HOME').and_return(nil)
+        allow(Etc).to receive(:getpwuid).with(501).and_return(double(dir: nil))
         Bluepill::System.drop_privileges('user', nil, [])
-        expect(ENV).to have_received(:[]=).with('HOME', nil)
+        expect(ENV).not_to have_received(:[]=)
       end
     end
   end

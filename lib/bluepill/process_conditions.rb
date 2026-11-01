@@ -15,7 +15,7 @@ module Bluepill
     #
     # @api private
     def self.[](name)
-      const_get(name.to_s.camelcase)
+      const_get(Util.camelize(name))
     end
   end
 end

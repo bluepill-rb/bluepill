@@ -35,7 +35,7 @@ module Bluepill
                 when Integer
                   Net::HTTPResponse::CODE_TO_OBJ.fetch(options.fetch(:kind).to_s)
                 when String, Symbol
-                  Net.const_get("HTTP#{options.fetch(:kind).to_s.camelize}")
+                  Net.const_get("HTTP#{Util.camelize(options.fetch(:kind))}")
                 else
                   Net::HTTPSuccess
                 end

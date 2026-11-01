@@ -74,7 +74,8 @@ end
 
 APPLICATION_COMMANDS = %w[status start stop restart unmonitor quit log].freeze
 
-controller = Bluepill::Controller.new(options.slice(:base_dir, :log_file))
+# Hash#slice needs Ruby 2.5
+controller = Bluepill::Controller.new(options.select { |key, _| [:base_dir, :log_file].include?(key) })
 
 if controller.running_applications.include?(File.basename($PROGRAM_NAME)) && File.symlink?($PROGRAM_NAME)
   # bluepill was called as a symlink with the name of the target application

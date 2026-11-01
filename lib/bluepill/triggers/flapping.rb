@@ -65,7 +65,7 @@ module Bluepill
       #
       # @api private
       def initialize(process, options = {})
-        options.reverse_merge!(times: 5, within: 1, retry_in: 5)
+        options = {times: 5, within: 1, retry_in: 5}.merge(options)
 
         options.each_pair do |name, val|
           instance_variable_set("@#{name}", val) if PARAMS.include?(name)

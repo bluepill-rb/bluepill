@@ -135,7 +135,7 @@ Bluepill.application("app_name") do |app|
     app.process("process_name_#{i}") do |process|
       process.group = "mongrels"
       process.start_command = "/usr/bin/some_start_command"
-      process.pid_file = "/tmp/some_pid_file.pid"
+      process.pid_file = "/tmp/some_pid_file_#{i}.pid"
     end
   end
 end
@@ -263,13 +263,16 @@ Bluepill.application("app_name") do |app|
     process.start_command = "/usr/bin/some_start_command"
     process.pid_file = "/tmp/some_pid_file.pid"
     process.stop_signals = [:quit, 30.seconds, :term, 5.seconds, :kill]
+    process.stop_grace_time = 45.seconds
   end
 end
 ```
 
 We added a line that will send a SIGQUIT, wait 30 seconds and check to
 see if the process is still up, send a SIGTERM, wait 5 seconds and check
-to see if the process is still up, and finally send a SIGKILL.
+to see if the process is still up, and finally send a SIGKILL. The
+`stop_grace_time` has to be longer than the delays added up, here 35
+seconds, so the last signal has time to work.
 
 And lastly, to monitor child processes:
 

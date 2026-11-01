@@ -1,47 +1,7 @@
 ---
 path: ".gem_rbs_collection"
 gems:
-- name: activesupport
-  version: '8.1'
-  source:
-    type: git
-    name: ruby/gem_rbs_collection
-    revision: 904dc25dace6f10aac76ca29dd0ee6ed299a7282
-    remote: https://github.com/ruby/gem_rbs_collection.git
-    repo_dir: gems
-- name: base64
-  version: 0.3.0
-  source:
-    type: rubygems
-- name: bigdecimal
-  version: 4.1.3
-  source:
-    type: rubygems
-- name: concurrent-ruby
-  version: '1.1'
-  source:
-    type: git
-    name: ruby/gem_rbs_collection
-    revision: 904dc25dace6f10aac76ca29dd0ee6ed299a7282
-    remote: https://github.com/ruby/gem_rbs_collection.git
-    repo_dir: gems
-- name: connection_pool
-  version: '2.4'
-  source:
-    type: git
-    name: ruby/gem_rbs_collection
-    revision: 904dc25dace6f10aac76ca29dd0ee6ed299a7282
-    remote: https://github.com/ruby/gem_rbs_collection.git
-    repo_dir: gems
-- name: date
-  version: '0'
-  source:
-    type: stdlib
 - name: digest
-  version: '0'
-  source:
-    type: stdlib
-- name: erb
   version: '0'
   source:
     type: stdlib
@@ -53,28 +13,8 @@ gems:
   version: '0'
   source:
     type: stdlib
-- name: i18n
-  version: '1.10'
-  source:
-    type: git
-    name: ruby/gem_rbs_collection
-    revision: 904dc25dace6f10aac76ca29dd0ee6ed299a7282
-    remote: https://github.com/ruby/gem_rbs_collection.git
-    repo_dir: gems
-- name: json
-  version: '0'
-  source:
-    type: stdlib
 - name: logger
   version: '1.7'
-  source:
-    type: git
-    name: ruby/gem_rbs_collection
-    revision: 904dc25dace6f10aac76ca29dd0ee6ed299a7282
-    remote: https://github.com/ruby/gem_rbs_collection.git
-    repo_dir: gems
-- name: minitest
-  version: '5.25'
   source:
     type: git
     name: ruby/gem_rbs_collection
@@ -97,19 +37,7 @@ gems:
   version: '0'
   source:
     type: stdlib
-- name: random-formatter
-  version: '0'
-  source:
-    type: stdlib
-- name: securerandom
-  version: '0'
-  source:
-    type: stdlib
 - name: shellwords
-  version: '0'
-  source:
-    type: stdlib
-- name: singleton
   version: '0'
   source:
     type: stdlib
@@ -117,26 +45,10 @@ gems:
   version: '0'
   source:
     type: stdlib
-- name: stringio
-  version: '0'
-  source:
-    type: stdlib
-- name: time
-  version: '0'
-  source:
-    type: stdlib
 - name: timeout
   version: '0'
   source:
     type: stdlib
-- name: tzinfo
-  version: '2.0'
-  source:
-    type: git
-    name: ruby/gem_rbs_collection
-    revision: 904dc25dace6f10aac76ca29dd0ee6ed299a7282
-    remote: https://github.com/ruby/gem_rbs_collection.git
-    repo_dir: gems
 - name: uri
   version: '0'
   source:

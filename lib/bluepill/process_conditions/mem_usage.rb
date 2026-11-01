@@ -68,7 +68,7 @@ module Bluepill
       #
       # @api private
       def check(value)
-        value.kilobytes < @below
+        value * 1024 < @below
       rescue StandardError
         true
       end
@@ -81,7 +81,7 @@ module Bluepill
       #
       # @api private
       def format_value(value)
-        if value.kilobytes >= MB
+        if value * 1024 >= MB
           format(FORMAT_STR, (value / 1024).round, MB_LABEL)
         else
           format(FORMAT_STR, value, KB_LABEL)

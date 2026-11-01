@@ -41,6 +41,8 @@ describe Bluepill::Controller do
       touch('socks', 'dead.sock')
       touch('pids', 'dead.pid') { |f| f.write('456') }
       touch('socks', 'nopid.sock')
+      touch('socks', 'empty.sock')
+      touch('pids', 'empty.pid')
       allow(Bluepill::System).to receive(:pid_alive?).with(456).and_return(false)
       described_class.new(base_dir: base_dir)
       expect(Dir[File.join(base_dir, '*', '*')]).to eq([])
@@ -81,6 +83,16 @@ describe Bluepill::Controller do
         expect(::Process).not_to receive(:kill)
         expect(controller).to receive(:puts).with('bluepilld[789] not running')
         controller.handle_command('app', 'quit')
+      end
+
+      ['', 'garbage'].each do |contents|
+        it "does not kill anything when the pid file holds #{contents.inspect}" do
+          touch('pids', 'app.pid') { |f| f.write(contents) }
+          expect(Bluepill::System).not_to receive(:pid_alive?)
+          expect(::Process).not_to receive(:kill)
+          expect(controller).to receive(:puts).with('bluepilld[false] not running')
+          controller.handle_command('app', 'quit')
+        end
       end
     end
 

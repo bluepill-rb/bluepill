@@ -96,7 +96,12 @@ module Bluepill
 
     def pid_for(app)
       pid_file = File.join(pids_dir, "#{app}.pid")
-      File.exist?(pid_file) && File.read(pid_file).to_i #: Integer | false
+      return false unless File.exist?(pid_file)
+
+      # An empty or garbled pid file reads as 0, and signaling pid 0 would
+      # hit the CLI's own process group
+      pid = File.read(pid_file).to_i
+      pid > 0 ? pid : false
     end
 
     def setup_dir_structure

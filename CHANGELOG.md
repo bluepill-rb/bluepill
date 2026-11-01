@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bluepill load` warns about a process that sets none of `daemonize`, `pid_file` or `pid_command`, since bluepill can't find its pid ([#54](https://github.com/bluepill-rb/bluepill/issues/54)).
 - Documented `pre_start_command`, and that commands don't run in a shell.
 - Gem metadata links to the source code, changelog and issue tracker ([#56](https://github.com/bluepill-rb/bluepill/issues/56)).
+- RBS type signatures in `sig/bluepill.rbs`, checked with Steep in strict mode.
 
 ### Changed
 

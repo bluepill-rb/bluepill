@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Two processes could hold the journal lock at the same time, the lock never timed out, and a waiting process could remove a lock held by another.
 - A `nil` pid crashed the process journal, and a pid of 0 made bluepill journal its own process group.
 - A pid file that was empty or held 0 made the process show as `up` forever, since signaling pid 0 reaches bluepill's own process group ([#53](https://github.com/bluepill-rb/bluepill/issues/53)).
+- Checking a process that had no pid yet, such as before its first start, logged a "Failed to signal process" error.
 - Commands sent to a process whose name contains a colon raised `ArgumentError` ([#24](https://github.com/bluepill-rb/bluepill/issues/24)).
 - `stop` or `restart` on a starting process with `monitor_children` raised `SystemStackError` ([#8](https://github.com/bluepill-rb/bluepill/issues/8)).
 - A start, stop or restart command that outlived its grace time left a zombie process behind ([#23](https://github.com/bluepill-rb/bluepill/issues/23)).

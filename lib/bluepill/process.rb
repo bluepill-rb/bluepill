@@ -300,9 +300,13 @@ module Bluepill
     def signal_process(code)
       code = code.to_s.upcase if code.is_a?(String) || code.instance_of?(Symbol)
       pid = actual_pid
+      # Without a pid the process isn't running. That's expected before the
+      # first start, and actual_pid already warns about a missing pid file.
+      return false unless pid
+
       # kill with a pid of 0 or less signals a whole process group, which
       # could include bluepill itself, so only signal a real pid
-      raise "invalid pid #{pid.inspect}" unless pid && pid > 0
+      raise "invalid pid #{pid}" unless pid > 0
 
       ::Process.kill(code, pid)
       true

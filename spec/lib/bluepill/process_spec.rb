@@ -778,11 +778,19 @@ describe Bluepill::Process do
     end
 
     it 'never signals a pid of 0 or less' do
-      [0, -1, nil].each do |pid|
+      [0, -1].each do |pid|
         subject.instance_variable_set(:@actual_pid, pid)
-        expect(logger).to receive(:err).with("Failed to signal process #{pid} with code 0: invalid pid #{pid.inspect}")
+        expect(logger).to receive(:err).with("Failed to signal process #{pid} with code 0: invalid pid #{pid}")
         expect(subject.signal_process(0)).to be false
       end
+      expect(::Process).not_to have_received(:kill)
+    end
+
+    it 'returns false without an error when there is no pid' do
+      subject.instance_variable_set(:@actual_pid, nil)
+      allow(logger).to receive(:err)
+      expect(subject.signal_process(0)).to be false
+      expect(logger).not_to have_received(:err)
       expect(::Process).not_to have_received(:kill)
     end
   end

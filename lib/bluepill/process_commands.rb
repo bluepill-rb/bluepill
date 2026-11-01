@@ -1,6 +1,19 @@
 module Bluepill
   # Starts, stops and restarts a Process with its configured commands
+  #
+  # @api private
   module ProcessCommands
+    # Start the process with its start command
+    #
+    # Anything still running from an earlier start is killed first, and the
+    # pre_start_command runs. A process bluepill daemonizes has its pid added
+    # to the journal. A self-daemonizing one gets start_grace_time to finish,
+    # and then on_start_timeout is dispatched. Ticks are skipped for
+    # start_grace_time either way.
+    #
+    # @return [Integer] when ticks resume, in epoch seconds
+    #
+    # @api private
     def start_process
       # An old stop signal thread would otherwise signal and clean up the new process
       clean_threads
@@ -28,6 +41,11 @@ module Bluepill
       skip_ticks_for(start_grace_time)
     end
 
+    # Run the pre_start_command, if there is one
+    #
+    # @return [void]
+    #
+    # @api private
     def pre_start_process
       return unless pre_start_command
 
@@ -35,6 +53,15 @@ module Bluepill
       run_command(pre_start_command, 'Pre start')
     end
 
+    # Stop the process with its stop command, stop signals, or TERM
+    #
+    # The children's pids go in the journal first, so cleanup kills them too.
+    # Stop signals are sent from a thread of their own, with their delays.
+    # Ticks are skipped for stop_grace_time.
+    #
+    # @return [Integer] when ticks resume, in epoch seconds
+    #
+    # @api private
     def stop_process
       if monitor_children
         System.get_children(actual_pid).each do |child_pid|
@@ -63,6 +90,11 @@ module Bluepill
       skip_ticks_for(stop_grace_time)
     end
 
+    # Restart the process with its restart command, or by stopping and starting
+    #
+    # @return [Integer] when ticks resume, in epoch seconds
+    #
+    # @api private
     def restart_process
       if restart_command
         cmd = prepare_command(restart_command)
@@ -84,18 +116,37 @@ module Bluepill
       end
     end
 
+    # Kill what's left of the process, and delete its pid file
+    #
+    # Bluepill only writes the pid file for processes it daemonizes, but it
+    # removes it for every process, so a stopped process never leaves a stale
+    # pid behind for a later process to reuse.
+    #
+    # @return [void]
+    #
+    # @api private
     def cleanup_process
       ProcessJournal.kill_all_from_journal(name) # finish cleanup
-      # Bluepill only writes the pid file for processes it daemonizes, but it
-      # removes it for every process, so a stopped process never leaves a stale
-      # pid behind for a later process to reuse
       unlink_pid
     end
 
+    # Return a command with <tt>{{PID}}</tt> replaced by the process's pid
+    #
+    # @param [String] command the stop or restart command
+    #
+    # @return [String]
+    #
+    # @api private
     def prepare_command(command)
       command.gsub('{{PID}}', actual_pid.to_s)
     end
 
+    # Return the options the process's commands run with
+    #
+    # @return [Hash{Symbol => Object}] the uid, gid, working_dir, environment,
+    #   pid_file, logger, stdin, stdout, stderr and supplementary_groups
+    #
+    # @api private
     def system_command_options
       {
         uid: uid,
@@ -111,9 +162,19 @@ module Bluepill
       }
     end
 
+    # Run a block, and dispatch an event if it takes too long
+    #
+    # @param [Integer, Float] secs how long the block may take
+    # @param [String, Symbol] next_state the event to dispatch if it times out
+    #
+    # @yield the work to time
+    # @yieldparam [Numeric] secs the time limit
+    #
+    # @return [Object, Boolean] what the block returned, or whether the event's
+    #   transition happened
+    #
+    # @api private
     def with_timeout(secs, next_state, &blk)
-      # Attempt to execute the passed block. If the block takes
-      # too long, transition to the indicated next state.
       Timeout.timeout(secs, &blk)
     rescue Timeout::Error
       logger.err 'Execution is taking longer than expected.'
@@ -121,6 +182,17 @@ module Bluepill
       dispatch!(next_state)
     end
 
+    # Run a command, and wait for it to finish
+    #
+    # A command that fails, or that a signal kills, is logged as a warning.
+    #
+    # @param [String] cmd the command
+    # @param [String] description what the command is, for the log, such as
+    #   Start
+    #
+    # @return [void]
+    #
+    # @api private
     def run_command(cmd, description)
       result = System.execute_blocking(cmd, system_command_options)
       # The exit code is nil when a signal killed the command
@@ -131,9 +203,17 @@ module Bluepill
       logger.warning result.inspect
     end
 
+    # Send stop signals, with their delays, until the process stops
+    #
     # Sends the first signal, then each later one after its delay, as long as
     # the process is still running. Then gives the last signal the rest of
     # stop_grace_time to work before cleaning up.
+    #
+    # @param [Array<Symbol, Integer>] signals signals with the delays between
+    #
+    # @return [void]
+    #
+    # @api private
     def send_stop_signals(signals)
       remaining = stop_grace_time
       signal = signals.shift
@@ -160,10 +240,17 @@ module Bluepill
       cleanup_process
     end
 
-    # Polls once a second until the process exits. It stops 2 seconds short
-    # of the grace time: ticks resume up to a second early (they count whole
-    # seconds) and can kill this thread, and the cleanup itself takes up to
-    # another second.
+    # Wait for the process to exit, checking once a second
+    #
+    # It stops 2 seconds short of the grace time: ticks resume up to a second
+    # early (they count whole seconds) and can kill this thread, and the
+    # cleanup itself takes up to another second.
+    #
+    # @param [Integer, Float] seconds the grace time that's left
+    #
+    # @return [void]
+    #
+    # @api private
     def wait_for_stop(seconds)
       (seconds - 2).ceil.times do
         break unless signal_process(0)

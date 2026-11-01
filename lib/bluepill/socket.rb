@@ -43,7 +43,7 @@ module Bluepill
         File.delete(socket_path)
         return UNIXServer.open(socket_path)
       else
-        logger.err('Server is already running!')
+        $stderr.puts('Server is already running!')
         exit(7)
       end
     end

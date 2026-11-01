@@ -86,18 +86,10 @@ describe Bluepill::Socket do
           allow(UNIXSocket).to receive(:open).with(socket_path).and_return(socket)
         end
 
-        it 'should log an error and exit' do
-          logger = double('logger')
-          allow(Bluepill::Socket).to receive(:logger).and_return(logger)
-          expect(logger).to receive(:err).with('Server is already running!')
+        it 'should print an error and exit' do
+          expect($stderr).to receive(:puts).with('Server is already running!')
           expect(Bluepill::Socket).to receive(:exit).with(7)
           Bluepill::Socket.server(base_dir, 'app')
-        end
-
-        # Bluepill::Socket does not define a logger, so this path currently
-        # raises a NameError instead of logging and exiting.
-        it 'should raise a NameError because no logger is defined' do
-          expect { Bluepill::Socket.server(base_dir, 'app') }.to raise_error(NameError, /logger/)
         end
       end
     end

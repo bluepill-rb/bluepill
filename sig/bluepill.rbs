@@ -12,6 +12,10 @@ module Bluepill
   # ProcessProxy and also gets it as an argument
   type process_block = ^(ProcessProxy process) [self: ProcessProxy] -> void
 
+  # Sets up Bundler when bluepill runs with a Gemfile, such as under bundle
+  # exec
+  def self.setup_bundler: (?String? gemfile) -> void
+
   # Loads an application from a config file. The block runs with self set to
   # the AppProxy, and also gets it as an argument.
   def self.application: (_ToS app_name, ?Hash[Symbol, untyped] options) { (AppProxy app) [self: AppProxy] -> void } -> void

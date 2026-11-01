@@ -1,11 +1,13 @@
 require 'rubygems'
 
-# This runs once, when bluepill is first loaded, so only one of its branches
-# can ever be covered in a single test run.
-# :nocov:
-gemfile = ENV['BUNDLE_GEMFILE']
-require 'bundler/setup' if gemfile && File.exist?(gemfile)
-# :nocov:
+module Bluepill
+  # Sets up Bundler when bluepill runs with a Gemfile, such as under bundle exec
+  def self.setup_bundler(gemfile = ENV['BUNDLE_GEMFILE'])
+    require 'bundler/setup' if gemfile && File.exist?(gemfile)
+  end
+end
+
+Bluepill.setup_bundler
 
 require 'thread'
 require 'monitor'

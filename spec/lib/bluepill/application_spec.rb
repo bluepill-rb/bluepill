@@ -206,8 +206,16 @@ describe Bluepill::Application do
             expect(app.send(command, 'a')).to eq(['web:a'])
           end
 
-          it 'affects nothing for an unknown group' do
-            expect(app.send(command, 'unknown', 'a')).to eq([])
+          it 'is sent to every group for a process name containing a colon' do
+            expect(group).to receive(command).with('job:a').and_return(['web:job:a'])
+            expect(other_group).to receive(command).with('job:a').and_return([])
+            expect(app.send(command, 'job', 'a')).to eq(['web:job:a'])
+          end
+
+          it 'prefers the named group over a process name containing a colon' do
+            expect(group).to receive(command).with('job:a').and_return(['web:job:a'])
+            expect(other_group).not_to receive(command)
+            expect(app.send(command, 'web', 'job:a')).to eq(['web:job:a'])
           end
         end
       end
@@ -355,6 +363,18 @@ describe Bluepill::Application do
         expect(app).to receive(:status).with('web').and_return(['web:a'])
         expect(client).to receive(:write).with(Marshal.dump(['web:a']))
         expect(client).to receive(:close)
+        listen
+      end
+
+      it 'sends a command without a target' do
+        allow(client).to receive(:readline).and_return("status:\n")
+        expect(app).to receive(:status).with(no_args).and_return([])
+        listen
+      end
+
+      it 'keeps the colons in a process name' do
+        allow(client).to receive(:readline).and_return("status:jobs:job_1:IMPORT\n")
+        expect(app).to receive(:status).with('jobs', 'job_1:IMPORT').and_return([])
         listen
       end
 

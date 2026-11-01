@@ -75,14 +75,12 @@ module Bluepill
         end.flatten
       elsif groups.key?(group_name)
         groups[group_name].send(method, process_name)
-      elsif process_name.nil?
-        # they must be targeting just by process name
-        process_name = group_name
+      else
+        # they must be targeting just by process name, which may contain ':'
+        process_name = [group_name, process_name].compact.join(':')
         groups.values.collect do |group|
           group.send(method, process_name)
         end.flatten
-      else
-        []
       end
     end
 
@@ -93,7 +91,8 @@ module Bluepill
           begin
             client = socket.accept
             client.close_on_exec = true if client.respond_to?(:close_on_exec=)
-            command, *args = client.readline.strip.split(':')
+            # The target is group:process and the process name may contain ':'
+            command, *args = client.readline.strip.split(':', 3).reject(&:empty?)
             response = begin
               mutex { send(command, *args) }
             rescue StandardError => e

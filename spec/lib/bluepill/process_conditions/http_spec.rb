@@ -38,6 +38,10 @@ describe Bluepill::ProcessConditions::Http do
       expect(http(kind: 200).instance_variable_get(:@kind)).to eq(Net::HTTPOK)
     end
 
+    it 'rejects an unknown status code' do
+      expect { http(kind: 999) }.to raise_error(KeyError)
+    end
+
     it 'accepts a string as kind' do
       expect(http(kind: 'redirection').instance_variable_get(:@kind)).to eq(Net::HTTPRedirection)
     end

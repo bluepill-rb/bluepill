@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ps` now runs with the POSIX options `-Ao pid,ppid,pcpu,rss,etime,args` ([#13](https://github.com/bluepill-rb/bluepill/issues/13)).
 - When `ps` can't run, the daemon logs a warning and skips that check until the next interval instead of exiting ([#37](https://github.com/bluepill-rb/bluepill/issues/37)).
 - When bluepill can't open its log file or create its pids directory, it explains which user needs access and exits with status 5 instead of printing a backtrace ([#33](https://github.com/bluepill-rb/bluepill/issues/33)).
+- An HTTP check with an unknown numeric `kind` now fails when the pill loads, like an unknown String or Symbol `kind` already did. Before, it raised on every tick and kept the process's other checks from running.
 
 ### Removed
 

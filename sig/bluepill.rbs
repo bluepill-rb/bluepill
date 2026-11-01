@@ -679,7 +679,7 @@ module Bluepill
     # Sets or reads an attribute
     def method_missing: (Symbol name, *untyped args) -> untyped
 
-    def respond_to_missing?: (Symbol | String name, ?bool include_private) -> boolish
+    def respond_to_missing?: (Symbol name, bool? include_private) -> bool
 
     def checks: (Symbol name, ?Hash[Symbol, untyped] options) -> Hash[Symbol, untyped]
 

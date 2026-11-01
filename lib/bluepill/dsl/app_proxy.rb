@@ -11,7 +11,7 @@ module Bluepill
 
     def process(process_name, &process_block)
       attributes = {} #: Hash[Symbol, untyped]
-      APP_ATTRIBUTES.each { |a| attributes[a] = send(a) }
+      APP_ATTRIBUTES.each { |a| attributes[a] = public_send(a) }
 
       process_factory = ProcessFactory.new(attributes, process_block)
 

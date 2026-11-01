@@ -1,11 +1,8 @@
 module Bluepill
   def self.application(app_name, options = {}, &block)
     app_proxy = AppProxy.new(app_name, options)
-    if block.arity.zero?
-      app_proxy.instance_eval(&block)
-    else
-      app_proxy.instance_exec(app_proxy, &block)
-    end
+    # instance_eval also passes the proxy to a block that takes an argument
+    app_proxy.instance_eval(&block)
     app_proxy.app.load
   end
 end

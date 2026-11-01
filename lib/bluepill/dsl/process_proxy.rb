@@ -7,31 +7,32 @@ module Bluepill
       @attributes = attributes
       @watches = {}
 
-      if process_block.arity.zero?
-        instance_eval(&process_block)
-      else
-        instance_exec(self, &process_block)
-      end
+      # instance_eval also passes the proxy to a block that takes an argument
+      instance_eval(&process_block)
     end
 
     def method_missing(name, *args)
-      if args.size == 1 && name.to_s =~ /^(.*)=$/
-        attribute = Regexp.last_match(1) #: String
-        @attributes[attribute.to_sym] = args.first
-      elsif args.size == 1
-        @attributes[name.to_sym] = args.first
-      elsif args.empty? && name.to_s =~ /^(.*)!$/
-        attribute = Regexp.last_match(1) #: String
-        @attributes[attribute.to_sym] = true
-      elsif args.empty? && @attributes.key?(name.to_sym)
-        @attributes[name.to_sym]
+      attribute = name.to_s
+      case args.size
+      when 1
+        value, = args
+        @attributes[attribute.chomp('=').to_sym] = value
+      when 0
+        if attribute.end_with?('!')
+          @attributes[attribute.chomp('!').to_sym] = true
+        elsif @attributes.key?(name)
+          @attributes.fetch(name)
+        else
+          super
+        end
       else
         super
       end
     end
 
-    def respond_to_missing?(name, include_private = false)
-      name.to_s =~ /[=!]$/ || @attributes.key?(name.to_sym) || super
+    # Ruby turns a String name into a Symbol before calling this
+    def respond_to_missing?(name, _include_private)
+      ['=', '!'].include?(name[-1]) || @attributes.key?(name)
     end
 
     def checks(name, options = {})

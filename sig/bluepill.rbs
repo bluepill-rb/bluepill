@@ -693,6 +693,28 @@ module Bluepill
     def to_process: () -> Process
   end
 
+  # The parts of the daemons gem that bluepill uses
+  module Daemonize
+    class Error < RuntimeError
+    end
+
+    MAX_FD: Integer
+
+    def self.safefork: () -> Integer?
+
+    def self.call_as_daemon: (^() -> void block, ?String? name) -> Integer
+
+    def self.daemonize: () -> Integer
+
+    def self.detach: () -> Integer
+
+    def self.become_daemon: (?String? name) -> void
+
+    def self.close_io: () -> void
+
+    def self.redirect_io: () -> void
+  end
+
   # Memoizes ps output for a tick, and runs commands as daemons or until
   # they finish
   module System

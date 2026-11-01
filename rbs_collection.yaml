@@ -21,8 +21,6 @@ gems:
   - name: timeout
   - name: uri
   # These have no published signatures. sig-vendor has stubs instead.
-  - name: blue-daemons
-    ignore: true
   - name: state_machine
     ignore: true
   - name: syslog

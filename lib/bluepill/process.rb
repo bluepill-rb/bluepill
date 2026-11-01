@@ -2,7 +2,6 @@
 gem 'state_machine'
 
 require 'state_machine'
-require 'daemons'
 require 'bluepill/system'
 require 'bluepill/process_journal'
 require 'bluepill/process_commands'

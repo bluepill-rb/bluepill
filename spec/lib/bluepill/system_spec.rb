@@ -161,7 +161,7 @@ describe Bluepill::System do
 
     context 'in the parent' do
       before(:each) do
-        allow(Daemonize).to receive(:safefork).and_return(123)
+        allow(Bluepill::Daemonize).to receive(:safefork).and_return(123)
         expect(Process).to receive(:detach).with(123)
       end
 
@@ -200,7 +200,7 @@ describe Bluepill::System do
       end
 
       before(:each) do
-        allow(Daemonize).to receive(:safefork).and_return(nil)
+        allow(Bluepill::Daemonize).to receive(:safefork).and_return(nil)
         allow(Bluepill::System).to receive(:drop_privileges)
         allow(Bluepill::System).to receive(:redirect_io)
         allow(Bluepill::System).to receive(:exit)
@@ -212,7 +212,7 @@ describe Bluepill::System do
         allow(Bluepill::System).to receive(:exit!).and_raise('exit! must be called on Process')
         allow(File).to receive(:open).with(pid_file, 'w').and_yield(file)
         allow(file).to receive(:write)
-        allow(Daemonize).to receive(:call_as_daemon) do |block, _, _|
+        allow(Bluepill::Daemonize).to receive(:call_as_daemon) do |block, _|
           block.call
           789
         end
@@ -224,7 +224,7 @@ describe Bluepill::System do
         expect { Bluepill::System.daemonize('cmd', options) }.to raise_error(SystemExit)
         expect(rd).to have_received(:close)
         expect(Bluepill::System).to have_received(:drop_privileges).with('user', 'group', ['extra'])
-        expect(Daemonize).not_to have_received(:call_as_daemon)
+        expect(Bluepill::Daemonize).not_to have_received(:call_as_daemon)
       end
 
       it 'should run without options' do
@@ -242,7 +242,7 @@ describe Bluepill::System do
 
       it 'should write any positive pid to the pid file' do
         allow(Bluepill::System).to receive(:can_write_pid_file).and_return(true)
-        allow(Daemonize).to receive(:call_as_daemon).and_return(1)
+        allow(Bluepill::Daemonize).to receive(:call_as_daemon).and_return(1)
         Bluepill::System.daemonize('cmd', options)
         expect(file).to have_received(:write).with(1)
         expect(wr).to have_received(:write).with(1)
@@ -256,7 +256,7 @@ describe Bluepill::System do
         expect(Bluepill::System).to have_received(:redirect_io).with('/dev/null', 'out.log', 'err.log')
         expect(Kernel).to have_received(:exec).with('echo', 'hello world')
         expect(Bluepill::System).to have_received(:exit).with(no_args)
-        expect(Daemonize).to have_received(:call_as_daemon).with(kind_of(Proc), nil, 'echo "hello world"')
+        expect(Bluepill::Daemonize).to have_received(:call_as_daemon).with(kind_of(Proc), 'echo "hello world"')
         expect(file).to have_received(:write).with(789)
         expect(wr).to have_received(:write).with(789)
         expect(wr).to have_received(:close)
@@ -265,7 +265,7 @@ describe Bluepill::System do
 
       it 'should not write a pid of 0 to the pid file' do
         allow(Bluepill::System).to receive(:can_write_pid_file).and_return(true)
-        allow(Daemonize).to receive(:call_as_daemon).and_return(0)
+        allow(Bluepill::Daemonize).to receive(:call_as_daemon).and_return(0)
         Bluepill::System.daemonize('cmd', options)
         expect(File).not_to have_received(:open)
         expect(wr).to have_received(:write).with(0)
@@ -327,7 +327,7 @@ describe Bluepill::System do
 
       before(:each) do
         allow(IO).to receive(:pipe).and_return([rd, wr])
-        allow(Daemonize).to receive(:safefork).and_return(123)
+        allow(Bluepill::Daemonize).to receive(:safefork).and_return(123)
         allow(Process).to receive(:detach).with(123).and_return(waiter)
       end
 
@@ -370,7 +370,7 @@ describe Bluepill::System do
 
       before(:each) do
         allow(IO).to receive(:pipe).and_return([rd, wr], [out_rd, out_wr], [err_rd, err_wr])
-        allow(Daemonize).to receive(:safefork).and_return(nil)
+        allow(Bluepill::Daemonize).to receive(:safefork).and_return(nil)
         allow(Bluepill::System).to receive(:fork) do |&block|
           block.call
           456

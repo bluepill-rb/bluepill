@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- The `blue-daemons` dependency. Bluepill now has its own copy of the few functions it used from it, as `Bluepill::Daemonize`, so an app that also uses the `daemons` gem no longer gets whichever of the two loads first. This isn't a breaking change ([#61](https://github.com/bluepill-rb/bluepill/issues/61)).
+
 ## [0.1.4] - 2026-11-01
 
 ### Added

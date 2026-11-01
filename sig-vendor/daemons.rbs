@@ -1,8 +1,0 @@
-# Only what bluepill uses from blue-daemons, which has no signatures
-module Daemonize
-  def self?.safefork: () -> Integer?
-
-  def self?.call_as_daemon: (^() -> void block, ?String? logfile_name, ?String? app_name) -> Integer
-
-  def self?.daemonize: (?String? logfile_name, ?String? app_name) -> Integer
-end

@@ -1,5 +1,6 @@
 require 'etc'
 require 'shellwords'
+require 'bluepill/daemonize'
 
 module Bluepill
   module System
@@ -57,7 +58,7 @@ module Bluepill
           exit
         end
 
-        daemon_id = Daemonize.call_as_daemon(to_daemonize, nil, cmd)
+        daemon_id = Daemonize.call_as_daemon(to_daemonize, cmd)
 
         # call_as_daemon returns 0 when the daemon fails to report its pid
         File.open(pid_file, 'w') { |f| f.write(daemon_id) } if daemon_id > 0

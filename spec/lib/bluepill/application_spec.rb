@@ -333,7 +333,7 @@ describe Bluepill::Application do
         allow(Bluepill::ProcessJournal).to receive(:kill_all_from_all_journals)
         allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks)
         allow(::Process).to receive(:setpgid)
-        allow(Daemonize).to receive(:daemonize)
+        allow(Bluepill::Daemonize).to receive(:daemonize)
         allow(group).to receive(:determine_initial_state)
         allow(Bluepill::Socket).to receive(:server).and_return(socket)
         allow(app).to receive(:start_listener)
@@ -347,7 +347,7 @@ describe Bluepill::Application do
         expect(Bluepill::ProcessJournal).to receive(:kill_all_from_all_journals).ordered
         expect(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks).ordered
         expect(::Process).to receive(:setpgid).with(0, 0).ordered
-        expect(Daemonize).to receive(:daemonize).ordered
+        expect(Bluepill::Daemonize).to receive(:daemonize).ordered
         expect(logger).to receive(:reopen).ordered
         expect(group).to receive(:determine_initial_state).ordered
         expect(Bluepill::Socket).to receive(:server).with(base_dir, 'test').ordered
@@ -368,7 +368,7 @@ describe Bluepill::Application do
         let(:foreground) { true }
 
         it 'does not daemonize' do
-          expect(Daemonize).not_to receive(:daemonize)
+          expect(Bluepill::Daemonize).not_to receive(:daemonize)
           expect(app).to receive(:run)
           app.send(:start_server)
         end

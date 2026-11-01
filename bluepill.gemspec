@@ -24,7 +24,6 @@ Gem::Specification.new do |spec|
   end
 
   spec.add_dependency 'activesupport', '>= 3.2'
-  spec.add_dependency 'blue-daemons', '~> 1.1'
   spec.add_dependency 'state_machine', '~> 1.1'
 
   spec.required_ruby_version = '>= 1.9.3'

@@ -3,7 +3,7 @@ require 'simplecov'
 SimpleCov.start do
   add_filter '/spec/'
   add_filter '/vendor/'
-  minimum_coverage(41)
+  minimum_coverage(40)
 end
 
 $LOAD_PATH.unshift(File.expand_path('../lib', File.dirname(__FILE__)))

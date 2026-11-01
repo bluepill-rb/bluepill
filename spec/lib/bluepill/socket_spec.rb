@@ -30,6 +30,7 @@ describe Bluepill::Socket do
       expect(UNIXSocket).to receive(:open).with(socket_path).once.and_yield(socket)
       expect(Bluepill::Socket.client_command(base_dir, 'app', 'status')).to eq(%w[ok])
       expect(socket).to have_received(:puts).with('status')
+      expect(Timeout).to have_received(:timeout).with(Bluepill::Socket::TIMEOUT).once
       expect(Bluepill::Socket).not_to have_received(:puts)
     end
 
@@ -37,13 +38,15 @@ describe Bluepill::Socket do
       calls = 0
       allow(socket).to receive(:read) do
         calls += 1
-        raise Timeout::Error if calls == 1
+        raise Timeout::Error if calls < 3
 
         Marshal.dump('done')
       end
       allow(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
       expect(Bluepill::Socket.client_command(base_dir, 'app', 'status')).to eq('done')
-      expect(Bluepill::Socket).to have_received(:puts).with('Retry 1 of 5')
+      expect(Bluepill::Socket).to have_received(:puts).with('Retry 1 of 5').ordered
+      expect(Bluepill::Socket).to have_received(:puts).with('Retry 2 of 5').ordered
+      expect(Bluepill::Socket).to have_received(:puts).twice
       expect(Bluepill::Socket).not_to have_received(:abort)
     end
 

@@ -32,6 +32,25 @@ describe Bluepill::Application do
         subject { super().base_dir }
         it { should eq('/var/run/bluepill') }
       end
+
+      it 'does not need HOME' do
+        home = ENV.delete('HOME')
+        begin
+          expect(subject.base_dir).to eq('/var/run/bluepill')
+        ensure
+          ENV['HOME'] = home
+        end
+      end
+    end
+
+    context 'without options' do
+      subject { described_class.new('test') }
+      before(:each) { allow(::Process).to receive(:euid).and_return(0) }
+
+      it 'uses the defaults' do
+        expect(subject.base_dir).to eq('/var/run/bluepill')
+        expect(subject).not_to be_foreground
+      end
     end
 
     context 'when option base_dir is specified' do
@@ -56,6 +75,21 @@ describe Bluepill::Application do
         expect(subject.kill_timeout).to eq(10)
         expect(subject).not_to be_foreground
         expect(subject.groups).to eq({})
+      end
+
+      it 'traps TERM, INT and HUP' do
+        subject
+        expect(traps.keys).to contain_exactly('TERM', 'INT', 'HUP')
+      end
+
+      it 'has a mutex' do
+        expect(subject.mutex { :result }).to eq(:result)
+      end
+
+      context 'and foreground is false' do
+        let(:options) { {base_dir: '/var/bluepill', foreground: false} }
+
+        it { should_not be_foreground }
       end
 
       it 'logs to the log file with the application name as prefix' do
@@ -152,6 +186,7 @@ describe Bluepill::Application do
       it 'is made writable for everybody when it already exists' do
         FileUtils.mkdir_p(pids_dir)
         FileUtils.chmod(0o700, pids_dir)
+        expect(FileUtils).not_to receive(:mkdir_p)
         app
         expect(File.stat(pids_dir).mode & 0o777).to eq(0o777)
       end
@@ -164,7 +199,7 @@ describe Bluepill::Application do
         it "terminates on #{signal}" do
           expect(app).to receive(:puts).with('Terminating...')
           expect(app).to receive(:cleanup)
-          traps[signal].call
+          traps[signal].call(Signal.list.fetch(signal))
           expect(app.instance_variable_get(:@running)).to be false
         end
       end
@@ -196,7 +231,9 @@ describe Bluepill::Application do
       let(:process) { double('process') }
 
       it 'adds the process to a new group named after the group name' do
-        expect(Bluepill::Group).to receive(:new).with('web', logger: logger).and_return(group)
+        group_logger = instance_double(Bluepill::Logger)
+        allow(logger).to receive(:prefix_with).with('web').and_return(group_logger)
+        expect(Bluepill::Group).to receive(:new).with('web', logger: group_logger).and_return(group)
         expect(group).to receive(:add_process).with(process)
         app.add_process(process, :web)
         expect(app.groups).to eq('web' => group)
@@ -239,6 +276,12 @@ describe Bluepill::Application do
             expect(app.send(command, 'job', 'a')).to eq(['web:job:a'])
           end
 
+          it 'is sent to every group for a process name without a group' do
+            expect(group).to receive(command).with('a').and_return(['web:a'])
+            expect(other_group).to receive(command).with('a').and_return([])
+            expect(app.send(command, nil, 'a')).to eq(['web:a'])
+          end
+
           it 'prefers the named group over a process name containing a colon' do
             expect(group).to receive(command).with('job:a').and_return(['web:job:a'])
             expect(other_group).not_to receive(command)
@@ -262,6 +305,19 @@ describe Bluepill::Application do
         expect($stderr).to receive(:puts).with('RuntimeError `boom`').ordered
         expect($stderr).to receive(:puts).with(['a.rb:1']).ordered
         expect(app).to receive(:exit).with(5)
+        app.load
+      end
+
+      it 'reports the message of an error from an anonymous class' do
+        error_class = Class.new(StandardError) do
+          def message
+            'boom'
+          end
+        end
+        allow(app).to receive(:start_server).and_raise(error_class)
+        allow($stderr).to receive(:puts)
+        expect($stderr).to receive(:puts).with(' `boom`')
+        allow(app).to receive(:exit)
         app.load
       end
     end
@@ -303,6 +359,11 @@ describe Bluepill::Application do
         expect(app.socket).to eq(socket)
       end
 
+      it 'writes the pid file with File.open' do
+        expect(File).to receive(:open).with(pid_file, 'w').and_call_original
+        app.send(:start_server)
+      end
+
       context 'in the foreground' do
         let(:foreground) { true }
 
@@ -332,8 +393,22 @@ describe Bluepill::Application do
         expect(other_group).to receive(:tick).twice
         expect(app).to receive(:sleep).with(1).twice do
           ticks += 1
-          traps['TERM'].call if ticks == 2
+          traps['TERM'].call(15) if ticks == 2
         end
+        app.send(:run)
+      end
+
+      it 'ticks while holding the mutex' do
+        locked = false
+        allow(app).to receive(:mutex) do |&block|
+          locked = true
+          block.call
+          locked = false
+        end
+        expect(Bluepill::System).to receive(:reset_data) { expect(locked).to be true }
+        expect(group).to receive(:tick) { expect(locked).to be true }
+        expect(other_group).to receive(:tick) { expect(locked).to be true }
+        expect(app).to receive(:sleep).with(1) { app.instance_variable_set(:@running, false) }
         app.send(:run)
       end
     end
@@ -385,11 +460,30 @@ describe Bluepill::Application do
       end
 
       it 'answers a command with the marshaled response' do
+        expect(app).to receive(:loop).and_yield
         allow(client).to receive(:close_on_exec=)
         expect(client).to receive(:close_on_exec=).with(true)
         expect(app).to receive(:status).with('web').and_return(['web:a'])
         expect(client).to receive(:write).with(Marshal.dump(['web:a']))
         expect(client).to receive(:close)
+        listen
+      end
+
+      it 'ignores whitespace around the command' do
+        allow(client).to receive(:readline).and_return(" status:web\n")
+        expect(app).to receive(:status).with('web').and_return([])
+        listen
+      end
+
+      it 'runs the command while holding the mutex' do
+        locked = false
+        allow(app).to receive(:mutex) do |&block|
+          locked = true
+          result = block.call
+          locked = false
+          result
+        end
+        expect(app).to receive(:status) { expect(locked).to be true }
         listen
       end
 
@@ -423,6 +517,28 @@ describe Bluepill::Application do
         expect(logger).to receive(:err).with('Got exception in cmd listener: RuntimeError `broken pipe`').ordered
         expect(logger).to receive(:err).with('a.rb:1').ordered
         expect(client).to receive(:close)
+        listen
+      end
+
+      it 'logs the message of an error from an anonymous class' do
+        error_class = Class.new(StandardError) do
+          def message
+            'broken pipe'
+          end
+        end
+        allow(app).to receive(:status).and_return([])
+        allow(client).to receive(:write).and_raise(error_class)
+        expect(logger).to receive(:err).with('Got exception in cmd listener:  `broken pipe`')
+        allow(logger).to receive(:err)
+        listen
+      end
+
+      it 'logs an error without a backtrace' do
+        error = RuntimeError.new('broken pipe')
+        allow(error).to receive(:backtrace).and_return(nil)
+        allow(app).to receive(:status).and_return([])
+        allow(client).to receive(:write).and_raise(error)
+        expect(logger).to receive(:err).once
         listen
       end
 
@@ -467,6 +583,12 @@ describe Bluepill::Application do
         app.send(:kill_previous_bluepill)
       end
 
+      it 'checks a previous bluepill with pid 1, as in a container' do
+        File.open(pid_file, 'w') { |f| f.write('1') }
+        expect(Bluepill::System).to receive(:pid_alive?).with(1).and_return(false)
+        app.send(:kill_previous_bluepill)
+      end
+
       ['', 'garbage'].each do |contents|
         it "does nothing when the pid file holds #{contents.inspect}" do
           File.open(pid_file, 'w') { |f| f.write(contents) }
@@ -486,7 +608,7 @@ describe Bluepill::Application do
         end
 
         it 'interrupts it and waits for it to die' do
-          allow(Bluepill::System).to receive(:pid_alive?).and_return(true, true, false)
+          allow(Bluepill::System).to receive(:pid_alive?).with(1234).and_return(true, true, false)
           expect(::Process).to receive(:kill).with(0, 1234).ordered
           expect(app).to receive(:puts).with('Killing previous bluepilld[1234]')
           expect(::Process).to receive(:kill).with(2, 1234).ordered
@@ -496,7 +618,7 @@ describe Bluepill::Application do
         end
 
         it 'exits when it does not die' do
-          allow(Bluepill::System).to receive(:pid_alive?).and_return(true)
+          allow(Bluepill::System).to receive(:pid_alive?).with(1234).and_return(true)
           allow(::Process).to receive(:kill)
           expect(app).to receive(:sleep).with(0.5).exactly(10).times
           expect($stderr).to receive(:puts).with("Previous bluepilld[1234] didn't die")
@@ -505,7 +627,7 @@ describe Bluepill::Application do
         end
 
         it 'carries on when it has just died' do
-          allow(Bluepill::System).to receive(:pid_alive?).and_return(true)
+          allow(Bluepill::System).to receive(:pid_alive?).with(1234).and_return(true)
           allow(::Process).to receive(:kill).and_raise(Errno::ESRCH)
           expect($stderr).to receive(:puts).with('Encountered error trying to kill previous bluepill:').ordered
           expect($stderr).to receive(:puts).with("Errno::ESRCH: #{Errno::ESRCH.new.message}").ordered
@@ -515,7 +637,7 @@ describe Bluepill::Application do
         end
 
         it 'exits when it cannot be killed' do
-          allow(Bluepill::System).to receive(:pid_alive?).and_return(true)
+          allow(Bluepill::System).to receive(:pid_alive?).with(1234).and_return(true)
           allow(::Process).to receive(:kill).and_raise(Errno::EPERM)
           allow($stderr).to receive(:puts)
           expect(app).to receive(:exit).with(4)

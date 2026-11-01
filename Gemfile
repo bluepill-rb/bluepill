@@ -16,7 +16,6 @@ group :doc do
 end
 
 group :test do
-  gem 'faker', '>= 1.2'
   gem 'rspec', '>= 3'
   gem 'rubocop', '0.40.0'
   gem 'simplecov', '>= 0.4'

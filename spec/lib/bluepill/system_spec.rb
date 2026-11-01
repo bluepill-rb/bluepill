@@ -28,7 +28,7 @@ describe Bluepill::System do
 
   describe :reset_data do
     it 'should clear the #store' do
-      Bluepill::System.store[:anotherkey] = Faker::Lorem.sentence
+      Bluepill::System.store[:anotherkey] = 'Lorem ipsum dolor sit amet.'
       Bluepill::System.reset_data
       expect(Bluepill::System.store).to be_empty
     end

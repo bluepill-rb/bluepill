@@ -9,7 +9,6 @@ end
 $LOAD_PATH.unshift(File.expand_path('../lib', File.dirname(__FILE__)))
 
 require 'bluepill'
-require 'faker'
 require 'rspec/core'
 
 module Process

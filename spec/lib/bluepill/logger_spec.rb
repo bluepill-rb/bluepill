@@ -41,6 +41,36 @@ describe Bluepill::Logger do
       expect(File.read(@log_file)).to match(/ERROR -- : something failed/)
     end
 
+    it 'should log to syslog when log_file is nil' do
+      allow(Syslog).to receive(:opened?).and_return(false)
+      expect(Syslog).to receive(:open).with('bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6).and_return(double('syslog'))
+      Bluepill::Logger.new(log_file: nil)
+    end
+
+    it 'should prefix messages with the given prefix' do
+      inner = double('inner')
+      expect(inner).to receive(:info).with('[app] message')
+      parent = Bluepill::Logger.new(logger: inner)
+      Bluepill::Logger.new(logger: parent, prefix: 'app').info('message')
+    end
+
+    it 'should write to stdout if requested' do
+      inner = double('inner', info: nil)
+      expect($stdout).to receive(:puts).with('[info]: message')
+      expect($stdout).to receive(:flush)
+      Bluepill::Logger.new(logger: inner, stdout: true).info('message')
+    end
+
+    it 'should not write to stdout when stdout is false' do
+      inner = double('inner', info: nil)
+      expect($stdout).not_to receive(:puts)
+      Bluepill::Logger.new(logger: inner, stdout: false).info('message')
+    end
+
+    it 'should start without prefixed loggers' do
+      expect(Bluepill::Logger.new(logger: double('inner')).prefix_with('app')).to be_a(Bluepill::Logger)
+    end
+
     it 'should use a given logger' do
       inner = double('inner')
       expect(inner).to receive(:warning).with('careful')
@@ -81,6 +111,13 @@ describe Bluepill::Logger do
       logger.info('after')
       expect(File.read(@log_file)).to match(/after/)
       expect(File.read(@log_file)).not_to match(/before/)
+    end
+
+    it 'should reopen syslog' do
+      allow(Syslog).to receive(:opened?).and_return(false, true)
+      expect(Syslog).to receive(:close).once
+      expect(Syslog).to receive(:open).with('bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6).twice.and_return(double('syslog'))
+      Bluepill::Logger.new.reopen
     end
 
     it 'should reopen the parent logger of a prefixed logger' do

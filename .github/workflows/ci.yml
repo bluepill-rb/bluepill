@@ -50,7 +50,16 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
-          bundler-cache: true
+          bundler: ${{ matrix.ruby == '2.2' && 'none' || 'default' }}
+          bundler-cache: ${{ matrix.ruby != '2.2' }}
+      # RubyGems on Ruby 2.2 crashes reading the rubygems.org index, so
+      # install Bundler from a downloaded .gem file instead.
+      - name: Install Bundler and gems
+        if: matrix.ruby == '2.2'
+        run: |
+          curl -fsSLO https://rubygems.org/downloads/bundler-1.17.3.gem
+          gem install --local bundler-1.17.3.gem --no-document
+          bundle install --jobs 4
       - run: bundle exec rake spec
       - name: Upload coverage to Coveralls
         if: matrix.ruby == '4.0'

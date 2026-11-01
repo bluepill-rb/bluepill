@@ -26,6 +26,23 @@ describe Bluepill::Triggers::Flapping do
       trigger = flapping(times: 2, within: 10, retry_in: 30)
       expect([trigger.times, trigger.within, trigger.retry_in]).to eq([2, 10, 30])
     end
+
+    it 'can be created without options' do
+      trigger = Bluepill::Triggers::Flapping.new(process)
+      expect([trigger.times, trigger.within, trigger.retry_in]).to eq([5, 1, 5])
+      expect(trigger.logger).to be_nil
+    end
+
+    it 'ignores options it does not know' do
+      trigger = flapping(every: 10)
+      expect(trigger.instance_variable_defined?(:@every)).to be false
+    end
+
+    it 'keeps as many incidents as times' do
+      trigger = flapping(times: 2)
+      trigger.timeline << 1 << 2 << 3
+      expect(trigger.timeline).to eq([2, 3])
+    end
   end
 
   describe '#notify' do
@@ -49,20 +66,26 @@ describe Bluepill::Triggers::Flapping do
 
     it 'does not detect flapping when the incidents are spread out' do
       trigger = flapping(times: 2, within: 10)
-      notify_at(trigger, 0)
-      notify_at(trigger, 11)
+      notify_at(trigger, 100)
+      notify_at(trigger, 111)
       expect(trigger).not_to have_received(:schedule_event)
-      expect(trigger.timeline).to eq([0, 11])
+      expect(trigger.timeline).to eq([100, 111])
     end
 
     it 'detects flapping, schedules a retry and halts the transition' do
       trigger = flapping(times: 2, within: 10, retry_in: 30)
-      notify_at(trigger, 0)
-      expect { notify_at(trigger, 10) }.to throw_symbol(:halt)
+      notify_at(trigger, 100)
+      expect { notify_at(trigger, 110) }.to throw_symbol(:halt)
       expect(logger).to have_received(:info).with('Flapping detected: retrying in 30 seconds')
       expect(trigger).to have_received(:schedule_event).with(:start, 30)
       expect(trigger).to have_received(:schedule_event).with(:unmonitor, 0)
       expect(trigger.timeline).to eq([])
+    end
+
+    it 'accepts a Float times' do
+      trigger = flapping(times: 2.0, within: 10)
+      notify_at(trigger, 100)
+      expect { notify_at(trigger, 105) }.to throw_symbol(:halt)
     end
 
     it 'does not retry when retry_in is zero' do

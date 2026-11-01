@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An empty or garbled application pid file made bluepill send `SIGINT` to its own process group on startup.
 - `bluepill quit` with an empty or garbled daemon pid file sent `TERM` to the process group of the `bluepill` command itself.
 - Loading a config rejected two different processes as duplicates when joining group and process name with `:` gave the same string, such as process `b:c` in group `a` and process `c` in group `a:b`.
+- Child processes of a process that didn't set its grace times got no start, stop or restart grace time, instead of the default of 3 seconds.
 
 ## [0.1.3] - 2017-04-06
 

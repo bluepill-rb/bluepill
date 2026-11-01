@@ -217,6 +217,13 @@ describe Bluepill::ProcessFactory do
       expect(child.uid).to be_nil
     end
 
+    it 'gives a child the default grace times when its parent sets none' do
+      allow_any_instance_of(Bluepill::Process).to receive(:determine_initial_state)
+      factory = Bluepill::ProcessFactory.new({}, proc { stop_command 'halt' })
+      child = factory.create_child_process('child', 123, logger)
+      expect([child.start_grace_time, child.stop_grace_time, child.restart_grace_time]).to eq([3, 3, 3])
+    end
+
     it 'requires a stop command' do
       factory = Bluepill::ProcessFactory.new(attributes, proc {})
       message = "Config Error: Invalid child process monitor for child\nYou must specify a stop command to monitor child processes.\n"

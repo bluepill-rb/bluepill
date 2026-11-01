@@ -115,8 +115,15 @@ describe Bluepill::ProcessConditions::Http do
         expect(http.run(123, false)).to eq(error)
       end
 
-      it 'turns the Net::HTTP closed? bug into a connection refused error' do
+      it 'turns the Net::HTTP closed? bug into a connection refused error before Ruby 3.4' do
         allow(session).to receive(:start).and_raise(NoMethodError.new("undefined method `closed?' for nil:NilClass"))
+        error = http.run(123, false)
+        expect(error).to be_a(Errno::ECONNREFUSED)
+        expect(error.message).to eq('Connection refused - Connection refused attempting to contact http://example.com:8080')
+      end
+
+      it 'turns the Net::HTTP closed? bug into a connection refused error on Ruby 3.4 and newer' do
+        allow(session).to receive(:start).and_raise(NoMethodError.new("undefined method 'closed?' for nil"))
         error = http.run(123, false)
         expect(error).to be_a(Errno::ECONNREFUSED)
         expect(error.message).to eq('Connection refused - Connection refused attempting to contact http://example.com:8080')
@@ -128,8 +135,20 @@ describe Bluepill::ProcessConditions::Http do
         expect(http.run(123, false)).to be_a(Errno::ECONNREFUSED)
       end
 
+      it 'finds the Ruby 3.4 wording of the Net::HTTP closed? bug anywhere in the message' do
+        message = "private method: undefined method 'closed?' for nil (NoMethodError)"
+        allow(session).to receive(:start).and_raise(NoMethodError.new(message))
+        expect(http.run(123, false)).to be_a(Errno::ECONNREFUSED)
+      end
+
       it 'returns other NoMethodErrors' do
         error = NoMethodError.new('undefined method `foo\' for nil:NilClass')
+        allow(session).to receive(:start).and_raise(error)
+        expect(http.run(123, false)).to eq(error)
+      end
+
+      it 'returns other NoMethodErrors in the Ruby 3.4 wording' do
+        error = NoMethodError.new("undefined method 'foo' for nil")
         allow(session).to receive(:start).and_raise(error)
         expect(http.run(123, false)).to eq(error)
       end

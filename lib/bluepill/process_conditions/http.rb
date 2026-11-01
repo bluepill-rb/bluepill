@@ -53,7 +53,9 @@ module Bluepill
       def hide_net_http_bug
         yield
       rescue NoMethodError => e
-        raise(Errno::ECONNREFUSED, "Connection refused attempting to contact #{@uri.scheme}://#{@uri.host}:#{@uri.port}") if e.to_s.include?("undefined method `closed?' for nil:NilClass")
+        # Ruby 3.4 changed the wording of this error
+        message = e.to_s
+        raise(Errno::ECONNREFUSED, "Connection refused attempting to contact #{@uri.scheme}://#{@uri.host}:#{@uri.port}") if message.include?("undefined method `closed?' for nil:NilClass") || message.include?("undefined method 'closed?' for nil")
 
         raise
       end

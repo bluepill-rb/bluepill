@@ -26,6 +26,50 @@ describe Bluepill::ConditionWatch do
       expect(Bluepill::System).to receive(:cpu_usage).with(123, true).and_return(10)
       watch(include_children: true).run(123, 0)
     end
+
+    it 'does not include children by default' do
+      expect(Bluepill::System).to receive(:cpu_usage).with(123, false).and_return(10)
+      watch.run(123, 0)
+    end
+
+    it 'can be created without options' do
+      expect(Bluepill::ConditionWatch.new(:always_true).to_s).to eq("always_true: []\n")
+    end
+
+    it 'fires a restart by default and keeps only the last value' do
+      cpu_usage(90, 10)
+      w = watch
+      expect(w.run(123, 0)).to eq([:restart])
+      expect(w.run(123, 10)).to eq([])
+      expect(w.to_s).to eq("cpu_usage: [10.0]\n")
+    end
+
+    it 'fires a single event' do
+      cpu_usage(90)
+      expect(watch(fires: :stop).run(123, 0)).to eq([:stop])
+    end
+
+    it 'fires a list of events' do
+      cpu_usage(90)
+      expect(watch(fires: [:stop, :start]).run(123, 0)).to eq([:stop, :start])
+    end
+
+    it 'fires the same number of times as it remembers when times is a number' do
+      cpu_usage(90, 90, 10)
+      w = watch(times: 2)
+      expect(w.run(123, 0)).to eq([])
+      expect(w.run(123, 10)).to eq([:restart])
+      expect(w.run(123, 20)).to eq([])
+      expect(w.to_s).to eq("cpu_usage: [90.0*, 10.0]\n")
+    end
+
+    it 'fires x out of y times when times is a list' do
+      cpu_usage(90, 10, 90)
+      w = watch(times: [2, 3])
+      expect(w.run(123, 0)).to eq([])
+      expect(w.run(123, 10)).to eq([])
+      expect(w.run(123, 20)).to eq([:restart])
+    end
   end
 
   describe '#run' do
@@ -59,6 +103,29 @@ describe Bluepill::ConditionWatch do
       expect(w.run(123)).to eq([:restart])
       expect(w.run(123, 109)).to eq([])
       expect(w.run(123, 110)).to eq([:restart])
+    end
+
+    it 'runs again once the interval has passed' do
+      cpu_usage(90)
+      w = watch
+      w.run(123, 0)
+      expect(w.run(123, 15)).to eq([:restart])
+      expect(Bluepill::System).to have_received(:cpu_usage).twice
+    end
+
+    it 'keeps firing while more values fail than needed' do
+      cpu_usage(90)
+      w = watch(times: [2, 3])
+      w.run(123, 0)
+      expect(w.run(123, 10)).to eq([:restart])
+      expect(w.run(123, 20)).to eq([:restart])
+    end
+
+    it 'logs the formatted values' do
+      allow(Bluepill::System).to receive(:memory_usage).with(123, false).and_return(2048)
+      w = Bluepill::ConditionWatch.new(:mem_usage, logger: logger, every: 10, below: 1.megabyte)
+      w.run(123, 0)
+      expect(logger).to have_received(:info).with("mem_usage: [2MB*]\n")
     end
 
     it 'skips runs until the interval has passed' do
@@ -117,6 +184,17 @@ describe Bluepill::ConditionWatch do
       w.clear_history!
       expect(w.to_s).to eq("cpu_usage: []\n")
       expect(w.run(123, 10)).to eq([])
+    end
+
+    it 'remembers as many values as the second times' do
+      cpu_usage(90)
+      w = watch(times: [2, 3])
+      w.clear_history!
+      w.run(123, 0)
+      cpu_usage(10)
+      w.run(123, 10)
+      cpu_usage(90)
+      expect(w.run(123, 20)).to eq([:restart])
     end
   end
 end

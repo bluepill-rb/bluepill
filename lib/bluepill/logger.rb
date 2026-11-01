@@ -33,7 +33,7 @@ module Bluepill
 
     def reopen
       logger = @logger
-      if logger.is_a?(self.class)
+      if logger.instance_of?(self.class)
         logger.reopen
       else
         @logger = create_logger
@@ -44,7 +44,7 @@ module Bluepill
 
     def create_logger
       if @options[:log_file]
-        LoggerAdapter.new(@options[:log_file])
+        LoggerAdapter.new(@options.fetch(:log_file))
       else
         require_syslog
         Syslog.close if Syslog.opened? # need to explictly close it before reopening it

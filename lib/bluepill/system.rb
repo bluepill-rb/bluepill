@@ -7,11 +7,6 @@ module Bluepill
     # Raised when ps could not be run, so there is no data for this tick
     class PsError < StandardError; end
 
-  module_function
-
-    # These methods run on the module, where the store is
-    # @type instance: singleton(Bluepill::System)
-
     # The position of each field in ps output
     IDX_MAP = {
       pid: 0,
@@ -22,7 +17,7 @@ module Bluepill
       command: 5,
     }.freeze #: { pid: Integer, ppid: Integer, pcpu: Integer, rss: Integer, etime: Integer, command: Integer }
 
-    def pid_alive?(pid)
+    def self.pid_alive?(pid)
       ::Process.kill(0, pid)
       true
     rescue Errno::EPERM # no permission, but it is definitely alive
@@ -33,7 +28,7 @@ module Bluepill
       false # other falsy (no pid)
     end
 
-    def cpu_usage(pid, include_children)
+    def self.cpu_usage(pid, include_children)
       ps = ps_axu
       return unless ps[pid]
 
@@ -46,7 +41,7 @@ module Bluepill
       cpu_used
     end
 
-    def memory_usage(pid, include_children)
+    def self.memory_usage(pid, include_children)
       ps = ps_axu
       return unless ps[pid]
 
@@ -59,21 +54,21 @@ module Bluepill
       mem_used
     end
 
-    def running_time(pid)
+    def self.running_time(pid)
       ps = ps_axu
       return unless ps[pid]
 
       parse_elapsed_time(ps[pid][IDX_MAP[:etime]])
     end
 
-    def command(pid)
+    def self.command(pid)
       ps = ps_axu
       return unless ps[pid]
 
       ps[pid][IDX_MAP[:command]]
     end
 
-    def get_children(parent_pid)
+    def self.get_children(parent_pid)
       # A process that is still starting has no pid yet, and nil.to_i is 0.
       # The ps header row parses as pid 0 with ppid 0, so it would be its own
       # child and the recursion would never end.
@@ -89,7 +84,7 @@ module Bluepill
       []
     end
 
-    def delete_if_exists(filename)
+    def self.delete_if_exists(filename)
       tries = 0
 
       begin
@@ -101,18 +96,18 @@ module Bluepill
       end
     end
 
-    def store
+    def self.store
       @store ||= {}
     end
 
-    def reset_data
+    def self.reset_data
       store.clear unless store.empty?
     end
 
     # Watches run in their own threads, so only let one of them run ps per tick
     PS_MUTEX = Mutex.new
 
-    def ps_axu
+    def self.ps_axu
       ps = PS_MUTEX.synchronize do
         store[:ps_axu] ||= begin
           # POSIX options, so this also works with System V ps on Solaris and SmartOS.
@@ -140,7 +135,7 @@ module Bluepill
       ps
     end
 
-    def parse_elapsed_time(str)
+    def self.parse_elapsed_time(str)
       # [[dd-]hh:]mm:ss
       match = /(?:(?:(\d+)-)?(\d\d):)?(\d\d):(\d\d)/.match(str)
       if match

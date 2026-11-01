@@ -5,13 +5,11 @@ module Bluepill
     TIMEOUT = 60 # Used for client commands
     MAX_ATTEMPTS = 5
 
-  module_function
-
-    def client(base_dir, name, &block)
+    def self.client(base_dir, name, &block)
       UNIXSocket.open(socket_path(base_dir, name), &block)
     end
 
-    def client_command(base_dir, name, command)
+    def self.client_command(base_dir, name, command)
       res = nil
       MAX_ATTEMPTS.times do |current_attempt|
         begin
@@ -30,7 +28,7 @@ module Bluepill
       res
     end
 
-    def server(base_dir, name)
+    def self.server(base_dir, name)
       # @type var socket_path: String
       socket_path = self.socket_path(base_dir, name)
       UNIXServer.open(socket_path)
@@ -47,7 +45,7 @@ module Bluepill
       end
     end
 
-    def socket_path(base_dir, name)
+    def self.socket_path(base_dir, name)
       File.join(base_dir, 'socks', "#{name}.sock")
     end
   end

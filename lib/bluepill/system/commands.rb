@@ -5,10 +5,8 @@ module Bluepill
   # Runs commands for bluepill: in the background as daemons, or until they
   # finish, optionally as another user
   module System
-  module_function
-
     # Returns the pid of the child that executes the cmd
-    def daemonize(cmd, options = {})
+    def self.daemonize(cmd, options = {})
       rd, wr = IO.pipe
 
       child = Daemonize.safefork
@@ -57,7 +55,7 @@ module Bluepill
     end
 
     # Returns the stdout, stderr and exit code of the cmd
-    def execute_blocking(cmd, options = {})
+    def self.execute_blocking(cmd, options = {})
       rd, wr = IO.pipe
 
       child = Daemonize.safefork
@@ -84,7 +82,7 @@ module Bluepill
 
     # Runs cmd in a grandchild, sends its output and exit code to the parent
     # over result_pipe, and exits
-    def run_blocking_child(cmd, options, result_pipe)
+    def self.run_blocking_child(cmd, options, result_pipe)
       # create a child in which we can override the stdin, stdout and stderr
       cmd_out_read, cmd_out_write = IO.pipe
       cmd_err_read, cmd_err_write = IO.pipe
@@ -121,7 +119,7 @@ module Bluepill
       ::Process.exit!
     end
 
-    def exec_blocking_grandchild(cmd, options, pipes)
+    def self.exec_blocking_grandchild(cmd, options, pipes)
       # @type var cmd_err_write: IO
       cmd_out_read, cmd_out_write = pipes[:out]
       cmd_err_read, cmd_err_write = pipes[:err]
@@ -153,7 +151,7 @@ module Bluepill
       exit 1
     end
 
-    def setup_command_environment(options)
+    def self.setup_command_environment(options)
       # Setting end PWD env emulates bash behavior when dealing with symlinks
       Dir.chdir(ENV['PWD'] = options[:working_dir].to_s) if options[:working_dir]
       options[:environment].each { |key, value| ENV[key.to_s] = value.to_s } if options[:environment]
@@ -161,7 +159,7 @@ module Bluepill
 
     # be sure to call this from a fork otherwise it will modify the attributes
     # of the bluepill daemon
-    def drop_privileges(uid, gid, supplementary_groups)
+    def self.drop_privileges(uid, gid, supplementary_groups)
       return unless ::Process::Sys.geteuid.zero?
 
       uid_num = Etc.getpwnam(uid).uid if uid
@@ -177,7 +175,7 @@ module Bluepill
       ENV['HOME'] = Etc.getpwuid(uid_num).try(:dir) || ENV['HOME'] if uid_num
     end
 
-    def can_write_pid_file(pid_file, logger)
+    def self.can_write_pid_file(pid_file, logger)
       FileUtils.touch(pid_file)
       File.unlink(pid_file)
       true
@@ -187,7 +185,7 @@ module Bluepill
       false
     end
 
-    def redirect_io(io_in, io_out, io_err)
+    def self.redirect_io(io_in, io_out, io_err)
       $stdin.reopen(io_in) if io_in
 
       if !io_out.nil? && !io_err.nil? && io_out == io_err

@@ -2,11 +2,6 @@ require 'bluepill/system'
 
 module Bluepill
   module ProcessJournal
-  module_function
-
-    # These methods run on the module, where logger is defined
-    # @type instance: singleton(Bluepill::ProcessJournal)
-
     class << self
       attr_reader :logger, :journal_base_dir
 
@@ -21,17 +16,17 @@ module Bluepill
       end
     end
 
-    def skip_pid?(pid)
+    def self.skip_pid?(pid)
       !pid.is_a?(Integer) || pid <= 1
     end
 
-    def skip_pgid?(pgid)
+    def self.skip_pgid?(pgid)
       !pgid.is_a?(Integer) || pgid <= 1
     end
 
     # atomic operation on POSIX filesystems, since
     # f.flock(File::LOCK_SH) is not available on all platforms
-    def acquire_atomic_fs_lock(name)
+    def self.acquire_atomic_fs_lock(name)
       lock = "#{name}.lock"
       times = 0
       begin
@@ -54,21 +49,21 @@ module Bluepill
       end
     end
 
-    def clear_all_atomic_fs_locks
+    def self.clear_all_atomic_fs_locks
       Dir['.*.lock'].each do |f|
         System.delete_if_exists(f) if File.directory?(f)
       end
     end
 
-    def pid_journal_filename(journal_name)
+    def self.pid_journal_filename(journal_name)
       File.join(journal_base_dir, ".bluepill_pids_journal.#{journal_name}")
     end
 
-    def pgid_journal_filename(journal_name)
+    def self.pgid_journal_filename(journal_name)
       File.join(journal_base_dir, ".bluepill_pgids_journal.#{journal_name}")
     end
 
-    def pid_journal(filename)
+    def self.pid_journal(filename)
       logger.debug("pid journal file: #{filename}")
       result = File.open(filename, 'r').readlines.collect(&:to_i).reject { |pid| skip_pid?(pid) }
       logger.debug("pid journal = #{result.join(' ')}")
@@ -77,7 +72,7 @@ module Bluepill
       []
     end
 
-    def pgid_journal(filename)
+    def self.pgid_journal(filename)
       logger.debug("pgid journal file: #{filename}")
       result = File.open(filename, 'r').readlines.collect(&:to_i).reject { |pgid| skip_pgid?(pgid) }
       logger.debug("pgid journal = #{result.join(' ')}")
@@ -86,14 +81,14 @@ module Bluepill
       []
     end
 
-    def clear_atomic_fs_lock(name)
+    def self.clear_atomic_fs_lock(name)
       return unless File.directory?(name)
 
       Dir.rmdir(name)
       logger.debug("Cleared lock #{name}")
     end
 
-    def kill_all_from_all_journals
+    def self.kill_all_from_all_journals
       pids = Dir['.bluepill_pids_journal.*'].collect { |p| p.sub(/^\.bluepill_pids_journal\./, '') }
       pids.reject! { |p| p =~ /\.lock$/ }
       pids.each do |journal_name|
@@ -101,24 +96,24 @@ module Bluepill
       end
     end
 
-    def kill_all_from_journal(journal_name)
+    def self.kill_all_from_journal(journal_name)
       kill_all_pids_from_journal(journal_name)
       kill_all_pgids_from_journal(journal_name)
     end
 
-    def kill_all_pgids_from_journal(journal_name)
+    def self.kill_all_pgids_from_journal(journal_name)
       filename = pgid_journal_filename(journal_name)
       kill_all_from_journal_file(filename, pgid_journal(filename), 'process group', -1)
     end
 
-    def kill_all_pids_from_journal(journal_name)
+    def self.kill_all_pids_from_journal(journal_name)
       filename = pid_journal_filename(journal_name)
       kill_all_from_journal_file(filename, pid_journal(filename), 'process', 1)
     end
 
     # Sends TERM, waits a second for any survivors, then sends KILL to those
     # still alive. A negative sign targets process groups instead of pids.
-    def kill_all_from_journal_file(filename, ids, label, sign)
+    def self.kill_all_from_journal_file(filename, ids, label, sign)
       if ids.empty?
         logger.debug('No previous process journal - Skipping cleanup')
         return
@@ -137,7 +132,7 @@ module Bluepill
       end
     end
 
-    def signal_journaled(signal, ids, label, sign)
+    def self.signal_journaled(signal, ids, label, sign)
       past, verb = signal == 'TERM' ? %w[Termed term] : %w[Killed kill]
       ids.each do |id|
         begin
@@ -149,7 +144,7 @@ module Bluepill
       end
     end
 
-    def append_pgid_to_journal(journal_name, pgid)
+    def self.append_pgid_to_journal(journal_name, pgid)
       if skip_pgid?(pgid)
         logger.debug("Skipping invalid pgid #{pgid} (class #{pgid.class})")
         return
@@ -168,7 +163,7 @@ module Bluepill
       end
     end
 
-    def append_pid_to_journal(journal_name, pid)
+    def self.append_pid_to_journal(journal_name, pid)
       if skip_pid?(pid)
         logger.debug("Skipping invalid pid #{pid} (class #{pid.class})")
         return

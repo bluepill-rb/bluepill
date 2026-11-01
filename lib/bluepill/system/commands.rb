@@ -57,11 +57,17 @@ module Bluepill
 
       child = Daemonize.safefork
       if child
-        wr.close
-        cmd_status = rd.read
-        rd.close
+        # Reap the child in a background thread, so it never becomes a zombie,
+        # even if a timeout interrupts us before it exits
+        waiter = ::Process.detach(child)
 
-        ::Process.waitpid(child)
+        wr.close
+        begin
+          cmd_status = rd.read
+        ensure
+          rd.close
+        end
+        waiter.join
 
         cmd_status.strip != '' ? Marshal.load(cmd_status) : {exit_code: 0, stdout: '', stderr: ''}
       else
@@ -98,7 +104,11 @@ module Bluepill
       cmd_err_read.close
 
       # Time to tell the parent about what went down
-      result_pipe.write Marshal.dump(result)
+      begin
+        result_pipe.write Marshal.dump(result)
+      rescue Errno::EPIPE
+        # The parent timed out and stopped waiting for the result
+      end
       result_pipe.close
 
       ::Process.exit!

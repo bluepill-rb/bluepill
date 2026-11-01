@@ -258,10 +258,12 @@ describe Bluepill::System do
     let(:wr) { double('wr', close: nil, write: nil) }
 
     context 'in the parent' do
+      let(:waiter) { double('waiter', join: nil) }
+
       before(:each) do
         allow(IO).to receive(:pipe).and_return([rd, wr])
         allow(Daemonize).to receive(:safefork).and_return(123)
-        expect(Process).to receive(:waitpid).with(123)
+        allow(Process).to receive(:detach).with(123).and_return(waiter)
       end
 
       it 'should return the result reported by the child' do
@@ -275,6 +277,21 @@ describe Bluepill::System do
       it 'should return an empty successful result if the child reported nothing' do
         allow(rd).to receive(:read).and_return('')
         expect(Bluepill::System.execute_blocking('cmd')).to eq(exit_code: 0, stdout: '', stderr: '')
+      end
+
+      it 'should wait for the child to be reaped' do
+        allow(rd).to receive(:read).and_return('')
+        Bluepill::System.execute_blocking('cmd')
+        expect(Process).to have_received(:detach).with(123)
+        expect(waiter).to have_received(:join)
+      end
+
+      it 'should reap the child and close the pipe if interrupted by a timeout' do
+        allow(rd).to receive(:read).and_raise(Timeout::Error)
+        expect { Bluepill::System.execute_blocking('cmd') }.to raise_error(Timeout::Error)
+        expect(Process).to have_received(:detach).with(123)
+        expect(rd).to have_received(:close)
+        expect(waiter).not_to have_received(:join)
       end
     end
 
@@ -320,6 +337,13 @@ describe Bluepill::System do
         expect(out_rd).to have_received(:close).twice
         expect(err_rd).to have_received(:close).twice
         expect(wr).to have_received(:write).with(Marshal.dump(stdout: 'out', stderr: 'err', exit_code: 2))
+        expect(Process).to have_received(:exit!).with(no_args)
+      end
+
+      it 'should still exit if the parent stopped waiting for the result' do
+        allow(wr).to receive(:write).and_raise(Errno::EPIPE)
+        Bluepill::System.execute_blocking('cmd', options)
+        expect(wr).to have_received(:close).twice
         expect(Process).to have_received(:exit!).with(no_args)
       end
 

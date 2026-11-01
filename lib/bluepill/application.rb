@@ -202,8 +202,10 @@ module Bluepill
     def kill_previous_bluepill
       return unless File.exist?(pid_file)
 
+      # An empty or garbled pid file reads as 0, and signaling pid 0 would
+      # interrupt bluepill's own process group
       previous_pid = File.read(pid_file).to_i
-      return unless System.pid_alive?(previous_pid)
+      return unless previous_pid > 0 && System.pid_alive?(previous_pid)
 
       ::Process.kill(0, previous_pid)
       puts "Killing previous bluepilld[#{previous_pid}]"

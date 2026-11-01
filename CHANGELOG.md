@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A start, stop or restart command killed by a signal could crash the daemon, since the command has no exit code.
 - The `running_time` check could crash the daemon when `ps` didn't list the process.
 - The HTTP check's workaround for a Net::HTTP connection error never matched on Ruby 3.4 and newer, which changed the error message.
+- An empty or garbled application pid file made bluepill send `SIGINT` to its own process group on startup.
 
 ## [0.1.3] - 2017-04-06
 

@@ -467,6 +467,17 @@ describe Bluepill::Application do
         app.send(:kill_previous_bluepill)
       end
 
+      ['', 'garbage'].each do |contents|
+        it "does nothing when the pid file holds #{contents.inspect}" do
+          File.open(pid_file, 'w') { |f| f.write(contents) }
+          expect(Bluepill::System).not_to receive(:pid_alive?)
+          expect(::Process).not_to receive(:kill)
+          expect(app).not_to receive(:puts)
+          expect(app).not_to receive(:exit)
+          app.send(:kill_previous_bluepill)
+        end
+      end
+
       context 'when the previous bluepill is running' do
         before(:each) do
           write_pid

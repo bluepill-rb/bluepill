@@ -1,31 +1,49 @@
-describe Bluepill::Version do
-  it 'has a major version' do
-    expect(Bluepill::Version.major).to be_a(Integer)
+# RSpec names a described module with its to_s, which is the version
+describe 'Bluepill::Version' do
+  describe '.major' do
+    it 'is the major version' do
+      expect(Bluepill::Version.major).to eq(0)
+    end
   end
 
-  it 'has a minor version' do
-    expect(Bluepill::Version.minor).to be_a(Integer)
+  describe '.minor' do
+    it 'is the minor version' do
+      expect(Bluepill::Version.minor).to eq(1)
+    end
   end
 
-  it 'has a patch version' do
-    expect(Bluepill::Version.patch).to be_a(Integer)
+  describe '.patch' do
+    it 'is the patch version' do
+      expect(Bluepill::Version.patch).to eq(4)
+    end
   end
 
-  it 'has no pre-release version' do
-    expect(Bluepill::Version.pre).to be_nil
+  describe '.pre' do
+    it 'is no pre-release version' do
+      expect(Bluepill::Version.pre).to be_nil
+    end
   end
 
-  it 'converts to a hash' do
-    version = Bluepill::Version
-    expect(version.to_h).to eq(major: version.major, minor: version.minor, patch: version.patch, pre: nil)
+  describe '.to_h' do
+    it 'has every part' do
+      expect(Bluepill::Version.to_h).to eq(major: 0, minor: 1, patch: 4, pre: nil)
+    end
+
+    it 'has the pre-release version when there is one' do
+      allow(Bluepill::Version).to receive(:pre).and_return(1)
+      expect(Bluepill::Version.to_h).to include(pre: 1)
+    end
   end
 
-  it 'converts to an array without nil parts' do
-    version = Bluepill::Version
-    expect(version.to_a).to eq([version.major, version.minor, version.patch])
+  describe '.to_a' do
+    it 'has the parts without nil' do
+      expect(Bluepill::Version.to_a).to eq([0, 1, 4])
+    end
   end
 
-  it 'converts to a dotted string' do
-    expect(Bluepill::Version.to_s).to match(/\A\d+\.\d+\.\d+\z/)
+  describe '.to_s' do
+    it 'is the dotted version' do
+      expect(Bluepill::Version.to_s).to eq('0.1.4')
+    end
   end
 end

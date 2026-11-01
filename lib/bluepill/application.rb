@@ -17,9 +17,9 @@ module Bluepill
       home = ENV['HOME'] #: String
       self.base_dir = ProcessJournal.base_dir = options[:base_dir] ||
         ENV['BLUEPILL_BASE_DIR'] ||
-        (::Process.euid != 0 ? File.join(home, '.bluepill') : '/var/run/bluepill')
-      self.pid_file = File.join(base_dir, 'pids', "#{self.name}.pid")
-      self.pids_dir = File.join(base_dir, 'pids', self.name)
+        (::Process.euid.zero? ? '/var/run/bluepill' : File.join(home, '.bluepill'))
+      self.pid_file = File.join(base_dir, 'pids', "#{name}.pid")
+      self.pids_dir = File.join(base_dir, 'pids', name)
       self.kill_timeout = options[:kill_timeout] || 10
 
       self.groups = {}
@@ -59,11 +59,11 @@ module Bluepill
       group_name = group_name.to_s if group_name
 
       groups[group_name] ||= Group.new(group_name, logger: logger.prefix_with(group_name))
-      groups[group_name].add_process(process)
+      groups.fetch(group_name).add_process(process)
     end
 
     def version
-      Bluepill::Version
+      Version
     end
 
   protected
@@ -71,15 +71,15 @@ module Bluepill
     def send_to_process_or_group(method, group_name, process_name)
       if group_name.nil? && process_name.nil?
         groups.values.collect do |group|
-          group.send(method)
+          group.public_send(method)
         end.flatten
       elsif groups.key?(group_name)
-        groups[group_name].send(method, process_name)
+        groups.fetch(group_name).public_send(method, process_name)
       else
         # they must be targeting just by process name, which may contain ':'
         process_name = [group_name, process_name].compact.join(':')
         groups.values.collect do |group|
-          group.send(method, process_name)
+          group.public_send(method, process_name)
         end.flatten
       end
     end
@@ -97,8 +97,8 @@ module Bluepill
             # The target is group:process and the process name may contain ':'
             command, *args = client.readline.strip.split(':', 3).reject(&:empty?)
             response = begin
-              # An empty line leaves command nil, so send raises an error for the client
-              mutex { send(command, *args) } # steep:ignore ArgumentTypeMismatch
+              # An empty line leaves command nil, so public_send raises an error for the client
+              mutex { public_send(command, *args) } # steep:ignore ArgumentTypeMismatch
             rescue StandardError => e
               e
             end
@@ -137,7 +137,7 @@ module Bluepill
       groups.each_value(&:determine_initial_state)
 
       write_pid_file
-      self.socket = Bluepill::Socket.server(base_dir, name)
+      self.socket = Socket.server(base_dir, name)
       start_listener
 
       run
@@ -182,10 +182,10 @@ module Bluepill
     # Bluepill opens its log file and creates its pids dir as the user that
     # runs it. The uid and gid in the config only apply to its processes.
     def setup_logger_and_pids_dir
-      self.logger = ProcessJournal.logger = Bluepill::Logger.new(log_file: log_file, stdout: foreground?).prefix_with(name)
+      self.logger = ProcessJournal.logger = Logger.new(log_file: log_file, stdout: foreground?).prefix_with(name)
       setup_pids_dir
     rescue SystemCallError => e
-      $stderr.puts("Failed to start bluepill: #{e.message}")
+      $stderr.puts("Failed to start bluepill: #{e}")
       message = 'The user running bluepill must be able to write to its log_file and base_dir. ' \
                 'The uid and gid in the config only apply to the processes it monitors.'
       $stderr.puts(message)
@@ -210,8 +210,8 @@ module Bluepill
       ::Process.kill(2, previous_pid)
     rescue StandardError => e
       $stderr.puts 'Encountered error trying to kill previous bluepill:'
-      $stderr.puts "#{e.class}: #{e.message}"
-      exit(4) unless e.is_a?(Errno::ESRCH)
+      $stderr.puts "#{e.class}: #{e}"
+      exit(4) unless e.instance_of?(Errno::ESRCH)
     else
       kill_timeout.times do |_i|
         sleep 0.5

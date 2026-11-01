@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** an attribute in a `process` block that bluepill doesn't know, such as a misspelled `start_comand`, now fails when the config loads, naming the attribute and the process and suggesting the closest one. Before, bluepill accepted it and quietly ignored it ([#40](https://github.com/bluepill-rb/bluepill/issues/40)).
+
 ### Removed
 
 - The `state_machine` dependency, whose last release was in 2013. A process's states and events are now a small transition table in `Bluepill::Process`, which moves between the same states, in the same order of callbacks. With all three dependencies gone, bluepill has no runtime dependencies. This isn't a breaking change ([#61](https://github.com/bluepill-rb/bluepill/issues/61)).

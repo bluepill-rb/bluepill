@@ -659,12 +659,26 @@ module Bluepill
 
     def respond_to_missing?: (Symbol name, bool? include_private) -> bool
 
+    # Whether a config can set the attribute on a process
+    def self.attribute?: (Symbol name) -> bool
+
+    def self.attribute_names: () -> Array[Symbol]
+
+    # The Levenshtein distance between two names
+    def self.distance: (String from, String to) -> Integer
+
     def checks: (Symbol name, ?Hash[Symbol, untyped] options) -> Hash[Symbol, untyped]
 
     # The block configures the children like a process block
     def monitor_children: () ?{ (ProcessProxy child) [self: ProcessProxy] -> void } -> process_block?
 
     def to_process: () -> Process
+
+    private
+
+    def unknown_attribute!: (Symbol key) -> bot
+
+    def suggest: (Symbol key) -> String?
   end
 
   # The durations and sizes a config writes, as plain numbers of seconds

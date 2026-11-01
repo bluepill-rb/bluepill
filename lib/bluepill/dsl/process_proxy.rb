@@ -58,7 +58,8 @@ module Bluepill
     #
     # A name ending in `=`, or one given a value, sets the attribute. A name
     # ending in `!` sets it to true. A name alone reads an attribute that's
-    # set.
+    # set. Only the attributes a process has can be set, so a misspelled one
+    # fails when the config loads instead of being ignored.
     #
     # @example
     #   process.start_command = '/usr/bin/my_server'
@@ -71,24 +72,25 @@ module Bluepill
     #
     # @return [Object] the value that was set or read
     #
-    # @raise [NoMethodError] for an attribute that isn't set, or more than one
-    #   value
+    # @raise [NoMethodError] for an attribute a process doesn't have, one
+    #   that isn't set yet, or more than one value
     #
     # @api public
     def method_missing(name, *args)
       attribute = name.to_s
-      case args.size
-      when 1
-        value, = args
-        @attributes[attribute.chomp('=').to_sym] = value
-      when 0
-        if attribute.end_with?('!')
-          @attributes[attribute.chomp('!').to_sym] = true
-        elsif @attributes.key?(name)
-          @attributes.fetch(name)
-        else
-          super
-        end
+      key = attribute.sub(/[=!]\z/, '').to_sym
+      bang = attribute.end_with?('!')
+      reader = args.empty? && key.to_s.eql?(attribute)
+      value, = args
+
+      if !reader && !args.size.equal?(bang ? 0 : 1)
+        super
+      elsif reader && @attributes.key?(key)
+        @attributes.fetch(key)
+      elsif !self.class.attribute?(key)
+        unknown_attribute!(key)
+      elsif !reader
+        @attributes[key] = bang || value
       else
         super
       end
@@ -101,12 +103,66 @@ module Bluepill
     # @param [Symbol] name the method's name
     # @param [Boolean, nil] _include_private ignored
     #
-    # @return [Boolean] true for a setter, a `name!`, or an attribute that's
-    #   set
+    # @return [Boolean] true for the setter or `name!` of an attribute a
+    #   process has, or the reader of one that's set
     #
     # @api private
     def respond_to_missing?(name, _include_private)
-      ['=', '!'].include?(name[-1]) || @attributes.key?(name)
+      attribute = name.to_s
+      key = attribute.sub(/[=!]\z/, '')
+      return @attributes.key?(name) if key.eql?(attribute)
+
+      self.class.attribute?(key.to_sym)
+    end
+
+    # Return whether a process has an attribute that a config can set
+    #
+    # These are a process's configurable attributes, and the group it's in.
+    #
+    # @param [Symbol] name the attribute's name
+    #
+    # @return [Boolean] true for an attribute a config can set
+    #
+    # @api private
+    def self.attribute?(name)
+      attribute_names.include?(name)
+    end
+
+    # Return the attributes a config can set on a process
+    #
+    # @return [Array<Symbol>] a process's configurable attributes, and :group
+    #
+    # @api private
+    def self.attribute_names
+      Process::CONFIGURABLE_ATTRIBUTES + [:group]
+    end
+
+    # Return how many edits turn one name into another
+    #
+    # Counts the characters to insert, delete or replace (the Levenshtein
+    # distance), a row of the table at a time.
+    #
+    # @example
+    #   ProcessProxy.distance('start_comand', 'start_command') # => 1
+    #
+    # @param [String] from the name to start from
+    # @param [String] to the name to end at
+    #
+    # @return [Integer] the number of edits
+    #
+    # @api private
+    def self.distance(from, to)
+      row = (0..to.length).to_a
+      from.each_char.with_index(1) do |from_char, i|
+        diagonal = row.fetch(0)
+        row[0] = i
+        to.each_char.with_index(1) do |to_char, j|
+          above = row.fetch(j)
+          row[j] = [above + 1, row.fetch(j - 1) + 1, diagonal + (from_char.eql?(to_char) ? 0 : 1)].min
+          diagonal = above
+        end
+      end
+      row.fetch(-1)
     end
 
     # Add a check of the process, or a trigger such as :flapping
@@ -156,6 +212,47 @@ module Bluepill
     # @api private
     def to_process
       Process.new(@name, @watches, @attributes)
+    end
+
+  private
+
+    # Fail on an attribute a process doesn't have
+    #
+    # The message names the process and the attribute, and the closest
+    # attribute a process has, when there's one close enough.
+    #
+    # @param [Symbol] key the attribute's name
+    #
+    # @return [void] it never returns
+    #
+    # @raise [NoMethodError] always
+    #
+    # @api private
+    def unknown_attribute!(key)
+      message = "Unknown attribute '#{key}' for process '#{@name}'"
+      suggestion = suggest(key)
+      message += ". Did you mean '#{suggestion}'?" if suggestion
+      raise NoMethodError.new(message, key) # steep:ignore ArgumentTypeMismatch
+    end
+
+    # Return the attribute a process has that's closest to a misspelled one
+    #
+    # The closest is the one the fewest edits away, if that's at most a
+    # third of the misspelled name's length. Ruby's did_you_mean would do,
+    # but Bundler leaves it out on Rubies before 2.7, so bluepill compares
+    # the names itself and suggests the same attribute on every Ruby.
+    #
+    # @param [Symbol] key the misspelled attribute
+    #
+    # @return [String, nil] the closest attribute, or nil
+    #
+    # @api private
+    def suggest(key)
+      word = key.to_s
+      distances = self.class.attribute_names.collect { |name| [self.class.distance(word, name.to_s), name.to_s] } #: Array[[Integer, String]]
+      closest = distances.min #: [Integer, String]
+      distance, name = closest
+      name if distance <= word.length / 3
     end
   end
 end

@@ -58,6 +58,12 @@ end
 
 If you don&apos;t specify a stop command, a TERM signal will be sent by default. Similarly, the default restart action is to issue stop and then start.
 
+Bluepill only accepts the process attributes it knows, which are the ones this README describes. A misspelled or unsupported attribute fails when the config loads, and the error names the attribute, the process, and the closest attribute bluepill knows:
+
+```
+Unknown attribute 'start_comand' for process 'process_name'. Did you mean 'start_command'?
+```
+
 Now if we want to do something more meaningful, like actually monitor the process, we do:
 
 ```ruby

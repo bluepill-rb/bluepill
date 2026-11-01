@@ -13,13 +13,17 @@ describe Bluepill::ProcessJournal do
   around do |example|
     old_logger = journal.instance_variable_get(:@logger)
     old_base_dir = journal.instance_variable_get(:@journal_base_dir)
+    old_legacy_dir = journal.instance_variable_get(:@legacy_journal_dir)
     Dir.mktmpdir do |dir|
-      @dir = dir
+      @legacy_dir = dir
+      @dir = File.join(dir, 'app')
+      Dir.mkdir(@dir)
       begin
         example.run
       ensure
         journal.instance_variable_set(:@logger, old_logger)
         journal.instance_variable_set(:@journal_base_dir, old_base_dir)
+        journal.instance_variable_set(:@legacy_journal_dir, old_legacy_dir)
       end
     end
   end
@@ -27,6 +31,7 @@ describe Bluepill::ProcessJournal do
   before do
     journal.instance_variable_set(:@logger, logger)
     journal.instance_variable_set(:@journal_base_dir, @dir)
+    journal.instance_variable_set(:@legacy_journal_dir, @legacy_dir)
     allow(journal).to receive(:sleep)
     allow(::Process).to receive(:kill)
     allow(Bluepill::System).to receive(:pid_alive?).and_return(false)
@@ -49,27 +54,44 @@ describe Bluepill::ProcessJournal do
     end
   end
 
-  describe '.base_dir=' do
-    it 'creates the journal directory once' do
+  describe '.setup' do
+    before do
       journal.instance_variable_set(:@journal_base_dir, nil)
-      journal.base_dir = @dir
-      expected = File.join(@dir, 'journals')
-      expect(journal.journal_base_dir).to eq expected
-      expect(File.directory?(expected)).to be true
-      expect(File.stat(expected).mode & 0o777).to eq 0o777
-
-      journal.base_dir = File.join(@dir, 'other')
-      expect(journal.journal_base_dir).to eq expected
-      expect(File.exist?(File.join(@dir, 'other'))).to be false
+      journal.instance_variable_set(:@legacy_journal_dir, nil)
     end
 
-    it 'only makes the journal directory writable if it exists' do
-      expected = File.join(@dir, 'journals')
-      Dir.mkdir(expected, 0o700)
-      journal.instance_variable_set(:@journal_base_dir, nil)
+    it "creates the app's journal directory once" do
+      journal.setup(@dir, :web)
+      legacy = File.join(@dir, 'journals')
+      expected = File.join(legacy, 'web')
+      expect(journal.journal_base_dir).to eq expected
+      expect(journal.legacy_journal_dir).to eq legacy
+      [legacy, expected].each do |dir|
+        expect(File.directory?(dir)).to be true
+        expect(File.stat(dir).mode & 0o777).to eq 0o777
+      end
+
+      journal.setup(File.join(@dir, 'other'), :api)
+      expect(journal.journal_base_dir).to eq expected
+      expect(journal.legacy_journal_dir).to eq legacy
+      expect(File.exist?(File.join(@dir, 'other'))).to be false
+      expect(File.exist?(File.join(legacy, 'api'))).to be false
+    end
+
+    it 'only makes the journal directories writable if they exist' do
+      legacy = File.join(@dir, 'journals')
+      Dir.mkdir(legacy, 0o700)
+      Dir.mkdir(File.join(legacy, 'web'), 0o700)
       expect(FileUtils).not_to receive(:mkdir_p)
-      journal.base_dir = @dir
-      expect(File.stat(expected).mode & 0o777).to eq 0o777
+      journal.setup(@dir, 'web')
+      expect(File.stat(legacy).mode & 0o777).to eq 0o777
+      expect(File.stat(File.join(legacy, 'web')).mode & 0o777).to eq 0o777
+    end
+  end
+
+  describe '.journal_dirs' do
+    it "lists the app's journal directory, then the one before 0.2" do
+      expect(journal.journal_dirs).to eq [@dir, @legacy_dir]
     end
   end
 
@@ -181,11 +203,19 @@ describe Bluepill::ProcessJournal do
     it 'is in the journal directory' do
       expect(journal.pid_journal_filename('app')).to eq File.join(@dir, '.bluepill_pids_journal.app')
     end
+
+    it 'is in another journal directory when given one' do
+      expect(journal.pid_journal_filename('app', '/old')).to eq '/old/.bluepill_pids_journal.app'
+    end
   end
 
   describe '.pgid_journal_filename' do
     it 'is in the journal directory' do
       expect(journal.pgid_journal_filename('app')).to eq File.join(@dir, '.bluepill_pgids_journal.app')
+    end
+
+    it 'is in another journal directory when given one' do
+      expect(journal.pgid_journal_filename('app', '/old')).to eq '/old/.bluepill_pgids_journal.app'
     end
   end
 
@@ -240,9 +270,15 @@ describe Bluepill::ProcessJournal do
   }.each do |method, (filename_method, sign, label, kind)|
     describe ".#{method}" do
       let(:filename) { journal.send(filename_method, 'app') }
+      let(:legacy_filename) { journal.send(filename_method, 'app', @legacy_dir) }
 
       define_method(:journal_log) do |ids|
         [[:debug, "#{kind} journal file: #{filename}"], [:debug, "#{kind} journal = #{ids.join(' ')}"]]
+      end
+
+      # Reading the journal that bluepill 0.1 and earlier shared, after the app's
+      define_method(:no_legacy_journal_log) do
+        [[:debug, "#{kind} journal file: #{legacy_filename}"], [:debug, 'No previous process journal - Skipping cleanup']]
       end
 
       it 'skips cleanup without a journal' do
@@ -252,7 +288,28 @@ describe Bluepill::ProcessJournal do
         expect(log).to eq [
           [:debug, "#{kind} journal file: #{filename}"],
           [:debug, 'No previous process journal - Skipping cleanup'],
-        ]
+        ] + no_legacy_journal_log
+      end
+
+      it 'also kills what the journal from before 0.2 lists, and resets it' do
+        write_journal(filename, [42])
+        write_journal(legacy_filename, [43])
+        expect(::Process).to receive(:kill).with('TERM', sign * 42).ordered
+        expect(::Process).to receive(:kill).with('TERM', sign * 43).ordered
+        journal.send(method, 'app')
+        expect(File.exist?(filename)).to be false
+        expect(File.exist?(legacy_filename)).to be false
+        expect(File.exist?("#{legacy_filename}.lock")).to be false
+        expect(log).to include([:info, "Termed old #{label} 43"])
+      end
+
+      it "doesn't touch another app's journal" do
+        other = journal.send(filename_method, 'app', File.join(@legacy_dir, 'other'))
+        Dir.mkdir(File.dirname(other))
+        write_journal(other, [44])
+        expect(::Process).not_to receive(:kill)
+        journal.send(method, 'app')
+        expect(File.read(other)).to eq "44\n"
       end
 
       it 'terms the journaled ids and resets the journal' do
@@ -269,7 +326,7 @@ describe Bluepill::ProcessJournal do
           [:debug, "Unable to term missing #{label} 43"],
           [:debug, 'Journal cleanup completed'],
           [:debug, "Cleared lock #{filename}.lock"],
-        ]
+        ] + no_legacy_journal_log
       end
 
       it 'kills a single id that survives TERM' do
@@ -286,7 +343,7 @@ describe Bluepill::ProcessJournal do
           [:info, "Killed old #{label} 42"],
           [:debug, 'Journal cleanup completed'],
           [:debug, "Cleared lock #{filename}.lock"],
-        ]
+        ] + no_legacy_journal_log
       end
 
       it 'only kills ids still alive after the wait' do

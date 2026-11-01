@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Two apps with a process of the same name shared its journal, so starting the process in one app killed the other app's ([#34](https://github.com/bluepill-rb/bluepill/issues/34)). Each app now keeps its journals in a directory of its own, `journals/<app>`. Journals that bluepill 0.1 and earlier wrote are still read and cleared, so upgrading doesn't leave their processes running.
+
 ## [0.1.4] - 2026-11-01
 
 ### Added

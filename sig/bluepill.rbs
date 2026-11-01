@@ -774,15 +774,18 @@ module Bluepill
   module ProcessJournal
     self.@logger: Logger
     self.@journal_base_dir: String
+    self.@legacy_journal_dir: String
 
     def self.logger: () -> Logger
 
     def self.journal_base_dir: () -> String
 
+    def self.legacy_journal_dir: () -> String
+
     # Only the first logger is kept
     def self.logger=: (Logger new_logger) -> Logger
 
-    def self.base_dir=: (String base_dir) -> void
+    def self.setup: (String base_dir, _ToS app_name) -> void
 
     def self.skip_pid?: (Integer? pid) -> bool
 
@@ -792,9 +795,9 @@ module Bluepill
 
     def self.clear_all_atomic_fs_locks: () -> void
 
-    def self.pid_journal_filename: (String journal_name) -> String
+    def self.pid_journal_filename: (String journal_name, ?String dir) -> String
 
-    def self.pgid_journal_filename: (String journal_name) -> String
+    def self.pgid_journal_filename: (String journal_name, ?String dir) -> String
 
     def self.pid_journal: (String filename) -> Array[Integer]
 
@@ -809,6 +812,8 @@ module Bluepill
     def self.kill_all_pgids_from_journal: (String journal_name) -> void
 
     def self.kill_all_pids_from_journal: (String journal_name) -> void
+
+    def self.journal_dirs: () -> Array[String]
 
     def self.kill_all_from_journal_file: (String filename, Array[Integer] ids, String label, Integer sign) -> void
 

@@ -104,9 +104,10 @@ module Bluepill
       self.log_file = options[:log_file]
       # Only used for a non-root user, who has a home
       home = ENV['HOME'] #: String
-      self.base_dir = ProcessJournal.base_dir = options[:base_dir] ||
-        ENV['BLUEPILL_BASE_DIR'] ||
-        (::Process.euid.zero? ? '/var/run/bluepill' : File.join(home, '.bluepill'))
+      self.base_dir = options[:base_dir] ||
+                      ENV['BLUEPILL_BASE_DIR'] ||
+                      (::Process.euid.zero? ? '/var/run/bluepill' : File.join(home, '.bluepill'))
+      ProcessJournal.setup(base_dir, name)
       self.pid_file = File.join(base_dir, 'pids', "#{name}.pid")
       self.pids_dir = File.join(base_dir, 'pids', name)
       self.kill_timeout = options[:kill_timeout] || 10

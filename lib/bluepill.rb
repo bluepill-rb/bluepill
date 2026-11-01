@@ -8,7 +8,6 @@ require 'bundler/setup' if ENV['BUNDLE_GEMFILE'] && File.exist?(ENV['BUNDLE_GEMF
 
 require 'thread'
 require 'monitor'
-require 'syslog'
 require 'timeout'
 require 'logger'
 

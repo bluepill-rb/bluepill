@@ -1,3 +1,4 @@
+require 'syslog'
 require 'tmpdir'
 
 describe Bluepill::Logger do
@@ -23,6 +24,16 @@ describe Bluepill::Logger do
       expect(Syslog).to receive(:close)
       expect(Syslog).to receive(:open).with('myapp', Syslog::LOG_PID, Syslog::LOG_LOCAL6).and_return(double('syslog'))
       Bluepill::Logger.new(identity: 'myapp')
+    end
+
+    it 'should explain how to fix a missing syslog library' do
+      allow_any_instance_of(Bluepill::Logger).to receive(:require).with('syslog').and_raise(LoadError)
+      expect { Bluepill::Logger.new }.to raise_error(LoadError, /add gem 'syslog' to your Gemfile or set log_file/)
+    end
+
+    it 'should not load syslog when logging to a log file' do
+      expect_any_instance_of(Bluepill::Logger).not_to receive(:require)
+      Bluepill::Logger.new(log_file: @log_file)
     end
 
     it 'should log to a log file' do

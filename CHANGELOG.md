@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- On Ruby 3.4 and newer, loading bluepill under Bundler raised `LoadError` unless the app's Gemfile included `syslog`, even when logging to a file. Bluepill now loads `syslog` only when it logs to syslog, and explains how to fix a missing `syslog` gem.
 - The HTTP condition with a numeric `kind`, and `stop_signals` with delays, crashed on Ruby 3.2 and newer, where `Fixnum` no longer exists.
 - Two processes could hold the journal lock at the same time, the lock never timed out, and a waiting process could remove a lock held by another.
 - A `nil` pid crashed the process journal, and a pid of 0 made bluepill journal its own process group.

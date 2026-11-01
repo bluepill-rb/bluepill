@@ -36,7 +36,7 @@ module Bluepill
     # @return [Logger] the process's logger
     #
     # @api private
-    attr_accessor :logger
+    attr_reader :logger
 
     # Return the check's name, such as :mem_usage
     #
@@ -75,7 +75,26 @@ module Bluepill
 
       clear_history!
 
-      @process_condition = ProcessConditions[@name].new(options)
+      # The condition gets the logger while it's created, so its own
+      # initialize can log, and again after, in case that initialize doesn't
+      # call super
+      @process_condition = ProcessConditions[@name].new(options.merge(logger: @logger))
+      self.logger = @logger
+    end
+
+    # Set the logger the watch and its condition write to
+    #
+    # The process sets its watches' logger again when it gets a logger of
+    # its own, such as one with its group's name.
+    #
+    # @param [Logger] logger the process's logger
+    #
+    # @return [void]
+    #
+    # @api private
+    def logger=(logger)
+      @logger = logger
+      @process_condition.logger = logger
     end
 
     # Run the check if it's due, and return the events to fire

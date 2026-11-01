@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Custom checks have a `logger`, which writes to bluepill's log with the app's and the process's names, and the README shows how to write one ([#7](https://github.com/bluepill-rb/bluepill/issues/7)).
+
 ### Changed
 
 - **Breaking:** an attribute in a `process` block that bluepill doesn't know, such as a misspelled `start_comand`, now fails when the config loads, naming the attribute and the process and suggesting the closest one. Before, bluepill accepted it and quietly ignored it ([#40](https://github.com/bluepill-rb/bluepill/issues/40)).

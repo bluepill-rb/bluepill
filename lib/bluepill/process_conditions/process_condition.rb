@@ -9,15 +9,30 @@ module Bluepill
     #
     # @api private
     class ProcessCondition
+      # Return the logger the condition can write to
+      #
+      # It's the watch's logger, so lines carry the app's and the process's
+      # names. A condition that calls super in its own initialize has it from
+      # then on.
+      #
+      # @example
+      #   logger.info("free disk: #{free}")
+      #
+      # @return [Logger, nil] the process's logger
+      #
+      # @api public
+      attr_accessor :logger
+
       # Create a condition with the options a config gave its check
       #
       # @param [Hash{Symbol => Object}] options the check's options, such as
-      #   below: 100.megabytes
+      #   below: 100.megabytes, and the watch's logger as logger:
       #
       # @return [void]
       #
       # @api private
       def initialize(options = {})
+        @logger = options.delete(:logger)
         @options = options
       end
 

@@ -519,7 +519,7 @@ module Bluepill
   class ConditionWatch
     EMPTY_ARRAY: Array[Symbol]
 
-    attr_accessor logger: Logger
+    attr_reader logger: Logger
     attr_accessor name: Symbol
 
     @fires: Array[Symbol]
@@ -531,6 +531,9 @@ module Bluepill
     @last_ran_at: Integer?
 
     def initialize: (Symbol name, ?Hash[Symbol, untyped] options) -> void
+
+    # Sets the logger of the watch and its condition
+    def logger=: (Logger logger) -> void
 
     # Returns the events to fire
     def run: (Integer? pid, ?Integer tick_number) -> Array[Symbol]
@@ -887,6 +890,9 @@ module Bluepill
     # returns and check tests.
     class ProcessCondition[V]
       @options: Hash[Symbol, untyped]
+
+      # The watch's logger
+      attr_accessor logger: Logger?
 
       def initialize: (?Hash[Symbol, untyped] options) -> void
 

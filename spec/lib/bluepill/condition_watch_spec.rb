@@ -10,14 +10,37 @@ describe Bluepill::ConditionWatch do
   end
 
   describe '#initialize' do
+    it 'gives the condition its logger while the condition\'s initialize runs' do
+      seen = []
+      stub_const('Bluepill::ProcessConditions::LoggingCheck', Class.new(Bluepill::ProcessConditions::ProcessCondition) do
+        define_method(:initialize) do |options = {}|
+          super(options)
+          seen << logger
+          seen << options
+        end
+      end)
+      w = Bluepill::ConditionWatch.new(:logging_check, logger: logger, every: 10, below: 5)
+      condition = w.instance_variable_get(:@process_condition)
+      expect(seen).to eq([logger, {below: 5}])
+      expect(condition.logger).to equal(logger)
+    end
+
+    it 'gives its logger to a condition whose initialize doesn\'t call super' do
+      stub_const('Bluepill::ProcessConditions::NoSuperCheck', Class.new(Bluepill::ProcessConditions::ProcessCondition) do
+        define_method(:initialize) { |_options = {}| nil }
+      end)
+      w = Bluepill::ConditionWatch.new(:no_super_check, logger: logger, every: 10)
+      expect(w.instance_variable_get(:@process_condition).logger).to equal(logger)
+    end
+
     it 'exposes its name and logger' do
       w = watch
       expect(w.name).to eq(:cpu_usage)
       expect(w.logger).to eq(logger)
     end
 
-    it 'passes the remaining options to the process condition' do
-      options = {below: 50}
+    it 'passes the remaining options and its logger to the process condition' do
+      options = {below: 50, logger: logger}
       expect(Bluepill::ProcessConditions::CpuUsage).to receive(:new).with(options).and_call_original
       watch
     end
@@ -195,6 +218,16 @@ describe Bluepill::ConditionWatch do
       w.run(123, 10)
       cpu_usage(90)
       expect(w.run(123, 20)).to eq([:restart])
+    end
+  end
+
+  describe '#logger=' do
+    it 'sets the logger of the watch and its condition' do
+      other = instance_double(Bluepill::Logger)
+      w = watch
+      w.logger = other
+      expect(w.logger).to equal(other)
+      expect(w.instance_variable_get(:@process_condition).logger).to equal(other)
     end
   end
 end

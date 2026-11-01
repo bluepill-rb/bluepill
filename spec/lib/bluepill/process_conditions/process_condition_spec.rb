@@ -5,6 +5,17 @@ describe Bluepill::ProcessConditions::ProcessCondition do
     expect(subject.instance_variable_get(:@options)).to eq(below: 5)
   end
 
+  it 'takes its logger out of its options' do
+    logger = double('logger')
+    condition = Bluepill::ProcessConditions::ProcessCondition.new(below: 5, logger: logger)
+    expect(condition.logger).to equal(logger)
+    expect(condition.instance_variable_get(:@options)).to eq(below: 5)
+  end
+
+  it 'has no logger without one' do
+    expect(subject.logger).to be_nil
+  end
+
   it 'can be created without options' do
     expect(Bluepill::ProcessConditions::ProcessCondition.new.instance_variable_get(:@options)).to eq({})
   end

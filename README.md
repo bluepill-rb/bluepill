@@ -292,6 +292,43 @@ end
 
 Note `{{PID}}` will be substituted for the pid of process in both the stop and restart commands.
 
+### Custom checks
+
+A check is a class in `Bluepill::ProcessConditions`, named after the check in camel case, so `checks :log_size` uses `LogSize`. Define it in the config file, before the application. It gets the check's options, except `every`, `times`, `fires`, and `include_children`, which bluepill handles. `run` reads a value, and `check` returns whether the value is fine:
+
+```ruby
+module Bluepill
+  module ProcessConditions
+    class LogSize < ProcessCondition
+      def initialize(options = {})
+        super
+        @path = options.fetch(:path)
+        @below = options.fetch(:below)
+      end
+
+      def run(_pid, _include_children)
+        File.size?(@path).to_i
+      end
+
+      def check(size)
+        logger.warning("#{@path} is #{size} bytes") unless size < @below
+        size < @below
+      end
+    end
+  end
+end
+
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+    process.checks :log_size, every: 1.minute, path: "/var/log/app.log", below: 1.gigabyte
+  end
+end
+```
+
+`logger` writes to bluepill's log, with the app's and the process's names, like the built-in checks. It's set once `super` returns, so call `super` first in `initialize`.
+
 ### Commands Don't Run in a Shell
 
 Bluepill splits each command (`start_command`, `pre_start_command`, `stop_command`, and `restart_command`) into words and runs it directly, without a shell. So shell syntax like `cd ... &&`, `VAR=value`, `|`, `>`, `2>&1`, and `*` globs doesn't work.

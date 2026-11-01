@@ -1,0 +1,48 @@
+name: Push gem to RubyGems
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    if: github.repository == 'bluepill-rb/bluepill'
+    runs-on: ubuntu-latest
+    environment:
+      name: rubygems.org
+      url: https://rubygems.org/gems/bluepill
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
+        with:
+          # Sigstore signing fails on Ruby 4.0, whose json 3 rejects options
+          # that protobug 0.1.0 passes to JSON.parse. Use 3.4 until it's fixed.
+          ruby-version: '3.4'
+      # Install gems fresh instead of from the Actions cache, so a poisoned
+      # cache can't end up in a published gem
+      - name: Install gems
+        run: bundle install --jobs 4
+      # Trusted publishing: RubyGems.org trusts this workflow, no API key.
+      - uses: rubygems/configure-rubygems-credentials@dc5a8d8553e6ee01fc26761a49e99e733d17954a # v2.1.0
+      - name: Update RubyGems
+        run: gem update --system
+      # The tag must match the version the gem builds as (v0.1.4: 0.1.4).
+      - name: Build gem
+        run: |
+          bundle exec rake build
+          test -f "pkg/bluepill-${GITHUB_REF_NAME#v}.gem"
+      - name: Sign gem with Sigstore
+        run: gem exec sigstore-cli sign pkg/*.gem --bundle pkg/bluepill.gem.sigstore.json
+      - name: Push gem
+        run: gem push pkg/*.gem --attestation pkg/bluepill.gem.sigstore.json
+      - name: Wait for release
+        run: gem exec rubygems-await pkg/*.gem

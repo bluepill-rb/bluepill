@@ -12,12 +12,6 @@ describe Bluepill::ProcessFactory do
     end
   end
 
-  # Fixnum was removed in Ruby 3.2, but the stop_signals validation still
-  # references it.
-  before do
-    stub_const('Fixnum', Integer) unless Object.const_defined?(:Fixnum)
-  end
-
   def create(name, block, attributes = {})
     Bluepill::ProcessFactory.new(attributes, block).create_process(name, '/pids')
   end

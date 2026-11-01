@@ -89,7 +89,7 @@ module Bluepill
           end
         else
           delay = s_or_d
-          unless delay.is_a? Fixnum
+          unless delay.is_a? Integer
             $stderr.puts "Config Error: Invalid stop_signals!  Expected a number (delay) at position #{i} instead of '#{delay}'."
             exit(6)
           end

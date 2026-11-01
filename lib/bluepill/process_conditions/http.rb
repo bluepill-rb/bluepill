@@ -8,7 +8,7 @@ module Bluepill
         @uri = URI.parse(options[:url])
         @kind = begin
           case options[:kind]
-          when Fixnum
+          when Integer
             Net::HTTPResponse::CODE_TO_OBJ[options[:kind].to_s]
           when String, Symbol
             Net.const_get("HTTP#{options[:kind].to_s.camelize}")

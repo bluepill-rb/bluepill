@@ -1,10 +1,4 @@
 describe Bluepill::ProcessConditions::Http do
-  # Fixnum was removed in Ruby 3.2, but the kind option handling still
-  # references it.
-  before do
-    stub_const('Fixnum', Integer) unless Object.const_defined?(:Fixnum)
-  end
-
   def http(options = {})
     Bluepill::ProcessConditions::Http.new({url: 'http://example.com:8080/status?full=1'}.merge(options))
   end

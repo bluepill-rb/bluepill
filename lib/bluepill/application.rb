@@ -92,7 +92,7 @@ module Bluepill
     #
     # @param [String] name the application's name
     # @param [Hash{Symbol => Object}] options :foreground, :log_file,
-    #   :base_dir and :kill_timeout
+    #   :log_level, :base_dir and :kill_timeout
     #
     # @return [void]
     #
@@ -102,6 +102,7 @@ module Bluepill
 
       @foreground   = options[:foreground]
       self.log_file = options[:log_file]
+      @log_level    = options[:log_level]
       # Only used for a non-root user, who has a home
       home = ENV['HOME'] #: String
       self.base_dir = options[:base_dir] ||
@@ -416,7 +417,7 @@ module Bluepill
     #
     # @api private
     def setup_logger_and_pids_dir
-      self.logger = ProcessJournal.logger = Logger.new(log_file: log_file, stdout: foreground?).prefix_with(name)
+      self.logger = ProcessJournal.logger = Logger.new(log_file: log_file, log_level: @log_level, stdout: foreground?).prefix_with(name)
       setup_pids_dir
     rescue SystemCallError => e
       $stderr.puts("Failed to start bluepill: #{e}")

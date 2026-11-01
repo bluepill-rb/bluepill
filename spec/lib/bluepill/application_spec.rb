@@ -93,17 +93,17 @@ describe Bluepill::Application do
       end
 
       it 'logs to the log file with the application name as prefix' do
-        expect(Bluepill::Logger).to receive(:new).with(log_file: nil, stdout: false).and_return(logger)
+        expect(Bluepill::Logger).to receive(:new).with(log_file: nil, log_level: nil, stdout: false).and_return(logger)
         expect(logger).to receive(:prefix_with).with('test').and_return(logger)
         expect(Bluepill::ProcessJournal).to receive(:logger=).with(logger)
         expect(subject.logger).to eq(logger)
       end
 
       context 'and other options are specified' do
-        let(:options) { {base_dir: '/var/bluepill', foreground: true, log_file: 'log', kill_timeout: 3} }
+        let(:options) { {base_dir: '/var/bluepill', foreground: true, log_file: 'log', log_level: :info, kill_timeout: 3} }
 
         it 'uses them' do
-          expect(Bluepill::Logger).to receive(:new).with(log_file: 'log', stdout: true).and_return(logger)
+          expect(Bluepill::Logger).to receive(:new).with(log_file: 'log', log_level: :info, stdout: true).and_return(logger)
           expect(subject.kill_timeout).to eq(3)
           expect(subject.log_file).to eq('log')
           expect(subject).to be_foreground

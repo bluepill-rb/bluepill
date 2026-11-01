@@ -1,13 +1,15 @@
 module Bluepill
   # Write bluepill's log, to syslog or a file, with prefixes
   #
-  # A logger made with prefix_with writes through its parent, which adds
-  # its own prefix, so a process's messages are tagged with its app's name
-  # and its own, as in "[app:web] Going from up => down".
+  # A logger made with prefix_with adds its prefix to its parent's, so a
+  # process's messages are tagged with its app's name and its own, as in
+  # "[app:web] Going from up => down". Every logger made from the same one
+  # writes to the same place, which reopen can change for all of them.
   #
   # @api private
   class Logger
-    # The syslog priorities, each a method that logs a message
+    # The syslog priorities, most severe first, each a method that logs a
+    # message
     #
     # @api private
     LOG_METHODS = [:emerg, :alert, :crit, :err, :warning, :notice, :info, :debug].freeze
@@ -15,82 +17,98 @@ module Bluepill
     # Make a logger
     #
     # @param [Hash{Symbol => Object}] options :logger, a parent logger to
-    #   write through, :prefix, :stdout to echo messages there too,
-    #   :log_file to write to instead of syslog, and :identity, the name
-    #   syslog shows
+    #   write through, or an object to write to, :prefix, :stdout to echo
+    #   messages there too, :log_file to write to instead of syslog,
+    #   :identity, the name syslog shows, and :log_level, the least severe
+    #   priority to log (debug, so everything, by default)
     #
     # @return [void]
+    #
+    # @raise [ArgumentError] if :log_level isn't one of {LOG_METHODS}
     #
     # @api private
     def initialize(options = {})
       @options  = options
       @logger   = options[:logger] || create_logger
       @prefix   = options[:prefix]
-      @stdout   = options[:stdout]
       @prefixes = {}
+      level = priority(options[:log_level] || :debug)
+      parent = @logger
+      if parent.instance_of?(Logger)
+        # The parent's level still applies, and so do its prefixes
+        @level  = [level, parent.level].min
+        @names  = parent.names + [@prefix]
+        @stdout = parent.stdout
+        @sink   = parent.sink
+      else
+        @level  = level
+        @names  = [] #: Array[String?]
+        @stdout = options[:stdout]
+        @sink   = [parent]
+      end
+      @label = label(@names)
     end
 
-    # @!method emerg(msg, prefix = [])
+    # @!method emerg(msg, prefix = nil)
     #   Log a message at the emergency priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>] prefix the prefixes of the loggers below
+    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    # @!method alert(msg, prefix = [])
+    # @!method alert(msg, prefix = nil)
     #   Log a message at the alert priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>] prefix the prefixes of the loggers below
+    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    # @!method crit(msg, prefix = [])
+    # @!method crit(msg, prefix = nil)
     #   Log a message at the critical priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>] prefix the prefixes of the loggers below
+    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    # @!method err(msg, prefix = [])
+    # @!method err(msg, prefix = nil)
     #   Log a message at the error priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>] prefix the prefixes of the loggers below
+    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    # @!method warning(msg, prefix = [])
+    # @!method warning(msg, prefix = nil)
     #   Log a message at the warning priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>] prefix the prefixes of the loggers below
+    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    # @!method notice(msg, prefix = [])
+    # @!method notice(msg, prefix = nil)
     #   Log a message at the notice priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>] prefix the prefixes of the loggers below
+    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    # @!method info(msg, prefix = [])
+    # @!method info(msg, prefix = nil)
     #   Log a message at the info priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>] prefix the prefixes of the loggers below
+    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    # @!method debug(msg, prefix = [])
+    # @!method debug(msg, prefix = nil)
     #   Log a message at the debug priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>] prefix the prefixes of the loggers below
+    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    LOG_METHODS.each do |method|
+    LOG_METHODS.each_with_index do |method, priority|
       class_eval <<-RUBY, __FILE__, __LINE__ + 1
-        def #{method}(msg, prefix = [])
-          if @logger.is_a?(self.class)
-            @logger.#{method}(msg, [@prefix] + prefix)
-          else
-            s_prefix = prefix.size > 0 ? "[\#{prefix.compact.join(':')}] " : ""
-            if @stdout
-              $stdout.puts("[#{method}]: \#{s_prefix}\#{msg}")
-              $stdout.flush
-            end
-            @logger.#{method}("\#{s_prefix}\#{msg}")
+        def #{method}(msg, prefix = nil)
+          # Below the log level, so dropped before anything is formatted
+          return if #{priority} > @level
+
+          line = "\#{prefix ? label(@names + prefix) : @label}\#{msg}"
+          if @stdout
+            $stdout.puts("[#{method}]: \#{line}")
+            $stdout.flush
           end
+          @sink[0].#{method}(line)
         end
       RUBY
     end
@@ -114,15 +132,75 @@ module Bluepill
     #
     # @api private
     def reopen
-      logger = @logger
-      if logger.instance_of?(self.class)
-        logger.reopen
+      parent = @logger
+      if parent.instance_of?(Logger)
+        parent.reopen
       else
-        @logger = create_logger
+        @sink.replace([create_logger])
       end
     end
 
+    # The position in {LOG_METHODS} of the least severe priority to log
+    #
+    # @return [Integer]
+    #
+    # @api private
+    attr_reader :level
+
+    # Whether messages are echoed to stdout too
+    #
+    # @return [Boolean, nil]
+    #
+    # @api private
+    attr_reader :stdout
+
+    # Where the messages go, which every logger made from this one shares
+    #
+    # It holds one LoggerAdapter, Syslog, or given logger, and reopen
+    # replaces it.
+    #
+    # @return [Array<Object>]
+    #
+    # @api private
+    attr_reader :sink
+
+    # This logger's prefixes, its parents' first
+    #
+    # @return [Array<String, nil>]
+    #
+    # @api private
+    attr_reader :names
+
   protected
+
+    # Return the prefixes as they start a message, as in "[app:web] "
+    #
+    # @param [Array<String, nil>] names the prefixes, nil for none
+    #
+    # @return [String, nil] the prefixes, or nil without any, which reads as
+    #   nothing in a message
+    #
+    # @api private
+    def label(names)
+      names = names.compact
+      "[#{names.join(':')}] " unless names.empty?
+    end
+
+    # Return the position of a log level in {LOG_METHODS}
+    #
+    # @param [Symbol, String] level a priority's name, such as :info
+    #
+    # @return [Integer] 0 for emerg, up to 7 for debug
+    #
+    # @raise [ArgumentError] if it isn't a priority's name
+    #
+    # @api private
+    def priority(level)
+      index = LOG_METHODS.index { |method| method.to_s.eql?(level.to_s) }
+      raise ArgumentError, "Unknown log_level #{level.inspect}. Use one of: #{LOG_METHODS.join(', ')}" unless index
+
+      index
+    end
 
     # Open the log file, or syslog if there isn't one
     #

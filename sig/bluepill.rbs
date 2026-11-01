@@ -54,6 +54,7 @@ module Bluepill
     attr_accessor log_file: String?
 
     @foreground: bool?
+    @log_level: (Symbol | String)?
     @mutex: Thread::Mutex
     @listener_thread: Thread?
     @running: bool
@@ -449,7 +450,8 @@ module Bluepill
       ?prefix: String?,
       ?stdout: bool,
       ?log_file: String?,
-      ?identity: String
+      ?identity: String,
+      ?log_level: (Symbol | String)?
     }
 
     LOG_METHODS: Array[Symbol]
@@ -475,31 +477,47 @@ module Bluepill
     @logger: Logger | (Object & _Backend)
     @prefix: String?
     @stdout: bool?
+    @level: Integer
+    @names: Array[String?]
+    @label: String?
+    @sink: Array[Object & _Backend]
     @prefixes: Hash[String?, Logger]
 
     def initialize: (?options options) -> void
 
-    def emerg: (_ToS msg, ?Array[String?] prefix) -> void
+    def emerg: (_ToS msg, ?Array[String?]? prefix) -> void
 
-    def alert: (_ToS msg, ?Array[String?] prefix) -> void
+    def alert: (_ToS msg, ?Array[String?]? prefix) -> void
 
-    def crit: (_ToS msg, ?Array[String?] prefix) -> void
+    def crit: (_ToS msg, ?Array[String?]? prefix) -> void
 
-    def err: (_ToS msg, ?Array[String?] prefix) -> void
+    def err: (_ToS msg, ?Array[String?]? prefix) -> void
 
-    def warning: (_ToS msg, ?Array[String?] prefix) -> void
+    def warning: (_ToS msg, ?Array[String?]? prefix) -> void
 
-    def notice: (_ToS msg, ?Array[String?] prefix) -> void
+    def notice: (_ToS msg, ?Array[String?]? prefix) -> void
 
-    def info: (_ToS msg, ?Array[String?] prefix) -> void
+    def info: (_ToS msg, ?Array[String?]? prefix) -> void
 
-    def debug: (_ToS msg, ?Array[String?] prefix) -> void
+    def debug: (_ToS msg, ?Array[String?]? prefix) -> void
 
     def prefix_with: (String? prefix) -> Logger
 
     def reopen: () -> void
 
+    attr_reader level: Integer
+
+    attr_reader stdout: bool?
+
+    attr_reader sink: Array[Object & _Backend]
+
+    attr_reader names: Array[String?]
+
     private
+
+    def label: (Array[String?] names) -> String?
+
+    def priority: (Symbol | String level) -> Integer
 
     def create_logger: () -> (Object & _Backend)
 

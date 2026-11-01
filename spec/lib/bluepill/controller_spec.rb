@@ -32,8 +32,19 @@ describe Bluepill::Controller do
       touch('socks', 'app.sock')
       touch('pids', 'app.pid') { |f| f.write('123') }
       allow(Bluepill::System).to receive(:pid_alive?).with(123).and_return(true)
+      expect(FileUtils).not_to receive(:mkdir_p)
       described_class.new(base_dir: base_dir)
       expect(File.exist?(File.join(base_dir, 'socks', 'app.sock'))).to be true
+    end
+
+    it 'keeps checking applications after a running one' do
+      controller
+      touch('socks', 'a.sock')
+      touch('pids', 'a.pid') { |f| f.write('123') }
+      touch('socks', 'b.sock')
+      allow(Bluepill::System).to receive(:pid_alive?).with(123).and_return(true)
+      described_class.new(base_dir: base_dir)
+      expect(controller.running_applications).to eq(['a'])
     end
 
     it 'removes the files of applications that are not running' do
@@ -65,6 +76,12 @@ describe Bluepill::Controller do
       controller.handle_command('app', 'status', 'web')
     end
 
+    it 'prints the status of every process' do
+      stub_daemon('status', "web:\n")
+      expect(controller).to receive(:puts).with("web:\n")
+      controller.handle_command('app', 'status')
+    end
+
     context 'quit' do
       before(:each) do
         controller
@@ -75,6 +92,21 @@ describe Bluepill::Controller do
         allow(Bluepill::System).to receive(:pid_alive?).with(789).and_return(true)
         expect(::Process).to receive(:kill).with('TERM', 789)
         expect(controller).to receive(:puts).with('Killing bluepilld[789]')
+        controller.handle_command('app', 'quit')
+      end
+
+      it 'kills a daemon with pid 1, as in a container' do
+        touch('pids', 'app.pid') { |f| f.write('1') }
+        allow(Bluepill::System).to receive(:pid_alive?).with(1).and_return(true)
+        expect(::Process).to receive(:kill).with('TERM', 1)
+        expect(controller).to receive(:puts).with('Killing bluepilld[1]')
+        controller.handle_command('app', 'quit')
+      end
+
+      it 'reports a daemon without a pid file' do
+        File.delete(File.join(base_dir, 'pids', 'app.pid'))
+        expect(Bluepill::System).not_to receive(:pid_alive?)
+        expect(controller).to receive(:puts).with('bluepilld[false] not running')
         controller.handle_command('app', 'quit')
       end
 
@@ -104,6 +136,18 @@ describe Bluepill::Controller do
         expect(controller).to receive(:puts).with('Tailing log for web...')
         expect(Kernel).to receive(:exec).with("tail -n 100 -f /tmp/app.log | grep -E '\\[.*app:web.*'")
         controller.handle_command('app', 'log', 'web')
+      end
+
+      it 'uses only the first argument as the pattern' do
+        stub_daemon('log_file', '/tmp/app.log')
+        expect(Kernel).to receive(:exec).with("tail -n 100 -f /tmp/app.log | grep -E '\\[.*app:web.*'")
+        controller.handle_command('app', 'log', 'web', 'extra')
+      end
+
+      it 'falls back to its own log file when the daemon logs to syslog' do
+        stub_daemon('log_file', nil)
+        expect(Kernel).to receive(:exec).with("tail -n 100 -f /var/log/bluepill.log | grep -E '\\[.*app.*'")
+        controller.handle_command('app', :log)
       end
 
       it 'falls back to its own log file' do
@@ -149,6 +193,15 @@ describe Bluepill::Controller do
       expect($stderr).to receive(:puts).with('Received error from server:').ordered
       expect($stderr).to receive(:puts).with(error.inspect).ordered
       expect($stderr).to receive(:puts).with("a.rb:1\nb.rb:2").ordered
+      expect(controller).to receive(:exit).with(8)
+      controller.send_to_daemon('app', :status)
+    end
+
+    it 'exits when the daemon returns an error without a backtrace' do
+      error = RuntimeError.new('boom')
+      stub_daemon('status', error)
+      allow($stderr).to receive(:puts)
+      expect($stderr).to receive(:puts).with('')
       expect(controller).to receive(:exit).with(8)
       controller.send_to_daemon('app', :status)
     end

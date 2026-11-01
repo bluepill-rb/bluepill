@@ -814,8 +814,6 @@ module Bluepill
 
     def self.clear_atomic_fs_lock: (String name) -> void
 
-    def self.kill_all_from_all_journals: () -> void
-
     def self.kill_all_from_journal: (String journal_name) -> void
 
     def self.kill_all_pgids_from_journal: (String journal_name) -> void

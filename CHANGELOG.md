@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- `ProcessJournal.kill_all_from_all_journals`, which was meant to kill every journaled process when bluepill started or quit, but looked in the wrong directory and never found any ([#59](https://github.com/bluepill-rb/bluepill/issues/59)). Bluepill still kills what a process's journal lists before it starts that process, and `bluepill load` keeps monitoring the processes that are already running instead of restarting them.
+
 ### Fixed
 
+- Stale journal locks, which a daemon that died leaves behind, were never cleared, since bluepill looked for them in the current directory instead of the journal directory, and removed them as if they were files ([#59](https://github.com/bluepill-rb/bluepill/issues/59)). A stale lock made the next write to its journal wait 10 seconds and fail. Bluepill now clears the app's own locks when it starts and quits.
 - After a reboot, or once pids wrapped around, bluepill could kill an unrelated process whose pid it had journaled ([#3](https://github.com/bluepill-rb/bluepill/issues/3)). The journal now records when each process started, and bluepill only kills a pid whose process started then. A process group whose leader has exited, and a journal line from bluepill 0.1 and earlier, are only trusted if they were journaled since the machine booted.
 - Two apps with a process of the same name shared its journal, so starting the process in one app killed the other app's ([#34](https://github.com/bluepill-rb/bluepill/issues/34)). Each app now keeps its journals in a directory of its own, `journals/<app>`. Journals that bluepill 0.1 and earlier wrote are still read and cleared, so upgrading doesn't leave their processes running.
 

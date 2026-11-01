@@ -1,24 +1,66 @@
 module Bluepill
+  # The version of bluepill
+  #
+  # @example
+  #   Bluepill::Version.to_s # => "0.1.4"
+  #
+  # @api public
   module Version
-    # @return [Integer]
+    # Return the major version
+    #
+    # @example
+    #   Bluepill::Version.major # => 0
+    #
+    # @return [Integer] the major version
+    #
+    # @api public
     def self.major
       0
     end
 
-    # @return [Integer]
+    # Return the minor version
+    #
+    # @example
+    #   Bluepill::Version.minor # => 1
+    #
+    # @return [Integer] the minor version
+    #
+    # @api public
     def self.minor
       1
     end
 
-    # @return [Integer]
+    # Return the patch version
+    #
+    # @example
+    #   Bluepill::Version.patch # => 4
+    #
+    # @return [Integer] the patch version
+    #
+    # @api public
     def self.patch
       4
     end
 
-    # @return [Integer, NilClass]
+    # Return the pre-release version
+    #
+    # @example
+    #   Bluepill::Version.pre # => nil
+    #
+    # @return [Integer, nil] the pre-release version, or nil for a release
+    #
+    # @api public
     def self.pre; end
 
-    # @return [Hash]
+    # Return the version's parts by name
+    #
+    # @example
+    #   Bluepill::Version.to_h # => {major: 0, minor: 1, patch: 4, pre: nil}
+    #
+    # @return [Hash{Symbol => Integer, nil}] the major, minor, patch and
+    #   pre-release versions
+    #
+    # @api public
     def self.to_h
       {
         major: major,
@@ -28,12 +70,26 @@ module Bluepill
       }
     end
 
-    # @return [Array]
+    # Return the version's parts, without a missing pre-release version
+    #
+    # @example
+    #   Bluepill::Version.to_a # => [0, 1, 4]
+    #
+    # @return [Array<Integer>] the parts of the version
+    #
+    # @api public
     def self.to_a
       to_h.values.compact
     end
 
-    # @return [String]
+    # Return the version as a string
+    #
+    # @example
+    #   Bluepill::Version.to_s # => "0.1.4"
+    #
+    # @return [String] the version, such as "0.1.4"
+    #
+    # @api public
     def self.to_s
       to_a.join('.')
     end

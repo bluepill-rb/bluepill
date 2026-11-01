@@ -1,16 +1,48 @@
 module Bluepill
+  # Create the processes that a config file describes, and check them
+  #
+  # A factory turns a process block into a {Process}, after it checks the
+  # config for mistakes, such as two processes with the same name or pid
+  # file. A process that monitors its children gets a factory of its own for
+  # them.
+  #
+  # @api private
   class ProcessFactory
+    # Return the attributes that each process starts with
+    #
+    # @return [Hash{Symbol => Object}] the attributes
+    #
+    # @api private
     attr_reader :attributes
 
     # Only the keys matter
     @@process_keys = {} #: Hash[Array[String?], nil]
     @@pid_files = {} #: Hash[String, nil]
 
+    # Create a factory of processes
+    #
+    # @param [Hash{Symbol => Object}] attributes the attributes that each
+    #   process starts with
+    # @param [Proc] process_block the block that configures each process
+    #
+    # @return [void]
+    #
+    # @api private
     def initialize(attributes, process_block)
       @attributes = attributes
       @process_block = process_block
     end
 
+    # Create a process from the factory's block, and check its config
+    #
+    # A process without a pid_file gets a default one in pids_dir.
+    #
+    # @param [String] name the process's name
+    # @param [String] pids_dir the directory of the default pid file
+    #
+    # @return [Process] the process
+    #
+    # @api private
     def create_process(name, pids_dir)
       default_pid_file = assign_default_pid_file(name, pids_dir)
 
@@ -23,6 +55,18 @@ module Bluepill
       process.to_process
     end
 
+    # Create the process of a child that bluepill found
+    #
+    # The child gets its parent's grace times, and its state from whether
+    # it's running.
+    #
+    # @param [String] name the child's name
+    # @param [Integer] pid the child's pid
+    # @param [Logger] logger the child's logger
+    #
+    # @return [Process] the child's process
+    #
+    # @api private
     def create_child_process(name, pid, logger)
       attributes = {} #: Hash[Symbol, untyped]
       # A grace time the parent leaves unset keeps the Process default
@@ -42,6 +86,15 @@ module Bluepill
 
   protected
 
+    # Set the default pid file, unless the process sets its own
+    #
+    # @param [String] process_name the process's name
+    # @param [String] pids_dir the directory of the pid file
+    #
+    # @return [String, nil] the default pid file, or nil when the process
+    #   sets its own
+    #
+    # @api private
     def assign_default_pid_file(process_name, pids_dir)
       return if @attributes.key?(:pid_file)
 
@@ -50,7 +103,15 @@ module Bluepill
       @attributes[:pid_file] = File.join(pids_dir, "#{default_pid_name}.pid")
     end
 
-    # The process shares its attributes hash with the factory
+    # Check a process's config, and exit on a mistake
+    #
+    # The process shares its attributes hash with the factory.
+    #
+    # @param [ProcessProxy] process the process's proxy
+    #
+    # @return [void]
+    #
+    # @api private
     def validate_process!(process)
       validate_unique_process!(process)
       validate_required_attributes!(process)
@@ -58,6 +119,13 @@ module Bluepill
       validate_stop_signals!
     end
 
+    # Exit if another process in the group has the same name
+    #
+    # @param [ProcessProxy] process the process's proxy
+    #
+    # @return [void]
+    #
+    # @api private
     def validate_unique_process!(process)
       # A process name may contain ':', so the key keeps the parts apart.
       # Like Application#add_process, it treats Symbols and Strings alike.
@@ -70,19 +138,39 @@ module Bluepill
       @@process_keys[process_key] = nil
     end
 
+    # Exit unless the process has a start_command
+    #
+    # @param [ProcessProxy] process the process's proxy
+    #
+    # @return [void]
+    #
+    # @api private
     def validate_required_attributes!(process)
       return if attributes.key?(:start_command)
 
       config_error!("Config Error: You must specify a start_command for '#{process.name}'")
     end
 
+    # Exit if another process has the same pid file
+    #
+    # @return [void]
+    #
+    # @api private
     def validate_unique_pid_file!
       pid_key = attributes.fetch(:pid_file).strip
       config_error!("Config Error: You have two entries with the pid file: #{pid_key}") if @@pid_files.key?(pid_key)
       @@pid_files[pid_key] = nil
     end
 
-    # Checks the more specific problems before the 'odd number' message
+    # Exit unless stop_signals alternates signals and delays
+    #
+    # The signals and delays must alternate, starting and ending with a
+    # signal, and stop_grace_time must be longer than the delays. Checks the
+    # more specific problems before the 'odd number' message.
+    #
+    # @return [void]
+    #
+    # @api private
     def validate_stop_signals!
       stop_signals = attributes[:stop_signals]
       return if stop_signals.nil?
@@ -102,8 +190,18 @@ module Bluepill
       config_error!('Config Error: Stop_grace_time should be greater than the sum of stop_signals delays!')
     end
 
+    # Warn when bluepill can't find the process's pid
+    #
     # Bluepill only writes the default pid file for processes it daemonizes,
-    # so it cannot find the pid of any other process that uses it
+    # so it cannot find the pid of any other process that uses it.
+    #
+    # @param [ProcessProxy] process the process's proxy
+    # @param [String, nil] default_pid_file the default pid file, or nil when
+    #   the process sets its own
+    #
+    # @return [void]
+    #
+    # @api private
     def warn_unless_pid_known(process, default_pid_file)
       return if attributes[:daemonize] || attributes[:pid_command] || !attributes.fetch(:pid_file).eql?(default_pid_file)
 
@@ -113,11 +211,25 @@ module Bluepill
       $stderr.puts warning
     end
 
+    # Print a config error and exit with status 6
+    #
+    # @param [String] message the error
+    #
+    # @return [void] it never returns
+    #
+    # @api private
     def config_error!(message)
       $stderr.puts message
       exit(6)
     end
 
+    # Exit unless a monitored child has a stop_command
+    #
+    # @param [ProcessProxy] child the child's proxy
+    #
+    # @return [void]
+    #
+    # @api private
     def validate_child_process!(child)
       return if child.attributes.key?(:stop_command)
 

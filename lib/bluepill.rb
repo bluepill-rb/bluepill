@@ -1,7 +1,24 @@
 require 'rubygems'
 
+# A process monitor that keeps daemons running
+#
+# A config file calls {Bluepill.application} to describe an application's
+# processes, and the bluepill daemon monitors and restarts them.
+#
+# @api public
 module Bluepill
-  # Sets up Bundler when bluepill runs with a Gemfile, such as under bundle exec
+  # Set up Bundler when bluepill runs with a Gemfile
+  #
+  # Bluepill calls this once, when it's loaded, so that it runs with the
+  # app's bundle, such as under bundle exec.
+  #
+  # @param [String, nil] gemfile the path of the Gemfile, BUNDLE_GEMFILE by
+  #   default
+  #
+  # @return [Boolean, nil] what requiring bundler/setup returned, or nil
+  #   when there's no Gemfile
+  #
+  # @api private
   def self.setup_bundler(gemfile = ENV['BUNDLE_GEMFILE'])
     require 'bundler/setup' if gemfile && File.exist?(gemfile)
   end

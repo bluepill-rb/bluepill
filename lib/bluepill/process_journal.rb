@@ -33,13 +33,13 @@ module Bluepill
         Dir.mkdir lock, 0o700
       rescue Errno::EEXIST
         times += 1
-        if times >= 10
-          logger.info("Timeout waiting for lock #{lock}")
-          raise "Timeout waiting for lock #{lock}"
+        if times < 10
+          logger.debug("Waiting for lock #{lock}")
+          sleep 1
+          retry
         end
-        logger.debug("Waiting for lock #{lock}")
-        sleep 1
-        retry
+        logger.info("Timeout waiting for lock #{lock}")
+        raise "Timeout waiting for lock #{lock}"
       end
       logger.debug("Acquired lock #{lock}")
       begin
@@ -65,7 +65,7 @@ module Bluepill
 
     def self.pid_journal(filename)
       logger.debug("pid journal file: #{filename}")
-      result = File.open(filename, 'r').readlines.collect(&:to_i).reject { |pid| skip_pid?(pid) }
+      result = File.readlines(filename).collect(&:to_i).reject { |pid| skip_pid?(pid) }
       logger.debug("pid journal = #{result.join(' ')}")
       result
     rescue Errno::ENOENT
@@ -74,7 +74,7 @@ module Bluepill
 
     def self.pgid_journal(filename)
       logger.debug("pgid journal file: #{filename}")
-      result = File.open(filename, 'r').readlines.collect(&:to_i).reject { |pgid| skip_pgid?(pgid) }
+      result = File.readlines(filename).collect(&:to_i).reject { |pgid| skip_pgid?(pgid) }
       logger.debug("pgid journal = #{result.join(' ')}")
       result
     rescue Errno::ENOENT
@@ -89,8 +89,8 @@ module Bluepill
     end
 
     def self.kill_all_from_all_journals
-      pids = Dir['.bluepill_pids_journal.*'].collect { |p| p.sub(/^\.bluepill_pids_journal\./, '') }
-      pids.reject! { |p| p =~ /\.lock$/ }
+      pids = Dir['.bluepill_pids_journal.*'].collect { |p| p.sub(/\A\.bluepill_pids_journal\./, '') }
+      pids.reject! { |p| p.end_with?('.lock') }
       pids.each do |journal_name|
         kill_all_from_journal(journal_name)
       end
@@ -133,7 +133,7 @@ module Bluepill
     end
 
     def self.signal_journaled(signal, ids, label, sign)
-      past, verb = signal == 'TERM' ? %w[Termed term] : %w[Killed kill]
+      past, verb = signal.eql?('TERM') ? %w[Termed term] : %w[Killed kill]
       ids.each do |id|
         begin
           ::Process.kill(signal, sign * id)
@@ -158,7 +158,7 @@ module Bluepill
           logger.debug("Saving pgid #{pgid} to process journal #{journal_name}")
           File.open(filename, 'a+', 0o600) { |f| f.puts(pgid) }
           logger.info("Saved pgid #{pgid} to journal #{journal_name}")
-          logger.debug("Journal now = #{File.open(filename, 'r').read}")
+          logger.debug("Journal now = #{File.read(filename)}")
         end
       end
     end
@@ -183,7 +183,7 @@ module Bluepill
           logger.debug("Saving pid #{pid} to process journal #{journal_name}")
           File.open(filename, 'a+', 0o600) { |f| f.puts(pid) }
           logger.info("Saved pid #{pid} to journal #{journal_name}")
-          logger.debug("Journal now = #{File.open(filename, 'r').read}")
+          logger.debug("Journal now = #{File.read(filename)}")
         end
       end
     end

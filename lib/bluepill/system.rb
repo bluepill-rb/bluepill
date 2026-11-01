@@ -105,10 +105,7 @@ module Bluepill
         exit unless can_write_pid_file(options[:pid_file], options[:logger])
 
         to_daemonize = lambda do
-          # Setting end PWD env emulates bash behavior when dealing with symlinks
-          Dir.chdir(ENV['PWD'] = options[:working_dir].to_s) if options[:working_dir]
-          options[:environment].each { |key, value| ENV[key.to_s] = value.to_s } if options[:environment]
-
+          setup_command_environment(options)
           redirect_io(*options.values_at(:stdin, :stdout, :stderr))
 
           ::Kernel.exec(*Shellwords.shellwords(cmd))
@@ -144,9 +141,7 @@ module Bluepill
 
       child = Daemonize.safefork
       if child
-        # parent
         wr.close
-
         cmd_status = rd.read
         rd.close
 
@@ -154,72 +149,80 @@ module Bluepill
 
         cmd_status.strip != '' ? Marshal.load(cmd_status) : {exit_code: 0, stdout: '', stderr: ''}
       else
-        # child
         rd.close
-
-        # create a child in which we can override the stdin, stdout and stderr
-        cmd_out_read, cmd_out_write = IO.pipe
-        cmd_err_read, cmd_err_write = IO.pipe
-
-        pid = fork do
-          begin
-            # grandchild
-            drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
-
-            Dir.chdir(ENV['PWD'] = options[:working_dir].to_s) if options[:working_dir]
-            options[:environment].each { |key, value| ENV[key.to_s] = value.to_s } if options[:environment]
-
-            # close unused fds so ancestors wont hang. This line is the only reason we are not
-            # using something like popen3. If this fd is not closed, the .read call on the parent
-            # will never return because "wr" would still be open in the "exec"-ed cmd
-            wr.close
-
-            # we do not care about stdin of cmd
-            STDIN.reopen('/dev/null')
-
-            # point stdout of cmd to somewhere we can read
-            cmd_out_read.close
-            STDOUT.reopen(cmd_out_write)
-            cmd_out_write.close
-
-            # same thing for stderr
-            cmd_err_read.close
-            STDERR.reopen(cmd_err_write)
-            cmd_err_write.close
-
-            # finally, replace grandchild with cmd
-            ::Kernel.exec(*Shellwords.shellwords(cmd))
-          rescue StandardError => e
-            (cmd_err_write.closed? ? STDERR : cmd_err_write).puts "Exception in grandchild: #{e}."
-            (cmd_err_write.closed? ? STDERR : cmd_err_write).puts e.backtrace
-            exit 1
-          end
-        end
-
-        # we do not use these ends of the pipes in the child
-        cmd_out_write.close
-        cmd_err_write.close
-
-        # wait for the cmd to finish executing and acknowledge it's death
-        _, status = ::Process.waitpid2(pid)
-
-        # collect stdout, stderr and exitcode
-        result = {
-          stdout: cmd_out_read.read,
-          stderr: cmd_err_read.read,
-          exit_code: status.exitstatus,
-        }
-
-        # We're done with these ends of the pipes as well
-        cmd_out_read.close
-        cmd_err_read.close
-
-        # Time to tell the parent about what went down
-        wr.write Marshal.dump(result)
-        wr.close
-
-        ::Process.exit!
+        run_blocking_child(cmd, options, wr)
       end
+    end
+
+    # Runs cmd in a grandchild, sends its output and exit code to the parent
+    # over result_pipe, and exits
+    def run_blocking_child(cmd, options, result_pipe)
+      # create a child in which we can override the stdin, stdout and stderr
+      cmd_out_read, cmd_out_write = IO.pipe
+      cmd_err_read, cmd_err_write = IO.pipe
+
+      pid = fork do
+        pipes = {out: [cmd_out_read, cmd_out_write], err: [cmd_err_read, cmd_err_write], result: result_pipe}
+        exec_blocking_grandchild(cmd, options, pipes)
+      end
+
+      # we do not use these ends of the pipes in the child
+      cmd_out_write.close
+      cmd_err_write.close
+
+      # wait for the cmd to finish executing and acknowledge it's death
+      _, status = ::Process.waitpid2(pid)
+
+      result = {
+        stdout: cmd_out_read.read,
+        stderr: cmd_err_read.read,
+        exit_code: status.exitstatus,
+      }
+      cmd_out_read.close
+      cmd_err_read.close
+
+      # Time to tell the parent about what went down
+      result_pipe.write Marshal.dump(result)
+      result_pipe.close
+
+      ::Process.exit!
+    end
+
+    def exec_blocking_grandchild(cmd, options, pipes)
+      cmd_out_read, cmd_out_write = pipes[:out]
+      cmd_err_read, cmd_err_write = pipes[:err]
+
+      drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
+      setup_command_environment(options)
+
+      # close unused fds so ancestors wont hang. This line is the only reason we are not
+      # using something like popen3. If this fd is not closed, the .read call on the parent
+      # will never return because the result pipe would still be open in the "exec"-ed cmd
+      pipes[:result].close
+
+      # we do not care about stdin of cmd
+      STDIN.reopen('/dev/null')
+
+      # point stdout and stderr of cmd to somewhere we can read
+      cmd_out_read.close
+      STDOUT.reopen(cmd_out_write)
+      cmd_out_write.close
+      cmd_err_read.close
+      STDERR.reopen(cmd_err_write)
+      cmd_err_write.close
+
+      ::Kernel.exec(*Shellwords.shellwords(cmd))
+    rescue StandardError => e
+      err = cmd_err_write.closed? ? STDERR : cmd_err_write
+      err.puts "Exception in grandchild: #{e}."
+      err.puts e.backtrace
+      exit 1
+    end
+
+    def setup_command_environment(options)
+      # Setting end PWD env emulates bash behavior when dealing with symlinks
+      Dir.chdir(ENV['PWD'] = options[:working_dir].to_s) if options[:working_dir]
+      options[:environment].each { |key, value| ENV[key.to_s] = value.to_s } if options[:environment]
     end
 
     def store

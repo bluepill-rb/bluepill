@@ -35,6 +35,9 @@ describe Bluepill::ProcessJournal do
     allow(journal).to receive(:sleep)
     allow(::Process).to receive(:kill)
     allow(Bluepill::System).to receive(:pid_alive?).and_return(false)
+    # Ids without a start time, journaled since the machine booted
+    allow(Bluepill::System).to receive(:started_at).and_return(nil)
+    allow(Bluepill::System).to receive(:boot_time).and_return(0)
   end
 
   def write_journal(filename, ids)
@@ -303,6 +306,15 @@ describe Bluepill::ProcessJournal do
         expect(log).to include([:info, "Termed old #{label} 43"])
       end
 
+      it 'leaves alone an id that now belongs to another process, and resets the journal' do
+        File.write(filename, "42 20000\n")
+        allow(Bluepill::System).to receive(:started_at).with(42).and_return(50_000)
+        expect(::Process).not_to receive(:kill)
+        journal.send(method, 'app')
+        expect(File.exist?(filename)).to be false
+        expect(log).to include([:info, "Skipping old #{label} 42, which isn't the one bluepill started"])
+      end
+
       it "doesn't touch another app's journal" do
         other = journal.send(filename_method, 'app', File.join(@legacy_dir, 'other'))
         Dir.mkdir(File.dirname(other))
@@ -394,6 +406,12 @@ describe Bluepill::ProcessJournal do
         expect(File.stat(filename).mode & 0o777).to eq 0o600
       end
 
+      it "journals when the #{kind}'s process started" do
+        allow(Bluepill::System).to receive(:started_at).with(42).and_return(1000)
+        journal.send(method, 'app', 42)
+        expect(File.read(filename)).to eq "42 1000\n"
+      end
+
       [nil, 0, 1, '42'].each do |id|
         it "skips the invalid #{kind} #{id.inspect}" do
           expect(::Process).not_to receive(:getpgid)
@@ -405,8 +423,105 @@ describe Bluepill::ProcessJournal do
     end
   end
 
+  describe '.journal_entries' do
+    it 'reads each id, with when its process started if the line says' do
+      filename = File.join(@dir, 'journal')
+      File.write(filename, "42 1000\n43\n\n")
+      expect(journal.journal_entries(filename)).to eq [[42, 1000], [43, nil], [0, nil]]
+    end
+
+    it 'reads a garbled start time as 0, which no running process started at' do
+      filename = File.join(@dir, 'journal')
+      File.write(filename, "42 junk\n")
+      expect(journal.journal_entries(filename)).to eq [[42, 0]]
+    end
+  end
+
+  describe '.journal_line' do
+    it 'has the id and when its process started' do
+      expect(Bluepill::System).to receive(:started_at).with(42).and_return(1000)
+      expect(journal.journal_line(42)).to eq '42 1000'
+    end
+
+    it "has only the id when ps can't tell when it started" do
+      expect(journal.journal_line(42)).to eq '42'
+    end
+  end
+
+  describe '.journaled_ids' do
+    let(:filename) { File.join(@dir, 'journal') }
+    let(:boot) { 10_000 }
+
+    before do
+      File.write(filename, "42 20000\n43\n")
+      File.utime(boot + 5, boot + 5, filename)
+      allow(Bluepill::System).to receive(:boot_time).and_return(boot)
+    end
+
+    def journaled(started)
+      allow(Bluepill::System).to receive(:started_at).with(42).and_return(started)
+      journal.journaled_ids(filename, [42], 'process')
+    end
+
+    it 'keeps a running process that started when the journal says' do
+      expect(journaled(20_000)).to eq [42]
+      expect(journaled(20_002)).to eq [42]
+      expect(journaled(19_998)).to eq [42]
+      expect(log).to eq []
+    end
+
+    it 'skips a running process that started at another time' do
+      expect(journaled(20_003)).to eq []
+      expect(journaled(19_997)).to eq []
+      expect(log).to eq [[:info, "Skipping old process 42, which isn't the one bluepill started"]] * 2
+    end
+
+    it 'keeps an exited one that was journaled since the machine booted' do
+      File.write(filename, "42 #{boot - 2}\n")
+      expect(journaled(nil)).to eq [42]
+    end
+
+    it 'skips an exited one that was journaled before the machine booted' do
+      File.write(filename, "42 #{boot - 3}\n")
+      expect(journaled(nil)).to eq []
+    end
+
+    it 'keeps one without a start time if the journal was written since the machine booted' do
+      allow(Bluepill::System).to receive(:started_at).with(43).and_return(30_000)
+      expect(journal.journaled_ids(filename, [43], 'process')).to eq [43]
+      File.utime(boot - 2, boot - 2, filename)
+      expect(journal.journaled_ids(filename, [43], 'process')).to eq [43]
+    end
+
+    it 'skips one without a start time if the journal was written before the machine booted' do
+      File.utime(boot - 3, boot - 3, filename)
+      expect(journal.journaled_ids(filename, [43], 'process')).to eq []
+    end
+
+    it "only keeps a running process that started when the journal says if ps can't tell when the machine booted" do
+      allow(Bluepill::System).to receive(:boot_time).and_return(nil)
+      expect(journaled(20_000)).to eq [42]
+      expect(journaled(nil)).to eq []
+      expect(journal.journaled_ids(filename, [43], 'process')).to eq []
+    end
+
+    it 'keeps nothing if the journal was cleared since its ids were read' do
+      File.delete(filename)
+      expect(journal.journaled_ids(filename, [42], 'process')).to eq []
+    end
+  end
+
   describe '.append_pid_to_journal' do
     let(:filename) { journal.pid_journal_filename('app') }
+
+    it 'journals when the process and its group leader started' do
+      expect(::Process).to receive(:getpgid).with(42).and_return(40)
+      allow(Bluepill::System).to receive(:started_at).with(42).and_return(1000)
+      allow(Bluepill::System).to receive(:started_at).with(40).and_return(900)
+      journal.append_pid_to_journal('app', 42)
+      expect(File.read(filename)).to eq "42 1000\n"
+      expect(File.read(journal.pgid_journal_filename('app'))).to eq "40 900\n"
+    end
 
     it 'journals the pid and its process group' do
       expect(::Process).to receive(:getpgid).with(42).twice.and_return(40)

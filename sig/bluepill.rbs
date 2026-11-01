@@ -764,6 +764,10 @@ module Bluepill
 
     def self.pid_alive?: (Integer pid) -> bool
 
+    def self.started_at: (Integer pid) -> Integer?
+
+    def self.boot_time: () -> Integer?
+
     def self.cpu_usage: (Integer? pid, boolish include_children) -> Float?
 
     def self.memory_usage: (Integer? pid, boolish include_children) -> Float?
@@ -832,6 +836,11 @@ module Bluepill
 
     def self.pgid_journal_filename: (String journal_name, ?String dir) -> String
 
+    # Each id, with when its process started (nil before 0.2)
+    def self.journal_entries: (String filename) -> Array[[Integer, Integer?]]
+
+    def self.journal_line: (Integer id) -> String
+
     def self.pid_journal: (String filename) -> Array[Integer]
 
     def self.pgid_journal: (String filename) -> Array[Integer]
@@ -849,6 +858,8 @@ module Bluepill
     def self.journal_dirs: () -> Array[String]
 
     def self.kill_all_from_journal_file: (String filename, Array[Integer] ids, String label, Integer sign) -> void
+
+    def self.journaled_ids: (String filename, Array[Integer] ids, String label) -> Array[Integer]
 
     def self.signal_journaled: (String signal, Array[Integer] ids, String label, Integer sign) -> void
 

@@ -39,6 +39,11 @@ describe Bluepill::ProcessFactory do
       expect(process.pid_file).to eq('/pids/web_server.pid')
     end
 
+    it 'replaces every unsafe character in the default pid file' do
+      process = create('my web/server', proc { start_command 'run' })
+      expect(process.pid_file).to eq('/pids/my_web_server.pid')
+    end
+
     it 'assigns a default pid file from the group and process name' do
       process = create('web', proc { start_command 'run' }, group: 'my group')
       expect(process.pid_file).to eq('/pids/my_group_web.pid')
@@ -63,6 +68,17 @@ describe Bluepill::ProcessFactory do
       expect(process.monitor_children).to be true
       expect(process.child_process_factory).to be_a(Bluepill::ProcessFactory)
       expect(process.child_process_factory.attributes).not_to have_key(:child_process_block)
+      expect_any_instance_of(Bluepill::Process).to receive(:determine_initial_state)
+      child = process.child_process_factory.create_child_process('child', 123, instance_double(Bluepill::Logger))
+      expect(child.stop_command).to eq('halt')
+    end
+
+    it 'does not create a child process factory when monitor_children is false' do
+      process = create('web', proc do |p|
+        p.start_command 'run'
+        p.monitor_children = false
+      end)
+      expect(process.child_process_factory).to be_nil
     end
 
     it 'does not create a child process factory otherwise' do
@@ -124,6 +140,22 @@ describe Bluepill::ProcessFactory do
           expect { create('web', proc { start_command 'run' }) }.to output(warning).to_stderr
         end
 
+        it 'warns about a process with daemonize set to false' do
+          expect { create('web', proc { start_command 'run' }, daemonize: false) }.to output(warning).to_stderr
+        end
+
+        it 'warns about a process with a nil pid command' do
+          expect { create('web', proc { start_command 'run' }, pid_command: nil) }.to output(warning).to_stderr
+        end
+
+        it 'warns about a process that sets the default pid file itself' do
+          block = proc do
+            start_command 'run'
+            pid_file '/pids/web.pid'
+          end
+          expect { create('web', block) }.to output(warning).to_stderr
+        end
+
         it 'does not warn about a daemonized process' do
           expect { create('web', proc { start_command 'run' }, daemonize: true) }.not_to output.to_stderr
         end
@@ -166,6 +198,36 @@ describe Bluepill::ProcessFactory do
           expect(process.stop_signals).to eq([:quit, 5, :term])
         end
 
+        it 'accepts a single stop signal' do
+          process = create_with_signals([:term], 10)
+          expect(process.stop_signals).to eq([:term])
+        end
+
+        it 'accepts Active Support durations as delays' do
+          process = create_with_signals([:quit, 5.seconds, :term], 10)
+          expect(process.stop_signals).to eq([:quit, 5, :term])
+        end
+
+        # Like a Fixnum before Ruby 2.4, which is an Integer but not an
+        # instance of it
+        it 'accepts any kind of Integer as a delay' do
+          delay = double('delay', is_a?: true)
+          expect_config_error(/Stop_grace_time should be greater than the sum of stop_signals delays/) do
+            create_with_signals([:quit, delay, :term], nil)
+          end
+        end
+
+        it 'accepts a stop_grace_time just above the sum of the delays' do
+          process = create_with_signals([:quit, 9, :term], 10)
+          expect(process.stop_signals).to eq([:quit, 9, :term])
+        end
+
+        it 'rejects a stop_grace_time below the sum of the delays' do
+          expect_config_error(/Stop_grace_time should be greater than the sum of stop_signals delays/) do
+            create_with_signals([:quit, 10, :term], 5)
+          end
+        end
+
         it 'requires signals to be symbols' do
           expect_config_error(/Expected a symbol \(signal\) at position 2 instead of 'term'/) do
             create_with_signals([:quit, 5, 'term'], 10)
@@ -201,7 +263,7 @@ describe Bluepill::ProcessFactory do
 
   describe '#create_child_process' do
     let(:logger) { instance_double(Bluepill::Logger) }
-    let(:attributes) { {start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 3, uid: 'user'} }
+    let(:attributes) { {start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 5, uid: 'user'} }
 
     it 'creates a child process with the grace times of its parent' do
       expect_any_instance_of(Bluepill::Process).to receive(:determine_initial_state)
@@ -213,7 +275,7 @@ describe Bluepill::ProcessFactory do
       expect(child.actual_pid).to eq(123)
       expect(child.logger).to eq(logger)
       expect(child.stop_command).to eq('halt')
-      expect([child.start_grace_time, child.stop_grace_time, child.restart_grace_time]).to eq([1, 2, 3])
+      expect([child.start_grace_time, child.stop_grace_time, child.restart_grace_time]).to eq([1, 2, 5])
       expect(child.uid).to be_nil
     end
 

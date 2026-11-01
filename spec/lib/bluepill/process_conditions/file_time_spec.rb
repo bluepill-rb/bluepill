@@ -37,6 +37,10 @@ describe Bluepill::ProcessConditions::FileTime do
       expect(subject.check(nil)).to be false
     end
 
+    it 'fails when the file could not be read' do
+      expect(subject.check(Errno::EACCES.new(filename))).to be false
+    end
+
     it 'passes when the file was modified recently' do
       expect(subject.check(59)).to be true
     end

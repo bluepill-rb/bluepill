@@ -35,8 +35,8 @@ module Bluepill
             http.get(@uri.request_uri)
           end
         end
-      rescue
-        $ERROR_INFO
+      rescue => e
+        e
       end
 
       def check(value)

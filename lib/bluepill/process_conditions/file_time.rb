@@ -8,13 +8,12 @@ module Bluepill
 
       def run(_pid, _include_children)
         Time.now - File.mtime(@filename) if File.exist?(@filename)
-      rescue
-        $ERROR_INFO
+      rescue => e
+        e
       end
 
       def check(value)
-        return false if value.nil?
-        value < @below
+        value.is_a?(Numeric) && value < @below
       end
     end
   end

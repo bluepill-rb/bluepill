@@ -128,8 +128,10 @@ module Bluepill
     end
 
     # Sends the first signal, then each later one after its delay, as long as
-    # the process is still running
+    # the process is still running. Then gives the last signal the rest of
+    # stop_grace_time to work before cleaning up.
     def send_stop_signals(process, signals)
+      remaining = process.stop_grace_time
       signal = signals.shift
       logger.info "Sending signal #{signal} to #{process.actual_pid}"
       process.signal_process(signal) # send first signal
@@ -138,18 +140,32 @@ module Bluepill
         # we already checked to make sure signals had an odd number of items
         delay = signals.shift
         signal = signals.shift
+        remaining -= delay
 
         logger.debug "Sleeping for #{delay} seconds"
         sleep delay
         # break unless signal_process(0) #break unless the process can be reached
         unless process.signal_process(0)
           logger.debug 'Process has terminated.'
-          break
+          return cleanup_process
         end
         logger.info "Sending signal #{signal} to #{process.actual_pid}"
         process.signal_process(signal)
       end
+      wait_for_stop(process, remaining)
       cleanup_process
+    end
+
+    # Polls once a second until the process exits. It stops 2 seconds short
+    # of the grace time: ticks resume up to a second early (they count whole
+    # seconds) and can kill this thread, and the cleanup itself takes up to
+    # another second.
+    def wait_for_stop(process, seconds)
+      (seconds - 2).ceil.times do
+        break unless process.signal_process(0)
+
+        sleep 1
+      end
     end
   end
 end

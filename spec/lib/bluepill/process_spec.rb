@@ -536,6 +536,28 @@ describe Bluepill::Process do
         expect(logger).to receive(:debug).with('Process has terminated.')
         run_stop_signals
       end
+
+      it 'waits for the process to exit before cleaning up' do
+        subject.stop_signals = [:quit]
+        subject.stop_grace_time = 5
+        expect(::Process).to receive(:kill).with('QUIT', 5).ordered
+        expect(::Process).to receive(:kill).with(0, 5).exactly(3).times.ordered
+        expect(subject).to receive(:sleep).with(1).exactly(3).times
+        expect(subject).to receive(:cleanup_process).ordered
+        run_stop_signals
+      end
+
+      it 'cleans up as soon as the process exits after the last signal' do
+        subject.stop_signals = [:quit, 2, :term]
+        subject.stop_grace_time = 10
+        alive = [1, 1]
+        allow(::Process).to receive(:kill).with(0, 5) { alive.shift || raise(Errno::ESRCH) }
+        expect(::Process).to receive(:kill).with('TERM', 5)
+        expect(subject).to receive(:sleep).with(2).once
+        expect(subject).to receive(:sleep).with(1).once
+        expect(subject).to receive(:cleanup_process)
+        run_stop_signals
+      end
     end
   end
 

@@ -3,11 +3,100 @@ require 'bluepill/system'
 require 'bluepill/process_journal'
 
 module Bluepill
+  # The bluepill daemon for one application
+  #
+  # It holds the application's groups of processes, ticks them every
+  # second, and answers the commands that the CLI sends over its socket.
+  #
+  # @api private
   class Application
+    # The commands that act on a process or group, and that the CLI sends
     PROCESS_COMMANDS = [:start, :stop, :restart, :unmonitor, :status].freeze
 
     attr_accessor :name, :logger, :base_dir, :socket, :pid_file, :kill_timeout, :groups, :work_queue, :pids_dir, :log_file
 
+    # @!attribute [rw] name
+    #   The application's name, which names its socket and pid file
+    #
+    #   @return [String]
+    #
+    #   @api private
+
+    # @!attribute [rw] logger
+    #   The application's logger, prefixed with its name
+    #
+    #   @return [Logger]
+    #
+    #   @api private
+
+    # @!attribute [rw] base_dir
+    #   The directory with the daemon's sockets, pid files and journals
+    #
+    #   @return [String]
+    #
+    #   @api private
+
+    # @!attribute [rw] socket
+    #   The socket the daemon listens for commands on, once it's started
+    #
+    #   @return [UNIXServer, nil]
+    #
+    #   @api private
+
+    # @!attribute [rw] pid_file
+    #   The daemon's own pid file
+    #
+    #   @return [String]
+    #
+    #   @api private
+
+    # @!attribute [rw] kill_timeout
+    #   How many half seconds to wait for a previous daemon to exit
+    #
+    #   @return [Integer]
+    #
+    #   @api private
+
+    # @!attribute [rw] groups
+    #   The application's groups by name, with nil for processes in no group
+    #
+    #   @return [Hash{String, nil => Group}]
+    #
+    #   @api private
+
+    # @!attribute [rw] work_queue
+    #   An attribute that bluepill doesn't use
+    #
+    #   @return [Object]
+    #
+    #   @api private
+
+    # @!attribute [rw] pids_dir
+    #   The directory with the pid files of the application's processes
+    #
+    #   @return [String]
+    #
+    #   @api private
+
+    # @!attribute [rw] log_file
+    #   The file the daemon logs to, or nil to log to syslog
+    #
+    #   @return [String, nil]
+    #
+    #   @api private
+
+    # Create the daemon for an application
+    #
+    # It sets up signal traps, the logger and the pids directory. It exits
+    # with status 5 if it can't write to its log file or base directory.
+    #
+    # @param [String] name the application's name
+    # @param [Hash{Symbol => Object}] options :foreground, :log_file,
+    #   :base_dir and :kill_timeout
+    #
+    # @return [void]
+    #
+    # @api private
     def initialize(name, options = {})
       self.name = name
 
@@ -30,14 +119,37 @@ module Bluepill
       @mutex = Mutex.new
     end
 
+    # Return whether the daemon runs in the foreground
+    #
+    # @return [Boolean]
+    #
+    # @api private
     def foreground?
       !!@foreground
     end
 
+    # Run a block while holding the daemon's lock
+    #
+    # Ticks and commands from the CLI hold it, so they never overlap.
+    #
+    # @yield the work to do while holding the lock
+    # @yieldreturn [Object] what the block returns
+    #
+    # @return [Object] what the block returns
+    #
+    # @api private
     def mutex(&block)
       @mutex.synchronize(&block)
     end
 
+    # Start the daemon and monitor the application's processes
+    #
+    # It prints what went wrong, and exits with status 5, if the daemon
+    # fails to start.
+    #
+    # @return [void]
+    #
+    # @api private
     def load
       start_server
     rescue StandardError => e
@@ -47,6 +159,62 @@ module Bluepill
       exit(5)
     end
 
+    # @!method start(group_name = nil, process_name = nil)
+    #   Start a process or group, or every process without either
+    #
+    #   @param [String, nil] group_name the group, or the process's name
+    #     when no group has it
+    #   @param [String, nil] process_name the process
+    #
+    #   @return [Array<String>] the affected processes, as group:process
+    #
+    #   @api private
+
+    # @!method stop(group_name = nil, process_name = nil)
+    #   Stop a process or group, or every process without either
+    #
+    #   @param [String, nil] group_name the group, or the process's name
+    #     when no group has it
+    #   @param [String, nil] process_name the process
+    #
+    #   @return [Array<String>] the affected processes, as group:process
+    #
+    #   @api private
+
+    # @!method restart(group_name = nil, process_name = nil)
+    #   Restart a process or group, or every process without either
+    #
+    #   @param [String, nil] group_name the group, or the process's name
+    #     when no group has it
+    #   @param [String, nil] process_name the process
+    #
+    #   @return [Array<String>] the affected processes, as group:process
+    #
+    #   @api private
+
+    # @!method unmonitor(group_name = nil, process_name = nil)
+    #   Stop monitoring a process or group, or every process without either
+    #
+    #   @param [String, nil] group_name the group, or the process's name
+    #     when no group has it
+    #   @param [String, nil] process_name the process
+    #
+    #   @return [Array<String>] the affected processes, as group:process
+    #
+    #   @api private
+
+    # @!method status(group_name = nil, process_name = nil)
+    #   Return the status of a process or group, or of every process
+    #
+    #   @param [String, nil] group_name the group, or the process's name
+    #     when no group has it
+    #   @param [String, nil] process_name the process
+    #
+    #   @return [Array<String>] the status lines
+    #
+    #   @api private
+
+    # Define a method for each of the PROCESS_COMMANDS
     PROCESS_COMMANDS.each do |command|
       class_eval <<-RUBY, __FILE__, __LINE__ + 1
         def #{command}(group_name = nil, process_name = nil)
@@ -55,6 +223,14 @@ module Bluepill
       RUBY
     end
 
+    # Add a process to a group, which is created if it's new
+    #
+    # @param [Process] process the process
+    # @param [#to_s, nil] group_name the group, or nil for no group
+    #
+    # @return [Array<Process>] the group's processes
+    #
+    # @api private
     def add_process(process, group_name = nil)
       group_name = group_name.to_s if group_name
 
@@ -62,12 +238,27 @@ module Bluepill
       groups.fetch(group_name).add_process(process)
     end
 
+    # Return the daemon's version, which the CLI checks against its own
+    #
+    # @return [Module] the Version module
+    #
+    # @api private
     def version
       Version
     end
 
   protected
 
+    # Send a command to a process, a group, or every process
+    #
+    # @param [Symbol] method the command
+    # @param [String, nil] group_name the group, or the start of a process
+    #   name that contains a colon
+    # @param [String, nil] process_name the process
+    #
+    # @return [Array<String>] what the groups returned, flattened
+    #
+    # @api private
     def send_to_process_or_group(method, group_name, process_name)
       if group_name.nil? && process_name.nil?
         groups.values.collect do |group|
@@ -84,6 +275,15 @@ module Bluepill
       end
     end
 
+    # Start the thread that answers commands on the socket
+    #
+    # It kills the thread that a previous call started. Each command is a
+    # line, such as start:group:process, and the answer is the command's
+    # result, or the error it raised, marshaled.
+    #
+    # @return [Thread] the listener thread
+    #
+    # @api private
     def start_listener
       previous_thread = @listener_thread
       previous_thread.kill if previous_thread
@@ -118,6 +318,15 @@ module Bluepill
       end
     end
 
+    # Start the daemon
+    #
+    # It stops a previous daemon for the application, kills what the
+    # journals recorded, daemonizes unless it runs in the foreground, opens
+    # the socket, and runs until a signal stops it.
+    #
+    # @return [void]
+    #
+    # @api private
     def start_server
       kill_previous_bluepill
       ProcessJournal.kill_all_from_all_journals
@@ -143,6 +352,11 @@ module Bluepill
       run
     end
 
+    # Tick every group once a second, until a signal stops the daemon
+    #
+    # @return [void]
+    #
+    # @api private
     def run
       @running = true # set to false by signal trap
       while @running
@@ -154,6 +368,11 @@ module Bluepill
       end
     end
 
+    # Kill what the journals recorded and remove the socket and pid file
+    #
+    # @return [void]
+    #
+    # @api private
     def cleanup
       ProcessJournal.kill_all_from_all_journals
       ProcessJournal.clear_all_atomic_fs_locks
@@ -164,6 +383,11 @@ module Bluepill
       System.delete_if_exists(pid_file)
     end
 
+    # Trap TERM and INT to clean up and stop, and HUP to reopen the log
+    #
+    # @return [void]
+    #
+    # @api private
     def setup_signal_traps
       terminator = proc do
         puts 'Terminating...'
@@ -179,8 +403,15 @@ module Bluepill
       end
     end
 
+    # Create the logger and the pids directory
+    #
     # Bluepill opens its log file and creates its pids dir as the user that
     # runs it. The uid and gid in the config only apply to its processes.
+    # It exits with status 5 if it can't.
+    #
+    # @return [void]
+    #
+    # @api private
     def setup_logger_and_pids_dir
       self.logger = ProcessJournal.logger = Logger.new(log_file: log_file, stdout: foreground?).prefix_with(name)
       setup_pids_dir
@@ -192,6 +423,11 @@ module Bluepill
       exit(5)
     end
 
+    # Create the pids directory, and let every user write to it
+    #
+    # @return [void]
+    #
+    # @api private
     def setup_pids_dir
       FileUtils.mkdir_p(pids_dir) unless File.exist?(pids_dir)
       # we need everybody to be able to write to the pids_dir as processes managed by
@@ -199,6 +435,14 @@ module Bluepill
       FileUtils.chmod(0o777, pids_dir)
     end
 
+    # Interrupt a daemon for this application that's still running
+    #
+    # It waits up to kill_timeout half seconds for the daemon to exit, and
+    # exits with status 4 if it doesn't, or if signaling it fails.
+    #
+    # @return [void]
+    #
+    # @api private
     def kill_previous_bluepill
       return unless File.exist?(pid_file)
 
@@ -226,6 +470,11 @@ module Bluepill
       end
     end
 
+    # Write the daemon's pid to its pid file
+    #
+    # @return [void]
+    #
+    # @api private
     def write_pid_file
       File.open(pid_file, 'w') { |x| x.write(::Process.pid) }
     end

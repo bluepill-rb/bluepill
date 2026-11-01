@@ -2,9 +2,53 @@ require 'fileutils'
 require 'bluepill/system'
 
 module Bluepill
+  # Run the bluepill CLI's commands, and send them to the daemon
+  #
+  # The CLI and the daemon talk over a socket of the application's in the
+  # base directory.
+  #
+  # @api private
   class Controller
     attr_accessor :base_dir, :log_file, :sockets_dir, :pids_dir
 
+    # @!attribute [rw] base_dir
+    #   The directory with the daemons' sockets and pid files
+    #
+    #   @return [String]
+    #
+    #   @api private
+
+    # @!attribute [rw] log_file
+    #   The log file to tail when the daemon doesn't name one
+    #
+    #   @return [String, nil]
+    #
+    #   @api private
+
+    # @!attribute [rw] sockets_dir
+    #   The directory with the daemons' sockets
+    #
+    #   @return [String]
+    #
+    #   @api private
+
+    # @!attribute [rw] pids_dir
+    #   The directory with the daemons' pid files
+    #
+    #   @return [String]
+    #
+    #   @api private
+
+    # Create the controller, and clean up after daemons that died
+    #
+    # It creates the sockets and pids directories, and removes the socket
+    # and pid file of each daemon that's no longer running.
+    #
+    # @param [Hash{Symbol => Object}] options :base_dir, and :log_file
+    #
+    # @return [void]
+    #
+    # @api private
     def initialize(options)
       self.log_file = options[:log_file]
       self.base_dir = options.fetch(:base_dir)
@@ -15,10 +59,28 @@ module Bluepill
       cleanup_bluepill_directory
     end
 
+    # Return the names of the applications with a daemon's socket
+    #
+    # @return [Array<String>]
+    #
+    # @api private
     def running_applications
       Dir[File.join(sockets_dir, '*.sock')].collect { |x| File.basename(x, '.sock') }
     end
 
+    # Run a CLI command and print what it did
+    #
+    # status prints the daemon's status, quit stops the daemon, log tails
+    # the log for a process or group, and the PROCESS_COMMANDS go to the
+    # daemon. It exits with status 1 for an unknown command.
+    #
+    # @param [String] application the application's name
+    # @param [String, Symbol] command the command
+    # @param [Array<String>] args the group or process, for example
+    #
+    # @return [void]
+    #
+    # @api private
     def handle_command(application, command, *args)
       case command.to_sym
       when :status
@@ -58,6 +120,19 @@ module Bluepill
       end
     end
 
+    # Send a command to an application's daemon, and return its answer
+    #
+    # It first checks that the daemon runs this version of bluepill. It
+    # prints an error that the daemon raised and exits with status 8, and
+    # aborts if the daemon isn't running.
+    #
+    # @param [String] application the application's name
+    # @param [String, Symbol] command the command
+    # @param [Array<String>] args the command's arguments
+    #
+    # @return [Object] what the daemon answered
+    #
+    # @api private
     def send_to_daemon(application, command, *args)
       verify_version!(application)
 
@@ -76,6 +151,14 @@ module Bluepill
       abort('Connection Refused: Server is not running')
     end
 
+    # Return the pattern that finds a process or group's lines in the log
+    #
+    # @param [String] application the application's name
+    # @param [String, nil] query the process or group
+    #
+    # @return [String] an extended regular expression for grep
+    #
+    # @api private
     def grep_pattern(application, query = nil)
       pattern = [application, query].compact.join(':')
       ['\[.*', Regexp.escape(pattern), '.*'].join
@@ -83,6 +166,11 @@ module Bluepill
 
   private
 
+    # Remove the socket and pid file of each daemon that's not running
+    #
+    # @return [void]
+    #
+    # @api private
     def cleanup_bluepill_directory
       running_applications.each do |app|
         pid = pid_for(app)
@@ -95,6 +183,13 @@ module Bluepill
       end
     end
 
+    # Return the pid in an application's pid file
+    #
+    # @param [String] app the application's name
+    #
+    # @return [Integer, false] the pid, or false without a valid one
+    #
+    # @api private
     def pid_for(app)
       pid_file = File.join(pids_dir, "#{app}.pid")
       return false unless File.exist?(pid_file)
@@ -105,12 +200,24 @@ module Bluepill
       pid > 0 ? pid : false
     end
 
+    # Create the sockets and pids directories
+    #
+    # @return [void]
+    #
+    # @api private
     def setup_dir_structure
       [@sockets_dir, @pids_dir].each do |dir|
         FileUtils.mkdir_p(dir) unless File.exist?(dir)
       end
     end
 
+    # Abort unless an application's daemon runs this version of bluepill
+    #
+    # @param [String] application the application's name
+    #
+    # @return [void]
+    #
+    # @api private
     def verify_version!(application)
       version = Socket.client_command(base_dir, application, 'version')
       abort("The running version of your daemon seems to be out of date.\nDaemon Version: #{version}, CLI Version: #{Version}") unless version.equal?(Version)

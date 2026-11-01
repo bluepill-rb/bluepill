@@ -16,9 +16,7 @@ module Bluepill
     end
 
     # @return [Integer, NilClass]
-    def self.pre
-      nil
-    end
+    def self.pre; end
 
     # @return [Hash]
     def self.to_h

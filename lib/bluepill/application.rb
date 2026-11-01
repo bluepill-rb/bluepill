@@ -22,10 +22,8 @@ module Bluepill
 
       self.groups = {}
 
-      self.logger = ProcessJournal.logger = Bluepill::Logger.new(log_file: log_file, stdout: foreground?).prefix_with(self.name)
-
       setup_signal_traps
-      setup_pids_dir
+      setup_logger_and_pids_dir
 
       @mutex = Mutex.new
     end
@@ -173,6 +171,18 @@ module Bluepill
       Signal.trap('HUP') do
         logger.reopen if logger
       end
+    end
+
+    # Bluepill opens its log file and creates its pids dir as the user that
+    # runs it. The uid and gid in the config only apply to its processes.
+    def setup_logger_and_pids_dir
+      self.logger = ProcessJournal.logger = Bluepill::Logger.new(log_file: log_file, stdout: foreground?).prefix_with(name)
+      setup_pids_dir
+    rescue SystemCallError => e
+      $stderr.puts("Failed to start bluepill: #{e.message}")
+      $stderr.puts('The user running bluepill must be able to write to its log_file and base_dir. ' \
+                   'The uid and gid in the config only apply to the processes it monitors.')
+      exit(5)
     end
 
     def setup_pids_dir

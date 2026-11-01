@@ -104,6 +104,33 @@ describe Bluepill::Application do
     end
   end
 
+  describe '#initialize without permission to write its files' do
+    subject { described_class.new('test', base_dir: '/var/bluepill', log_file: '/var/log/bluepill.log') }
+
+    def expect_startup_failure(message)
+      expect($stderr).to receive(:puts).with("Failed to start bluepill: #{message}").ordered
+      expect($stderr).to receive(:puts).with(
+        'The user running bluepill must be able to write to its log_file and base_dir. ' \
+        'The uid and gid in the config only apply to the processes it monitors.'
+      ).ordered
+      expect_any_instance_of(described_class).to receive(:exit).with(5)
+    end
+
+    it 'exits with a clear message when it cannot open the log file' do
+      allow(Bluepill::Logger).to receive(:new).and_raise(Errno::EACCES, '/var/log/bluepill.log')
+      expect(FileUtils).not_to receive(:mkdir_p)
+      expect_startup_failure('Permission denied - /var/log/bluepill.log')
+      subject
+    end
+
+    it 'exits with a clear message when it cannot create the pids dir' do
+      allow(File).to receive(:exist?).with('/var/bluepill/pids/test').and_return(false)
+      allow(FileUtils).to receive(:mkdir_p).and_raise(Errno::EACCES, '/var/bluepill/pids/test')
+      expect_startup_failure('Permission denied - /var/bluepill/pids/test')
+      subject
+    end
+  end
+
   context 'with a base dir' do
     let(:base_dir) { Dir.mktmpdir }
     let(:foreground) { false }

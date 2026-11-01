@@ -35,7 +35,7 @@ Metrics/BlockLength:
 Security/MarshalLoad:
   Exclude:
     - lib/bluepill/socket.rb
-    - lib/bluepill/system.rb
+    - lib/bluepill/system/commands.rb
     - spec/lib/bluepill/application_spec.rb
 
 Lint/SuppressedException:

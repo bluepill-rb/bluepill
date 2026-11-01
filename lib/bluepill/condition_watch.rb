@@ -14,8 +14,7 @@ module Bluepill
       @logger = options.delete(:logger)
       @fires  = options.key?(:fires) ? Array(options.delete(:fires)) : [:restart]
       @every  = options.delete(:every)
-      times   = options.delete(:times) || [1, 1]
-      @times  = times.is_a?(Array) ? times : [times, times] # handles times: 5
+      @times  = Array(options.delete(:times) || 1) # handles times: 5
       @include_children = options.delete(:include_children) || false
 
       clear_history!
@@ -23,7 +22,7 @@ module Bluepill
       @process_condition = ProcessConditions[@name].new(options)
     end
 
-    def run(pid, tick_number = Time.now.to_i)
+    def run(pid, tick_number = Integer(Time.now))
       last_ran_at = @last_ran_at
       if last_ran_at.nil? || (last_ran_at + @every) <= tick_number
         @last_ran_at = tick_number
@@ -32,11 +31,11 @@ module Bluepill
           value = @process_condition.run(pid, @include_children)
         rescue System::PsError => e
           # No data this time, so leave the history alone and check again next interval
-          logger.warning("#{@name}: #{e.message}")
+          logger.warning("#{@name}: #{e}")
           return EMPTY_ARRAY
         rescue StandardError => e
           logger.err(e.backtrace)
-          raise e
+          raise
         end
 
         @history << HistoryValue.new(@process_condition.format_value(value), @process_condition.check(value))

@@ -1,6 +1,6 @@
 module Bluepill
   class ProcessStatistics
-    STRFTIME = '%m/%d/%Y %H:%I:%S'.freeze
+    STRFTIME = '%m/%d/%Y %H:%M:%S'.freeze
     EVENTS_TO_PERSIST = 10
 
     attr_reader :events

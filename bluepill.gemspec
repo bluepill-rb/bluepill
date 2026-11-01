@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.name        = 'bluepill'
   spec.version     = Bluepill::Version
   spec.platform    = Gem::Platform::RUBY
-  spec.authors     = ['Arya Asemanfar', 'Gary Tsang', 'Rohith Ravi']
+  spec.authors     = ['Arya Asemanfar', 'Erik Berlin', 'Rohith Ravi', 'Gary Tsang']
   spec.email       = ['entombedvirus@gmail.com']
   spec.homepage    = 'https://github.com/bluepill-rb/bluepill'
   spec.summary     = 'A process monitor written in Ruby with stability and minimalism in mind.'

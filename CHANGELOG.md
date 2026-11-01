@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-11-01
+
 ### Added
 
 - `bluepill load` warns about a process that sets none of `daemonize`, `pid_file` or `pid_command`, since bluepill can't find its pid ([#54](https://github.com/bluepill-rb/bluepill/issues/54)).
@@ -742,7 +744,8 @@ Initial release.
 - Added the `bluepill` CLI with the `load`, `status`, `start`, `stop`, `restart`, `unmonitor`, `quit` and `log` commands.
 - Added syslog logging.
 
-[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.1.3...HEAD
+[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/bluepill-rb/bluepill/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/bluepill-rb/bluepill/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/bluepill-rb/bluepill/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/bluepill-rb/bluepill/compare/v0.1.0...v0.1.1

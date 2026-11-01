@@ -47,7 +47,7 @@ module Process
   LIB_DIR = File.expand_path('../lib', File.dirname(__FILE__))
 
   class << self
-    alias_method :unstubbed_euid, :euid
+    alias unstubbed_euid euid
 
     def euid
       raise 'Process.euid should be stubbed' if caller.first.start_with?(LIB_DIR)

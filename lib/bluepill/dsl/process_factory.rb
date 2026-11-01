@@ -2,8 +2,9 @@ module Bluepill
   class ProcessFactory
     attr_reader :attributes
 
-    @@process_keys = {} #: Hash[Array[String?], Integer]
-    @@pid_files = {} #: Hash[String, Integer]
+    # Only the keys matter
+    @@process_keys = {} #: Hash[Array[String?], nil]
+    @@pid_files = {} #: Hash[String, nil]
 
     def initialize(attributes, process_block)
       @attributes = attributes
@@ -46,42 +47,41 @@ module Bluepill
       @attributes[:pid_file] = File.join(pids_dir, "#{default_pid_name}.pid")
     end
 
+    # The process shares its attributes hash with the factory
     def validate_process!(process)
       validate_unique_process!(process)
       validate_required_attributes!(process)
-      validate_unique_pid_file!(process)
-      validate_stop_signals!(process)
+      validate_unique_pid_file!
+      validate_stop_signals!
     end
 
     def validate_unique_process!(process)
       # A process name may contain ':', so the key keeps the parts apart.
       # Like Application#add_process, it treats Symbols and Strings alike.
-      process_key = [process.attributes[:group], process.name].collect { |part| part && part.to_s }
+      process_key = [attributes[:group], process.name].collect { |part| part && part.to_s }
       if @@process_keys.key?(process_key)
         message = "Config Error: You have two entries for the process name '#{process.name}'"
-        message += " in the group '#{process.attributes[:group]}'" if process.attributes.key?(:group)
+        message += " in the group '#{attributes.fetch(:group)}'" if attributes.key?(:group)
         config_error!(message)
       end
-      @@process_keys[process_key] = 0
+      @@process_keys[process_key] = nil
     end
 
     def validate_required_attributes!(process)
-      [:start_command].each do |required_attr|
-        next if process.attributes.key?(required_attr)
+      return if attributes.key?(:start_command)
 
-        config_error!("Config Error: You must specify a #{required_attr} for '#{process.name}'")
-      end
+      config_error!("Config Error: You must specify a start_command for '#{process.name}'")
     end
 
-    def validate_unique_pid_file!(process)
-      pid_key = process.attributes[:pid_file].strip
+    def validate_unique_pid_file!
+      pid_key = attributes.fetch(:pid_file).strip
       config_error!("Config Error: You have two entries with the pid file: #{pid_key}") if @@pid_files.key?(pid_key)
-      @@pid_files[pid_key] = 0
+      @@pid_files[pid_key] = nil
     end
 
     # Checks the more specific problems before the 'odd number' message
-    def validate_stop_signals!(process)
-      stop_signals = process.attributes[:stop_signals]
+    def validate_stop_signals!
+      stop_signals = attributes[:stop_signals]
       return if stop_signals.nil?
 
       stop_signals.each_with_index do |value, i|
@@ -92,7 +92,7 @@ module Bluepill
       end
       config_error!('Config Error: Invalid stop_signals!  Expected an odd number of elements.') unless stop_signals.size.odd?
 
-      stop_grace_time = process.attributes[:stop_grace_time]
+      stop_grace_time = attributes[:stop_grace_time]
       delays = stop_signals.select.with_index { |_, i| i.odd? }
       return unless stop_grace_time.nil? || stop_grace_time <= delays.inject(0, :+)
 
@@ -102,8 +102,7 @@ module Bluepill
     # Bluepill only writes the default pid file for processes it daemonizes,
     # so it cannot find the pid of any other process that uses it
     def warn_unless_pid_known(process, default_pid_file)
-      attributes = process.attributes
-      return if attributes[:daemonize] || attributes[:pid_command] || attributes[:pid_file] != default_pid_file
+      return if attributes[:daemonize] || attributes[:pid_command] || !attributes.fetch(:pid_file).eql?(default_pid_file)
 
       warning = "Config Warning: '#{process.name}' sets no daemonize, pid_file or pid_command, " \
                 "so bluepill cannot find its pid unless start_command writes it to #{default_pid_file}. " \

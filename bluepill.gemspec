@@ -19,6 +19,7 @@ Gem::Specification.new do |spec|
       'source_code_uri' => 'https://github.com/bluepill-rb/bluepill',
       'changelog_uri' => 'https://github.com/bluepill-rb/bluepill/blob/master/CHANGELOG.md',
       'bug_tracker_uri' => 'https://github.com/bluepill-rb/bluepill/issues',
+      'rubygems_mfa_required' => 'true',
     }
   end
 

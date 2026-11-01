@@ -51,9 +51,8 @@ module Bluepill
 
     ].freeze
 
-    attr_accessor :name, :watches, :triggers, :logger, :skip_ticks_until, :process_running
-    attr_accessor(*CONFIGURABLE_ATTRIBUTES)
-    attr_reader :children, :statistics
+    attr_accessor :name, :watches, :triggers, :skip_ticks_until, :process_running, *CONFIGURABLE_ATTRIBUTES
+    attr_reader :children, :statistics, :logger
 
     state_machine initial: :unmonitored do
       # These are the idle states, i.e. only an event (either external or internal) will trigger a transition.
@@ -146,6 +145,7 @@ module Bluepill
 
     def tick
       return if skipping_ticks?
+
       self.skip_ticks_until = nil
 
       # clear the memoization per tick
@@ -158,9 +158,11 @@ module Bluepill
       super
 
       return unless up?
+
       run_watches
 
       return unless monitor_children?
+
       refresh_children!
       children.each(&:tick)
     end
@@ -181,6 +183,7 @@ module Bluepill
 
     def record_transition(transition)
       return if transition.loopback?
+
       @transitioned = true
 
       # When a process changes state, we should clear the memory of all the watches
@@ -198,7 +201,7 @@ module Bluepill
       triggers.each do |trigger|
         begin
           trigger.notify(transition)
-        rescue => e
+        rescue StandardError => e
           logger.err e.backtrace
           raise e
         end
@@ -225,13 +228,15 @@ module Bluepill
 
       threads.each_with_object([]) do |(watch, thread), events|
         thread.join
-        next if thread[:events].size.zero?
+        next if thread[:events].empty?
+
         logger.info "#{watch.name} dispatched: #{thread[:events].join(',')}"
         thread[:events].each do |event|
           events << [event, watch.to_s]
         end
       end.each do |event, reason| # rubocop:disable Style/MultilineBlockChain
         break if @transitioned
+
         dispatch!(event, reason)
       end
     end
@@ -241,7 +246,7 @@ module Bluepill
         self.state = 'up'
         return
       end
-      self.state = (auto_start == false) ? 'unmonitored' : 'down' # we need to check for false value
+      self.state = auto_start == false ? 'unmonitored' : 'down' # we need to check for false value
     end
 
     def handle_user_command(cmd)
@@ -283,9 +288,11 @@ module Bluepill
         daemon_id = System.daemonize(start_command, system_command_options)
         if daemon_id
           ProcessJournal.append_pid_to_journal(name, daemon_id)
-          children.each do |child|
-            ProcessJournal.append_pid_to_journal(name, child.actual_pid)
-          end if monitor_children?
+          if monitor_children?
+            children.each do |child|
+              ProcessJournal.append_pid_to_journal(name, child.actual_pid)
+            end
+          end
         end
         daemon_id
       else
@@ -305,9 +312,11 @@ module Bluepill
 
     def pre_start_process
       return unless pre_start_command
+
       logger.warning "Executing pre start command: #{pre_start_command}"
       result = System.execute_blocking(pre_start_command, system_command_options)
       return if result[:exit_code].zero?
+
       logger.warning 'Pre start command execution returned non-zero exit code:'
       logger.warning result.inspect
     end
@@ -411,7 +420,7 @@ module Bluepill
       code = code.to_s.upcase if code.is_a?(String) || code.is_a?(Symbol)
       ::Process.kill(code, actual_pid)
       true
-    rescue => e
+    rescue StandardError => e
       logger.err "Failed to signal process #{actual_pid} with code #{code}: #{e}"
       false
     end
@@ -426,22 +435,21 @@ module Bluepill
 
     def pid_from_file
       return @actual_pid if cache_actual_pid? && @actual_pid
-      @actual_pid = begin
-        if pid_file
-          if File.exist?(pid_file)
-            str = File.read(pid_file)
-            str.to_i unless str.empty?
-          else
-            logger.warning("pid_file #{pid_file} does not exist or cannot be read")
-            nil
-          end
-        end
-      end
+
+      @actual_pid = if pid_file
+                      if File.exist?(pid_file)
+                        str = File.read(pid_file)
+                        str.to_i unless str.empty?
+                      else
+                        logger.warning("pid_file #{pid_file} does not exist or cannot be read")
+                        nil
+                      end
+                    end
     end
 
     def pid_from_command
       pid = `#{pid_command}`.strip
-      (pid =~ /\A\d+\z/) ? pid.to_i : nil
+      pid =~ /\A\d+\z/ ? pid.to_i : nil
     end
 
     def actual_pid=(pid)
@@ -475,9 +483,7 @@ module Bluepill
       # Add new found children to the list
       new_children_pids = System.get_children(actual_pid) - @children.collect(&:actual_pid)
 
-      unless new_children_pids.empty?
-        logger.info "Existing children: #{@children.collect(&:actual_pid).join(',')}. Got new children: #{new_children_pids.inspect} for #{actual_pid}"
-      end
+      logger.info "Existing children: #{@children.collect(&:actual_pid).join(',')}. Got new children: #{new_children_pids.inspect} for #{actual_pid}" unless new_children_pids.empty?
 
       # Construct a new process wrapper for each new found children
       new_children_pids.each do |child_pid|

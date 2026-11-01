@@ -1,7 +1,6 @@
 module Bluepill
   class Group
-    attr_accessor :name, :processes, :logger
-    attr_accessor :process_logger
+    attr_accessor :name, :processes, :logger, :process_logger
 
     def initialize(name, options = {})
       self.name = name
@@ -24,7 +23,7 @@ module Bluepill
 
     # proxied events
     [:start, :unmonitor, :stop, :restart].each do |event|
-      class_eval <<-END
+      class_eval <<-RUBY, __FILE__, __LINE__ + 1
         def #{event}(process_name = nil)
           threads = []
           affected = []
@@ -44,7 +43,7 @@ module Bluepill
           threads.each { |t| t.join } unless threads.nil?
           affected
         end
-      END
+      RUBY
     end
 
     def status(process_name = nil)
@@ -56,6 +55,7 @@ module Bluepill
         processes.each do |process|
           lines << format('%s%s(pid:%s): %s', prefix, process.name, process.actual_pid, process.state)
           next unless process.monitor_children?
+
           process.children.each do |child|
             lines << format('  %s%s: %s', prefix, child.name, child.state)
           end
@@ -64,6 +64,7 @@ module Bluepill
       else
         processes.each do |process|
           next if process_name != process.name
+
           lines << format('%s%s(pid:%s): %s', prefix, process.name, process.actual_pid, process.state)
           lines << process.statistics.to_s
         end

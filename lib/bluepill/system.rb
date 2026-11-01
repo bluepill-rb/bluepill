@@ -26,39 +26,47 @@ module Bluepill
       true
     rescue Errno::ESRCH
       false
-    rescue
+    rescue StandardError
       false # other falsy (no pid)
     end
 
     def cpu_usage(pid, include_children)
       ps = ps_axu
       return unless ps[pid]
+
       cpu_used = ps[pid][IDX_MAP[:pcpu]].to_f
-      get_children(pid).each do |child_pid|
-        cpu_used += ps[child_pid][IDX_MAP[:pcpu]].to_f if ps[child_pid]
-      end if include_children
+      if include_children
+        get_children(pid).each do |child_pid|
+          cpu_used += ps[child_pid][IDX_MAP[:pcpu]].to_f if ps[child_pid]
+        end
+      end
       cpu_used
     end
 
     def memory_usage(pid, include_children)
       ps = ps_axu
       return unless ps[pid]
+
       mem_used = ps[pid][IDX_MAP[:rss]].to_f
-      get_children(pid).each do |child_pid|
-        mem_used += ps[child_pid][IDX_MAP[:rss]].to_f if ps[child_pid]
-      end if include_children
+      if include_children
+        get_children(pid).each do |child_pid|
+          mem_used += ps[child_pid][IDX_MAP[:rss]].to_f if ps[child_pid]
+        end
+      end
       mem_used
     end
 
     def running_time(pid)
       ps = ps_axu
       return unless ps[pid]
+
       parse_elapsed_time(ps[pid][IDX_MAP[:etime]])
     end
 
     def command(pid)
       ps = ps_axu
       return unless ps[pid]
+
       ps[pid][IDX_MAP[:command]]
     end
 
@@ -86,7 +94,7 @@ module Bluepill
         daemon_id = rd.read.to_i
         rd.close
 
-        return daemon_id if daemon_id > 0
+        daemon_id if daemon_id > 0
       else
         # child
         rd.close
@@ -181,7 +189,7 @@ module Bluepill
 
             # finally, replace grandchild with cmd
             ::Kernel.exec(*Shellwords.shellwords(cmd))
-          rescue => e
+          rescue StandardError => e
             (cmd_err_write.closed? ? STDERR : cmd_err_write).puts "Exception in grandchild: #{e}."
             (cmd_err_write.closed? ? STDERR : cmd_err_write).puts e.backtrace
             exit 1
@@ -256,6 +264,7 @@ module Bluepill
     # of the bluepill daemon
     def drop_privileges(uid, gid, supplementary_groups)
       return unless ::Process::Sys.geteuid.zero?
+
       uid_num = Etc.getpwnam(uid).uid if uid
       gid_num = Etc.getgrnam(gid).gid if gid
       supplementary_groups ||= []
@@ -273,7 +282,7 @@ module Bluepill
       FileUtils.touch(pid_file)
       File.unlink(pid_file)
       true
-    rescue => e
+    rescue StandardError => e
       logger.warning(format('%s - %s', e.class.name, e.message))
       e.backtrace.each { |l| logger.warning l }
       false

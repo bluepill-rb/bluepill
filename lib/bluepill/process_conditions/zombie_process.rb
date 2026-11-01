@@ -11,7 +11,7 @@ module Bluepill
       end
 
       def check(value)
-        (value =~ /\<defunct\>/).nil?
+        (value =~ /<defunct>/).nil?
       end
     end
   end

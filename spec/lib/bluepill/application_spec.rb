@@ -119,21 +119,21 @@ describe Bluepill::Application do
       it 'is created writable for everybody' do
         app
         expect(File.directory?(pids_dir)).to be true
-        expect(File.stat(pids_dir).mode & 0777).to eq(0777)
+        expect(File.stat(pids_dir).mode & 0o777).to eq(0o777)
       end
 
       it 'is made writable for everybody when it already exists' do
         FileUtils.mkdir_p(pids_dir)
-        FileUtils.chmod(0700, pids_dir)
+        FileUtils.chmod(0o700, pids_dir)
         app
-        expect(File.stat(pids_dir).mode & 0777).to eq(0777)
+        expect(File.stat(pids_dir).mode & 0o777).to eq(0o777)
       end
     end
 
     describe 'signal traps' do
       before(:each) { app }
 
-      %w(TERM INT).each do |signal|
+      %w[TERM INT].each do |signal|
         it "terminates on #{signal}" do
           expect(app).to receive(:puts).with('Terminating...')
           expect(app).to receive(:cleanup)

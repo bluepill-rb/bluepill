@@ -3,6 +3,7 @@ module Bluepill
 
   class ConditionWatch
     attr_accessor :logger, :name
+
     EMPTY_ARRAY = [].freeze # no need to recreate one every tick
 
     def initialize(name, options = {})
@@ -26,7 +27,7 @@ module Bluepill
 
         begin
           value = @process_condition.run(pid, @include_children)
-        rescue => e
+        rescue StandardError => e
           logger.err(e.backtrace)
           raise e
         end

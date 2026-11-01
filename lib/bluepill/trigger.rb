@@ -2,6 +2,7 @@ module Bluepill
   class Trigger
     @implementations = {}
     def self.inherited(klass)
+      super
       @implementations[klass.name.split('::').last.underscore.to_sym] = klass
     end
 
@@ -51,7 +52,7 @@ module Bluepill
     def cancel_all_events
       logger.info 'Canceling all scheduled events'
       mutex.synchronize do
-        scheduled_events.each { |_, thread| thread.kill }
+        scheduled_events.collect(&:last).each(&:kill)
       end
     end
   end

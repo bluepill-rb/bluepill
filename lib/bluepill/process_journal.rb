@@ -5,8 +5,7 @@ module Bluepill
   module_function
 
     class << self
-      attr_reader :logger
-      attr_reader :journal_base_dir
+      attr_reader :logger, :journal_base_dir
 
       def logger=(new_logger)
         @logger ||= new_logger
@@ -15,7 +14,7 @@ module Bluepill
       def base_dir=(base_dir)
         @journal_base_dir ||= File.join(base_dir, 'journals')
         FileUtils.mkdir_p(@journal_base_dir) unless File.exist?(@journal_base_dir)
-        FileUtils.chmod(0777, @journal_base_dir)
+        FileUtils.chmod(0o777, @journal_base_dir)
       end
     end
 
@@ -33,7 +32,7 @@ module Bluepill
       lock = "#{name}.lock"
       times = 0
       begin
-        Dir.mkdir lock, 0700
+        Dir.mkdir lock, 0o700
       rescue Errno::EEXIST
         times += 1
         if times >= 10
@@ -86,6 +85,7 @@ module Bluepill
 
     def clear_atomic_fs_lock(name)
       return unless File.directory?(name)
+
       Dir.rmdir(name)
       logger.debug("Cleared lock #{name}")
     end
@@ -135,7 +135,7 @@ module Bluepill
     end
 
     def signal_journaled(signal, ids, label, sign)
-      past, verb = signal == 'TERM' ? %w(Termed term) : %w(Killed kill)
+      past, verb = signal == 'TERM' ? %w[Termed term] : %w[Killed kill]
       ids.each do |id|
         begin
           ::Process.kill(signal, sign * id)
@@ -158,7 +158,7 @@ module Bluepill
           logger.debug("Skipping duplicate pgid #{pgid} already in journal #{journal_name}")
         else
           logger.debug("Saving pgid #{pgid} to process journal #{journal_name}")
-          File.open(filename, 'a+', 0600) { |f| f.puts(pgid) }
+          File.open(filename, 'a+', 0o600) { |f| f.puts(pgid) }
           logger.info("Saved pgid #{pgid} to journal #{journal_name}")
           logger.debug("Journal now = #{File.open(filename, 'r').read}")
         end
@@ -181,7 +181,7 @@ module Bluepill
           logger.debug("Skipping duplicate pid #{pid} already in journal #{journal_name}")
         else
           logger.debug("Saving pid #{pid} to process journal #{journal_name}")
-          File.open(filename, 'a+', 0600) { |f| f.puts(pid) }
+          File.open(filename, 'a+', 0o600) { |f| f.puts(pid) }
           logger.info("Saved pid #{pid} to journal #{journal_name}")
           logger.debug("Journal now = #{File.open(filename, 'r').read}")
         end

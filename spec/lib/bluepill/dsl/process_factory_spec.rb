@@ -16,9 +16,9 @@ describe Bluepill::ProcessFactory do
     Bluepill::ProcessFactory.new(attributes, block).create_process(name, '/pids')
   end
 
-  def expect_config_error(message)
+  def expect_config_error(message, &block)
     expect do
-      expect { yield }.to raise_error(SystemExit) { |e| expect(e.status).to eq(6) }
+      expect(&block).to raise_error(SystemExit) { |e| expect(e.status).to eq(6) }
     end.to output(message).to_stderr
   end
 

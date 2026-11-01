@@ -2,6 +2,7 @@ module Bluepill
   module ProcessConditions
     class RunningTime < ProcessCondition
       def initialize(options = {})
+        super
         @below = options[:below]
       end
 

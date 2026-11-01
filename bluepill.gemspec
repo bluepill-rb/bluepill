@@ -19,7 +19,7 @@ Gem::Specification.new do |spec|
 
   spec.required_ruby_version = '>= 1.9.3'
 
-  spec.files            = %w(CONTRIBUTING.md DESIGN.md LICENSE README.md bluepill.gemspec) + Dir['bin/*'] + Dir['lib/**/*.rb']
+  spec.files            = %w[CONTRIBUTING.md DESIGN.md LICENSE README.md bluepill.gemspec] + Dir['bin/*'] + Dir['lib/**/*.rb']
   spec.executables      = Dir['bin/*'].collect { |f| File.basename(f) }
   spec.require_paths    = ['lib']
 end

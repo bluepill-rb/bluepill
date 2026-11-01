@@ -9,8 +9,8 @@ describe Bluepill::System do
     Bluepill::System.reset_data
   end
 
-  def stub_ps(ps)
-    allow(Bluepill::System).to receive(:ps_axu).and_return(ps)
+  def stub_ps(output)
+    allow(Bluepill::System).to receive(:ps_axu).and_return(output)
   end
 
   let(:ps) do
@@ -393,7 +393,7 @@ describe Bluepill::System do
     it 'should parse ps output into a hash keyed by pid' do
       expect(Bluepill::System).to receive(:`).with('ps axo pid,ppid,pcpu,rss,etime,command').once.and_return(output)
       expected = {
-        0 => %w(PID PPID %CPU RSS ELAPSED COMMAND),
+        0 => %w[PID PPID %CPU RSS ELAPSED COMMAND],
         1 => ['1', '0', '0.0', '1234', '10-01:02:03', '/sbin/init'],
         321 => ['321', '1', '12.5', '56789', '01:02', 'ruby -e "sleep 1"'],
       }

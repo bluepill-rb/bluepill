@@ -6,9 +6,7 @@ module Bluepill
   class Application
     PROCESS_COMMANDS = [:start, :stop, :restart, :unmonitor, :status].freeze
 
-    attr_accessor :name, :logger, :base_dir, :socket, :pid_file, :kill_timeout
-    attr_accessor :groups, :work_queue
-    attr_accessor :pids_dir, :log_file
+    attr_accessor :name, :logger, :base_dir, :socket, :pid_file, :kill_timeout, :groups, :work_queue, :pids_dir, :log_file
 
     def initialize(name, options = {})
       self.name = name
@@ -18,7 +16,7 @@ module Bluepill
       self.base_dir = ProcessJournal.base_dir = options[:base_dir] ||
         ENV['BLUEPILL_BASE_DIR'] ||
         (::Process.euid != 0 ? File.join(ENV['HOME'], '.bluepill') : '/var/run/bluepill')
-      self.pid_file = File.join(base_dir, 'pids', self.name + '.pid')
+      self.pid_file = File.join(base_dir, 'pids', "#{self.name}.pid")
       self.pids_dir = File.join(base_dir, 'pids', self.name)
       self.kill_timeout = options[:kill_timeout] || 10
 
@@ -36,8 +34,8 @@ module Bluepill
       !!@foreground
     end
 
-    def mutex(&b)
-      @mutex.synchronize(&b)
+    def mutex(&block)
+      @mutex.synchronize(&block)
     end
 
     def load
@@ -50,11 +48,11 @@ module Bluepill
     end
 
     PROCESS_COMMANDS.each do |command|
-      class_eval <<-END
+      class_eval <<-RUBY, __FILE__, __LINE__ + 1
         def #{command}(group_name = nil, process_name = nil)
           self.send_to_process_or_group(:#{command}, group_name, process_name)
         end
-      END
+      RUBY
     end
 
     def add_process(process, group_name = nil)
@@ -94,11 +92,11 @@ module Bluepill
         loop do
           begin
             client = socket.accept
-            client.close_on_exec = true  if client.respond_to?(:close_on_exec=)
+            client.close_on_exec = true if client.respond_to?(:close_on_exec=)
             command, *args = client.readline.strip.split(':')
             response = begin
               mutex { send(command, *args) }
-            rescue => e
+            rescue StandardError => e
               e
             end
             client.write(Marshal.dump(response))
@@ -133,7 +131,7 @@ module Bluepill
 
       $0 = "bluepilld: #{name}"
 
-      groups.each { |_, group| group.determine_initial_state }
+      groups.each_value(&:determine_initial_state)
 
       write_pid_file
       self.socket = Bluepill::Socket.server(base_dir, name)
@@ -147,7 +145,7 @@ module Bluepill
       while @running
         mutex do
           System.reset_data
-          groups.each { |_, group| group.tick }
+          groups.each_value(&:tick)
         end
         sleep 1
       end
@@ -182,17 +180,19 @@ module Bluepill
       FileUtils.mkdir_p(pids_dir) unless File.exist?(pids_dir)
       # we need everybody to be able to write to the pids_dir as processes managed by
       # bluepill will be writing to this dir after they've dropped privileges
-      FileUtils.chmod(0777, pids_dir)
+      FileUtils.chmod(0o777, pids_dir)
     end
 
     def kill_previous_bluepill
       return unless File.exist?(pid_file)
+
       previous_pid = File.read(pid_file).to_i
       return unless System.pid_alive?(previous_pid)
+
       ::Process.kill(0, previous_pid)
       puts "Killing previous bluepilld[#{previous_pid}]"
       ::Process.kill(2, previous_pid)
-    rescue => e
+    rescue StandardError => e
       $stderr.puts 'Encountered error trying to kill previous bluepill:'
       $stderr.puts "#{e.class}: #{e.message}"
       exit(4) unless e.is_a?(Errno::ESRCH)

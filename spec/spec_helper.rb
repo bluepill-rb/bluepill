@@ -51,6 +51,7 @@ module Process
 
     def euid
       raise 'Process.euid should be stubbed' if caller.first.start_with?(LIB_DIR)
+
       unstubbed_euid
     end
   end

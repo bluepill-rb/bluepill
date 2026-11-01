@@ -5,17 +5,17 @@ module Bluepill
   module ProcessConditions
     class Http < ProcessCondition
       def initialize(options = {})
+        super
         @uri = URI.parse(options[:url])
-        @kind = begin
-          case options[:kind]
-          when Integer
-            Net::HTTPResponse::CODE_TO_OBJ[options[:kind].to_s]
-          when String, Symbol
-            Net.const_get("HTTP#{options[:kind].to_s.camelize}")
-          else
-            Net::HTTPSuccess
-          end
-        end
+        @kind = case options[:kind]
+                when Integer
+                  Net::HTTPResponse::CODE_TO_OBJ[options[:kind].to_s]
+                when String, Symbol
+                  Net.const_get("HTTP#{options[:kind].to_s.camelize}")
+                else
+                  Net::HTTPSuccess
+                end
+
         @pattern = options[:pattern] || nil
         @open_timeout = (options[:open_timeout] || options[:timeout] || 5).to_i
         @read_timeout = (options[:read_timeout] || options[:timeout] || 5).to_i
@@ -35,7 +35,7 @@ module Bluepill
             http.get(@uri.request_uri)
           end
         end
-      rescue => e
+      rescue StandardError => e
         e
       end
 
@@ -43,6 +43,7 @@ module Bluepill
         return false unless value.is_a?(@kind)
         return true  unless @pattern
         return false unless value.class.body_permitted?
+
         @pattern =~ value.body
       end
 
@@ -51,11 +52,9 @@ module Bluepill
       def hide_net_http_bug
         yield
       rescue NoMethodError => e
-        if e.to_s =~ /#{Regexp.escape("undefined method `closed?' for nil:NilClass")}/
-          raise(Errno::ECONNREFUSED, "Connection refused attempting to contact #{@uri.scheme}://#{@uri.host}:#{@uri.port}")
-        else
-          raise
-        end
+        raise(Errno::ECONNREFUSED, "Connection refused attempting to contact #{@uri.scheme}://#{@uri.host}:#{@uri.port}") if e.to_s =~ /#{Regexp.escape("undefined method `closed?' for nil:NilClass")}/
+
+        raise
       end
     end
   end

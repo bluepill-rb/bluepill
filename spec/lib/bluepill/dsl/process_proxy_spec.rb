@@ -37,6 +37,14 @@ describe Bluepill::ProcessProxy do
       expect(proxy.attributes).to eq(daemonize: true)
     end
 
+    it 'responds to setters, bang methods and attributes that have been set' do
+      proxy = Bluepill::ProcessProxy.new('web', {uid: 'user'}, proc {})
+      expect(proxy).to respond_to(:start_command=)
+      expect(proxy).to respond_to(:daemonize!)
+      expect(proxy).to respond_to(:uid)
+      expect(proxy).not_to respond_to(:gid)
+    end
+
     it 'reads attributes that have been set' do
       value = nil
       Bluepill::ProcessProxy.new('web', {}, proc do

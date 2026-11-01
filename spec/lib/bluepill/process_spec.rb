@@ -64,7 +64,7 @@ describe Bluepill::Process do
 
       describe '#environment' do
         subject { super().environment }
-        it { should eq Hash[] }
+        it { should eq({}) }
       end
 
       describe '#state' do
@@ -156,10 +156,10 @@ describe Bluepill::Process do
     end
 
     {
-      'starting' => %w(up down),
-      'up' => %w(up down),
-      'stopping' => %w(up down),
-      'restarting' => %w(up down),
+      'starting' => %w[up down],
+      'up' => %w[up down],
+      'stopping' => %w[up down],
+      'restarting' => %w[up down],
     }.each do |from, (running_to, stopped_to)|
       it "transitions from #{from} to #{running_to} when running" do
         subject.state = from
@@ -247,9 +247,9 @@ describe Bluepill::Process do
 
     it 'logs and re-raises errors' do
       error = RuntimeError.new('boom')
-      error.set_backtrace(%w(a b))
+      error.set_backtrace(%w[a b])
       allow(trigger).to receive(:notify).and_raise(error)
-      expect(logger).to receive(:err).with(%w(a b))
+      expect(logger).to receive(:err).with(%w[a b])
       expect { subject.notify_triggers(transition) }.to raise_error(error)
     end
   end

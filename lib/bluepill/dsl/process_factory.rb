@@ -39,9 +39,10 @@ module Bluepill
 
     def assign_default_pid_file(process_name, pids_dir)
       return if @attributes.key?(:pid_file)
+
       group_name = @attributes[:group]
-      default_pid_name = [group_name, process_name].compact.join('_').gsub(/[^A-Za-z0-9_\-]/, '_')
-      @attributes[:pid_file] = File.join(pids_dir, default_pid_name + '.pid')
+      default_pid_name = [group_name, process_name].compact.join('_').gsub(/[^A-Za-z0-9_-]/, '_')
+      @attributes[:pid_file] = File.join(pids_dir, "#{default_pid_name}.pid")
     end
 
     def validate_process!(process)
@@ -78,6 +79,7 @@ module Bluepill
       stop_signals = process.attributes[:stop_signals]
 
       return if stop_signals.nil?
+
       # Start with the more helpful error messages before the 'odd number' message.
       delay_sum = 0
       stop_signals.each_with_index do |s_or_d, i|
@@ -110,6 +112,7 @@ module Bluepill
 
     def validate_child_process!(child)
       return if child.attributes.key?(:stop_command)
+
       $stderr.puts "Config Error: Invalid child process monitor for #{child.name}"
       $stderr.puts 'You must specify a stop command to monitor child processes.'
       exit(6)

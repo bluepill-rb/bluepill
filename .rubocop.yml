@@ -1,8 +1,45 @@
-FileName:
+AllCops:
+  # The gem still supports Ruby 1.9.3, and 2.0 is the oldest Ruby that
+  # RuboCop can check against. CI runs the specs on 1.9.3 to catch syntax
+  # that 1.9 does not support.
+  TargetRubyVersion: 2.0
+  NewCops: disable
+  SuggestExtensions: false
+
+# required_ruby_version is 1.9.3, which RuboCop cannot target
+Gemspec/RequiredRubyVersion:
+  Enabled: false
+
+Naming/FileName:
   Exclude:
     - local-bluepill
 
-Lint/HandleExceptions:
+Lint/ScriptPermission:
+  Exclude:
+    - examples/**/*
+
+# The examples use 0.times and 1.times to show how to define several processes
+Lint/UselessTimes:
+  Exclude:
+    - examples/**/*
+
+Metrics/BlockLength:
+  AllowedMethods:
+    - state_machine
+  Exclude:
+    - bin/bluepill
+    - examples/**/*
+    - local-bluepill
+    - spec/**/*
+
+# Marshal only reads data from bluepill's own socket and child processes
+Security/MarshalLoad:
+  Exclude:
+    - lib/bluepill/socket.rb
+    - lib/bluepill/system.rb
+    - spec/lib/bluepill/application_spec.rb
+
+Lint/SuppressedException:
   Exclude:
     - bin/bluepill
     - lib/bluepill/application.rb
@@ -35,7 +72,7 @@ Metrics/ModuleLength:
 Metrics/PerceivedComplexity:
   Enabled: false
 
-Metrics/LineLength:
+Layout/LineLength:
   AllowURI: true
   Enabled: false
 
@@ -46,14 +83,40 @@ Metrics/ParameterLists:
 Style/SpecialGlobalVars:
   Enabled: false
 
-Style/AccessModifierIndentation:
+Style/FormatStringToken:
+  EnforcedStyle: unannotated
+
+# Writing to $stderr keeps errors visible under ruby -W0, which silences warn,
+# and lets the specs capture them
+Style/StderrPuts:
+  Enabled: false
+
+Style/GlobalStdStream:
+  Enabled: false
+
+# __dir__ needs Ruby 2.0
+Style/ExpandPathArguments:
+  Enabled: false
+
+# Keyword arguments need Ruby 2.0
+Style/OptionalBooleanParameter:
+  Enabled: false
+
+# %i needs Ruby 2.0
+Style/SymbolArray:
+  EnforcedStyle: brackets
+
+Layout/AccessModifierIndentation:
   EnforcedStyle: outdent
 
 Style/ClassVars:
   Exclude:
     - lib/bluepill/dsl/process_factory.rb
+    - spec/lib/bluepill/dsl/app_proxy_spec.rb
+    - spec/lib/bluepill/dsl/process_factory_spec.rb
 
 Style/CollectionMethods:
+  Enabled: true
   PreferredMethods:
     map:      'collect'
     map!:     'collect!'
@@ -64,7 +127,7 @@ Style/CollectionMethods:
 Style/Documentation:
   Enabled: false
 
-Style/DotPosition:
+Layout/DotPosition:
   EnforcedStyle: trailing
 
 Style/DoubleNegation:
@@ -74,11 +137,14 @@ Style/GuardClause:
   Exclude:
     - lib/bluepill/dsl/process_factory.rb
 
-Style/MultilineOperationIndentation:
+Layout/MultilineOperationIndentation:
   Enabled: false
 
-Style/SpaceInsideHashLiteralBraces:
+Layout/SpaceInsideHashLiteralBraces:
   EnforcedStyle: no_space
 
-Style/TrailingCommaInLiteral:
-  EnforcedStyleForMultiline: 'comma'
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: comma

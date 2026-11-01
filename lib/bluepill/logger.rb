@@ -11,7 +11,7 @@ module Bluepill
     end
 
     LOG_METHODS.each do |method|
-      class_eval <<-END
+      class_eval <<-RUBY, __FILE__, __LINE__ + 1
         def #{method}(msg, prefix = [])
           if @logger.is_a?(self.class)
             @logger.#{method}(msg, [@prefix] + prefix)
@@ -24,7 +24,7 @@ module Bluepill
             @logger.#{method}("\#{s_prefix}\#{msg}")
           end
         end
-      END
+      RUBY
     end
 
     def prefix_with(prefix)
@@ -56,6 +56,7 @@ module Bluepill
 
       LOG_METHODS.each do |method|
         next if method == LOGGER_EQUIVALENTS[method]
+
         alias_method method, LOGGER_EQUIVALENTS[method]
       end
     end

@@ -26,9 +26,9 @@ describe Bluepill::Socket do
     end
 
     it 'should send the command and return the response' do
-      allow(socket).to receive(:read).and_return(Marshal.dump(%w(ok)))
+      allow(socket).to receive(:read).and_return(Marshal.dump(%w[ok]))
       expect(UNIXSocket).to receive(:open).with(socket_path).once.and_yield(socket)
-      expect(Bluepill::Socket.client_command(base_dir, 'app', 'status')).to eq(%w(ok))
+      expect(Bluepill::Socket.client_command(base_dir, 'app', 'status')).to eq(%w[ok])
       expect(socket).to have_received(:puts).with('status')
       expect(Bluepill::Socket).not_to have_received(:puts)
     end
@@ -38,6 +38,7 @@ describe Bluepill::Socket do
       allow(socket).to receive(:read) do
         calls += 1
         raise Timeout::Error if calls == 1
+
         Marshal.dump('done')
       end
       allow(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
@@ -71,6 +72,7 @@ describe Bluepill::Socket do
         allow(UNIXServer).to receive(:open).with(socket_path) do
           calls += 1
           raise Errno::EADDRINUSE if calls == 1
+
           server
         end
       end

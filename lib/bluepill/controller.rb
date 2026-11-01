@@ -71,7 +71,6 @@ module Bluepill
       else
         response
       end
-
     rescue Errno::ECONNREFUSED
       abort('Connection Refused: Server is not running')
     end
@@ -87,6 +86,7 @@ module Bluepill
       running_applications.each do |app|
         pid = pid_for(app)
         next if pid && System.pid_alive?(pid)
+
         pid_file = File.join(pids_dir, "#{app}.pid")
         sock_file = File.join(sockets_dir, "#{app}.sock")
         System.delete_if_exists(pid_file)
@@ -107,9 +107,7 @@ module Bluepill
 
     def verify_version!(application)
       version = Socket.client_command(base_dir, application, 'version')
-      if version != Bluepill::Version
-        abort("The running version of your daemon seems to be out of date.\nDaemon Version: #{version}, CLI Version: #{Bluepill::Version}")
-      end
+      abort("The running version of your daemon seems to be out of date.\nDaemon Version: #{version}, CLI Version: #{Bluepill::Version}") if version != Bluepill::Version
     rescue ArgumentError
       abort('The running version of your daemon seems to be out of date.')
     end

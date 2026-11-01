@@ -104,12 +104,11 @@ jobs:
 
   lint:
     name: RuboCop
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
-          # RuboCop 0.40.0 does not load on modern Ruby
-          ruby-version: '2.4'
+          ruby-version: '4.0'
           bundler-cache: true
       - run: bundle exec rake rubocop

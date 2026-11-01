@@ -46,7 +46,7 @@ describe Bluepill::ProcessJournal do
       expected = File.join(@dir, 'journals')
       expect(journal.journal_base_dir).to eq expected
       expect(File.directory?(expected)).to be true
-      expect(File.stat(expected).mode & 0777).to eq 0777
+      expect(File.stat(expected).mode & 0o777).to eq 0o777
 
       journal.base_dir = File.join(@dir, 'other')
       expect(journal.journal_base_dir).to eq expected
@@ -78,7 +78,7 @@ describe Bluepill::ProcessJournal do
     it 'waits until the lock is released' do
       Dir.mkdir("#{name}.lock")
       yielded = false
-      expect(journal).to receive(:sleep).with(1).once { Dir.rmdir("#{name}.lock") }
+      expect(journal).to(receive(:sleep).with(1).once { Dir.rmdir("#{name}.lock") })
       expect(logger).to receive(:debug).with("Waiting for lock #{name}.lock")
       journal.acquire_atomic_fs_lock(name) { yielded = true }
       expect(yielded).to be true
@@ -195,7 +195,7 @@ describe Bluepill::ProcessJournal do
         write_journal(filename, [42, 43, 44])
         alive = {42 => true, 43 => true, 44 => false}
         allow(Bluepill::System).to receive(:pid_alive?) { |id| alive[sign * id] }
-        expect(journal).to receive(:sleep).with(1).once { alive[43] = false }
+        expect(journal).to(receive(:sleep).with(1).once { alive[43] = false })
         expect(::Process).to receive(:kill).with('KILL', sign * 42).and_raise(Errno::ESRCH)
         expect(::Process).not_to receive(:kill).with('KILL', sign * 43)
         expect(::Process).not_to receive(:kill).with('KILL', sign * 44)
@@ -221,7 +221,7 @@ describe Bluepill::ProcessJournal do
       journal.append_pgid_to_journal('app', 42)
       journal.append_pgid_to_journal('app', 43)
       expect(File.read(filename)).to eq "42\n43\n"
-      expect(File.stat(filename).mode & 0777).to eq 0600
+      expect(File.stat(filename).mode & 0o777).to eq 0o600
     end
   end
 

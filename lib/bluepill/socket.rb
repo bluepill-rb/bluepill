@@ -23,9 +23,7 @@ module Bluepill
           end
           break
         rescue EOFError, Timeout::Error
-          if current_attempt == MAX_ATTEMPTS - 1
-            abort('Socket Timeout: Server may not be responding')
-          end
+          abort('Socket Timeout: Server may not be responding') if current_attempt == MAX_ATTEMPTS - 1
           puts "Retry #{current_attempt + 1} of #{MAX_ATTEMPTS}"
         end
       end
@@ -41,7 +39,7 @@ module Bluepill
         UNIXSocket.open(socket_path)
       rescue Errno::ECONNREFUSED
         File.delete(socket_path)
-        return UNIXServer.open(socket_path)
+        UNIXServer.open(socket_path)
       else
         $stderr.puts('Server is already running!')
         exit(7)
@@ -49,7 +47,7 @@ module Bluepill
     end
 
     def socket_path(base_dir, name)
-      File.join(base_dir, 'socks', name + '.sock')
+      File.join(base_dir, 'socks', "#{name}.sock")
     end
   end
 end

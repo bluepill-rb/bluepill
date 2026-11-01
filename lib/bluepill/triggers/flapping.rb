@@ -21,6 +21,7 @@ module Bluepill
 
       def notify(transition)
         return unless TRIGGER_STATES.include?(transition.to_name)
+
         timeline << Time.now.to_i
         check_flapping
       end

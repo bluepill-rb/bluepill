@@ -1,6 +1,7 @@
 module Bluepill
   class ProcessProxy
     attr_reader :attributes, :watches, :name
+
     def initialize(process_name, attributes, process_block)
       @name = process_name
       @attributes = attributes
@@ -25,6 +26,10 @@ module Bluepill
       else
         super
       end
+    end
+
+    def respond_to_missing?(name, include_private = false)
+      name.to_s =~ /[=!]$/ || @attributes.key?(name.to_sym) || super
     end
 
     def checks(name, options = {})

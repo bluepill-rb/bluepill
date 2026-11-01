@@ -1,12 +1,13 @@
 module Bluepill
   module ProcessConditions
     class MemUsage < ProcessCondition
-      MB         = (1024**2).freeze
+      MB         = (1024**2)
       FORMAT_STR = '%d%s'.freeze
       MB_LABEL   = 'MB'.freeze
       KB_LABEL   = 'KB'.freeze
 
       def initialize(options = {})
+        super
         @below = options[:below]
       end
 
@@ -17,7 +18,7 @@ module Bluepill
 
       def check(value)
         value.kilobytes < @below
-      rescue
+      rescue StandardError
         true
       end
 

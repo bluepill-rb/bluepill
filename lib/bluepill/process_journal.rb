@@ -4,6 +4,9 @@ module Bluepill
   module ProcessJournal
   module_function
 
+    # These methods run on the module, where logger is defined
+    # @type instance: singleton(Bluepill::ProcessJournal)
+
     class << self
       attr_reader :logger, :journal_base_dir
 
@@ -58,11 +61,11 @@ module Bluepill
     end
 
     def pid_journal_filename(journal_name)
-      File.join(@journal_base_dir, ".bluepill_pids_journal.#{journal_name}")
+      File.join(journal_base_dir, ".bluepill_pids_journal.#{journal_name}")
     end
 
     def pgid_journal_filename(journal_name)
-      File.join(@journal_base_dir, ".bluepill_pgids_journal.#{journal_name}")
+      File.join(journal_base_dir, ".bluepill_pgids_journal.#{journal_name}")
     end
 
     def pid_journal(filename)
@@ -170,8 +173,10 @@ module Bluepill
         logger.debug("Skipping invalid pid #{pid} (class #{pid.class})")
         return
       end
+      # skip_pid? made sure it's an Integer
+      valid_pid = pid #: Integer
       begin
-        append_pgid_to_journal(journal_name, ::Process.getpgid(pid))
+        append_pgid_to_journal(journal_name, ::Process.getpgid(valid_pid))
       rescue Errno::ESRCH
       end
 

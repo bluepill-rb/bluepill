@@ -43,7 +43,7 @@ module Bluepill
             end
           rescue StandardError => e
             trigger.logger.err(e)
-            trigger.logger.err(e.backtrace.join("\n"))
+            trigger.logger.err(Array(e.backtrace).join("\n"))
           end
         end
         scheduled_events.push([event, thread])

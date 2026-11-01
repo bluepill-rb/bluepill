@@ -6,7 +6,7 @@ module Bluepill
     class Http < ProcessCondition
       def initialize(options = {})
         super
-        @uri = URI.parse(options[:url])
+        @uri = URI.parse(options[:url]) #: URI::HTTP
         @kind = case options[:kind]
                 when Integer
                   Net::HTTPResponse::CODE_TO_OBJ[options[:kind].to_s]
@@ -22,7 +22,8 @@ module Bluepill
       end
 
       def run(_pid, _include_children)
-        session = Net::HTTP.new(@uri.host, @uri.port)
+        host = @uri.host #: String
+        session = Net::HTTP.new(host, @uri.port)
         if @uri.scheme == 'https'
           require 'net/https'
           session.use_ssl = true
@@ -42,9 +43,11 @@ module Bluepill
       def check(value)
         return false unless value.is_a?(@kind)
         return true  unless @pattern
-        return false unless value.class.body_permitted?
 
-        !(@pattern =~ value.body).nil?
+        response = value #: Net::HTTPResponse
+        return false unless response.class.body_permitted?
+
+        !(@pattern =~ response.body).nil?
       end
 
     private

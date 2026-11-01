@@ -25,7 +25,7 @@ module Bluepill
         puts send_to_daemon(application, :status, *args)
       when :quit
         pid = pid_for(application)
-        if System.pid_alive?(pid)
+        if pid && System.pid_alive?(pid)
           ::Process.kill('TERM', pid)
           puts "Killing bluepilld[#{pid}]"
         else
@@ -66,7 +66,7 @@ module Bluepill
       if response.is_a?(Exception)
         $stderr.puts 'Received error from server:'
         $stderr.puts response.inspect
-        $stderr.puts response.backtrace.join("\n")
+        $stderr.puts Array(response.backtrace).join("\n")
         exit(8)
       else
         response
@@ -96,7 +96,7 @@ module Bluepill
 
     def pid_for(app)
       pid_file = File.join(pids_dir, "#{app}.pid")
-      File.exist?(pid_file) && File.read(pid_file).to_i
+      File.exist?(pid_file) && File.read(pid_file).to_i #: Integer | false
     end
 
     def setup_dir_structure

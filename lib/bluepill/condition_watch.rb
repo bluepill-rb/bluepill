@@ -4,7 +4,9 @@ module Bluepill
   class ConditionWatch
     attr_accessor :logger, :name
 
-    EMPTY_ARRAY = [].freeze # no need to recreate one every tick
+    # no need to recreate one every tick
+    no_events = [] #: Array[Symbol]
+    EMPTY_ARRAY = no_events.freeze
 
     def initialize(name, options = {})
       @name = name
@@ -12,8 +14,8 @@ module Bluepill
       @logger = options.delete(:logger)
       @fires  = options.key?(:fires) ? Array(options.delete(:fires)) : [:restart]
       @every  = options.delete(:every)
-      @times  = options.delete(:times) || [1, 1]
-      @times  = [@times, @times] unless @times.is_a?(Array) # handles times: 5
+      times   = options.delete(:times) || [1, 1]
+      @times  = times.is_a?(Array) ? times : [times, times] # handles times: 5
       @include_children = options.delete(:include_children) || false
 
       clear_history!
@@ -22,7 +24,8 @@ module Bluepill
     end
 
     def run(pid, tick_number = Time.now.to_i)
-      if @last_ran_at.nil? || (@last_ran_at + @every) <= tick_number
+      last_ran_at = @last_ran_at
+      if last_ran_at.nil? || (last_ran_at + @every) <= tick_number
         @last_ran_at = tick_number
 
         begin

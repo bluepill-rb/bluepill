@@ -13,9 +13,11 @@ module Bluepill
 
       @foreground   = options[:foreground]
       self.log_file = options[:log_file]
+      # Only used for a non-root user, who has a home
+      home = ENV['HOME'] #: String
       self.base_dir = ProcessJournal.base_dir = options[:base_dir] ||
         ENV['BLUEPILL_BASE_DIR'] ||
-        (::Process.euid != 0 ? File.join(ENV['HOME'], '.bluepill') : '/var/run/bluepill')
+        (::Process.euid != 0 ? File.join(home, '.bluepill') : '/var/run/bluepill')
       self.pid_file = File.join(base_dir, 'pids', "#{self.name}.pid")
       self.pids_dir = File.join(base_dir, 'pids', self.name)
       self.kill_timeout = options[:kill_timeout] || 10
@@ -83,23 +85,27 @@ module Bluepill
     end
 
     def start_listener
-      @listener_thread.kill if @listener_thread
+      previous_thread = @listener_thread
+      previous_thread.kill if previous_thread
       @listener_thread = Thread.new do
         loop do
+          client = nil #: UNIXSocket?
           begin
-            client = socket.accept
+            server = socket #: UNIXServer
+            client = server.accept
             client.close_on_exec = true if client.respond_to?(:close_on_exec=)
             # The target is group:process and the process name may contain ':'
             command, *args = client.readline.strip.split(':', 3).reject(&:empty?)
             response = begin
-              mutex { send(command, *args) }
+              # An empty line leaves command nil, so send raises an error for the client
+              mutex { send(command, *args) } # steep:ignore ArgumentTypeMismatch
             rescue StandardError => e
               e
             end
             client.write(Marshal.dump(response))
           rescue StandardError => e
             logger.err(format('Got exception in cmd listener: %s `%s`', e.class.name, e.message))
-            e.backtrace.each { |l| logger.err(l) }
+            Array(e.backtrace).each { |l| logger.err(l) }
           ensure
             begin
               # Ruby before 3.0 never counts branches in ensure as covered
@@ -163,7 +169,7 @@ module Bluepill
         puts 'Terminating...'
         cleanup
         @running = false
-      end
+      end #: ^(Integer signal) -> void
 
       Signal.trap('TERM', &terminator)
       Signal.trap('INT', &terminator)

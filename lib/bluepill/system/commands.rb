@@ -29,12 +29,16 @@ module Bluepill
 
         drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
 
+        # Processes that bluepill daemonizes always have a pid file and a logger
+        pid_file = options[:pid_file] #: String
+        logger = options[:logger] #: Logger
+
         # if we cannot write the pid file as the provided user, err out
-        exit unless can_write_pid_file(options[:pid_file], options[:logger])
+        exit unless can_write_pid_file(pid_file, logger)
 
         to_daemonize = lambda do
           setup_command_environment(options)
-          redirect_io(*options.values_at(:stdin, :stdout, :stderr))
+          redirect_io(options[:stdin], options[:stdout], options[:stderr])
 
           ::Kernel.exec(*Shellwords.shellwords(cmd))
           exit
@@ -43,7 +47,7 @@ module Bluepill
         daemon_id = Daemonize.call_as_daemon(to_daemonize, nil, cmd)
 
         # call_as_daemon returns 0 when the daemon fails to report its pid
-        File.open(options[:pid_file], 'w') { |f| f.write(daemon_id) } if daemon_id > 0
+        File.open(pid_file, 'w') { |f| f.write(daemon_id) } if daemon_id > 0
 
         wr.write daemon_id
         wr.close
@@ -63,6 +67,7 @@ module Bluepill
         waiter = ::Process.detach(child)
 
         wr.close
+        # @type var cmd_status: String
         begin
           cmd_status = rd.read
         ensure
@@ -85,6 +90,7 @@ module Bluepill
       cmd_err_read, cmd_err_write = IO.pipe
 
       pid = fork do
+        # @type var pipes: grandchild_pipes
         pipes = {out: [cmd_out_read, cmd_out_write], err: [cmd_err_read, cmd_err_write], result: result_pipe}
         exec_blocking_grandchild(cmd, options, pipes)
       end
@@ -116,6 +122,7 @@ module Bluepill
     end
 
     def exec_blocking_grandchild(cmd, options, pipes)
+      # @type var cmd_err_write: IO
       cmd_out_read, cmd_out_write = pipes[:out]
       cmd_err_read, cmd_err_write = pipes[:err]
 
@@ -159,15 +166,15 @@ module Bluepill
 
       uid_num = Etc.getpwnam(uid).uid if uid
       gid_num = Etc.getgrnam(gid).gid if gid
-      supplementary_groups ||= []
+      supplementary_groups ||= [] #: Array[String]
       group_nums = supplementary_groups.collect do |group|
         Etc.getgrnam(group).gid
       end
-      ::Process.groups = [gid_num] if gid
+      ::Process.groups = [gid_num] if gid_num
       ::Process.groups |= group_nums unless group_nums.empty?
-      ::Process::Sys.setgid(gid_num) if gid
-      ::Process::Sys.setuid(uid_num) if uid
-      ENV['HOME'] = Etc.getpwuid(uid_num).try(:dir) || ENV['HOME'] if uid
+      ::Process::Sys.setgid(gid_num) if gid_num
+      ::Process::Sys.setuid(uid_num) if uid_num
+      ENV['HOME'] = Etc.getpwuid(uid_num).try(:dir) || ENV['HOME'] if uid_num
     end
 
     def can_write_pid_file(pid_file, logger)
@@ -176,7 +183,7 @@ module Bluepill
       true
     rescue StandardError => e
       logger.warning(format('%s - %s', e.class.name, e.message))
-      e.backtrace.each { |l| logger.warning l }
+      Array(e.backtrace).each { |l| logger.warning l }
       false
     end
 

@@ -5,7 +5,8 @@ module Bluepill
     def initialize(name, options = {})
       self.name = name
       self.processes = []
-      self.logger = options[:logger]
+      logger = options[:logger] #: Logger
+      self.logger = logger
     end
 
     def add_process(process)
@@ -47,7 +48,7 @@ module Bluepill
     end
 
     def status(process_name = nil)
-      lines = []
+      lines = [] #: Array[String]
       if process_name.nil?
         prefix = name ? '  ' : ''
         lines << "#{name}:" if name
@@ -65,7 +66,7 @@ module Bluepill
         processes.each do |process|
           next if process_name != process.name
 
-          lines << format('%s%s(pid:%s): %s', prefix, process.name, process.actual_pid, process.state)
+          lines << format('%s(pid:%s): %s', process.name, process.actual_pid, process.state)
           lines << process.statistics.to_s
         end
       end

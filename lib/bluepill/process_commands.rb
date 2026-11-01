@@ -6,9 +6,11 @@ module Bluepill
       clean_threads
       ProcessJournal.kill_all_from_journal(name) # be sure nothing else is running from previous runs
       pre_start_process
-      logger.warning "Executing start command: #{start_command}"
+      # ProcessFactory makes sure every process has a start command
+      command = start_command #: String
+      logger.warning "Executing start command: #{command}"
       if daemonize?
-        daemon_id = System.daemonize(start_command, system_command_options)
+        daemon_id = System.daemonize(command, system_command_options)
         if daemon_id
           ProcessJournal.append_pid_to_journal(name, daemon_id)
           if monitor_children?
@@ -21,7 +23,7 @@ module Bluepill
       else
         # This is a self-daemonizing process
         with_timeout(start_grace_time, on_start_timeout) do
-          run_command(start_command, 'Start')
+          run_command(command, 'Start')
         end
       end
 
@@ -142,7 +144,7 @@ module Bluepill
 
       until signals.empty?
         # we already checked to make sure signals had an odd number of items
-        delay = signals.shift
+        delay = signals.shift #: Integer
         signal = signals.shift
         remaining -= delay
 

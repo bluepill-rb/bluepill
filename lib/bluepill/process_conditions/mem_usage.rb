@@ -1,7 +1,7 @@
 module Bluepill
   module ProcessConditions
     class MemUsage < ProcessCondition
-      MB         = (1024**2)
+      MB         = (1024**2) #: Integer
       FORMAT_STR = '%d%s'.freeze
       MB_LABEL   = 'MB'.freeze
       KB_LABEL   = 'KB'.freeze

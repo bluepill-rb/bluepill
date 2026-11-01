@@ -2,8 +2,8 @@ module Bluepill
   class ProcessFactory
     attr_reader :attributes
 
-    @@process_keys = {}
-    @@pid_files = {}
+    @@process_keys = {} #: Hash[String, Integer]
+    @@pid_files = {} #: Hash[String, Integer]
 
     def initialize(attributes, process_block)
       @attributes = attributes
@@ -23,7 +23,7 @@ module Bluepill
     end
 
     def create_child_process(name, pid, logger)
-      attributes = {}
+      attributes = {} #: Hash[Symbol, untyped]
       [:start_grace_time, :stop_grace_time, :restart_grace_time].each { |a| attributes[a] = @attributes[a] }
       attributes[:actual_pid] = pid
       attributes[:logger] = logger

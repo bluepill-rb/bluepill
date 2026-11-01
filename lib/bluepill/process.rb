@@ -157,8 +157,9 @@ module Bluepill
       # Deal with thread cleanup here since the stopping state isn't used
       clean_threads if unmonitored?
 
-      # run state machine transitions
-      super
+      # run state machine transitions. state_machine defines tick in a
+      # module it creates, which the signatures can't name.
+      super # steep:ignore UnexpectedSuper
 
       return unless up?
 
@@ -224,7 +225,7 @@ module Bluepill
       now = Time.now.to_i
 
       threads = watches.collect do |watch|
-        [watch, Thread.new { Thread.current[:events] = watch.run(actual_pid, now) }]
+        [watch, Thread.new { Thread.current[:events] = watch.run(actual_pid, now) }] #: [ConditionWatch, Thread]
       end
 
       @transitioned = false
@@ -280,7 +281,7 @@ module Bluepill
       @process_running ||= signal_process(0)
       # the process isn't running, so we should clear the PID
       clear_pid unless @process_running
-      @process_running
+      @process_running #: bool
     end
 
     def clean_threads
@@ -375,12 +376,14 @@ module Bluepill
       logger.info "Existing children: #{@children.collect(&:actual_pid).join(',')}. Got new children: #{new_children_pids.inspect} for #{actual_pid}" unless new_children_pids.empty?
 
       # Construct a new process wrapper for each new found children
+      # monitor_children sets the factory
+      factory = child_process_factory #: ProcessFactory
       new_children_pids.each do |child_pid|
         ProcessJournal.append_pid_to_journal(name, child_pid) if daemonize?
         child_name = "<child(pid:#{child_pid})>"
         logger = self.logger.prefix_with(child_name)
 
-        child = child_process_factory.create_child_process(child_name, child_pid, logger)
+        child = factory.create_child_process(child_name, child_pid, logger)
         @children << child
       end
     end

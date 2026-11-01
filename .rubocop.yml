@@ -104,6 +104,10 @@ Style/OptionalBooleanParameter:
 Style/SymbolArray:
   EnforcedStyle: brackets
 
+# Allow the `#: Type` comments that Steep reads
+Layout/LeadingCommentSpace:
+  AllowRBSInlineAnnotation: true
+
 Layout/AccessModifierIndentation:
   EnforcedStyle: outdent
 

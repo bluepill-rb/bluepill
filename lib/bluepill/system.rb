@@ -9,6 +9,9 @@ module Bluepill
 
   module_function
 
+    # These methods run on the module, where the store is
+    # @type instance: singleton(Bluepill::System)
+
     # The position of each field in ps output
     IDX_MAP = {
       pid: 0,
@@ -17,7 +20,7 @@ module Bluepill
       rss: 3,
       etime: 4,
       command: 5,
-    }.freeze
+    }.freeze #: { pid: Integer, ppid: Integer, pcpu: Integer, rss: Integer, etime: Integer, command: Integer }
 
     def pid_alive?(pid)
       ::Process.kill(0, pid)
@@ -76,7 +79,7 @@ module Bluepill
       # child and the recursion would never end.
       return [] unless parent_pid.to_i > 0
 
-      child_pids = []
+      child_pids = [] #: Array[Integer]
       ps_axu.each_pair do |_pid, chunks|
         child_pids << chunks[IDX_MAP[:pid]].to_i if chunks[IDX_MAP[:ppid]].to_i == parent_pid.to_i
       end
@@ -116,14 +119,16 @@ module Bluepill
           # Use -A because -e shows the environment on FreeBSD and OpenBSD.
           lines = `ps -Ao pid,ppid,pcpu,rss,etime,args`.split("\n")
 
-          lines.each_with_object({}) do |line, mem|
+          table = {} #: ps_table
+          lines.each do |line|
             chunks = line.split(/\s+/)
             chunks.delete_if { |c| c.strip.empty? }
             pid = chunks[IDX_MAP[:pid]].strip.to_i
-            command = chunks.slice!(IDX_MAP[:command], chunks.length).join ' '
-            chunks[IDX_MAP[:command]] = command
-            mem[pid] = chunks.flatten
+            command = chunks.slice!(IDX_MAP[:command], chunks.length) #: Array[String]
+            chunks[IDX_MAP[:command]] = command.join ' '
+            table[pid] = chunks.flatten
           end
+          table
         rescue SystemCallError => e
           # Forking ps can fail, for example with ENOMEM or EAGAIN under memory pressure.
           # Cache the message so ps is not run again until the next tick.
@@ -137,11 +142,12 @@ module Bluepill
 
     def parse_elapsed_time(str)
       # [[dd-]hh:]mm:ss
-      if str =~ /(?:(?:(\d+)-)?(\d\d):)?(\d\d):(\d\d)/
-        days = (Regexp.last_match[1] || 0).to_i
-        hours = (Regexp.last_match[2] || 0).to_i
-        mins = Regexp.last_match[3].to_i
-        secs = Regexp.last_match[4].to_i
+      match = /(?:(?:(\d+)-)?(\d\d):)?(\d\d):(\d\d)/.match(str)
+      if match
+        days = (match[1] || 0).to_i
+        hours = (match[2] || 0).to_i
+        mins = match[3].to_i
+        secs = match[4].to_i
         ((days * 24 + hours) * 60 + mins) * 60 + secs
       else
         0

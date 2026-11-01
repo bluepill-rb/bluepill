@@ -31,6 +31,7 @@ module Bluepill
     end
 
     def server(base_dir, name)
+      # @type var socket_path: String
       socket_path = self.socket_path(base_dir, name)
       UNIXServer.open(socket_path)
     rescue Errno::EADDRINUSE

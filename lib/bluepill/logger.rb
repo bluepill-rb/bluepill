@@ -32,8 +32,9 @@ module Bluepill
     end
 
     def reopen
-      if @logger.is_a?(self.class)
-        @logger.reopen
+      logger = @logger
+      if logger.is_a?(self.class)
+        logger.reopen
       else
         @logger = create_logger
       end

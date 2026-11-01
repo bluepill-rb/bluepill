@@ -5,9 +5,9 @@ module Bluepill
   class Controller
     attr_accessor :base_dir, :log_file, :sockets_dir, :pids_dir
 
-    def initialize(options = {})
+    def initialize(options)
       self.log_file = options[:log_file]
-      self.base_dir = options[:base_dir]
+      self.base_dir = options.fetch(:base_dir)
       self.sockets_dir = File.join(base_dir, 'socks')
       self.pids_dir = File.join(base_dir, 'pids')
 
@@ -33,12 +33,12 @@ module Bluepill
         end
       when :log
         log_file_location = send_to_daemon(application, :log_file)
-        log_file_location = log_file if log_file_location.to_s.strip.empty?
+        log_file_location = log_file if log_file_location.to_s.rstrip.empty?
 
         requested_pattern = args.first
-        grep_pattern = self.grep_pattern(application, requested_pattern)
+        pattern = grep_pattern(application, requested_pattern)
 
-        tail = "tail -n 100 -f #{log_file_location} | grep -E '#{grep_pattern}'"
+        tail = "tail -n 100 -f #{log_file_location} | grep -E '#{pattern}'"
         puts "Tailing log for #{requested_pattern}..."
         Kernel.exec(tail)
       when *Application::PROCESS_COMMANDS
@@ -66,7 +66,8 @@ module Bluepill
       if response.is_a?(Exception)
         $stderr.puts 'Received error from server:'
         $stderr.puts response.inspect
-        $stderr.puts Array(response.backtrace).join("\n")
+        # join flattens the backtrace and makes a missing one empty
+        $stderr.puts [response.backtrace].join("\n")
         exit(8)
       else
         response
@@ -77,7 +78,7 @@ module Bluepill
 
     def grep_pattern(application, query = nil)
       pattern = [application, query].compact.join(':')
-      ['\[.*', Regexp.escape(pattern), '.*'].compact.join
+      ['\[.*', Regexp.escape(pattern), '.*'].join
     end
 
   private
@@ -112,7 +113,7 @@ module Bluepill
 
     def verify_version!(application)
       version = Socket.client_command(base_dir, application, 'version')
-      abort("The running version of your daemon seems to be out of date.\nDaemon Version: #{version}, CLI Version: #{Bluepill::Version}") if version != Bluepill::Version
+      abort("The running version of your daemon seems to be out of date.\nDaemon Version: #{version}, CLI Version: #{Version}") unless version.equal?(Version)
     rescue ArgumentError
       abort('The running version of your daemon seems to be out of date.')
     end

@@ -110,7 +110,7 @@ module Bluepill
     attr_accessor sockets_dir: String
     attr_accessor pids_dir: String
 
-    def initialize: (?Hash[Symbol, untyped] options) -> void
+    def initialize: (Hash[Symbol, untyped] options) -> void
 
     def running_applications: () -> Array[String]
 

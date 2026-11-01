@@ -100,8 +100,27 @@ rescue LoadError
   $stderr.puts 'Please install YARD with: gem install yard'
 end
 
+# Yardstick needs Ruby 2.7 or newer, so the Gemfile only installs it there
+begin
+  require 'yardstick/rake/measurement'
+  require 'yardstick/rake/verify'
+  yardstick = true
+rescue LoadError
+  yardstick = false
+end
+
+if yardstick
+  Yardstick::Rake::Measurement.new(:yardstick_measure)
+
+  # Fails unless every method in lib is documented
+  Yardstick::Rake::Verify.new(:yardstick) do |verify|
+    verify.threshold = 100
+  end
+end
+
 task test: :spec
 default_tasks = [:spec, :rubocop]
+default_tasks << :yardstick if yardstick
 default_tasks << :steep if steep
 default_tasks << :mutant if mutant
 task default: default_tasks

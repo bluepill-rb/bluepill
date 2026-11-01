@@ -24,6 +24,7 @@ end
 group :doc do
   gem 'maruku', '>= 0.7'
   gem 'yard', '>= 0.8'
+  gem 'yardstick', '>= 0.9.9', require: false if RUBY_VERSION >= '2.7'
 end
 
 group :test do

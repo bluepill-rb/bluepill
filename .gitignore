@@ -13,3 +13,4 @@ bluepill.log
 
 .mutant/
 tmp/
+measurements/

@@ -277,7 +277,7 @@ process.monitor_children do |child_process|
 end
 ```
 
-Note {{PID}} will be substituted for the pid of process in both the stop and restart commands.
+Note `{{PID}}` will be substituted for the pid of process in both the stop and restart commands.
 
 ### Commands Don't Run in a Shell
 

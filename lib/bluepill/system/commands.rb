@@ -38,7 +38,7 @@ module Bluepill
           setup_command_environment(options)
           redirect_io(options[:stdin], options[:stdout], options[:stderr])
 
-          ::Kernel.exec(*Shellwords.shellwords(cmd))
+          Kernel.exec(*Shellwords.shellwords(cmd))
           exit
         end
 
@@ -73,7 +73,7 @@ module Bluepill
         end
         waiter.join
 
-        cmd_status.strip != '' ? Marshal.load(cmd_status) : {exit_code: 0, stdout: '', stderr: ''}
+        cmd_status.empty? ? {exit_code: 0, stdout: '', stderr: ''} : Marshal.load(cmd_status)
       else
         rd.close
         run_blocking_child(cmd, options, wr)
@@ -121,8 +121,8 @@ module Bluepill
 
     def self.exec_blocking_grandchild(cmd, options, pipes)
       # @type var cmd_err_write: IO
-      cmd_out_read, cmd_out_write = pipes[:out]
-      cmd_err_read, cmd_err_write = pipes[:err]
+      cmd_out_read, cmd_out_write = pipes.fetch(:out)
+      cmd_err_read, cmd_err_write = pipes.fetch(:err)
 
       drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
       setup_command_environment(options)
@@ -130,7 +130,7 @@ module Bluepill
       # close unused fds so ancestors wont hang. This line is the only reason we are not
       # using something like popen3. If this fd is not closed, the .read call on the parent
       # will never return because the result pipe would still be open in the "exec"-ed cmd
-      pipes[:result].close
+      pipes.fetch(:result).close
 
       # we do not care about stdin of cmd
       STDIN.reopen('/dev/null')
@@ -143,7 +143,7 @@ module Bluepill
       STDERR.reopen(cmd_err_write)
       cmd_err_write.close
 
-      ::Kernel.exec(*Shellwords.shellwords(cmd))
+      Kernel.exec(*Shellwords.shellwords(cmd))
     rescue StandardError => e
       err = cmd_err_write.closed? ? STDERR : cmd_err_write
       err.puts "Exception in grandchild: #{e}."
@@ -153,8 +153,10 @@ module Bluepill
 
     def self.setup_command_environment(options)
       # Setting end PWD env emulates bash behavior when dealing with symlinks
-      Dir.chdir(ENV['PWD'] = options[:working_dir].to_s) if options[:working_dir]
-      options[:environment].each { |key, value| ENV[key.to_s] = value.to_s } if options[:environment]
+      working_dir = options[:working_dir]
+      Dir.chdir(ENV['PWD'] = working_dir.to_s) if working_dir
+      environment = options[:environment]
+      environment.each { |key, value| ENV[key.to_s] = value.to_s } if environment
     end
 
     # be sure to call this from a fork otherwise it will modify the attributes
@@ -180,15 +182,17 @@ module Bluepill
       File.unlink(pid_file)
       true
     rescue StandardError => e
-      logger.warning(format('%s - %s', e.class.name, e.message))
-      Array(e.backtrace).each { |l| logger.warning l }
+      logger.warning(format('%s - %s', e.class, e))
+      # A rescued exception was raised, so it has a backtrace
+      backtrace = e.backtrace #: Array[String]
+      backtrace.each { |l| logger.warning l }
       false
     end
 
     def self.redirect_io(io_in, io_out, io_err)
       $stdin.reopen(io_in) if io_in
 
-      if !io_out.nil? && !io_err.nil? && io_out == io_err
+      if !io_out.nil? && io_out.eql?(io_err)
         $stdout.reopen(io_out, APPEND_MODE)
         $stderr.reopen($stdout)
 

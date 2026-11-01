@@ -22,20 +22,18 @@ module Bluepill
       true
     rescue Errno::EPERM # no permission, but it is definitely alive
       true
-    rescue Errno::ESRCH
-      false
     rescue StandardError
-      false # other falsy (no pid)
+      false # no such process (ESRCH), or no pid
     end
 
     def self.cpu_usage(pid, include_children)
       ps = ps_axu
-      return unless ps[pid]
+      return unless ps.key?(pid)
 
-      cpu_used = ps[pid][IDX_MAP[:pcpu]].to_f
+      cpu_used = ps.fetch(pid).fetch(IDX_MAP.fetch(:pcpu)).to_f
       if include_children
         get_children(pid).each do |child_pid|
-          cpu_used += ps[child_pid][IDX_MAP[:pcpu]].to_f if ps[child_pid]
+          cpu_used += ps.fetch(child_pid).fetch(IDX_MAP.fetch(:pcpu)).to_f if ps.key?(child_pid)
         end
       end
       cpu_used
@@ -43,12 +41,12 @@ module Bluepill
 
     def self.memory_usage(pid, include_children)
       ps = ps_axu
-      return unless ps[pid]
+      return unless ps.key?(pid)
 
-      mem_used = ps[pid][IDX_MAP[:rss]].to_f
+      mem_used = ps.fetch(pid).fetch(IDX_MAP.fetch(:rss)).to_f
       if include_children
         get_children(pid).each do |child_pid|
-          mem_used += ps[child_pid][IDX_MAP[:rss]].to_f if ps[child_pid]
+          mem_used += ps.fetch(child_pid).fetch(IDX_MAP.fetch(:rss)).to_f if ps.key?(child_pid)
         end
       end
       mem_used
@@ -56,16 +54,16 @@ module Bluepill
 
     def self.running_time(pid)
       ps = ps_axu
-      return unless ps[pid]
+      return unless ps.key?(pid)
 
-      parse_elapsed_time(ps[pid][IDX_MAP[:etime]])
+      parse_elapsed_time(ps.fetch(pid).fetch(IDX_MAP.fetch(:etime)))
     end
 
     def self.command(pid)
       ps = ps_axu
-      return unless ps[pid]
+      return unless ps.key?(pid)
 
-      ps[pid][IDX_MAP[:command]]
+      ps.fetch(pid).fetch(IDX_MAP.fetch(:command))
     end
 
     def self.get_children(parent_pid)
@@ -76,7 +74,7 @@ module Bluepill
 
       child_pids = [] #: Array[Integer]
       ps_axu.each_pair do |_pid, chunks|
-        child_pids << chunks[IDX_MAP[:pid]].to_i if chunks[IDX_MAP[:ppid]].to_i == parent_pid.to_i
+        child_pids << Integer(chunks.fetch(IDX_MAP.fetch(:pid))) if chunks.fetch(IDX_MAP.fetch(:ppid)).to_i.eql?(parent_pid)
       end
       grand_children = child_pids.collect { |pid| get_children(pid) }.flatten
       child_pids.concat grand_children
@@ -101,7 +99,7 @@ module Bluepill
     end
 
     def self.reset_data
-      store.clear unless store.empty?
+      store.clear
     end
 
     # Watches run in their own threads, so only let one of them run ps per tick
@@ -116,21 +114,20 @@ module Bluepill
 
           table = {} #: ps_table
           lines.each do |line|
-            chunks = line.split(/\s+/)
-            chunks.delete_if { |c| c.strip.empty? }
-            pid = chunks[IDX_MAP[:pid]].strip.to_i
-            command = chunks.slice!(IDX_MAP[:command], chunks.length) #: Array[String]
-            chunks[IDX_MAP[:command]] = command.join ' '
-            table[pid] = chunks.flatten
+            chunks = line.split
+            pid = chunks.fetch(IDX_MAP.fetch(:pid)).to_i
+            command = chunks.slice!(IDX_MAP.fetch(:command), chunks.length) #: Array[String]
+            chunks[IDX_MAP.fetch(:command)] = command.join ' '
+            table[pid] = chunks
           end
           table
         rescue SystemCallError => e
           # Forking ps can fail, for example with ENOMEM or EAGAIN under memory pressure.
           # Cache the message so ps is not run again until the next tick.
-          "Could not run ps: #{e.class}: #{e.message}"
+          "Could not run ps: #{e.class}: #{e}"
         end
       end
-      raise PsError, ps if ps.is_a?(String)
+      raise PsError, ps if ps.instance_of?(String)
 
       ps
     end
@@ -139,8 +136,8 @@ module Bluepill
       # [[dd-]hh:]mm:ss
       match = /(?:(?:(\d+)-)?(\d\d):)?(\d\d):(\d\d)/.match(str)
       if match
-        days = (match[1] || 0).to_i
-        hours = (match[2] || 0).to_i
+        days = match[1].to_i
+        hours = match[2].to_i
         mins = match[3].to_i
         secs = match[4].to_i
         ((days * 24 + hours) * 60 + mins) * 60 + secs

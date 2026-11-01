@@ -9,4 +9,5 @@ pkg/
 Gemfile.lock
 .idea
 bluepill.log
+.gem_rbs_collection/
 

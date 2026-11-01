@@ -1,0 +1,48 @@
+# Type signatures that Steep loads for bluepill's dependencies. Run
+# `bundle exec rbs collection install` to download them.
+sources:
+  - type: git
+    name: ruby/gem_rbs_collection
+    remote: https://github.com/ruby/gem_rbs_collection.git
+    revision: main
+    repo_dir: gems
+
+path: .gem_rbs_collection
+
+gems:
+  - name: activesupport
+  - name: etc
+  - name: fileutils
+  - name: logger
+  - name: monitor
+  - name: net-http
+  - name: shellwords
+  - name: socket
+  - name: timeout
+  - name: uri
+  # These have no published signatures. sig-vendor has stubs instead.
+  - name: blue-daemons
+    ignore: true
+  - name: state_machine
+    ignore: true
+  - name: syslog
+    ignore: true
+  # Development tools that the signatures don't need
+  - name: diff-lcs
+    ignore: true
+  - name: maruku
+    ignore: true
+  - name: prism
+    ignore: true
+  - name: rake
+    ignore: true
+  - name: rspec
+    ignore: true
+  - name: rubocop
+    ignore: true
+  - name: simplecov
+    ignore: true
+  - name: steep
+    ignore: true
+  - name: yard
+    ignore: true

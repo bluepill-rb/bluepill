@@ -1,0 +1,18 @@
+# Only what bluepill uses from syslog, which has no signatures
+module Syslog
+  LOG_PID: Integer
+  LOG_LOCAL6: Integer
+
+  def self.open: (?String ident, ?Integer options, ?Integer facility) -> singleton(Syslog)
+  def self.opened?: () -> bool
+  def self.close: () -> nil
+
+  def self.emerg: (String format, *untyped args) -> singleton(Syslog)
+  def self.alert: (String format, *untyped args) -> singleton(Syslog)
+  def self.crit: (String format, *untyped args) -> singleton(Syslog)
+  def self.err: (String format, *untyped args) -> singleton(Syslog)
+  def self.warning: (String format, *untyped args) -> singleton(Syslog)
+  def self.notice: (String format, *untyped args) -> singleton(Syslog)
+  def self.info: (String format, *untyped args) -> singleton(Syslog)
+  def self.debug: (String format, *untyped args) -> singleton(Syslog)
+end

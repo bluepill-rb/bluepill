@@ -24,6 +24,33 @@ rescue LoadError
   end
 end
 
+# Steep needs Ruby 3.3 or newer, so the Gemfile only installs it there
+begin
+  require 'steep/version'
+  steep = true
+rescue LoadError
+  steep = false
+end
+
+if steep
+  namespace :rbs do
+    desc 'Install the signatures of the dependencies from rbs_collection.lock.yaml'
+    task :collection do
+      sh 'rbs collection install --frozen'
+    end
+
+    desc 'Validate the RBS signatures'
+    task validate: :collection do
+      sh 'rbs -I sig -I sig-vendor validate'
+    end
+  end
+
+  desc 'Type check lib against sig with Steep'
+  task steep: 'rbs:validate' do
+    sh 'steep check'
+  end
+end
+
 begin
   require 'yard'
   YARD::Rake::YardocTask.new do |yard|
@@ -34,4 +61,6 @@ rescue LoadError
 end
 
 task test: :spec
-task default: [:spec, :rubocop]
+default_tasks = [:spec, :rubocop]
+default_tasks << :steep if steep
+task default: default_tasks

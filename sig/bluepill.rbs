@@ -1,0 +1,924 @@
+# Type signatures for bluepill
+
+module Bluepill
+  # The value of Bluepill::System.ps_axu: ps fields by pid
+  type ps_table = Hash[Integer, Array[String]]
+
+  # A time in seconds. An ActiveSupport::Duration also works, since it
+  # passes for its value.
+  type seconds = Integer | Float
+
+  # A process block from the config, which runs with self set to the
+  # ProcessProxy and also gets it as an argument
+  type process_block = ^(ProcessProxy process) [self: ProcessProxy] -> void
+
+  # Loads an application from a config file. The block runs with self set to
+  # the AppProxy, and also gets it as an argument.
+  def self.application: (_ToS app_name, ?Hash[Symbol, untyped] options) { (AppProxy app) [self: AppProxy] -> void } -> void
+
+  module Version
+    def self?.major: () -> Integer
+
+    def self?.minor: () -> Integer
+
+    def self?.patch: () -> Integer
+
+    def self?.pre: () -> Integer?
+
+    def self?.to_h: () -> { major: Integer, minor: Integer, patch: Integer, pre: Integer? }
+
+    def self?.to_a: () -> Array[Integer]
+
+    def self?.to_s: () -> String
+  end
+
+  # The daemon: it holds the groups of processes and serves commands from
+  # bluepill's socket
+  class Application
+    PROCESS_COMMANDS: Array[Symbol]
+
+    attr_accessor name: String
+    attr_accessor logger: Logger
+    attr_accessor base_dir: String
+    attr_accessor socket: UNIXServer?
+    attr_accessor pid_file: String
+    attr_accessor kill_timeout: Integer
+    attr_accessor groups: Hash[String?, Group]
+    # Not used by bluepill
+    attr_accessor work_queue: untyped
+    attr_accessor pids_dir: String
+    attr_accessor log_file: String?
+
+    @foreground: bool?
+    @mutex: Thread::Mutex
+    @listener_thread: Thread?
+    @running: bool
+
+    def initialize: (String name, ?Hash[Symbol, untyped] options) -> void
+
+    def foreground?: () -> bool
+
+    def mutex: [T] () { () -> T } -> T
+
+    def load: () -> void
+
+    # The PROCESS_COMMANDS, which return the affected processes, or the
+    # status lines for status
+    def start: (?String? group_name, ?String? process_name) -> Array[String]
+
+    def stop: (?String? group_name, ?String? process_name) -> Array[String]
+
+    def restart: (?String? group_name, ?String? process_name) -> Array[String]
+
+    def unmonitor: (?String? group_name, ?String? process_name) -> Array[String]
+
+    def status: (?String? group_name, ?String? process_name) -> Array[String]
+
+    def add_process: (Process process, ?_ToS? group_name) -> Array[Process]
+
+    def version: () -> singleton(Version)
+
+    # Ruby's protected methods are private in RBS
+
+    private
+
+    def send_to_process_or_group: (Symbol method, String? group_name, String? process_name) -> Array[String]
+
+    def start_listener: () -> Thread
+
+    def start_server: () -> void
+
+    def run: () -> void
+
+    def cleanup: () -> void
+
+    def setup_signal_traps: () -> void
+
+    def setup_logger_and_pids_dir: () -> void
+
+    def setup_pids_dir: () -> void
+
+    def kill_previous_bluepill: () -> void
+
+    def write_pid_file: () -> void
+  end
+
+  # Runs the bluepill commands, and sends them to the daemon over its socket
+  class Controller
+    attr_accessor base_dir: String
+    attr_accessor log_file: String?
+    attr_accessor sockets_dir: String
+    attr_accessor pids_dir: String
+
+    def initialize: (?Hash[Symbol, untyped] options) -> void
+
+    def running_applications: () -> Array[String]
+
+    def handle_command: (String application, String | Symbol command, *String args) -> void
+
+    # Returns what the daemon responds with, which is unmarshaled from the socket
+    def send_to_daemon: (String application, String | Symbol command, *String args) -> untyped
+
+    def grep_pattern: (String application, ?String? query) -> String
+
+    private
+
+    def cleanup_bluepill_directory: () -> void
+
+    def pid_for: (String app) -> (Integer | false)
+
+    def setup_dir_structure: () -> void
+
+    def verify_version!: (String application) -> void
+  end
+
+  module Socket
+    TIMEOUT: Integer
+    MAX_ATTEMPTS: Integer
+
+    def self?.client: [T] (String base_dir, String name) { (UNIXSocket socket) -> T } -> T
+
+    # Returns the daemon's response, unmarshaled
+    def self?.client_command: (String base_dir, String name, String command) -> untyped
+
+    def self?.server: (String base_dir, String name) -> UNIXServer
+
+    def self?.socket_path: (String base_dir, String name) -> String
+  end
+
+  # Runs commands for a Process, which is the only class that includes it
+  module ProcessCommands : _Host
+    # What ProcessCommands uses from Process
+    interface _Host
+      %a{pure} def name: () -> String
+      %a{pure} def logger: () -> Logger
+      %a{pure} def children: () -> Array[Process]
+      %a{pure} def pre_start_command: () -> String?
+      %a{pure} def start_command: () -> String?
+      %a{pure} def stop_command: () -> String?
+      %a{pure} def restart_command: () -> String?
+      %a{pure} def stop_signals: () -> Array[Symbol | Integer]?
+      %a{pure} def start_grace_time: () -> seconds
+      %a{pure} def stop_grace_time: () -> seconds
+      %a{pure} def restart_grace_time: () -> seconds
+      %a{pure} def on_start_timeout: () -> (String | Symbol)
+      %a{pure} def monitor_children: () -> bool
+      %a{pure} def uid: () -> String?
+      %a{pure} def gid: () -> String?
+      %a{pure} def working_dir: () -> String?
+      %a{pure} def environment: () -> Hash[_ToS, _ToS]?
+      %a{pure} def pid_file: () -> String?
+      %a{pure} def stdin: () -> String?
+      %a{pure} def stdout: () -> String?
+      %a{pure} def stderr: () -> String?
+      %a{pure} def supplementary_groups: () -> Array[String]?
+      def daemonize?: () -> bool
+      def monitor_children?: () -> bool
+      def actual_pid: () -> Integer?
+      def clean_threads: () -> void
+      def signal_process: (Integer | String | Symbol code) -> bool
+      def unlink_pid: () -> void
+      def skip_ticks_for: (seconds seconds) -> Integer
+      def dispatch!: (Symbol | String event, ?String? reason) -> bool
+    end
+
+    @threads: Array[Thread]
+
+    def start_process: () -> Integer
+
+    def pre_start_process: () -> void
+
+    def stop_process: () -> Integer
+
+    def restart_process: () -> Integer
+
+    def cleanup_process: () -> void
+
+    def prepare_command: (_ToS command) -> String
+
+    def system_command_options: () -> System::command_options
+
+    # Runs the block, and dispatches next_state if it takes longer than secs
+    def with_timeout: [T] (seconds secs, String | Symbol next_state) { (Numeric secs) -> T } -> (T | bool)
+
+    def run_command: (String cmd, String description) -> void
+
+    def send_stop_signals: (Process process, Array[Symbol | Integer] signals) -> void
+
+    def wait_for_stop: (Process process, seconds seconds) -> void
+  end
+
+  # What state_machine passes to transition callbacks and triggers
+  interface _Transition
+    def from_name: () -> Symbol?
+
+    def to_name: () -> Symbol?
+
+    def loopback?: () -> bool
+  end
+
+  # A monitored process
+  class Process
+    include ProcessCommands
+
+    CONFIGURABLE_ATTRIBUTES: Array[Symbol]
+
+    attr_accessor name: String
+    attr_accessor watches: Array[ConditionWatch]
+    attr_accessor triggers: Array[Trigger]
+    attr_accessor skip_ticks_until: Integer?
+    attr_accessor process_running: bool?
+
+    # CONFIGURABLE_ATTRIBUTES
+    attr_accessor pre_start_command: String?
+    attr_accessor start_command: String?
+    attr_accessor stop_command: String?
+    attr_accessor restart_command: String?
+    attr_accessor stdout: String?
+    attr_accessor stderr: String?
+    attr_accessor stdin: String?
+    attr_accessor daemonize: bool?
+    attr_accessor pid_file: String?
+    attr_accessor working_dir: String?
+    attr_accessor environment: Hash[_ToS, _ToS]?
+    attr_accessor start_grace_time: seconds
+    attr_accessor stop_grace_time: seconds
+    attr_accessor restart_grace_time: seconds
+    attr_accessor uid: String?
+    attr_accessor gid: String?
+    attr_accessor cache_actual_pid: bool
+    attr_accessor monitor_children: bool
+    attr_accessor child_process_factory: ProcessFactory?
+    attr_accessor pid_command: String?
+    attr_accessor auto_start: bool?
+    attr_accessor supplementary_groups: Array[String]?
+    # Signal names alternating with delays in seconds
+    attr_accessor stop_signals: Array[Symbol | Integer]?
+    attr_accessor on_start_timeout: String | Symbol
+    attr_accessor group_start_noblock: bool
+    attr_accessor group_restart_noblock: bool
+    attr_accessor group_stop_noblock: bool
+    attr_accessor group_unmonitor_noblock: bool
+
+    attr_reader children: Array[Process]
+    attr_reader statistics: ProcessStatistics
+    attr_reader logger: Logger
+
+    @event_mutex: Monitor
+    @threads: Array[Thread]
+    @actual_pid: Integer?
+    @transitioned: bool
+
+    # Methods that state_machine defines, in a module it includes
+    interface _StateMachine
+      def state: () -> String
+
+      def state=: (String state) -> String
+
+      def state_name: () -> Symbol
+
+      def human_state_name: () -> String
+
+      def state?: (Symbol state) -> bool
+
+      def unmonitored?: () -> bool
+
+      def up?: () -> bool
+
+      def down?: () -> bool
+
+      def starting?: () -> bool
+
+      def stopping?: () -> bool
+
+      def restarting?: () -> bool
+
+      def state_events: () -> Array[Symbol]
+
+      def state_transitions: () -> Array[_Transition]
+
+      def fire_state_event: (Symbol | String event) -> bool
+
+      def can_tick?: () -> bool
+
+      def tick_transition: () -> _Transition?
+
+      def tick!: () -> true
+
+      def start: () -> bool
+
+      def can_start?: () -> bool
+
+      def start_transition: () -> _Transition?
+
+      def start!: () -> true
+
+      def stop: () -> bool
+
+      def can_stop?: () -> bool
+
+      def stop_transition: () -> _Transition?
+
+      def stop!: () -> true
+
+      def unmonitor: () -> bool
+
+      def can_unmonitor?: () -> bool
+
+      def unmonitor_transition: () -> _Transition?
+
+      def unmonitor!: () -> true
+
+      def restart: () -> bool
+
+      def can_restart?: () -> bool
+
+      def restart_transition: () -> _Transition?
+
+      def restart!: () -> true
+    end
+
+    include _StateMachine
+
+    # Methods bluepill defines
+
+    def initialize: (String process_name, Hash[Symbol, Hash[Symbol, untyped]] checks, ?Hash[Symbol, untyped] options) -> void
+
+    # Runs the state machine's tick event, then the watches and children
+    def tick: () -> void
+
+    def logger=: (Logger logger) -> void
+
+    def dispatch!: (Symbol | String event, ?String? reason) -> bool
+
+    def record_transition: (_Transition transition) -> void
+
+    def notify_triggers: (_Transition transition) -> void
+
+    def add_watch: (Symbol name, ?Hash[Symbol, untyped] options) -> Array[ConditionWatch]
+
+    def add_trigger: (Symbol name, ?Hash[Symbol, untyped] options) -> Array[Trigger]
+
+    def run_watches: () -> void
+
+    def determine_initial_state: () -> void
+
+    def handle_user_command: (String cmd) -> void
+
+    def process_running?: (?bool force) -> bool
+
+    def clean_threads: () -> void
+
+    def daemonize?: () -> bool
+
+    def monitor_children?: () -> bool
+
+    def signal_process: (Integer | String | Symbol code) -> bool
+
+    def cache_actual_pid?: () -> bool
+
+    def actual_pid: () -> Integer?
+
+    def pid_from_file: () -> Integer?
+
+    def pid_from_command: () -> Integer?
+
+    def positive_pid: (Integer pid) -> Integer?
+
+    def actual_pid=: (Integer pid) -> void
+
+    def clear_pid: () -> nil
+
+    def unlink_pid: () -> void
+
+    def skip_ticks_for: (seconds seconds) -> Integer
+
+    def skipping_ticks?: () -> bool?
+
+    def refresh_children!: () -> void
+  end
+
+  # Keeps a short history of a process's events
+  class ProcessStatistics
+    type event = [Symbol | String, String?, Time]
+
+    STRFTIME: String
+    EVENTS_TO_PERSIST: Integer
+
+    attr_reader events: Util::RotationalArray[event]
+
+    def initialize: () -> void
+
+    def record_event: (Symbol | String event, String? reason) -> Util::RotationalArray[event]
+
+    def to_s: () -> String
+  end
+
+  # Processes that share a group name. Processes without one are in the
+  # group named nil.
+  class Group
+    attr_accessor name: String?
+    attr_accessor processes: Array[Process]
+    attr_accessor logger: Logger
+    # Not used by bluepill
+    attr_accessor process_logger: untyped
+
+    def initialize: (String? name, ?{ ?logger: Logger } options) -> void
+
+    def add_process: (Process process) -> Array[Process]
+
+    def tick: () -> void
+
+    def determine_initial_state: () -> void
+
+    # Proxied events, which return the affected processes as group:process
+
+    def start: (?String? process_name) -> Array[String]
+
+    def unmonitor: (?String? process_name) -> Array[String]
+
+    def stop: (?String? process_name) -> Array[String]
+
+    def restart: (?String? process_name) -> Array[String]
+
+    def status: (?String? process_name) -> Array[String]
+  end
+
+  # Logs to a file or syslog, with nested prefixes
+  class Logger
+    # Where a Logger without a parent logger writes: a LoggerAdapter, or
+    # Syslog
+    interface _Backend
+      def emerg: (String message) -> void
+
+      def alert: (String message) -> void
+
+      def crit: (String message) -> void
+
+      def err: (String message) -> void
+
+      def warning: (String message) -> void
+
+      def notice: (String message) -> void
+
+      def info: (String message) -> void
+
+      def debug: (String message) -> void
+    end
+
+    type options = {
+      ?logger: Logger,
+      ?prefix: String?,
+      ?stdout: bool,
+      ?log_file: String?,
+      ?identity: String
+    }
+
+    LOG_METHODS: Array[Symbol]
+
+    # A ::Logger that also answers to the syslog method names
+    class LoggerAdapter < ::Logger
+      LOGGER_EQUIVALENTS: Hash[Symbol, Symbol]
+
+      alias err error
+
+      alias warning warn
+
+      alias emerg fatal
+
+      alias alert warn
+
+      alias crit fatal
+
+      alias notice info
+    end
+
+    @options: options
+    @logger: Logger | (Object & _Backend)
+    @prefix: String?
+    @stdout: bool?
+    @prefixes: Hash[String?, Logger]
+
+    def initialize: (?options options) -> void
+
+    def emerg: (_ToS msg, ?Array[String?] prefix) -> void
+
+    def alert: (_ToS msg, ?Array[String?] prefix) -> void
+
+    def crit: (_ToS msg, ?Array[String?] prefix) -> void
+
+    def err: (_ToS msg, ?Array[String?] prefix) -> void
+
+    def warning: (_ToS msg, ?Array[String?] prefix) -> void
+
+    def notice: (_ToS msg, ?Array[String?] prefix) -> void
+
+    def info: (_ToS msg, ?Array[String?] prefix) -> void
+
+    def debug: (_ToS msg, ?Array[String?] prefix) -> void
+
+    def prefix_with: (String? prefix) -> Logger
+
+    def reopen: () -> void
+
+    private
+
+    def create_logger: () -> (Object & _Backend)
+
+    def require_syslog: () -> bool
+  end
+
+  # A value a ConditionWatch got, and whether it passed the check
+  class HistoryValue < Struct[_ToS]
+    attr_accessor value: _ToS
+    attr_accessor critical: bool
+
+    def self.new: (_ToS value, bool critical) -> HistoryValue
+  end
+
+  # Runs a process condition every so often, and fires its events when the
+  # check fails often enough
+  class ConditionWatch
+    EMPTY_ARRAY: Array[Symbol]
+
+    attr_accessor logger: Logger
+    attr_accessor name: Symbol
+
+    @fires: Array[Symbol]
+    @every: Integer
+    @times: Array[Integer]
+    @include_children: bool
+    @history: Util::RotationalArray[HistoryValue]
+    @process_condition: ProcessConditions::ProcessCondition[untyped]
+    @last_ran_at: Integer?
+
+    def initialize: (Symbol name, ?Hash[Symbol, untyped] options) -> void
+
+    # Returns the events to fire
+    def run: (Integer? pid, ?Integer tick_number) -> Array[Symbol]
+
+    def clear_history!: () -> Util::RotationalArray[HistoryValue]
+
+    def fired?: () -> bool
+
+    def to_s: () -> String
+  end
+
+  # Reacts to a process's state transitions. Subclasses register themselves
+  # by their underscored name.
+  class Trigger
+    self.@implementations: Hash[Symbol, singleton(Trigger)]
+
+    def self.inherited: (singleton(Trigger) klass) -> void
+
+    def self.[]: %a{implicitly-returns-nil} (Symbol name) -> singleton(Trigger)
+
+    attr_accessor process: Process
+    attr_accessor logger: Logger
+    attr_accessor mutex: Thread::Mutex
+    attr_accessor scheduled_events: Array[[Symbol, Thread]]
+
+    def initialize: (Process process, ?Hash[Symbol, untyped] options) -> void
+
+    def reset!: () -> void
+
+    def notify: (_Transition transition) -> void
+
+    def dispatch!: (Symbol event) -> bool
+
+    def schedule_event: (Symbol event, seconds delay) -> Thread
+
+    def cancel_all_events: () -> void
+  end
+
+  module Triggers
+    # Unmonitors a process that starts or restarts too often, and starts it
+    # again later
+    class Flapping < Trigger
+      TRIGGER_STATES: Array[Symbol]
+      PARAMS: Array[Symbol]
+
+      attr_accessor times: Integer
+      attr_accessor within: Integer
+      attr_accessor retry_in: Integer
+      attr_reader timeline: Util::RotationalArray[Integer]
+
+      def initialize: (Process process, ?Hash[Symbol, untyped] options) -> void
+
+      def notify: (_Transition transition) -> void
+
+      def reset!: () -> void
+
+      def check_flapping: () -> void
+    end
+  end
+
+  # self in an application block
+  class AppProxy
+    APP_ATTRIBUTES: Array[Symbol]
+
+    attr_accessor working_dir: String?
+    attr_accessor uid: String?
+    attr_accessor gid: String?
+    attr_accessor environment: Hash[_ToS, _ToS]?
+    attr_accessor auto_start: bool?
+    attr_reader app: Application
+
+    def initialize: (_ToS app_name, Hash[Symbol, untyped] options) -> void
+
+    # The block runs with self set to the ProcessProxy, and also gets it as
+    # an argument
+    def process: (String process_name) { (ProcessProxy process) [self: ProcessProxy] -> void } -> Array[Process]
+  end
+
+  # Builds processes from a process block in the config
+  class ProcessFactory
+    @@process_keys: Hash[String, Integer]
+    @@pid_files: Hash[String, Integer]
+
+    @process_block: process_block
+
+    attr_reader attributes: Hash[Symbol, untyped]
+
+    def initialize: (Hash[Symbol, untyped] attributes, process_block process_block) -> void
+
+    def create_process: (String name, String pids_dir) -> Process
+
+    def create_child_process: (String name, Integer pid, Logger logger) -> Process
+
+    private
+
+    def assign_default_pid_file: (String process_name, String pids_dir) -> String?
+
+    def validate_process!: (ProcessProxy process) -> void
+
+    def validate_unique_process!: (ProcessProxy process) -> void
+
+    def validate_required_attributes!: (ProcessProxy process) -> void
+
+    def validate_unique_pid_file!: (ProcessProxy process) -> void
+
+    def validate_stop_signals!: (ProcessProxy process) -> void
+
+    def warn_unless_pid_known: (ProcessProxy process, String? default_pid_file) -> void
+
+    def config_error!: (String message) -> bot
+
+    def validate_child_process!: (ProcessProxy child) -> void
+  end
+
+  # self in a process block. Any attribute can be set with `name = value`,
+  # `name value` or `name!` (for true), and read back with `name`.
+  class ProcessProxy
+    attr_reader attributes: Hash[Symbol, untyped]
+    attr_reader watches: Hash[Symbol, Hash[Symbol, untyped]]
+    attr_reader name: String
+
+    def initialize: (String process_name, Hash[Symbol, untyped] attributes, process_block process_block) -> void
+
+    # Sets or reads an attribute
+    def method_missing: (Symbol name, *untyped args) -> untyped
+
+    def respond_to_missing?: (Symbol | String name, ?bool include_private) -> boolish
+
+    def checks: (Symbol name, ?Hash[Symbol, untyped] options) -> Hash[Symbol, untyped]
+
+    # The block configures the children like a process block
+    def monitor_children: () ?{ (ProcessProxy child) [self: ProcessProxy] -> void } -> process_block?
+
+    def to_process: () -> Process
+  end
+
+  # Memoizes ps output for a tick, and runs commands as daemons or until
+  # they finish
+  module System
+    # Options for daemonize and execute_blocking
+    type command_options = {
+      ?uid: String?,
+      ?gid: String?,
+      ?working_dir: String?,
+      ?environment: Hash[_ToS, _ToS]?,
+      ?pid_file: String?,
+      ?logger: Logger,
+      ?stdin: String?,
+      ?stdout: String?,
+      ?stderr: String?,
+      ?supplementary_groups: Array[String]?
+    }
+
+    type blocking_result = { exit_code: Integer?, stdout: String, stderr: String }
+
+    type grandchild_pipes = { out: [IO, IO], err: [IO, IO], result: IO }
+
+    APPEND_MODE: String
+
+    IDX_MAP: { pid: Integer, ppid: Integer, pcpu: Integer, rss: Integer, etime: Integer, command: Integer }
+
+    PS_MUTEX: Thread::Mutex
+
+    # The store lives on the module. Steep checks the module functions as
+    # instance methods, so it needs the instance variable too.
+    self.@store: Hash[Symbol, ps_table | String]
+    @store: Hash[Symbol, ps_table | String]
+
+    # Raised when ps could not be run, so there is no data for this tick
+    class PsError < StandardError
+    end
+
+    def self?.pid_alive?: (Integer pid) -> bool
+
+    def self?.cpu_usage: (Integer? pid, boolish include_children) -> Float?
+
+    def self?.memory_usage: (Integer? pid, boolish include_children) -> Float?
+
+    def self?.running_time: (Integer? pid) -> Integer?
+
+    def self?.command: (Integer? pid) -> String?
+
+    def self?.get_children: (Integer? parent_pid) -> Array[Integer]
+
+    def self?.delete_if_exists: (String? filename) -> void
+
+    def self?.store: () -> Hash[Symbol, ps_table | String]
+
+    def self?.reset_data: () -> void
+
+    def self?.ps_axu: () -> ps_table
+
+    def self?.parse_elapsed_time: (String? str) -> Integer
+
+    # Returns the daemon's pid
+    def self?.daemonize: (String cmd, ?command_options options) -> Integer?
+
+    def self?.execute_blocking: (String cmd, ?command_options options) -> blocking_result
+
+    def self?.run_blocking_child: (String cmd, command_options options, IO result_pipe) -> bot
+
+    def self?.exec_blocking_grandchild: (String cmd, command_options options, grandchild_pipes pipes) -> bot
+
+    def self?.setup_command_environment: (command_options options) -> void
+
+    def self?.drop_privileges: (String? uid, String? gid, Array[String]? supplementary_groups) -> void
+
+    def self?.can_write_pid_file: (String pid_file, Logger logger) -> bool
+
+    def self?.redirect_io: (String? io_in, String? io_out, String? io_err) -> void
+  end
+
+  # Remembers the pids and process groups of the processes bluepill starts,
+  # so it can kill any left over from an earlier run
+  module ProcessJournal
+    self.@logger: Logger
+    self.@journal_base_dir: String
+
+    def self.logger: () -> Logger
+
+    def self.journal_base_dir: () -> String
+
+    # Only the first logger is kept
+    def self.logger=: (Logger new_logger) -> Logger
+
+    def self.base_dir=: (String base_dir) -> void
+
+    def self?.skip_pid?: (Integer? pid) -> bool
+
+    def self?.skip_pgid?: (Integer? pgid) -> bool
+
+    def self?.acquire_atomic_fs_lock: [T] (String name) { () -> T } -> T
+
+    def self?.clear_all_atomic_fs_locks: () -> void
+
+    def self?.pid_journal_filename: (String journal_name) -> String
+
+    def self?.pgid_journal_filename: (String journal_name) -> String
+
+    def self?.pid_journal: (String filename) -> Array[Integer]
+
+    def self?.pgid_journal: (String filename) -> Array[Integer]
+
+    def self?.clear_atomic_fs_lock: (String name) -> void
+
+    def self?.kill_all_from_all_journals: () -> void
+
+    def self?.kill_all_from_journal: (String journal_name) -> void
+
+    def self?.kill_all_pgids_from_journal: (String journal_name) -> void
+
+    def self?.kill_all_pids_from_journal: (String journal_name) -> void
+
+    def self?.kill_all_from_journal_file: (String filename, Array[Integer] ids, String label, Integer sign) -> void
+
+    def self?.signal_journaled: (String signal, Array[Integer] ids, String label, Integer sign) -> void
+
+    def self?.append_pgid_to_journal: (String journal_name, Integer? pgid) -> void
+
+    def self?.append_pid_to_journal: (String journal_name, Integer? pid) -> void
+  end
+
+  module ProcessConditions
+    def self.[]: (Symbol | String name) -> singleton(ProcessCondition)
+
+    # Checks something about a process. V is the type of value that run
+    # returns and check tests.
+    class ProcessCondition[V]
+      @options: Hash[Symbol, untyped]
+
+      def initialize: (?Hash[Symbol, untyped] options) -> void
+
+      def run: (Integer? pid, boolish include_children) -> V
+
+      # Whether the value is fine
+      def check: (V value) -> bool
+
+      def format_value: (V value) -> V
+    end
+
+    class AlwaysTrue < ProcessCondition[Integer]
+      @below: Numeric?
+
+      def run: (Integer? pid, boolish include_children) -> Integer
+
+      def check: (Integer value) -> true
+    end
+
+    class CpuUsage < ProcessCondition[Float]
+      @below: Numeric
+
+      def run: (Integer? pid, boolish include_children) -> Float
+
+      def check: (Float value) -> bool
+    end
+
+    # Seconds since the file changed, or the error that stopped bluepill
+    # from finding out
+    class FileTime < ProcessCondition[Float | StandardError | nil]
+      @below: Numeric
+      @filename: String
+
+      def run: (Integer? pid, boolish include_children) -> (Float | StandardError | nil)
+
+      def check: (Float | StandardError | nil value) -> bool
+    end
+
+    class Http < ProcessCondition[Net::HTTPResponse | StandardError]
+      @uri: URI::HTTP
+      @kind: Class
+      @pattern: Regexp?
+      @open_timeout: Integer
+      @read_timeout: Integer
+
+      def run: (Integer? pid, boolish include_children) -> (Net::HTTPResponse | StandardError)
+
+      def check: (Net::HTTPResponse | StandardError value) -> bool
+
+      private
+
+      def hide_net_http_bug: [T] () { () -> T } -> T
+    end
+
+    # Memory usage in kilobytes
+    class MemUsage < ProcessCondition[Float]
+      MB: Integer
+      FORMAT_STR: String
+      MB_LABEL: String
+      KB_LABEL: String
+
+      @below: Numeric
+
+      def run: (Integer? pid, boolish include_children) -> Float
+
+      def check: (Float value) -> bool
+
+      def format_value: (Float value) -> String
+    end
+
+    # Seconds since the process started
+    class RunningTime < ProcessCondition[Integer]
+      @below: Numeric
+
+      def run: (Integer? pid, boolish include_children) -> Integer
+
+      def check: (Integer value) -> bool
+    end
+
+    # The process's command line, which says <defunct> for a zombie
+    class ZombieProcess < ProcessCondition[String?]
+      def run: (Integer? pid, boolish include_children) -> String?
+
+      def check: (String? value) -> bool
+    end
+  end
+
+  module Util
+    # An array that drops its oldest element when it grows past its capacity
+    class RotationalArray[Elem] < Array[Elem]
+      @capacity: Integer
+
+      def initialize: (Integer size) -> void
+
+      def push: (Elem value) -> self
+
+      alias << push
+    end
+  end
+end

@@ -1,0 +1,7 @@
+# Standard libraries that bluepill's signatures use
+dependencies:
+  - name: logger
+  - name: monitor
+  - name: net-http
+  - name: socket
+  - name: uri

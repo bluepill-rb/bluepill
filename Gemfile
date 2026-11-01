@@ -19,4 +19,5 @@ group :test do
   gem 'rspec', '>= 3'
   gem 'rubocop', '~> 1.92' if RUBY_VERSION >= '2.7'
   gem 'simplecov', '>= 0.4'
+  gem 'steep', '~> 2.1', require: false if RUBY_VERSION >= '3.3' && RUBY_ENGINE == 'ruby'
 end

@@ -27,7 +27,7 @@ module Bluepill
       attributes = {} #: Hash[Symbol, untyped]
       # A grace time the parent leaves unset keeps the Process default
       [:start_grace_time, :stop_grace_time, :restart_grace_time].each do |a|
-        attributes[a] = @attributes[a] if @attributes.key?(a)
+        attributes[a] = @attributes.fetch(a) if @attributes.key?(a)
       end
       attributes[:actual_pid] = pid
       attributes[:logger] = logger

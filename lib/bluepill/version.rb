@@ -1,29 +1,27 @@
 module Bluepill
   module Version
-  module_function
-
     # @return [Integer]
-    def major
+    def self.major
       0
     end
 
     # @return [Integer]
-    def minor
+    def self.minor
       1
     end
 
     # @return [Integer]
-    def patch
+    def self.patch
       4
     end
 
     # @return [Integer, NilClass]
-    def pre
+    def self.pre
       nil
     end
 
     # @return [Hash]
-    def to_h
+    def self.to_h
       {
         major: major,
         minor: minor,
@@ -33,12 +31,12 @@ module Bluepill
     end
 
     # @return [Array]
-    def to_a
+    def self.to_a
       to_h.values.compact
     end
 
     # @return [String]
-    def to_s
+    def self.to_s
       to_a.join('.')
     end
   end

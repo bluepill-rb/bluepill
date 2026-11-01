@@ -17,19 +17,19 @@ module Bluepill
   def self.application: (_ToS app_name, ?Hash[Symbol, untyped] options) { (AppProxy app) [self: AppProxy] -> void } -> void
 
   module Version
-    def self?.major: () -> Integer
+    def self.major: () -> Integer
 
-    def self?.minor: () -> Integer
+    def self.minor: () -> Integer
 
-    def self?.patch: () -> Integer
+    def self.patch: () -> Integer
 
-    def self?.pre: () -> Integer?
+    def self.pre: () -> Integer?
 
-    def self?.to_h: () -> { major: Integer, minor: Integer, patch: Integer, pre: Integer? }
+    def self.to_h: () -> { major: Integer, minor: Integer, patch: Integer, pre: Integer? }
 
-    def self?.to_a: () -> Array[Integer]
+    def self.to_a: () -> Array[Integer]
 
-    def self?.to_s: () -> String
+    def self.to_s: () -> String
   end
 
   # The daemon: it holds the groups of processes and serves commands from

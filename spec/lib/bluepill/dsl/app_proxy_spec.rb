@@ -16,6 +16,8 @@ describe Bluepill::AppProxy do
 
   before do
     allow(Bluepill::Application).to receive(:new).with('app_name', {}).and_return(app)
+    # Silence the warning for processes without a known pid
+    allow($stderr).to receive(:puts)
   end
 
   subject { Bluepill::AppProxy.new(:app_name, {}) }

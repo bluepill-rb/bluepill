@@ -12,6 +12,10 @@ describe Bluepill::ProcessFactory do
     end
   end
 
+  # Silence the warning for processes without a known pid. The output
+  # matcher swaps $stderr, so specs can still check what is written.
+  before { allow($stderr).to receive(:puts) }
+
   def create(name, block, attributes = {})
     Bluepill::ProcessFactory.new(attributes, block).create_process(name, '/pids')
   end
@@ -84,6 +88,38 @@ describe Bluepill::ProcessFactory do
       it 'requires a start command' do
         expect_config_error("Config Error: You must specify a start_command for 'web'\n") do
           create('web', proc {})
+        end
+      end
+
+      context 'without a known pid' do
+        let(:warning) do
+          "Config Warning: 'web' sets no daemonize, pid_file or pid_command, " \
+            'so bluepill cannot find its pid unless start_command writes it to /pids/web.pid. ' \
+            "Set daemonize = true if start_command runs in the foreground.\n"
+        end
+
+        it 'warns about a process that is not daemonized and uses the default pid file' do
+          expect { create('web', proc { start_command 'run' }) }.to output(warning).to_stderr
+        end
+
+        it 'does not warn about a daemonized process' do
+          expect { create('web', proc { start_command 'run' }, daemonize: true) }.not_to output.to_stderr
+        end
+
+        it 'does not warn about a process with a pid command' do
+          expect { create('web', proc { start_command 'run' }, pid_command: 'pgrep web') }.not_to output.to_stderr
+        end
+
+        it 'does not warn about a process with its own pid file' do
+          block = proc do
+            start_command 'run'
+            pid_file '/var/web.pid'
+          end
+          expect { create('web', block) }.not_to output.to_stderr
+        end
+
+        it 'does not warn about a pid file set before the default is assigned' do
+          expect { create('web', proc { start_command 'run' }, pid_file: '/var/web.pid') }.not_to output.to_stderr
         end
       end
 

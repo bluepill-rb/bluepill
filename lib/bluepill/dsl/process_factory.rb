@@ -11,13 +11,14 @@ module Bluepill
     end
 
     def create_process(name, pids_dir)
-      assign_default_pid_file(name, pids_dir)
+      default_pid_file = assign_default_pid_file(name, pids_dir)
 
       process = ProcessProxy.new(name, @attributes, @process_block)
       child_process_block = @attributes.delete(:child_process_block)
       @attributes[:child_process_factory] = ProcessFactory.new(@attributes, child_process_block) if @attributes[:monitor_children]
 
       validate_process! process
+      warn_unless_pid_known(process, default_pid_file)
       process.to_process
     end
 
@@ -94,6 +95,17 @@ module Bluepill
       return unless stop_grace_time.nil? || stop_grace_time <= delays.inject(0, :+)
 
       config_error!('Config Error: Stop_grace_time should be greater than the sum of stop_signals delays!')
+    end
+
+    # Bluepill only writes the default pid file for processes it daemonizes,
+    # so it cannot find the pid of any other process that uses it
+    def warn_unless_pid_known(process, default_pid_file)
+      attributes = process.attributes
+      return if attributes[:daemonize] || attributes[:pid_command] || attributes[:pid_file] != default_pid_file
+
+      $stderr.puts "Config Warning: '#{process.name}' sets no daemonize, pid_file or pid_command, " \
+                   "so bluepill cannot find its pid unless start_command writes it to #{default_pid_file}. " \
+                   'Set daemonize = true if start_command runs in the foreground.'
     end
 
     def config_error!(message)

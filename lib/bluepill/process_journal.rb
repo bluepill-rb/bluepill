@@ -30,26 +30,26 @@ module Bluepill
     # atomic operation on POSIX filesystems, since
     # f.flock(File::LOCK_SH) is not available on all platforms
     def acquire_atomic_fs_lock(name)
+      lock = "#{name}.lock"
       times = 0
-      name += '.lock'
-      Dir.mkdir name, 0700
-      logger.debug("Acquired lock #{name}")
-      yield
-    rescue Errno::EEXIST
-      times += 1
-      logger.debug("Waiting for lock #{name}")
-      sleep 1
-      if times < 10
+      begin
+        Dir.mkdir lock, 0700
+      rescue Errno::EEXIST
+        times += 1
+        if times >= 10
+          logger.info("Timeout waiting for lock #{lock}")
+          raise "Timeout waiting for lock #{lock}"
+        end
+        logger.debug("Waiting for lock #{lock}")
+        sleep 1
         retry
-      # :nocov:
-      # Unreachable: retry reruns the method body, which resets times to 0
-      else
-        logger.info("Timeout waiting for lock #{name}")
-        raise "Timeout waiting for lock #{name}"
-        # :nocov:
       end
-    ensure
-      clear_atomic_fs_lock(name)
+      logger.debug("Acquired lock #{lock}")
+      begin
+        yield
+      ensure
+        clear_atomic_fs_lock(lock)
+      end
     end
 
     def clear_all_atomic_fs_locks

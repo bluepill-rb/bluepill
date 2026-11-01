@@ -75,13 +75,32 @@ describe Bluepill::ProcessJournal do
       expect(File.exist?("#{name}.lock")).to be false
     end
 
-    it 'waits and retries when the lock is taken' do
+    it 'waits until the lock is released' do
       Dir.mkdir("#{name}.lock")
       yielded = false
-      expect(journal).to receive(:sleep).with(1).once
+      expect(journal).to receive(:sleep).with(1).once { Dir.rmdir("#{name}.lock") }
       expect(logger).to receive(:debug).with("Waiting for lock #{name}.lock")
       journal.acquire_atomic_fs_lock(name) { yielded = true }
       expect(yielded).to be true
+      expect(File.exist?("#{name}.lock")).to be false
+      expect(File.exist?("#{name}.lock.lock")).to be false
+    end
+
+    it 'gives up after 10 attempts without removing the other lock' do
+      Dir.mkdir("#{name}.lock")
+      expect(journal).to receive(:sleep).with(1).exactly(9).times
+      expect(logger).to receive(:info).with("Timeout waiting for lock #{name}.lock")
+      expect do
+        journal.acquire_atomic_fs_lock(name) { raise 'should not yield' }
+      end.to raise_error("Timeout waiting for lock #{name}.lock")
+      expect(File.directory?("#{name}.lock")).to be true
+    end
+
+    it 'removes the lock when the block raises' do
+      expect do
+        journal.acquire_atomic_fs_lock(name) { raise Errno::EEXIST }
+      end.to raise_error(Errno::EEXIST)
+      expect(File.exist?("#{name}.lock")).to be false
     end
   end
 

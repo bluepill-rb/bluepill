@@ -2,6 +2,8 @@ module Bluepill
   # Starts, stops and restarts a Process with its configured commands
   module ProcessCommands
     def start_process
+      # An old stop signal thread would otherwise signal and clean up the new process
+      clean_threads
       ProcessJournal.kill_all_from_journal(name) # be sure nothing else is running from previous runs
       pre_start_process
       logger.warning "Executing start command: #{start_command}"

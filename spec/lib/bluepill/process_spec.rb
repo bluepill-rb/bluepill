@@ -390,6 +390,16 @@ describe Bluepill::Process do
       subject.start_process
     end
 
+    it 'kills a stop signal thread left from an earlier stop' do
+      allow(Bluepill::System).to receive(:execute_blocking).and_return(exit_code: 0)
+      stop_thread = Thread.new { sleep }
+      subject.instance_variable_get(:@threads) << stop_thread
+      subject.start_process
+      stop_thread.join(1)
+      expect(stop_thread).not_to be_alive
+      expect(subject.instance_variable_get(:@threads)).to be_empty
+    end
+
     context 'when daemonizing' do
       before { subject.daemonize = true }
 

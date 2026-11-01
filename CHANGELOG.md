@@ -53,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The HTTP check's workaround for a Net::HTTP connection error never matched on Ruby 3.4 and newer, which changed the error message.
 - An empty or garbled application pid file made bluepill send `SIGINT` to its own process group on startup.
 - `bluepill quit` with an empty or garbled daemon pid file sent `TERM` to the process group of the `bluepill` command itself.
+- Loading a config rejected two different processes as duplicates when joining group and process name with `:` gave the same string, such as process `b:c` in group `a` and process `c` in group `a:b`.
 
 ## [0.1.3] - 2017-04-06
 

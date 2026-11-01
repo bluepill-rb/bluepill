@@ -85,6 +85,28 @@ describe Bluepill::ProcessFactory do
         end
       end
 
+      it 'accepts the same process name in different groups' do
+        create('web', proc { start_command 'run' }, group: 'a')
+        expect { create('web', proc { start_command 'run' }, group: 'b') }.not_to raise_error
+      end
+
+      it 'accepts process names that only match when joined with a colon' do
+        create('b:c', proc { start_command 'run' }, group: 'a')
+        expect { create('c', proc { start_command 'run' }, group: 'a:b', pid_file: '/pids/c.pid') }.not_to raise_error
+      end
+
+      it 'treats Symbol and String group and process names alike' do
+        create(:web, proc { start_command 'run' }, group: :servers)
+        expect_config_error("Config Error: You have two entries for the process name 'web' in the group 'servers'\n") do
+          create('web', proc { start_command 'run' }, group: 'servers', pid_file: '/other.pid')
+        end
+      end
+
+      it 'tells a group without a name from no group' do
+        create('web', proc { start_command 'run' })
+        expect { create('web', proc { start_command 'run' }, group: '', pid_file: '/other.pid') }.not_to raise_error
+      end
+
       it 'requires a start command' do
         expect_config_error("Config Error: You must specify a start_command for 'web'\n") do
           create('web', proc {})

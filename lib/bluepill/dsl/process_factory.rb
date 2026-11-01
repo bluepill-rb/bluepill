@@ -2,7 +2,7 @@ module Bluepill
   class ProcessFactory
     attr_reader :attributes
 
-    @@process_keys = {} #: Hash[String, Integer]
+    @@process_keys = {} #: Hash[Array[String?], Integer]
     @@pid_files = {} #: Hash[String, Integer]
 
     def initialize(attributes, process_block)
@@ -54,7 +54,9 @@ module Bluepill
     end
 
     def validate_unique_process!(process)
-      process_key = [process.attributes[:group], process.name].join(':')
+      # A process name may contain ':', so the key keeps the parts apart.
+      # Like Application#add_process, it treats Symbols and Strings alike.
+      process_key = [process.attributes[:group], process.name].collect { |part| part && part.to_s }
       if @@process_keys.key?(process_key)
         message = "Config Error: You have two entries for the process name '#{process.name}'"
         message += " in the group '#{process.attributes[:group]}'" if process.attributes.key?(:group)

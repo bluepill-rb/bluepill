@@ -633,7 +633,7 @@ module Bluepill
 
   # Builds processes from a process block in the config
   class ProcessFactory
-    @@process_keys: Hash[String, Integer]
+    @@process_keys: Hash[Array[String?], Integer]
     @@pid_files: Hash[String, Integer]
 
     @process_block: process_block

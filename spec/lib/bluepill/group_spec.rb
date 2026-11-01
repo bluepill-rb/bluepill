@@ -13,6 +13,10 @@ describe Bluepill::Group do
       expect(group.logger).to eq(logger)
       expect(group.processes).to eq([])
     end
+
+    it 'has no logger without options' do
+      expect(described_class.new('web').logger).to be_nil
+    end
   end
 
   describe '#add_process' do
@@ -122,8 +126,13 @@ describe Bluepill::Group do
       end
 
       it 'lists the named process with its statistics' do
-        allow(second).to receive(:statistics).and_return('stats')
+        allow(second).to receive(:statistics).and_return(double('statistics', to_s: 'stats'))
         expect(group.status('second')).to eq(['second(pid:2): down', 'stats', ''])
+      end
+
+      it 'lists processes after one that does not monitor children' do
+        group.processes.reverse!
+        expect(group.status).to eq(['web:', '  second(pid:2): down', '  first(pid:1): up', '    child: up', ''])
       end
     end
   end

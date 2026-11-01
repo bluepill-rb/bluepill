@@ -78,7 +78,7 @@ Bluepill.application("app_name") do |app|
     process.checks :mem_usage, every: 10.seconds, below: 100.megabytes, times: [3,5]
   end
 end
- ```
+```
 
 To watch the modification time of a file, e.g. a log file to ensure the process is actually working add one more line:
 

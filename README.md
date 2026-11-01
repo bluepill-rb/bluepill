@@ -223,6 +223,20 @@ end
 
 Note: We also set the PWD in the environment to the working dir you specify. This is useful for when the working dir is a symlink. Unicorn in particular will cd into the environment variable in PWD when it re-execs to deal with a change in the symlink.
 
+To run a command before every start, for example to clear a cache:
+
+```ruby
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.pre_start_command = "/usr/bin/some_setup_command"
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+  end
+end
+```
+
+Bluepill waits for the `pre_start_command` to finish, and logs a warning if it exits with a non-zero status, but starts the process either way. It runs in the same `working_dir`, with the same `environment`, `uid`, and `gid`, as the process.
+
 By default, bluepill will send a SIGTERM to your process when stopping.
 To change the stop command:
 

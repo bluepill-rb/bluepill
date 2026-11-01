@@ -4,6 +4,9 @@ module Bluepill
   module System
     APPEND_MODE = 'a'.freeze
 
+    # Raised when ps could not be run, so there is no data for this tick
+    class PsError < StandardError; end
+
   module_function
 
     # The position of each field in ps output
@@ -74,6 +77,8 @@ module Bluepill
       end
       grand_children = child_pids.collect { |pid| get_children(pid) }.flatten
       child_pids.concat grand_children
+    rescue PsError
+      []
     end
 
     def delete_if_exists(filename)
@@ -100,7 +105,7 @@ module Bluepill
     PS_MUTEX = Mutex.new
 
     def ps_axu
-      PS_MUTEX.synchronize do
+      ps = PS_MUTEX.synchronize do
         store[:ps_axu] ||= begin
           # BSD style ps invocation
           lines = `ps axo pid,ppid,pcpu,rss,etime,command`.split("\n")
@@ -113,8 +118,15 @@ module Bluepill
             chunks[IDX_MAP[:command]] = command
             mem[pid] = chunks.flatten
           end
+        rescue SystemCallError => e
+          # Forking ps can fail, for example with ENOMEM or EAGAIN under memory pressure.
+          # Cache the message so ps is not run again until the next tick.
+          "Could not run ps: #{e.class}: #{e.message}"
         end
       end
+      raise PsError, ps if ps.is_a?(String)
+
+      ps
     end
 
     def parse_elapsed_time(str)

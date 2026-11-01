@@ -1,5 +1,5 @@
 describe Bluepill::ConditionWatch do
-  let(:logger) { instance_double(Bluepill::Logger, info: nil, err: nil) }
+  let(:logger) { instance_double(Bluepill::Logger, info: nil, warning: nil, err: nil) }
 
   def watch(options = {})
     Bluepill::ConditionWatch.new(:cpu_usage, {logger: logger, every: 10, below: 50}.merge(options))
@@ -93,6 +93,19 @@ describe Bluepill::ConditionWatch do
       allow(Bluepill::System).to receive(:cpu_usage).and_raise(error)
       expect { watch.run(123, 0) }.to raise_error(error)
       expect(logger).to have_received(:err).with(['line 1'])
+    end
+
+    it 'logs a ps failure and skips the check without recording a value' do
+      cpu_usage(90)
+      w = watch(times: [2, 3])
+      w.run(123, 0)
+      allow(Bluepill::System).to receive(:cpu_usage).and_raise(Bluepill::System::PsError, 'Could not run ps')
+      expect(w.run(123, 10)).to eq([])
+      expect(logger).to have_received(:warning).with('cpu_usage: Could not run ps')
+      expect(logger).not_to have_received(:err)
+      expect(w.to_s).to eq("cpu_usage: [90.0*]\n")
+      cpu_usage(90)
+      expect(w.run(123, 20)).to eq([:restart])
     end
   end
 

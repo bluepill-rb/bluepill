@@ -27,6 +27,10 @@ module Bluepill
 
         begin
           value = @process_condition.run(pid, @include_children)
+        rescue System::PsError => e
+          # No data this time, so leave the history alone and check again next interval
+          logger.warning("#{@name}: #{e.message}")
+          return EMPTY_ARRAY
         rescue StandardError => e
           logger.err(e.backtrace)
           raise e

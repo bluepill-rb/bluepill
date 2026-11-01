@@ -120,6 +120,11 @@ describe Bluepill::System do
     it 'should return an empty array for a process without children' do
       expect(Bluepill::System.get_children('3')).to eq([])
     end
+
+    it 'should return an empty array if ps could not be run' do
+      allow(Bluepill::System).to receive(:ps_axu).and_raise(Bluepill::System::PsError)
+      expect(Bluepill::System.get_children(1)).to eq([])
+    end
   end
 
   describe :daemonize do
@@ -432,6 +437,16 @@ describe Bluepill::System do
       end
       threads = Array.new(5) { Thread.new { Bluepill::System.ps_axu } }
       expect(threads.collect(&:value).uniq.size).to eq(1)
+    end
+
+    it 'should raise a PsError and not retry until the next tick if ps cannot be run' do
+      expect(Bluepill::System).to receive(:`).once.and_raise(Errno::ENOMEM)
+      message = 'Could not run ps: Errno::ENOMEM: Cannot allocate memory'
+      expect { Bluepill::System.ps_axu }.to raise_error(Bluepill::System::PsError, message)
+      expect { Bluepill::System.memory_usage(1, false) }.to raise_error(Bluepill::System::PsError, message)
+      Bluepill::System.reset_data
+      expect(Bluepill::System).to receive(:`).and_return(output)
+      expect(Bluepill::System.memory_usage(1, false)).to eq(1234.0)
     end
   end
 

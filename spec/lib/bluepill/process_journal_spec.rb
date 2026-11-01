@@ -182,7 +182,7 @@ describe Bluepill::ProcessJournal do
 
       it 'kills a single id that survives TERM' do
         write_journal(filename, [42])
-        allow(Bluepill::System).to receive(:pid_alive?).with(42).and_return(true)
+        allow(Bluepill::System).to receive(:pid_alive?).with(sign * 42).and_return(true)
         expect(::Process).to receive(:kill).with('TERM', sign * 42)
         expect(journal).to receive(:sleep).with(1)
         expect(::Process).to receive(:kill).with('KILL', sign * 42)
@@ -191,14 +191,15 @@ describe Bluepill::ProcessJournal do
         expect(File.exist?(filename)).to be false
       end
 
-      it 'kills the journaled ids when any survive' do
-        write_journal(filename, [42, 43])
-        allow(Bluepill::System).to receive(:pid_alive?).and_return(true)
-        expect(journal).to receive(:sleep).with(1)
-        expect(::Process).to receive(:kill).with('KILL', sign * 42)
-        expect(::Process).to receive(:kill).with('KILL', sign * 43).and_raise(Errno::ESRCH)
-        expect(logger).to receive(:info).with("Killed old #{label} 42")
-        expect(logger).to receive(:debug).with("Unable to kill missing #{label} 43")
+      it 'only kills ids still alive after the wait' do
+        write_journal(filename, [42, 43, 44])
+        alive = {42 => true, 43 => true, 44 => false}
+        allow(Bluepill::System).to receive(:pid_alive?) { |id| alive[sign * id] }
+        expect(journal).to receive(:sleep).with(1).once { alive[43] = false }
+        expect(::Process).to receive(:kill).with('KILL', sign * 42).and_raise(Errno::ESRCH)
+        expect(::Process).not_to receive(:kill).with('KILL', sign * 43)
+        expect(::Process).not_to receive(:kill).with('KILL', sign * 44)
+        expect(logger).to receive(:debug).with("Unable to kill missing #{label} 42")
         journal.send(method, 'app')
         expect(File.exist?(filename)).to be false
       end

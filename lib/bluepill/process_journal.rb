@@ -105,67 +105,44 @@ module Bluepill
 
     def kill_all_pgids_from_journal(journal_name)
       filename = pgid_journal_filename(journal_name)
-      j = pgid_journal(filename)
-      if !j.empty?
-        acquire_atomic_fs_lock(filename) do
-          j.each do |pgid|
-            begin
-              ::Process.kill('TERM', -pgid)
-              logger.info("Termed old process group #{pgid}")
-            rescue Errno::ESRCH
-              logger.debug("Unable to term missing process group #{pgid}")
-            end
-          end
-
-          if j.any? { |pgid| System.pid_alive?(pgid) }
-            sleep(1)
-            j.each do |pgid|
-              begin
-                ::Process.kill('KILL', -pgid)
-                logger.info("Killed old process group #{pgid}")
-              rescue Errno::ESRCH
-                logger.debug("Unable to kill missing process group #{pgid}")
-              end
-            end
-          end
-          System.delete_if_exists(filename) # reset journal
-          logger.debug('Journal cleanup completed')
-        end
-      else
-        logger.debug('No previous process journal - Skipping cleanup')
-      end
+      kill_all_from_journal_file(filename, pgid_journal(filename), 'process group', -1)
     end
 
     def kill_all_pids_from_journal(journal_name)
       filename = pid_journal_filename(journal_name)
-      j = pid_journal(filename)
-      if !j.empty?
-        acquire_atomic_fs_lock(filename) do
-          j.each do |pid|
-            begin
-              ::Process.kill('TERM', pid)
-              logger.info("Termed old process #{pid}")
-            rescue Errno::ESRCH
-              logger.debug("Unable to term missing process #{pid}")
-            end
-          end
+      kill_all_from_journal_file(filename, pid_journal(filename), 'process', 1)
+    end
 
-          if j.any? { |pid| System.pid_alive?(pid) }
-            sleep(1)
-            j.each do |pid|
-              begin
-                ::Process.kill('KILL', pid)
-                logger.info("Killed old process #{pid}")
-              rescue Errno::ESRCH
-                logger.debug("Unable to kill missing process #{pid}")
-              end
-            end
-          end
-          System.delete_if_exists(filename) # reset journal
-          logger.debug('Journal cleanup completed')
-        end
-      else
+    # Sends TERM, waits a second for any survivors, then sends KILL to those
+    # still alive. A negative sign targets process groups instead of pids.
+    def kill_all_from_journal_file(filename, ids, label, sign)
+      if ids.empty?
         logger.debug('No previous process journal - Skipping cleanup')
+        return
+      end
+
+      acquire_atomic_fs_lock(filename) do
+        signal_journaled('TERM', ids, label, sign)
+        survivors = ids.select { |id| System.pid_alive?(sign * id) }
+        unless survivors.empty?
+          sleep(1)
+          survivors = survivors.select { |id| System.pid_alive?(sign * id) }
+          signal_journaled('KILL', survivors, label, sign)
+        end
+        System.delete_if_exists(filename) # reset journal
+        logger.debug('Journal cleanup completed')
+      end
+    end
+
+    def signal_journaled(signal, ids, label, sign)
+      past, verb = signal == 'TERM' ? %w(Termed term) : %w(Killed kill)
+      ids.each do |id|
+        begin
+          ::Process.kill(signal, sign * id)
+          logger.info("#{past} old #{label} #{id}")
+        rescue Errno::ESRCH
+          logger.debug("Unable to #{verb} missing #{label} #{id}")
+        end
       end
     end
 

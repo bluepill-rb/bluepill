@@ -103,9 +103,10 @@ module Bluepill
       attributes = process.attributes
       return if attributes[:daemonize] || attributes[:pid_command] || attributes[:pid_file] != default_pid_file
 
-      $stderr.puts "Config Warning: '#{process.name}' sets no daemonize, pid_file or pid_command, " \
-                   "so bluepill cannot find its pid unless start_command writes it to #{default_pid_file}. " \
-                   'Set daemonize = true if start_command runs in the foreground.'
+      warning = "Config Warning: '#{process.name}' sets no daemonize, pid_file or pid_command, " \
+                "so bluepill cannot find its pid unless start_command writes it to #{default_pid_file}. " \
+                'Set daemonize = true if start_command runs in the foreground.'
+      $stderr.puts warning
     end
 
     def config_error!(message)

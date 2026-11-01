@@ -56,9 +56,10 @@ module Bluepill
     def require_syslog
       require 'syslog'
     rescue LoadError
-      raise LoadError, 'Bluepill logs to syslog unless log_file is set, but the syslog library ' \
-                       "could not be loaded. Since Ruby 3.4 it's a separate gem, so add gem 'syslog' " \
-                       'to your Gemfile or set log_file.'
+      message = 'Bluepill logs to syslog unless log_file is set, but the syslog library ' \
+                "could not be loaded. Since Ruby 3.4 it's a separate gem, so add gem 'syslog' " \
+                'to your Gemfile or set log_file.'
+      raise LoadError, message
     end
 
     class LoggerAdapter < ::Logger

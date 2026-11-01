@@ -180,8 +180,9 @@ module Bluepill
       setup_pids_dir
     rescue SystemCallError => e
       $stderr.puts("Failed to start bluepill: #{e.message}")
-      $stderr.puts('The user running bluepill must be able to write to its log_file and base_dir. ' \
-                   'The uid and gid in the config only apply to the processes it monitors.')
+      message = 'The user running bluepill must be able to write to its log_file and base_dir. ' \
+                'The uid and gid in the config only apply to the processes it monitors.'
+      $stderr.puts(message)
       exit(5)
     end
 

@@ -143,14 +143,17 @@ module Bluepill
       end
     end
 
-    # Remove the journal locks in the current directory
+    # Remove the app's journal locks, which a daemon that died left behind
+    #
+    # Without this, a stale lock would make the next write to its journal
+    # wait 10 seconds and fail.
     #
     # @return [void]
     #
     # @api private
     def self.clear_all_atomic_fs_locks
-      Dir['.*.lock'].each do |f|
-        System.delete_if_exists(f) if File.directory?(f)
+      Dir[File.join(journal_base_dir, '.*.lock')].each do |lock|
+        clear_atomic_fs_lock(lock)
       end
     end
 
@@ -253,19 +256,6 @@ module Bluepill
 
       Dir.rmdir(name)
       logger.debug("Cleared lock #{name}")
-    end
-
-    # Kill what every journal in the current directory lists
-    #
-    # @return [void]
-    #
-    # @api private
-    def self.kill_all_from_all_journals
-      pids = Dir['.bluepill_pids_journal.*'].collect { |p| p.sub(/\A\.bluepill_pids_journal\./, '') }
-      pids.reject! { |p| p.end_with?('.lock') }
-      pids.each do |journal_name|
-        kill_all_from_journal(journal_name)
-      end
     end
 
     # Kill the processes and process groups that a process's journals list

@@ -321,16 +321,17 @@ module Bluepill
 
     # Start the daemon
     #
-    # It stops a previous daemon for the application, kills what the
-    # journals recorded, daemonizes unless it runs in the foreground, opens
-    # the socket, and runs until a signal stops it.
+    # It stops a previous daemon for the application, clears journal locks
+    # it left behind, daemonizes unless it runs in the foreground, opens the
+    # socket, and runs until a signal stops it. Processes that are already
+    # running, from their pid files, are monitored again, not restarted, so
+    # bluepill can be upgraded without restarting them.
     #
     # @return [void]
     #
     # @api private
     def start_server
       kill_previous_bluepill
-      ProcessJournal.kill_all_from_all_journals
       ProcessJournal.clear_all_atomic_fs_locks
 
       begin
@@ -369,13 +370,14 @@ module Bluepill
       end
     end
 
-    # Kill what the journals recorded and remove the socket and pid file
+    # Clear the app's journal locks, and remove the socket and pid file
+    #
+    # The processes keep running, so the next daemon monitors them again.
     #
     # @return [void]
     #
     # @api private
     def cleanup
-      ProcessJournal.kill_all_from_all_journals
       ProcessJournal.clear_all_atomic_fs_locks
       begin
         System.delete_if_exists(socket.path) if socket

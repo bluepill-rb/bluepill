@@ -330,7 +330,6 @@ describe Bluepill::Application do
         program_name
         app.groups = {'web' => group}
         allow(app).to receive(:kill_previous_bluepill)
-        allow(Bluepill::ProcessJournal).to receive(:kill_all_from_all_journals)
         allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks)
         allow(::Process).to receive(:setpgid)
         allow(Bluepill::Daemonize).to receive(:daemonize)
@@ -344,7 +343,6 @@ describe Bluepill::Application do
 
       it 'daemonizes and runs the application' do
         expect(app).to receive(:kill_previous_bluepill).ordered
-        expect(Bluepill::ProcessJournal).to receive(:kill_all_from_all_journals).ordered
         expect(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks).ordered
         expect(::Process).to receive(:setpgid).with(0, 0).ordered
         expect(Bluepill::Daemonize).to receive(:daemonize).ordered
@@ -417,7 +415,6 @@ describe Bluepill::Application do
       let(:socket) { double('socket', path: File.join(base_dir, 'test.sock')) }
 
       before(:each) do
-        expect(Bluepill::ProcessJournal).to receive(:kill_all_from_all_journals)
         expect(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks)
         expect(Bluepill::System).to receive(:delete_if_exists).with(pid_file)
       end

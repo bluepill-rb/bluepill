@@ -190,15 +190,20 @@ describe Bluepill::ProcessJournal do
   end
 
   describe '.clear_all_atomic_fs_locks' do
-    it 'deletes lock directories' do
-      dir_lock = File.join(@dir, '.a.lock')
-      file_lock = File.join(@dir, '.b.lock')
-      Dir.mkdir(dir_lock)
-      File.open(file_lock, 'w') {}
-      allow(Dir).to receive(:[]).with('.*.lock').and_return([dir_lock, file_lock])
-      expect(Bluepill::System).to receive(:delete_if_exists).with(dir_lock)
-      expect(Bluepill::System).not_to receive(:delete_if_exists).with(file_lock)
-      journal.clear_all_atomic_fs_locks
+    it "removes the app's lock directories, and nothing else" do
+      lock = File.join(@dir, '.bluepill_pids_journal.web.lock')
+      file = File.join(@dir, '.b.lock')
+      other_app = File.join(@legacy_dir, 'other')
+      other_lock = File.join(other_app, '.bluepill_pids_journal.web.lock')
+      legacy_lock = File.join(@legacy_dir, '.bluepill_pids_journal.web.lock')
+      [lock, other_app, other_lock, legacy_lock].each { |dir| Dir.mkdir(dir) }
+      File.write(file, '')
+      Dir.chdir(@legacy_dir) { journal.clear_all_atomic_fs_locks }
+      expect(File.exist?(lock)).to be false
+      expect(File.exist?(file)).to be true
+      expect(File.directory?(other_lock)).to be true
+      expect(File.directory?(legacy_lock)).to be true
+      expect(log).to eq [[:debug, "Cleared lock #{lock}"]]
     end
   end
 
@@ -239,23 +244,6 @@ describe Bluepill::ProcessJournal do
         expect(journal.send(method, filename)).to eq []
         expect(log).to eq [[:debug, "#{kind} journal file: #{filename}"]]
       end
-    end
-  end
-
-  describe '.kill_all_from_all_journals' do
-    it 'kills every journal found, ignoring locks' do
-      allow(Dir).to receive(:[]).with('.bluepill_pids_journal.*').and_return(
-        [
-          '.bluepill_pids_journal.foo',
-          '.bluepill_pids_journal.foo.lock',
-          '.bluepill_pids_journal.lock.bar',
-          '.bluepill_pids_journal..bluepill_pids_journal.baz',
-        ]
-      )
-      expect(journal).to receive(:kill_all_from_journal).once.with('foo')
-      expect(journal).to receive(:kill_all_from_journal).once.with('lock.bar')
-      expect(journal).to receive(:kill_all_from_journal).once.with('.bluepill_pids_journal.baz')
-      journal.kill_all_from_all_journals
     end
   end
 

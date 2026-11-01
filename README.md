@@ -350,6 +350,8 @@ To quit the bluepill daemon for an application:
 
     sudo bluepill quit
 
+Its processes keep running. The next `bluepill load` monitors them again, from their pid files, without restarting them, so you can upgrade bluepill this way.
+
 #### bpsv
 
 `bpsv` runs a bluepill command on the process it's named after, so a

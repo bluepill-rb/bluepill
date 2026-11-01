@@ -50,7 +50,7 @@ module Bluepill
     def status(process_name = nil)
       lines = [] #: Array[String]
       if process_name.nil?
-        prefix = name ? '  ' : ''
+        prefix = ('  ' if name)
         lines << "#{name}:" if name
 
         processes.each do |process|
@@ -64,7 +64,7 @@ module Bluepill
 
       else
         processes.each do |process|
-          next if process_name != process.name
+          next unless process_name.eql?(process.name)
 
           lines << format('%s(pid:%s): %s', process.name, process.actual_pid, process.state)
           lines << process.statistics.to_s

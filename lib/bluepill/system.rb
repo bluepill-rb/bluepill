@@ -71,6 +71,11 @@ module Bluepill
     end
 
     def get_children(parent_pid)
+      # A process that is still starting has no pid yet, and nil.to_i is 0.
+      # The ps header row parses as pid 0 with ppid 0, so it would be its own
+      # child and the recursion would never end.
+      return [] unless parent_pid.to_i > 0
+
       child_pids = []
       ps_axu.each_pair do |_pid, chunks|
         child_pids << chunks[IDX_MAP[:pid]].to_i if chunks[IDX_MAP[:ppid]].to_i == parent_pid.to_i

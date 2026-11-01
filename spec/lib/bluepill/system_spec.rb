@@ -125,6 +125,23 @@ describe Bluepill::System do
       allow(Bluepill::System).to receive(:ps_axu).and_raise(Bluepill::System::PsError)
       expect(Bluepill::System.get_children(1)).to eq([])
     end
+
+    context 'when ps output includes its header row' do
+      # "PID".to_i and "PPID".to_i are both 0
+      let(:ps) { super().merge(0 => %w[PID PPID %CPU RSS ELAPSED COMMAND]) }
+
+      it 'should return an empty array for a nil pid' do
+        expect(Bluepill::System.get_children(nil)).to eq([])
+      end
+
+      it 'should return an empty array for pid 0' do
+        expect(Bluepill::System.get_children(0)).to eq([])
+      end
+
+      it 'should still return all descendants of a real pid' do
+        expect(Bluepill::System.get_children(1)).to eq([2, 4, 3])
+      end
+    end
   end
 
   describe :daemonize do

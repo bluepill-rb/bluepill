@@ -481,6 +481,15 @@ describe Bluepill::Process do
       subject.stop_process
     end
 
+    it 'journals no children when stopped before it has a pid' do
+      subject.clear_pid
+      subject.monitor_children = true
+      allow(Bluepill::System).to receive(:ps_axu).and_return(0 => %w[PID PPID %CPU RSS ELAPSED COMMAND])
+      allow(Bluepill::System).to receive(:delete_if_exists)
+      expect(Bluepill::ProcessJournal).not_to receive(:append_pid_to_journal)
+      subject.stop_process
+    end
+
     it 'sends TERM by default' do
       expect(::Process).to receive(:kill).with('TERM', 5)
       expect(Bluepill::System).to receive(:delete_if_exists).with(nil)

@@ -11,11 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Custom checks have a `logger`, which writes to bluepill's log with the app's and the process's names, and the README shows how to write one ([#7](https://github.com/bluepill-rb/bluepill/issues/7)).
 - A `log_level` option for `Bluepill.application`, which drops messages less severe than it, such as `log_level: :warning` ([#47](https://github.com/bluepill-rb/bluepill/issues/47)).
+- `supplementary_groups` can be set for the whole app, like `uid` and `gid` ([#28](https://github.com/bluepill-rb/bluepill/issues/28)).
 
 ### Changed
 
 - **Breaking:** an attribute in a `process` block that bluepill doesn't know, such as a misspelled `start_comand`, now fails when the config loads, naming the attribute and the process and suggesting the closest one. Before, bluepill accepted it and quietly ignored it ([#40](https://github.com/bluepill-rb/bluepill/issues/40)).
 - A process's logger works out its prefixes once, and writes straight to the log, so a log line takes 1 allocation instead of 10, and each check's run takes about 10% less time.
+- A process with a `uid` now runs with every group the user belongs to, as it would after logging in, and with the user's primary group when it sets no `gid`. Before, it got only its `gid` and `supplementary_groups`, and without a `gid` it kept the root group and root's other groups ([#28](https://github.com/bluepill-rb/bluepill/issues/28)).
+- The commands of a process's children with `monitor_children`, such as their `stop_command`, now run as the parent's `uid`, `gid` and `supplementary_groups`. Before, they ran as root ([#28](https://github.com/bluepill-rb/bluepill/issues/28)).
 
 ### Removed
 

@@ -619,6 +619,7 @@ module Bluepill
     attr_accessor working_dir: String?
     attr_accessor uid: String?
     attr_accessor gid: String?
+    attr_accessor supplementary_groups: Array[String]?
     attr_accessor environment: Hash[_ToS, _ToS]?
     attr_accessor auto_start: bool?
     attr_reader app: Application

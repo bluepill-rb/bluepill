@@ -162,7 +162,7 @@ Bluepill.application("app_name") do |app|
 end
 ```
 
-If you want to include one or more supplementary groups:
+A process with a `uid` gets every group that the user belongs to, the same as logging in as the user, and the user's primary group unless `gid` names another. To add more groups to those:
 
 ```ruby
 Bluepill.application("app_name") do |app|
@@ -178,18 +178,21 @@ Bluepill.application("app_name") do |app|
 end
 ```
 
-You can also set an app-wide uid/gid:
+You can also set an app-wide uid, gid and supplementary groups:
 
 ```ruby
 Bluepill.application("app_name") do |app|
   app.uid = "deploy"
   app.gid = "deploy"
+  app.supplementary_groups = ['rvm']
   app.process("process_name") do |process|
     process.start_command = "/usr/bin/some_start_command"
     process.pid_file = "/tmp/some_pid_file.pid"
   end
 end
 ```
+
+These only apply when bluepill runs as root. Every command a process runs, such as its `start_command`, `stop_command` and `pre_start_command`, runs as its user and groups, and so do the commands of its children with `monitor_children`.
 
 To track resources of child processes, use `:include_children`:
 ```ruby

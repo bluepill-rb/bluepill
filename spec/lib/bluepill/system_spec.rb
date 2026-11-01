@@ -611,35 +611,59 @@ describe Bluepill::System do
         expect(ENV).not_to have_received(:[]=)
       end
 
-      it 'should switch the uid, gid, groups and home directory' do
-        allow(Etc).to receive(:getpwnam).with('user').and_return(double(uid: 501))
+      it "should give a user the user's own groups, the gid, and the supplementary groups" do
+        allow(Etc).to receive(:getpwnam).with('user').and_return(double(name: 'user', uid: 501, gid: 10, dir: '/home/user'))
         allow(Etc).to receive(:getgrnam).with('group').and_return(double(gid: 20))
         allow(Etc).to receive(:getgrnam).with('extra').and_return(double(gid: 30))
-        allow(Etc).to receive(:getpwuid).with(501).and_return(double(dir: '/home/user'))
-        allow(Process).to receive(:groups).and_return([20])
+        allow(Process).to receive(:initgroups)
+        allow(Process).to receive(:groups).and_return([10, 20])
         Bluepill::System.drop_privileges('user', 'group', ['extra'])
-        expect(Process).to have_received(:groups=).with([20])
-        expect(Process).to have_received(:groups=).with([20, 30])
-        expect(Process::Sys).to have_received(:setgid).with(20)
+        expect(Process).to have_received(:initgroups).with('user', 20).ordered
+        expect(Process).to have_received(:groups=).with([10, 20, 30]).ordered
+        expect(Process::Sys).to have_received(:setgid).with(20).ordered
+        expect(Process::Sys).to have_received(:setuid).with(501).ordered
+        expect(ENV).to have_received(:[]=).with('HOME', '/home/user')
+      end
+
+      it "should give a user without a gid the user's primary group" do
+        allow(Etc).to receive(:getpwnam).with('user').and_return(double(name: 'user', uid: 501, gid: 10, dir: '/home/user'))
+        allow(Process).to receive(:initgroups)
+        Bluepill::System.drop_privileges('user', nil, [])
+        expect(Process).to have_received(:initgroups).with('user', 10)
+        expect(Process).not_to have_received(:groups=)
+        expect(Process::Sys).to have_received(:setgid).with(10)
         expect(Process::Sys).to have_received(:setuid).with(501)
         expect(ENV).to have_received(:[]=).with('HOME', '/home/user')
       end
 
-      it 'should keep the home directory if there is no such user' do
-        allow(Etc).to receive(:getpwnam).with('user').and_return(double(uid: 501))
-        allow(Etc).to receive(:getpwuid).with(501).and_return(nil)
+      it 'should keep the home directory if the user has none' do
+        allow(Etc).to receive(:getpwnam).with('user').and_return(double(name: 'user', uid: 501, gid: 10, dir: nil))
+        allow(Process).to receive(:initgroups)
         Bluepill::System.drop_privileges('user', nil, [])
-        expect(Process).not_to have_received(:groups=)
-        expect(Process::Sys).not_to have_received(:setgid)
         expect(Process::Sys).to have_received(:setuid).with(501)
         expect(ENV).not_to have_received(:[]=)
       end
 
-      it 'should keep the home directory if the user has none' do
-        allow(Etc).to receive(:getpwnam).with('user').and_return(double(uid: 501))
-        allow(Etc).to receive(:getpwuid).with(501).and_return(double(dir: nil))
-        Bluepill::System.drop_privileges('user', nil, [])
+      it 'should use only the gid and supplementary groups without a uid' do
+        allow(Etc).to receive(:getgrnam).with('group').and_return(double(gid: 20))
+        allow(Etc).to receive(:getgrnam).with('extra').and_return(double(gid: 30))
+        allow(Process).to receive(:groups).and_return([20])
+        expect(Process).not_to receive(:initgroups)
+        Bluepill::System.drop_privileges(nil, 'group', ['extra'])
+        expect(Process).to have_received(:groups=).with([20]).ordered
+        expect(Process).to have_received(:groups=).with([20, 30]).ordered
+        expect(Process::Sys).to have_received(:setgid).with(20)
+        expect(Process::Sys).not_to have_received(:setuid)
         expect(ENV).not_to have_received(:[]=)
+      end
+
+      it "should add supplementary groups to bluepill's own without a uid or gid" do
+        allow(Etc).to receive(:getgrnam).with('extra').and_return(double(gid: 30))
+        allow(Process).to receive(:groups).and_return([0])
+        Bluepill::System.drop_privileges(nil, nil, ['extra'])
+        expect(Process).to have_received(:groups=).with([0, 30])
+        expect(Process::Sys).not_to have_received(:setgid)
+        expect(Process::Sys).not_to have_received(:setuid)
       end
     end
   end

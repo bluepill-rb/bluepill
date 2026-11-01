@@ -214,6 +214,10 @@ module Bluepill
 
     # Switch to another user and groups, when bluepill runs as root
     #
+    # With a uid, the command gets the user's own supplementary groups, the
+    # way logging in as the user does, and the user's primary group unless
+    # gid names another. supplementary_groups adds more groups to those.
+    #
     # Be sure to call this from a fork, or it changes the user and groups of
     # the bluepill daemon itself.
     #
@@ -227,20 +231,21 @@ module Bluepill
     def self.drop_privileges(uid, gid, supplementary_groups)
       return unless ::Process::Sys.geteuid.zero?
 
-      uid_num = Etc.getpwnam(uid).uid if uid
+      user = Etc.getpwnam(uid) if uid
       gid_num = Etc.getgrnam(gid).gid if gid
-      supplementary_groups ||= [] #: Array[String]
-      group_nums = supplementary_groups.collect do |group|
-        Etc.getgrnam(group).gid
+      if user
+        gid_num ||= user.gid
+        ::Process.initgroups(user.name, gid_num)
+      elsif gid_num
+        ::Process.groups = [gid_num]
       end
-      ::Process.groups = [gid_num] if gid_num
+      group_nums = (supplementary_groups || []).collect { |group| Etc.getgrnam(group).gid }
       ::Process.groups |= group_nums unless group_nums.empty?
       ::Process::Sys.setgid(gid_num) if gid_num
-      ::Process::Sys.setuid(uid_num) if uid_num
-      return unless uid_num
+      return unless user
 
-      user = Etc.getpwuid(uid_num)
-      ENV['HOME'] = user.dir if user && user.dir
+      ::Process::Sys.setuid(user.uid)
+      ENV['HOME'] = user.dir if user.dir
     end
 
     # Return whether the pid file can be written, logging why if it can't

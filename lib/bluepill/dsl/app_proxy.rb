@@ -14,7 +14,7 @@ module Bluepill
   class AppProxy
     # The attributes that every process of the application gets, unless the
     # process sets its own
-    APP_ATTRIBUTES = [:working_dir, :uid, :gid, :environment, :auto_start].freeze
+    APP_ATTRIBUTES = [:working_dir, :uid, :gid, :supplementary_groups, :environment, :auto_start].freeze
 
     # The directory that the application's processes start in
     #
@@ -45,6 +45,19 @@ module Bluepill
     #
     # @api public
     attr_accessor :gid
+
+    # More groups that the application's processes run with
+    #
+    # The processes already get every group that their uid belongs to. These
+    # are added to those.
+    #
+    # @example
+    #   app.supplementary_groups = ['rvm', 'ssl-cert']
+    #
+    # @return [Array<String>, nil] the groups' names
+    #
+    # @api public
+    attr_accessor :supplementary_groups
 
     # The environment variables that the application's processes get
     #

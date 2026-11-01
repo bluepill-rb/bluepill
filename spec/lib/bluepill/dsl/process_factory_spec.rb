@@ -263,9 +263,9 @@ describe Bluepill::ProcessFactory do
 
   describe '#create_child_process' do
     let(:logger) { instance_double(Bluepill::Logger) }
-    let(:attributes) { {start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 5, uid: 'user'} }
+    let(:attributes) { {start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 5, uid: 'user', gid: 'staff', supplementary_groups: ['rvm'], working_dir: '/srv'} }
 
-    it 'creates a child process with the grace times of its parent' do
+    it 'creates a child process with the grace times, user and groups of its parent' do
       expect_any_instance_of(Bluepill::Process).to receive(:determine_initial_state)
       factory = Bluepill::ProcessFactory.new(attributes, proc { stop_command 'halt' })
       child = factory.create_child_process('child', 123, logger)
@@ -276,7 +276,8 @@ describe Bluepill::ProcessFactory do
       expect(child.logger).to eq(logger)
       expect(child.stop_command).to eq('halt')
       expect([child.start_grace_time, child.stop_grace_time, child.restart_grace_time]).to eq([1, 2, 5])
-      expect(child.uid).to be_nil
+      expect([child.uid, child.gid, child.supplementary_groups]).to eq(['user', 'staff', ['rvm']])
+      expect(child.working_dir).to be_nil
     end
 
     it 'gives a child the default grace times when its parent sets none' do

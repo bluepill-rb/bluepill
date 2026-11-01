@@ -57,7 +57,8 @@ module Bluepill
 
     # Create the process of a child that bluepill found
     #
-    # The child gets its parent's grace times, and its state from whether
+    # The child gets its parent's grace times, the parent's user and groups,
+    # so its commands run as the parent's do, and its state from whether
     # it's running.
     #
     # @param [String] name the child's name
@@ -70,7 +71,7 @@ module Bluepill
     def create_child_process(name, pid, logger)
       attributes = {} #: Hash[Symbol, untyped]
       # A grace time the parent leaves unset keeps the Process default
-      [:start_grace_time, :stop_grace_time, :restart_grace_time].each do |a|
+      [:start_grace_time, :stop_grace_time, :restart_grace_time, :uid, :gid, :supplementary_groups].each do |a|
         attributes[a] = @attributes.fetch(a) if @attributes.key?(a)
       end
       attributes[:actual_pid] = pid

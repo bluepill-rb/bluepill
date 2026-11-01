@@ -47,6 +47,19 @@ describe Bluepill::AppProxy do
       end
     end
 
+    it "gives every process the app's supplementary groups, unless it sets its own" do
+      groups = []
+      allow(app).to receive(:add_process) { |process, _| groups << process.supplementary_groups }
+      subject.supplementary_groups = ['rvm']
+      subject.process('web') { start_command 'run' }
+      subject.process('worker') do
+        start_command 'run'
+        supplementary_groups ['ssl-cert']
+      end
+
+      expect(groups).to eq([['rvm'], ['ssl-cert']])
+    end
+
     it 'adds a process without a group' do
       subject.process('worker') { start_command 'run' }
       expect(app).to have_received(:add_process).with(kind_of(Bluepill::Process), nil)

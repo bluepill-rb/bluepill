@@ -3,21 +3,105 @@ name: Mutant
 on:
   push:
   pull_request:
+  # Every subject, in shards: Actions > Mutant > Run workflow
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+env:
+  # Subjects per runner. A whole run of about 190 subjects takes 13 minutes
+  # on one runner, so 16 keeps each shard to about a minute.
+  SUBJECTS_PER_SHARD: 16
+  # A ceiling on the fan-out. Past it, shards grow instead of runners.
+  MAX_SHARDS: 12
+
 jobs:
-  mutant:
-    name: Mutation coverage
+  plan:
+    name: Plan mutation shards
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
+    outputs:
+      base: ${{ steps.plan.outputs.base }}
+      count: ${{ steps.plan.outputs.count }}
+      shards: ${{ steps.plan.outputs.shards }}
+      total: ${{ steps.plan.outputs.total }}
     steps:
+      # Mutant selects subjects by diffing against a revision, so the
+      # revision has to be in the clone
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
         with:
           ruby-version: '4.0'
           bundler-cache: true
-      - run: bundle exec rake mutant
+      # A pull request is diffed against its base branch. A push to another
+      # branch is diffed against where it left master, which also covers
+      # force pushes. A push to master is diffed against the head it
+      # replaced. A manual run, or a push whose old head is gone, mutates
+      # every subject (an empty base).
+      - name: Plan the shards
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          REF_NAME: ${{ github.ref_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            base=$(git rev-parse "origin/$BASE_REF^{commit}")
+          elif [ "$EVENT" = "push" ] && [ "$REF_NAME" != "master" ]; then
+            base=$(git merge-base HEAD origin/master)
+          elif [ "$EVENT" = "push" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] &&
+            git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            base="$BEFORE"
+          else
+            base=""
+          fi
+          echo "Comparing against ${base:-nothing: every subject}"
+
+          count=$(bundle exec rake -s "mutant:subjects[$base]" | grep -c . || true)
+          if [ "$count" -eq 0 ]; then
+            total=0
+          else
+            total=$(( (count + SUBJECTS_PER_SHARD - 1) / SUBJECTS_PER_SHARD ))
+            if [ "$total" -gt "$MAX_SHARDS" ]; then total="$MAX_SHARDS"; fi
+          fi
+          echo "$count subject(s) across $total shard(s)"
+          {
+            echo "base=$base"
+            echo "count=$count"
+            echo "total=$total"
+            echo "shards=$(jq -nc --argjson n "$total" '[range($n)]')"
+          } >> "$GITHUB_OUTPUT"
+
+  # A change that touches no code in lib selects nothing and never gets here
+  mutate:
+    name: Mutation coverage, shard ${{ matrix.shard }}
+    needs: plan
+    if: needs.plan.outputs.count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      # Every shard reports its own survivors. Stopping the others on the
+      # first failure would hide the rest.
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
+        with:
+          ruby-version: '4.0'
+          bundler-cache: true
+      - name: Mutation test this shard
+        env:
+          BASE: ${{ needs.plan.outputs.base }}
+          SHARD: ${{ matrix.shard }}
+          TOTAL: ${{ needs.plan.outputs.total }}
+        run: bundle exec rake "mutant:shard[$BASE,$SHARD,$TOTAL]"

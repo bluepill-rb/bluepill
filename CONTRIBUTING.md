@@ -13,3 +13,16 @@ The RBS signatures in `sig/bluepill.rbs` ship with the gem, and CI checks `lib` 
     bundle exec rake steep
 
 This installs the signatures of the dependencies into `.gem_rbs_collection`, validates the signatures and runs `steep check`. `sig-vendor` has stubs for the dependencies that publish no signatures. Update `sig/bluepill.rbs` when you change a method in `lib`.
+
+Mutation testing
+----------------
+
+CI runs [mutant](https://github.com/mbj/mutant) on Ruby 4.0, and every mutant must be killed. Mutant needs Ruby 3.3 or newer. To run it on every subject locally:
+
+    bundle exec rake mutant
+
+Or only on the subjects you changed since `master`:
+
+    bundle exec mutant run --since master
+
+CI only mutates the subjects that a push or pull request changes, split into shards that run in parallel. To mutate every subject in CI, run the Mutant workflow from the Actions tab.

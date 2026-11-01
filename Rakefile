@@ -60,9 +60,34 @@ rescue LoadError
 end
 
 if mutant
-  desc 'Run mutation tests with mutant'
+  desc 'Run mutation tests with mutant (CI splits it into shards)'
   task :mutant do
     sh 'mutant run'
+  end
+
+  namespace :mutant do
+    desc 'List the subjects touched since REF (every one, without a REF), one per line'
+    task :subjects, [:ref] do |_task, args|
+      require_relative 'tasks/mutant_shard'
+      puts MutantShard.subjects(args[:ref])
+    end
+
+    desc 'Run mutant on shard INDEX of TOTAL of the subjects touched since REF (every one, without a REF)'
+    task :shard, [:ref, :index, :total] do |_task, args|
+      require 'shellwords'
+      require_relative 'tasks/mutant_shard'
+      index = Integer(args.fetch(:index))
+      total = Integer(args.fetch(:total))
+      subjects = MutantShard.subjects(args[:ref])
+      mine = MutantShard.shard(subjects, index, total)
+
+      if mine.empty?
+        puts "Shard #{index} of #{total}: no subjects"
+      else
+        puts "Shard #{index} of #{total}: #{mine.size} of #{subjects.size} subjects"
+        sh "mutant run #{mine.collect { |subject| Shellwords.escape(subject) }.join(' ')}"
+      end
+    end
   end
 end
 

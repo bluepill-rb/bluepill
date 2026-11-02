@@ -93,7 +93,7 @@ describe "The README and example configs", type: :integration do
 
   it "loads the runit example" do
     load File.join(BLUEPILL_ROOT, "examples", "runit.rb")
-    process = processes.fetch("runit-man")
+    process = processes.fetch("web")
     expect(condition(process, :http).instance_variable_get(:@read_timeout)).to be(3)
   end
 

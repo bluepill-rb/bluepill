@@ -11,6 +11,11 @@ module MutantShard
     output, status = Open3.capture2(*command)
     raise "mutant couldn't list its subjects#{" touched since #{ref}" if ref}" unless status.success?
 
+    subject_names(output)
+  end
+
+  # The subjects in mutant's listing of them
+  def self.subject_names(output)
     # A subject's name has no space, which tells it apart from the
     # "Subjects in environment: N" line that starts the listing
     output.lines.collect(&:chomp).select { |line| line.start_with?("Bluepill") && !line.include?(" ") }

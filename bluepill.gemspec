@@ -31,7 +31,9 @@ Gem::Specification.new do |spec|
 
   # sig has the RBS signatures, and the standard libraries they use in manifest.yaml
   spec.executables = %w[bluepill bpsv]
-  spec.files = %w[CHANGELOG.md CONTRIBUTING.md DESIGN.md LICENSE README.md bluepill.gemspec sig/manifest.yaml] +
+  # The changelog is linked from the metadata instead, so the gem doesn't
+  # grow with it
+  spec.files = %w[LICENSE README.md sig/manifest.yaml] +
     spec.executables.collect { |f| "bin/#{f}" } + Dir["lib/**/*.rb"] + Dir["sig/**/*.rbs"]
   spec.require_paths = ["lib"]
 end

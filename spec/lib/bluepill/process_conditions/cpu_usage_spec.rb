@@ -1,8 +1,8 @@
 describe Bluepill::ProcessConditions::CpuUsage do
-  subject { Bluepill::ProcessConditions::CpuUsage.new(below: 50) }
+  subject { described_class.new(below: 50) }
 
   it 'can be created without options' do
-    expect(Bluepill::ProcessConditions::CpuUsage.new).to be_a(Bluepill::ProcessConditions::CpuUsage)
+    expect(described_class.new).to be_a(described_class)
   end
 
   it 'stores its options' do

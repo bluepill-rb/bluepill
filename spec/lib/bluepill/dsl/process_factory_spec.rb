@@ -1,14 +1,14 @@
 describe Bluepill::ProcessFactory do
   around do |example|
-    process_keys = Bluepill::ProcessFactory.class_variable_get(:@@process_keys)
-    pid_files = Bluepill::ProcessFactory.class_variable_get(:@@pid_files)
-    Bluepill::ProcessFactory.class_variable_set(:@@process_keys, {})
-    Bluepill::ProcessFactory.class_variable_set(:@@pid_files, {})
+    process_keys = described_class.class_variable_get(:@@process_keys)
+    pid_files = described_class.class_variable_get(:@@pid_files)
+    described_class.class_variable_set(:@@process_keys, {})
+    described_class.class_variable_set(:@@pid_files, {})
     begin
       example.run
     ensure
-      Bluepill::ProcessFactory.class_variable_set(:@@process_keys, process_keys)
-      Bluepill::ProcessFactory.class_variable_set(:@@pid_files, pid_files)
+      described_class.class_variable_set(:@@process_keys, process_keys)
+      described_class.class_variable_set(:@@pid_files, pid_files)
     end
   end
 
@@ -55,7 +55,7 @@ describe Bluepill::ProcessFactory do
     end
 
     it 'exposes its attributes' do
-      factory = Bluepill::ProcessFactory.new({uid: 'user'}, proc {})
+      factory = described_class.new({uid: 'user'}, proc {})
       expect(factory.attributes).to eq(uid: 'user')
     end
 
@@ -66,7 +66,7 @@ describe Bluepill::ProcessFactory do
         p.monitor_children(&child_block)
       end)
       expect(process.monitor_children).to be true
-      expect(process.child_process_factory).to be_a(Bluepill::ProcessFactory)
+      expect(process.child_process_factory).to be_a(described_class)
       expect(process.child_process_factory.attributes).not_to have_key(:child_process_block)
       expect_any_instance_of(Bluepill::Process).to receive(:determine_initial_state)
       child = process.child_process_factory.create_child_process('child', 123, instance_double(Bluepill::Logger))
@@ -267,7 +267,7 @@ describe Bluepill::ProcessFactory do
 
     it 'creates a child process with the grace times, user and groups of its parent' do
       expect_any_instance_of(Bluepill::Process).to receive(:determine_initial_state)
-      factory = Bluepill::ProcessFactory.new(attributes, proc { stop_command 'halt' })
+      factory = described_class.new(attributes, proc { stop_command 'halt' })
       child = factory.create_child_process('child', 123, logger)
 
       expect(child).to be_a(Bluepill::Process)
@@ -282,13 +282,13 @@ describe Bluepill::ProcessFactory do
 
     it 'gives a child the default grace times when its parent sets none' do
       allow_any_instance_of(Bluepill::Process).to receive(:determine_initial_state)
-      factory = Bluepill::ProcessFactory.new({}, proc { stop_command 'halt' })
+      factory = described_class.new({}, proc { stop_command 'halt' })
       child = factory.create_child_process('child', 123, logger)
       expect([child.start_grace_time, child.stop_grace_time, child.restart_grace_time]).to eq([3, 3, 3])
     end
 
     it 'requires a stop command' do
-      factory = Bluepill::ProcessFactory.new(attributes, proc {})
+      factory = described_class.new(attributes, proc {})
       message = "Config Error: Invalid child process monitor for child\nYou must specify a stop command to monitor child processes.\n"
       expect_config_error(message) do
         factory.create_child_process('child', 123, logger)

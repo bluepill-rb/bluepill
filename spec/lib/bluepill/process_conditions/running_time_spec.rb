@@ -1,8 +1,8 @@
 describe Bluepill::ProcessConditions::RunningTime do
-  subject { Bluepill::ProcessConditions::RunningTime.new(below: 60) }
+  subject { described_class.new(below: 60) }
 
   it 'can be created without options' do
-    expect(Bluepill::ProcessConditions::RunningTime.new).to be_a(Bluepill::ProcessConditions::RunningTime)
+    expect(described_class.new).to be_a(described_class)
   end
 
   it 'stores its options' do

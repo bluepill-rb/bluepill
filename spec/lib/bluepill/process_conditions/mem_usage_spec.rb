@@ -1,8 +1,8 @@
 describe Bluepill::ProcessConditions::MemUsage do
-  subject { Bluepill::ProcessConditions::MemUsage.new(below: 100.megabytes) }
+  subject { described_class.new(below: 100.megabytes) }
 
   it 'can be created without options' do
-    expect(Bluepill::ProcessConditions::MemUsage.new).to be_a(Bluepill::ProcessConditions::MemUsage)
+    expect(described_class.new).to be_a(described_class)
   end
 
   it 'stores its options' do

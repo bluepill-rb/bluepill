@@ -1,5 +1,5 @@
 describe Bluepill::Util::RotationalArray do
-  subject { Bluepill::Util::RotationalArray.new(3) }
+  subject { described_class.new(3) }
 
   it 'starts empty' do
     expect(subject).to be_empty

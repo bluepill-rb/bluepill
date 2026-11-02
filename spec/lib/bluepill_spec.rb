@@ -1,22 +1,22 @@
 describe Bluepill do
   describe '.setup_bundler' do
     before do
-      allow(Bluepill).to receive(:require)
+      allow(described_class).to receive(:require)
     end
 
     it 'sets up Bundler when the Gemfile exists' do
-      Bluepill.setup_bundler(__FILE__)
-      expect(Bluepill).to have_received(:require).with('bundler/setup')
+      described_class.setup_bundler(__FILE__)
+      expect(described_class).to have_received(:require).with('bundler/setup')
     end
 
     it 'does nothing when the Gemfile is missing' do
-      Bluepill.setup_bundler('/nonexistent/Gemfile')
-      expect(Bluepill).not_to have_received(:require)
+      described_class.setup_bundler('/nonexistent/Gemfile')
+      expect(described_class).not_to have_received(:require)
     end
 
     it 'does nothing without a Gemfile' do
-      Bluepill.setup_bundler(nil)
-      expect(Bluepill).not_to have_received(:require)
+      described_class.setup_bundler(nil)
+      expect(described_class).not_to have_received(:require)
     end
 
     context 'without an argument' do
@@ -28,14 +28,14 @@ describe Bluepill do
 
       it 'uses BUNDLE_GEMFILE' do
         ENV['BUNDLE_GEMFILE'] = __FILE__
-        Bluepill.setup_bundler
-        expect(Bluepill).to have_received(:require).with('bundler/setup')
+        described_class.setup_bundler
+        expect(described_class).to have_received(:require).with('bundler/setup')
       end
 
       it 'does nothing when BUNDLE_GEMFILE is unset' do
         ENV.delete('BUNDLE_GEMFILE')
-        Bluepill.setup_bundler
-        expect(Bluepill).not_to have_received(:require)
+        described_class.setup_bundler
+        expect(described_class).not_to have_received(:require)
       end
     end
   end

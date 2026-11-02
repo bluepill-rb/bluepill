@@ -5,7 +5,7 @@ describe Bluepill::Process do
   let(:now) { Time.at(1_000_000) }
 
   subject do
-    Bluepill::Process.new(:proc_name, [], logger: logger)
+    described_class.new(:proc_name, [], logger: logger)
   end
 
   before do
@@ -88,7 +88,7 @@ describe Bluepill::Process do
     end
 
     it 'works without options' do
-      process = Bluepill::Process.new(:proc_name, [])
+      process = described_class.new(:proc_name, [])
       expect(process.name).to eq :proc_name
       expect(process.children).to eq []
       expect(process.statistics).to be_a(Bluepill::ProcessStatistics)
@@ -98,7 +98,7 @@ describe Bluepill::Process do
     end
 
     context 'overrides' do
-      subject { Bluepill::Process.new(:proc_name, [], start_grace_time: 17) }
+      subject { described_class.new(:proc_name, [], start_grace_time: 17) }
 
       describe '#start_grace_time' do
         subject { super().start_grace_time }
@@ -108,7 +108,7 @@ describe Bluepill::Process do
 
     context 'with checks' do
       subject do
-        Bluepill::Process.new(:proc_name, {flapping: {times: 2}, mem_usage: {below: 100, every: 10}}, logger: logger)
+        described_class.new(:proc_name, {flapping: {times: 2}, mem_usage: {below: 100, every: 10}}, logger: logger)
       end
 
       it 'adds triggers and watches' do
@@ -133,7 +133,7 @@ describe Bluepill::Process do
     end
 
     it 'accepts an actual pid' do
-      process = Bluepill::Process.new(:proc_name, [], logger: logger, actual_pid: 42)
+      process = described_class.new(:proc_name, [], logger: logger, actual_pid: 42)
       expect(process.actual_pid).to eq 42
     end
   end

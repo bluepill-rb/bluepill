@@ -2,15 +2,15 @@ describe Bluepill::Trigger do
   let(:process) { instance_double(Bluepill::Process, dispatch!: nil) }
   let(:logger) { instance_double(Bluepill::Logger, info: nil, err: nil) }
 
-  subject { Bluepill::Trigger.new(process, logger: logger) }
+  subject { described_class.new(process, logger: logger) }
 
   describe '.[]' do
     it 'looks up registered triggers by name' do
-      expect(Bluepill::Trigger[:flapping]).to eq(Bluepill::Triggers::Flapping)
+      expect(described_class[:flapping]).to eq(Bluepill::Triggers::Flapping)
     end
 
     it 'returns nil for unknown triggers' do
-      expect(Bluepill::Trigger[:unknown]).to be_nil
+      expect(described_class[:unknown]).to be_nil
     end
   end
 
@@ -23,16 +23,16 @@ describe Bluepill::Trigger do
     end
 
     after do
-      Bluepill::Trigger.instance_variable_get(:@implementations).delete(:spec_example)
+      described_class.instance_variable_get(:@implementations).delete(:spec_example)
     end
 
     it 'registers subclasses by their underscored name' do
-      Bluepill::Trigger.send(:inherited, klass)
-      expect(Bluepill::Trigger[:spec_example]).to equal(klass)
+      described_class.send(:inherited, klass)
+      expect(described_class[:spec_example]).to equal(klass)
     end
 
     it 'calls the inherited hook of its superclass' do
-      Bluepill::Trigger.send(:inherited, klass)
+      described_class.send(:inherited, klass)
       expect(Object).to have_received(:inherited).with(klass)
     end
   end
@@ -46,7 +46,7 @@ describe Bluepill::Trigger do
     end
 
     it 'can be created without options' do
-      expect(Bluepill::Trigger.new(process).logger).to be_nil
+      expect(described_class.new(process).logger).to be_nil
     end
   end
 

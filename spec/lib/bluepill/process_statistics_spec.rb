@@ -1,6 +1,6 @@
 describe Bluepill::ProcessStatistics do
   before(:each) do
-    @stats = Bluepill::ProcessStatistics.new
+    @stats = described_class.new
   end
 
   it 'should record events' do

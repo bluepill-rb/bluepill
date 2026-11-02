@@ -1,8 +1,8 @@
 describe Bluepill::ProcessConditions::AlwaysTrue do
-  subject { Bluepill::ProcessConditions::AlwaysTrue.new(below: 5) }
+  subject { described_class.new(below: 5) }
 
   it 'can be created without options' do
-    expect(Bluepill::ProcessConditions::AlwaysTrue.new).to be_a(Bluepill::ProcessConditions::AlwaysTrue)
+    expect(described_class.new).to be_a(described_class)
   end
 
   it 'stores its options' do

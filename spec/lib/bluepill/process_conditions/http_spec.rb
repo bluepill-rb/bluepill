@@ -11,7 +11,7 @@ describe Bluepill::ProcessConditions::Http do
 
   describe '#initialize' do
     it 'requires a url' do
-      expect { Bluepill::ProcessConditions::Http.new }.to raise_error(URI::InvalidURIError)
+      expect { described_class.new }.to raise_error(URI::InvalidURIError)
     end
 
     it 'stores its options' do

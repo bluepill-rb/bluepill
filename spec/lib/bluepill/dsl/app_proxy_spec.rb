@@ -20,7 +20,7 @@ describe Bluepill::AppProxy do
     allow($stderr).to receive(:puts)
   end
 
-  subject { Bluepill::AppProxy.new(:app_name, {}) }
+  subject { described_class.new(:app_name, {}) }
 
   it 'creates an application' do
     expect(subject.app).to eq(app)

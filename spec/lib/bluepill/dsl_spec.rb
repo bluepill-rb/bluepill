@@ -9,14 +9,14 @@ describe Bluepill do
 
     it 'evaluates a block without arguments in the context of the app proxy' do
       context = nil
-      Bluepill.application(:app_name, options) { context = self }
+      described_class.application(:app_name, options) { context = self }
       expect(context).to be_a(Bluepill::AppProxy)
       expect(app).to have_received(:load)
     end
 
     it 'yields the app proxy to a block with one argument' do
       yielded = nil
-      Bluepill.application(:app_name, options) { |a| yielded = a }
+      described_class.application(:app_name, options) { |a| yielded = a }
       expect(yielded).to be_a(Bluepill::AppProxy)
       expect(yielded.app).to eq(app)
       expect(app).to have_received(:load)
@@ -24,7 +24,7 @@ describe Bluepill do
 
     it 'defaults to no options' do
       expect(Bluepill::Application).to receive(:new).with('app_name', {}).and_return(app)
-      Bluepill.application(:app_name) { |_app| } # an app with no processes
+      described_class.application(:app_name) { |_app| } # an app with no processes
       expect(app).to have_received(:load)
     end
   end

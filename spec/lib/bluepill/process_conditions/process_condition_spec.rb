@@ -1,5 +1,5 @@
 describe Bluepill::ProcessConditions::ProcessCondition do
-  subject { Bluepill::ProcessConditions::ProcessCondition.new(below: 5) }
+  subject { described_class.new(below: 5) }
 
   it 'stores its options' do
     expect(subject.instance_variable_get(:@options)).to eq(below: 5)
@@ -7,7 +7,7 @@ describe Bluepill::ProcessConditions::ProcessCondition do
 
   it 'takes its logger out of its options' do
     logger = double('logger')
-    condition = Bluepill::ProcessConditions::ProcessCondition.new(below: 5, logger: logger)
+    condition = described_class.new(below: 5, logger: logger)
     expect(condition.logger).to equal(logger)
     expect(condition.instance_variable_get(:@options)).to eq(below: 5)
   end
@@ -17,7 +17,7 @@ describe Bluepill::ProcessConditions::ProcessCondition do
   end
 
   it 'can be created without options' do
-    expect(Bluepill::ProcessConditions::ProcessCondition.new.instance_variable_get(:@options)).to eq({})
+    expect(described_class.new.instance_variable_get(:@options)).to eq({})
   end
 
   it 'requires subclasses to implement #run' do

@@ -28,7 +28,7 @@ describe Bluepill::Triggers::Flapping do
     end
 
     it 'can be created without options' do
-      trigger = Bluepill::Triggers::Flapping.new(process)
+      trigger = described_class.new(process)
       expect([trigger.times, trigger.within, trigger.retry_in]).to eq([5, 1, 5])
       expect(trigger.logger).to be_nil
     end

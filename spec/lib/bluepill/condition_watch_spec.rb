@@ -19,7 +19,7 @@ describe Bluepill::ConditionWatch do
           seen << options
         end
       end)
-      w = Bluepill::ConditionWatch.new(:logging_check, logger: logger, every: 10, below: 5)
+      w = described_class.new(:logging_check, logger: logger, every: 10, below: 5)
       condition = w.instance_variable_get(:@process_condition)
       expect(seen).to eq([logger, {below: 5}])
       expect(condition.logger).to equal(logger)
@@ -29,7 +29,7 @@ describe Bluepill::ConditionWatch do
       stub_const('Bluepill::ProcessConditions::NoSuperCheck', Class.new(Bluepill::ProcessConditions::ProcessCondition) do
         define_method(:initialize) { |_options = {}| nil }
       end)
-      w = Bluepill::ConditionWatch.new(:no_super_check, logger: logger, every: 10)
+      w = described_class.new(:no_super_check, logger: logger, every: 10)
       expect(w.instance_variable_get(:@process_condition).logger).to equal(logger)
     end
 
@@ -56,7 +56,7 @@ describe Bluepill::ConditionWatch do
     end
 
     it 'can be created without options' do
-      expect(Bluepill::ConditionWatch.new(:always_true).to_s).to eq("always_true: []\n")
+      expect(described_class.new(:always_true).to_s).to eq("always_true: []\n")
     end
 
     it 'fires a restart by default and keeps only the last value' do
@@ -146,7 +146,7 @@ describe Bluepill::ConditionWatch do
 
     it 'logs the formatted values' do
       allow(Bluepill::System).to receive(:memory_usage).with(123, false).and_return(2048)
-      w = Bluepill::ConditionWatch.new(:mem_usage, logger: logger, every: 10, below: 1.megabyte)
+      w = described_class.new(:mem_usage, logger: logger, every: 10, below: 1.megabyte)
       w.run(123, 0)
       expect(logger).to have_received(:info).with("mem_usage: [2MB*]\n")
     end

@@ -10,11 +10,11 @@ describe Bluepill::ProcessConditions::FileTime do
 
   let(:filename) { File.join(@dir, 'heartbeat') }
 
-  subject { Bluepill::ProcessConditions::FileTime.new(below: 60, filename: filename) }
+  subject { described_class.new(below: 60, filename: filename) }
 
   describe '#initialize' do
     it 'can be created without options' do
-      expect(Bluepill::ProcessConditions::FileTime.new).to be_a(Bluepill::ProcessConditions::FileTime)
+      expect(described_class.new).to be_a(described_class)
     end
 
     it 'stores its options' do

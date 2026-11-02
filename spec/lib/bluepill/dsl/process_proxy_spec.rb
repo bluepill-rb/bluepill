@@ -188,7 +188,7 @@ describe Bluepill::ProcessProxy do
 
     it "builds a process from its watches and attributes" do
       expect(proxy.to_process).to be_a(Bluepill::Process).and have_attributes(
-        name: "web", start_command: "run", watches: have_attributes(size: 1)
+        name: "web", start_command: "run", watches: have_attributes(count: 1)
       )
     end
   end

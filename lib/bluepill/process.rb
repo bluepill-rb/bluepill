@@ -6,7 +6,8 @@ require "bluepill/process/pid"
 require "bluepill/process/children"
 require "bluepill/process/transition"
 require "bluepill/process/state_machine"
-require "bluepill/process/checks"
+require "bluepill/process/transition_callbacks"
+require "bluepill/process/watches"
 require "bluepill/process/user_commands"
 
 module Bluepill
@@ -23,7 +24,7 @@ module Bluepill
     include Pid
     include Children
     include StateMachine
-    include Checks
+    include TransitionCallbacks
     include UserCommands
 
     # Return the process's name, which commands and logs use
@@ -35,10 +36,10 @@ module Bluepill
 
     # Return the checks that run on the process every interval
     #
-    # @return [Array<ConditionWatch>]
+    # @return [Watches]
     #
     # @api private
-    attr_accessor :watches
+    attr_reader :watches
 
     # Return the triggers notified of the process's transitions
     #
@@ -170,7 +171,7 @@ module Bluepill
     # @api private
     def logger=(logger)
       @logger = logger
-      watches.each { |w| w.logger = logger }
+      watches.logger = logger
       triggers.each { |t| t.logger = logger }
     end
 
@@ -208,28 +209,16 @@ module Bluepill
     #
     # @api private
     def add_checks(checks, logger)
-      @watches = []
+      @watches = Watches.new
       @triggers = []
       self.logger = logger
       checks.each do |name, opts|
         if Trigger[name]
           add_trigger(name, opts)
         else
-          add_watch(name, opts)
+          watches.add(name, opts)
         end
       end
-    end
-
-    # Add a check to run on the process every interval
-    #
-    # @param [Symbol] name the check's name, such as :mem_usage
-    # @param [Hash{Symbol => Object}] options the check's options
-    #
-    # @return [Array<ConditionWatch>] the process's watches
-    #
-    # @api private
-    def add_watch(name, options)
-      watches << ConditionWatch.new(name, options.merge(logger: logger))
     end
 
     # Add a trigger to notify of the process's transitions
@@ -242,6 +231,26 @@ module Bluepill
     # @api private
     def add_trigger(name, options)
       triggers << Trigger[name].new(self, options.merge(logger: logger))
+    end
+
+    # Run every watch that's due, and dispatch the events they fire
+    #
+    # Once an event changes the process's state, the events after it are
+    # dropped, since the watches asked for them of the state it left.
+    #
+    # @return [void]
+    #
+    # @api private
+    def run_watches
+      events = watches.run(Integer(Time.now)) { actual_pid }
+      return if events.empty?
+
+      @transitioned = false
+      events.each do |event, reason|
+        break if @transitioned
+
+        dispatch!(event, reason)
+      end
     end
 
     # Kill the threads the process's commands left running

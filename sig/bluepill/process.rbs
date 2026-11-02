@@ -168,11 +168,11 @@ module Bluepill
     include Pid
     include Children
     include StateMachine
-    include Checks
+    include TransitionCallbacks
     include UserCommands
 
     attr_accessor name: String
-    attr_accessor watches: Array[ConditionWatch]
+    attr_reader watches: Process::Watches
     attr_accessor triggers: Array[Trigger]
     attr_accessor skip_ticks_until: Integer?
     attr_accessor process_running: bool?
@@ -185,6 +185,7 @@ module Bluepill
     @threads: Array[Thread]
     @actual_pid: Integer?
     @transition_reason: String?
+    @transitioned: bool
 
     attr_accessor app_name: String?
     attr_accessor group_name: String?
@@ -212,9 +213,10 @@ module Bluepill
 
     def add_checks: (Hash[Symbol, Hash[Symbol, untyped]] checks, Logger logger) -> void
 
-    def add_watch: (Symbol name, Hash[Symbol, untyped] options) -> Array[ConditionWatch]
-
     def add_trigger: (Symbol name, Hash[Symbol, untyped] options) -> Array[Trigger]
+
+    # Runs the watches that are due, and dispatches their events
+    def run_watches: () -> void
 
     def clean_threads: () -> void
 
@@ -328,28 +330,21 @@ module Bluepill
     def new_child: (ProcessFactory factory, Integer child_pid) -> Process
   end
 
-  # Moves a Process between its states, and runs the callbacks on the way
+  # Moves a Process between its states
   module Process::StateMachine : Process::StateMachine::_Host
     # What StateMachine uses from Process
     interface _Host
       %a{pure} def auto_start: () -> bool?
       def process_running?: (?bool force) -> bool
-      def clean_threads: () -> void
-      def start_process: () -> Integer
-      def stop_process: () -> Integer
-      def restart_process: () -> Integer
-      def post_start_process: () -> Thread?
-      def notify_transition: (_Transition transition) -> Thread?
-      def record_transition: (_Transition transition) -> void
-      def notify_triggers: (_Transition transition) -> void
+      def before_transition: (Process::Transition transition) -> true
+      def after_transition: (Process::Transition transition) -> void
     end
 
     TICKS: Hash[Symbol, Array[Symbol]]
-    STARTS: Array[Symbol]
-
-    STATES: Array[Symbol]
 
     TRANSITIONS: Hash[Symbol, Hash[Symbol, Symbol]]
+
+    STATES: Array[Symbol]
 
     LOOPBACKS: Hash[Symbol, Process::Transition]
 
@@ -381,37 +376,68 @@ module Bluepill
 
     def tick_target: (Symbol from) -> Symbol?
 
+    def determine_initial_state: () -> void
+  end
+
+  # Runs what a Process does on its way from one state to another
+  module Process::TransitionCallbacks : Process::TransitionCallbacks::_Host
+    # What TransitionCallbacks uses from Process
+    interface _Host
+      %a{pure} def logger: () -> Logger
+      %a{pure} def watches: () -> Process::Watches
+      %a{pure} def triggers: () -> Array[Trigger]
+      %a{pure} def children: () -> Array[Process]
+      def monitor_children?: () -> bool
+      def clean_threads: () -> void
+      def start_process: () -> Integer
+      def stop_process: () -> Integer
+      def restart_process: () -> Integer
+      def post_start_process: () -> Thread?
+      def notify_transition: (_Transition transition) -> Thread?
+    end
+
+    STARTS: Array[Symbol]
+
+    @transitioned: bool
+
     def before_transition: (Process::Transition transition) -> true
 
     def after_transition: (Process::Transition transition) -> void
 
-    def determine_initial_state: () -> void
-  end
-
-  # Runs a Process's watches, and tells its triggers about its transitions
-  module Process::Checks : Process::Checks::_Host
-    # What Checks uses from Process
-    interface _Host
-      %a{pure} def logger: () -> Logger
-      %a{pure} def watches: () -> Array[ConditionWatch]
-      %a{pure} def triggers: () -> Array[Trigger]
-      %a{pure} def children: () -> Array[Process]
-      def monitor_children?: () -> bool
-      def actual_pid: () -> Integer?
-      def dispatch!: (Symbol | String event, ?String? reason) -> bool
-    end
-
-    @transitioned: bool
-
-    def record_transition: (_Transition transition) -> void
-
     def notify_triggers: (_Transition transition) -> void
 
-    def run_watches: () -> void
+    def record_transition: (_Transition transition) -> void
+  end
 
-    def watch_events: (Array[[ConditionWatch, Thread]] threads) -> Array[[Symbol, String]]
+  # The checks that run on a Process every interval, and the events they
+  # ask it for
+  class Process::Watches
+    include Enumerable[ConditionWatch]
 
-    def dispatch_watch_events: (Array[[Symbol, String]] events) -> void
+    NO_EVENTS: Array[[Symbol, String]]
+
+    attr_reader logger: Logger
+
+    @watches: Array[ConditionWatch]
+
+    def initialize: () -> void
+
+    def add: (Symbol name, Hash[Symbol, untyped] options) -> Process::Watches
+
+    def <<: (ConditionWatch watch) -> Process::Watches
+
+    def each: () { (ConditionWatch watch) -> void } -> Array[ConditionWatch]
+
+    def logger=: (Logger logger) -> void
+
+    def clear_history!: () -> void
+
+    # Yields for the process's pid on each due watch's thread
+    def run: (Integer now) { () -> Integer? } -> Array[[Symbol, String]]
+
+    private
+
+    def events: (Array[[ConditionWatch, Thread]] threads) -> Array[[Symbol, String]]
   end
 
   # Carries out the commands a user gives a Process from the command line

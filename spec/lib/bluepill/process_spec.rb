@@ -508,13 +508,6 @@ describe Bluepill::Process do
     end
   end
 
-  describe "#add_watch" do
-    it "adds a condition watch" do
-      process.add_watch(:mem_usage, below: 10)
-      expect(process.watches).to match [be_a(Bluepill::ConditionWatch).and(have_attributes(logger: logger))]
-    end
-  end
-
   describe "#run_watches" do
     before { process.actual_pid = 5 }
 

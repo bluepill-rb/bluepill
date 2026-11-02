@@ -15,11 +15,16 @@ describe Bluepill::Triggers::Flapping do
     double
   end
 
-  # The seconds each of the trigger's threads slept, by thread
+  # Record each event the trigger's threads dispatch, with how long its
+  # thread slept first. Each thread keeps that in a thread variable, and
+  # the shared array is written under a lock, since on JRuby the threads
+  # run at once.
   def record_dispatches
-    slept = {}
-    allow(Kernel).to receive(:sleep) { |seconds| slept[Thread.current] = seconds }
-    allow(process).to receive(:dispatch!) { |event, reason| dispatched << [event, reason, slept[Thread.current]] }
+    lock = Mutex.new
+    allow(Kernel).to receive(:sleep) { |seconds| Thread.current[:bluepill_slept] = seconds }
+    allow(process).to receive(:dispatch!) do |event, reason|
+      lock.synchronize { dispatched << [event, reason, Thread.current[:bluepill_slept]] }
+    end
   end
 
   def flapping(options = {})

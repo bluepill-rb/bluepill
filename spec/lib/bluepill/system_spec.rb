@@ -150,21 +150,21 @@ describe Bluepill::System do
     end
 
     it 'returns the memory usage of the process' do
-      expect(described_class.memory_usage(2, false)).to be(200.0)
+      expect(described_class.memory_usage(2, false)).to be_a(Float).and eq(200.0)
     end
 
     it 'includes the memory usage of all descendants' do
-      expect(described_class.memory_usage(1, true)).to be(1000.0)
+      expect(described_class.memory_usage(1, true)).to be_a(Float).and eq(1000.0)
     end
 
     it 'skips children that are missing from ps output' do
       allow(described_class).to receive(:get_children).with(1).and_return([2, 99])
-      expect(described_class.memory_usage(1, true)).to be(300.0)
+      expect(described_class.memory_usage(1, true)).to be_a(Float).and eq(300.0)
     end
 
     it 'parses the memory usage of children as floats' do
       stub_ps(1 => ps[1], 2 => ['2', '1', '2.5', '200.5', '02:00', 'child one'])
-      expect(described_class.memory_usage(1, true)).to be(300.5)
+      expect(described_class.memory_usage(1, true)).to be_a(Float).and eq(300.5)
     end
   end
 

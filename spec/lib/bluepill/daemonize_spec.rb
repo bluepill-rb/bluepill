@@ -111,7 +111,7 @@ describe Bluepill::Daemonize do
         allow(described_class).to receive(:safefork).and_return(nil, nil)
         call_as_daemon("name")
         expect(events).to eq([[:close, :rd], [:setsid], [:trap, "SIGHUP", "IGNORE"], [:write, Process.pid], [:close, :wr],
-                              [:become_daemon, "name"], [:call], [:exit!, true]])
+          [:become_daemon, "name"], [:call], [:exit!, true]])
       end
 
       it "keeps its process title without a name" do

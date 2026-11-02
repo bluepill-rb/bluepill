@@ -113,6 +113,19 @@ describe Bluepill::ConditionWatch do
     end
   end
 
+  describe '#due?' do
+    it 'is due before its first run' do
+      expect(watch.due?(0)).to be true
+    end
+
+    it 'is not due again until its interval has passed, and then stays due' do
+      cpu_usage(10)
+      w = watch
+      w.run(123, 100)
+      expect([w.due?(109), w.due?(110), w.due?(111)]).to eq([false, true, true])
+    end
+  end
+
   describe '#run' do
     it 'fires a restart by default when the condition fails' do
       cpu_usage(90)

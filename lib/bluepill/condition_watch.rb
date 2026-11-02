@@ -97,6 +97,20 @@ module Bluepill
       @process_condition.logger = logger
     end
 
+    # Return whether the check is due
+    #
+    # It's due on its first run, and then every `every` seconds.
+    #
+    # @param [Integer] tick_number the current time, in seconds
+    #
+    # @return [Boolean]
+    #
+    # @api private
+    def due?(tick_number)
+      last_ran_at = @last_ran_at
+      last_ran_at.nil? || (last_ran_at + @every) <= tick_number
+    end
+
     # Run the check if it's due, and return the events to fire
     #
     # A check is due on its first run, and then every `every` seconds. A
@@ -113,6 +127,7 @@ module Bluepill
     #
     # @api private
     def run(pid, tick_number = Integer(Time.now))
+      # The same test as due?, written out to save a call on every check
       last_ran_at = @last_ran_at
       if last_ran_at.nil? || (last_ran_at + @every) <= tick_number
         @last_ran_at = tick_number

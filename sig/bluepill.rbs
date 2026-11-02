@@ -590,6 +590,7 @@ module Bluepill
     def logger=: (Logger logger) -> void
 
     # Returns the events to fire
+    def due?: (Integer tick_number) -> bool
     def run: (Integer? pid, ?Integer tick_number) -> Array[Symbol]
 
     def clear_history!: () -> Util::RotationalArray[HistoryValue]

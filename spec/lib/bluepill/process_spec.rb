@@ -18,7 +18,7 @@ describe Bluepill::Process do
   end
 
   def watch_double(name, events)
-    instance_double(Bluepill::ConditionWatch, name.to_s, name: name, run: events, to_s: name.to_s, clear_history!: nil, :logger= => nil)
+    instance_double(Bluepill::ConditionWatch, name.to_s, name: name, due?: true, run: events, to_s: name.to_s, clear_history!: nil, :logger= => nil)
   end
 
   # Give the process pid 5, which signal 0 finds running, since
@@ -535,6 +535,25 @@ describe Bluepill::Process do
 
       it 'dispatches events from watches' do
         expect(dispatched_events).to eq [[:restart, 'loud: [1, 2]'], [:stop, 'loud: [1, 2]']]
+      end
+    end
+
+    context 'with a watch that is not due' do
+      let(:idle) { watch_double(:idle, [:restart]) }
+
+      before do
+        allow(idle).to receive(:due?).with(now.to_i).and_return(false)
+        allow(Thread).to receive(:new).and_call_original
+        process.watches << idle
+        process.run_watches
+      end
+
+      it 'does not run it' do
+        expect(idle).not_to have_received(:run)
+      end
+
+      it 'does not start a thread for it' do
+        expect(Thread).not_to have_received(:new)
       end
     end
 

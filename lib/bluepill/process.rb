@@ -869,8 +869,12 @@ module Bluepill
     def run_watches
       now = Integer(Time.now)
 
-      threads = watches.collect do |watch|
-        [watch, Thread.new { watch.run(actual_pid, now) }] #: [ConditionWatch, Thread]
+      # Each check that's due runs in a thread of its own, so a slow one
+      # doesn't hold up the others. One that isn't due would do nothing, so
+      # it gets no thread.
+      threads = [] #: Array[[ConditionWatch, Thread]]
+      watches.each do |watch|
+        threads << [watch, Thread.new { watch.run(actual_pid, now) }] if watch.due?(now)
       end
 
       @transitioned = false

@@ -46,7 +46,7 @@ describe Bluepill::Process do
     end
     process.triggers << trigger
 
-    watch = instance_double(Bluepill::ConditionWatch, name: :watch, to_s: 'watch')
+    watch = instance_double(Bluepill::ConditionWatch, name: :watch, to_s: 'watch', due?: true)
     allow(watch).to receive(:clear_history!) { calls << [:record_transition, process.state] }
     allow(watch).to receive(:run) do
       calls << [:run_watches, process.state]

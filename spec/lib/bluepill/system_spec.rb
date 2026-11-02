@@ -93,11 +93,7 @@ describe Bluepill::System do
 
       after do
         ::Process.kill("KILL", pid)
-        begin
-          ::Process.wait(pid)
-        rescue Errno::ECHILD
-          nil # JRuby 1.7 reaps it already
-        end
+        ::Process.wait(pid)
       end
 
       it "reads what ps prints" do

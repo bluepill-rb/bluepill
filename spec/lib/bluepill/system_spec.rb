@@ -300,7 +300,7 @@ describe Bluepill::System do
         Bluepill::System.daemonize('echo "hello world"', options)
         expect(Dir).not_to have_received(:chdir)
         expect(ENV).not_to have_received(:[]=)
-        expect(Bluepill::System).to have_received(:redirect_io).with('/dev/null', 'out.log', 'err.log')
+        expect(Bluepill::System).to have_received(:redirect_io).with(File::NULL, 'out.log', 'err.log')
         expect(Kernel).to have_received(:exec).with('echo', 'hello world')
         expect(Bluepill::System).to have_received(:exit).with(no_args)
         expect(Bluepill::Daemonize).to have_received(:call_as_daemon).with(kind_of(Proc), 'echo "hello world"')
@@ -494,7 +494,7 @@ describe Bluepill::System do
         expect(Dir).not_to have_received(:chdir)
         expect(ENV).not_to have_received(:[]=)
         expect(wr).to have_received(:close).twice
-        expect(STDIN).to have_received(:reopen).with('/dev/null')
+        expect(STDIN).to have_received(:reopen).with(File::NULL)
         expect(STDOUT).to have_received(:reopen).with(out_wr)
         expect(STDERR).to have_received(:reopen).with(err_wr)
         expect(Kernel).to have_received(:exec).with('echo', 'hello world')

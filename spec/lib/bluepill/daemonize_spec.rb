@@ -219,8 +219,8 @@ describe Bluepill::Daemonize do
 
     it 'points the standard streams at /dev/null' do
       described_class.redirect_io
-      expect(STDIN).to have_received(:reopen).with('/dev/null')
-      expect(STDOUT).to have_received(:reopen).with('/dev/null')
+      expect(STDIN).to have_received(:reopen).with(File::NULL)
+      expect(STDOUT).to have_received(:reopen).with(File::NULL)
       expect(STDERR).to have_received(:reopen).with(STDOUT)
       expect(STDERR).to have_received(:sync=).with(true)
     end
@@ -229,7 +229,7 @@ describe Bluepill::Daemonize do
       allow(STDIN).to receive(:reopen).and_raise(Errno::ENOENT)
       allow(STDERR).to receive(:reopen).and_raise(IOError)
       described_class.redirect_io
-      expect(STDOUT).to have_received(:reopen).with('/dev/null')
+      expect(STDOUT).to have_received(:reopen).with(File::NULL)
       expect(STDERR).to have_received(:sync=).with(true)
     end
   end

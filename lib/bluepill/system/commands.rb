@@ -213,7 +213,7 @@ module Bluepill
       pipes.fetch(:result).close
 
       # we do not care about stdin of cmd
-      STDIN.reopen('/dev/null')
+      STDIN.reopen(File::NULL)
 
       # point stdout and stderr of cmd to somewhere we can read
       cmd_out_read.close

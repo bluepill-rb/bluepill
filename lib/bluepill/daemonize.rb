@@ -180,7 +180,7 @@ module Bluepill
     def self.redirect_io
       [STDIN, STDOUT].each do |io|
         begin
-          io.reopen('/dev/null')
+          io.reopen(File::NULL)
         rescue StandardError
           nil
         end

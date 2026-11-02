@@ -15,6 +15,7 @@ describe Bluepill::Application do
   describe '#initialize' do
     let(:options) { {} }
     subject { described_class.new('test', options) }
+
     before { expect_any_instance_of(described_class).to receive(:setup_pids_dir) }
 
     context 'when euid is not root' do
@@ -22,6 +23,7 @@ describe Bluepill::Application do
 
       describe '#base_dir' do
         subject { super().base_dir }
+
         it { should eq(File.join(ENV.fetch('HOME', nil), '.bluepill')) }
       end
     end
@@ -30,6 +32,7 @@ describe Bluepill::Application do
 
       describe '#base_dir' do
         subject { super().base_dir }
+
         it { should eq('/var/run/bluepill') }
       end
 
@@ -45,6 +48,7 @@ describe Bluepill::Application do
 
     context 'without options' do
       subject { described_class.new('test') }
+
       before { allow(::Process).to receive(:euid).and_return(0) }
 
       it 'uses the defaults' do
@@ -58,6 +62,7 @@ describe Bluepill::Application do
 
       describe '#base_dir' do
         subject { super().base_dir }
+
         it { should eq(options[:base_dir]) }
       end
 
@@ -124,6 +129,7 @@ describe Bluepill::Application do
 
       describe '#base_dir' do
         subject { super().base_dir }
+
         it { should eq(ENV.fetch('BLUEPILL_BASE_DIR', nil)) }
       end
 
@@ -132,6 +138,7 @@ describe Bluepill::Application do
 
         describe '#base_dir' do
           subject { super().base_dir }
+
           it { should eq(options[:base_dir]) }
         end
       end

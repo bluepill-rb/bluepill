@@ -30,58 +30,69 @@ describe Bluepill::Process do
       ].each do |attr|
         describe "##{attr}" do
           subject { super().send(attr) }
+
           it { should be_nil }
         end
       end
 
       describe '#monitor_children' do
         subject { super().monitor_children }
+
         it { should be false }
       end
 
       describe '#hook_timeout' do
         subject { super().hook_timeout }
+
         it { should eq 30 }
       end
 
       describe '#cache_actual_pid' do
         subject { super().cache_actual_pid }
+
         it { should be true }
       end
 
       describe '#start_grace_time' do
         subject { super().start_grace_time }
+
         it { should eq 3 }
       end
 
       describe '#stop_grace_time' do
         subject { super().stop_grace_time }
+
         it { should eq 3 }
       end
 
       describe '#restart_grace_time' do
         subject { super().restart_grace_time }
+
         it { should eq 3 }
       end
 
       describe '#on_start_timeout' do
         subject { super().on_start_timeout }
+
         it { should eq 'start' }
       end
 
       describe '#environment' do
         subject { super().environment }
+
         it { should eq({}) }
       end
 
       describe '#state' do
         subject { super().state }
+
         it { should eq 'unmonitored' }
       end
 
       [:group_start_noblock, :group_stop_noblock, :group_restart_noblock, :group_unmonitor_noblock].each do |attr|
         describe "##{attr}" do
           subject { super().send(attr) }
+
           it { should be true }
         end
       end
@@ -102,6 +113,7 @@ describe Bluepill::Process do
 
       describe '#start_grace_time' do
         subject { super().start_grace_time }
+
         it { should eq 17 }
       end
     end

@@ -185,3 +185,10 @@ Naming/PredicateMethod:
   AllowedMethods:
     - fire_event
     - before_transition
+
+# These scripts run in a Ruby of their own, and the specs read what they
+# print
+RSpec/Output:
+  Exclude:
+    - spec/support/active_support_config.rb
+    - spec/support/core_extensions.rb

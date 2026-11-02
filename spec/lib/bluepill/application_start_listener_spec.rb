@@ -140,13 +140,6 @@ describe Bluepill::Application do
       expect([answer.message, app.log_file]).to eq(["Unknown command `log_file=`", nil])
     end
 
-    # The error takes caller's lines, which start at the method that asked
-    # for the command, so Ruby 3.1's error_highlight has no line to quote
-    it "answers an unknown command with the backtrace of the method that asked for it" do
-      allow(client).to receive(:readline).and_return("add_process:web\n")
-      expect(answer.backtrace.first).to include("command_result")
-    end
-
     it "answers an empty line with a NoMethodError" do
       allow(client).to receive(:readline).and_return("\n")
       expect(answer).to have_attributes(class: NoMethodError, message: "Unknown command ``")

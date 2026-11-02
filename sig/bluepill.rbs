@@ -576,6 +576,14 @@ module Bluepill
     def restart: (?String? process_name) -> Array[String]
 
     def status: (?String? process_name) -> Array[String]
+
+    private
+
+    def add_group_status: (Array[String] lines) -> void
+
+    def add_children_status: (Array[Process] children, String? prefix, Array[String] lines) -> void
+
+    def add_process_status: (String process_name, Array[String] lines) -> void
   end
 
   # Logs to a file or syslog, with nested prefixes

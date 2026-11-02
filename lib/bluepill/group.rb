@@ -181,27 +181,65 @@ module Bluepill
     def status(process_name = nil)
       lines = [] #: Array[String]
       if process_name.nil?
-        prefix = ("  " if name)
-        lines << "#{name}:" if name
-
-        processes.each do |process|
-          lines << format("%s%s(pid:%s): %s", prefix, process.name, process.actual_pid, process.state)
-          next unless process.monitor_children?
-
-          process.children.each do |child|
-            lines << format("  %s%s: %s", prefix, child.name, child.state)
-          end
-        end
-
+        add_group_status(lines)
       else
-        processes.each do |process|
-          next unless process_name.eql?(process.name)
-
-          lines << format("%s(pid:%s): %s", process.name, process.actual_pid, process.state)
-          lines << process.statistics.to_s
-        end
+        add_process_status(process_name, lines)
       end
       lines << ""
+    end
+
+    private
+
+    # Add a status line for each process, under the group's name
+    #
+    # A process with monitor_children has a line for each of its children
+    # too.
+    #
+    # @param [Array<String>] lines the status lines to add to
+    #
+    # @return [void]
+    #
+    # @api private
+    def add_group_status(lines)
+      prefix = ("  " if name)
+      lines << "#{name}:" if name
+
+      processes.each do |process|
+        lines << format("%s%s(pid:%s): %s", prefix, process.name, process.actual_pid, process.state)
+        add_children_status(process.children, prefix, lines) if process.monitor_children?
+      end
+    end
+
+    # Add a status line for each child of a process
+    #
+    # @param [Array<Process>] children the process's children
+    # @param [String, nil] prefix the indent of the process's line
+    # @param [Array<String>] lines the status lines to add to
+    #
+    # @return [void]
+    #
+    # @api private
+    def add_children_status(children, prefix, lines)
+      children.each do |child|
+        lines << format("  %s%s: %s", prefix, child.name, child.state)
+      end
+    end
+
+    # Add a process's status line and its event history
+    #
+    # @param [String] process_name the process to show
+    # @param [Array<String>] lines the status lines to add to
+    #
+    # @return [void]
+    #
+    # @api private
+    def add_process_status(process_name, lines)
+      processes.each do |process|
+        next unless process_name.eql?(process.name)
+
+        lines << format("%s(pid:%s): %s", process.name, process.actual_pid, process.state)
+        lines << process.statistics.to_s
+      end
     end
   end
 end

@@ -1,8 +1,8 @@
 # Standard's configuration: https://github.com/standardrb/standard
 #
-# The gem still supports Ruby 2.0, so leave out the rules that need a
+# The gem still supports Ruby 2.1, so leave out the rules that need a
 # newer Ruby
-ruby_version: 2.0
+ruby_version: 2.1
 
 ignore:
   # HashConversion suggests Array#to_h, which needs Ruby 2.1. Writing to

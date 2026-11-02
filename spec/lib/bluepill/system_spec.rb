@@ -193,7 +193,7 @@ describe Bluepill::System do
         expect(described_class.get_children(0)).to eq([])
       end
 
-      it 'stills return all descendants of a real pid' do
+      it 'still returns all descendants of a real pid' do
         expect(described_class.get_children(1)).to eq([2, 4, 3])
       end
     end
@@ -295,7 +295,7 @@ describe Bluepill::System do
         expect(wr).to have_received(:write).with(1)
       end
 
-      it 'execs the command as a daemon and report its pid' do
+      it 'execs the command as a daemon and reports its pid' do
         allow(described_class).to receive(:can_write_pid_file).and_return(true)
         described_class.daemonize('echo "hello world"', options)
         expect(Dir).not_to have_received(:chdir)
@@ -318,7 +318,7 @@ describe Bluepill::System do
         expect(wr).to have_received(:write).with(0)
       end
 
-      it 'changes directory and set the environment' do
+      it 'changes directory and sets the environment' do
         allow(described_class).to receive(:can_write_pid_file).and_return(true)
         options[:working_dir] = Pathname.new('/tmp/work')
         options[:environment] = {FOO: 1}
@@ -357,7 +357,7 @@ describe Bluepill::System do
       expect { described_class.delete_if_exists('file') }.not_to raise_error
     end
 
-    it 'retries and then warn when permission is denied' do
+    it 'retries and then warns when permission is denied' do
       allow(File).to receive(:exist?).with('file').and_return(true)
       expect(File).to receive(:unlink).with('file').exactly(3).times.and_raise(Errno::EACCES)
       expect($stderr).to receive(:puts).with('Warning: permission denied trying to delete file')
@@ -426,7 +426,7 @@ describe Bluepill::System do
         expect { described_class.execute_blocking('cmd', timeout: 2) }.to raise_error(Timeout::Error)
       end
 
-      it 'reaps the child and close the pipe if interrupted by a timeout' do
+      it 'reaps the child and closes the pipe if interrupted by a timeout' do
         allow(rd).to receive(:read).and_raise(Timeout::Error)
         expect { described_class.execute_blocking('cmd') }.to raise_error(Timeout::Error)
         expect(Process).to have_received(:detach).with(123)
@@ -487,7 +487,7 @@ describe Bluepill::System do
         described_class.execute_blocking('echo')
       end
 
-      it 'execs the command and report its output and exit code' do
+      it 'execs the command and reports its output and exit code' do
         described_class.execute_blocking('echo "hello world"', options)
         expect(rd).to have_received(:close)
         expect(described_class).to have_received(:drop_privileges).with('user', 'group', ['extra'])
@@ -512,14 +512,14 @@ describe Bluepill::System do
         expect(Kernel).to have_received(:exec).with('cmd')
       end
 
-      it 'stills exit if the parent stopped waiting for the result' do
+      it 'still exits if the parent stopped waiting for the result' do
         allow(wr).to receive(:write).and_raise(Errno::EPIPE)
         described_class.execute_blocking('cmd', options)
         expect(wr).to have_received(:close).twice
         expect(Process).to have_received(:exit!).with(no_args)
       end
 
-      it 'changes directory and set the environment' do
+      it 'changes directory and sets the environment' do
         options[:working_dir] = Pathname.new('/tmp/work')
         options[:environment] = {FOO: 1}
         described_class.execute_blocking('cmd', options)
@@ -554,7 +554,7 @@ describe Bluepill::System do
       expect(described_class.store).to be_kind_of(Hash)
     end
 
-    it 'returns same Hash or every call' do
+    it 'returns the same Hash on every call' do
       expect(described_class.store).to equal(described_class.store)
     end
 
@@ -606,7 +606,7 @@ describe Bluepill::System do
       expect(threads.collect(&:value).uniq.size).to eq(1)
     end
 
-    it 'raises a PsError and not retry until the next tick if ps cannot be run' do
+    it "raises a PsError and doesn't retry until the next tick if ps cannot be run" do
       expect(described_class).to receive(:`).once.and_raise(Errno::ENOMEM)
       message = 'Could not run ps: Errno::ENOMEM: Cannot allocate memory'
       expect { described_class.ps_axu }.to raise_error(Bluepill::System::PsError, message)
@@ -728,7 +728,7 @@ describe Bluepill::System do
       end
     end
 
-    it 'logs the error and be false if the pid file cannot be written' do
+    it 'logs the error and is false if the pid file cannot be written' do
       Dir.mktmpdir do |dir|
         pid_file = File.join(dir, 'missing', 'test.pid')
         message = begin

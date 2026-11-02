@@ -10,7 +10,7 @@ describe Bluepill::Socket do
   end
 
   describe '.client' do
-    it 'opens a UNIX socket and yield it' do
+    it 'opens a UNIX socket and yields it' do
       expect(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
       yielded = nil
       described_class.client(base_dir, 'app') { |s| yielded = s }
@@ -25,7 +25,7 @@ describe Bluepill::Socket do
       allow(described_class).to receive(:abort)
     end
 
-    it 'sends the command and return the response' do
+    it 'sends the command and returns the response' do
       allow(socket).to receive(:read).and_return(Marshal.dump(%w[ok]))
       expect(UNIXSocket).to receive(:open).with(socket_path).once.and_yield(socket)
       expect(described_class.client_command(base_dir, 'app', 'status')).to eq(%w[ok])

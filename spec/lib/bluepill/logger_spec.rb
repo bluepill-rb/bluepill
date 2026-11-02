@@ -19,7 +19,7 @@ describe Bluepill::Logger do
       described_class.new.info('hello')
     end
 
-    it 'closes an already opened syslog and use the given identity' do
+    it 'closes an already opened syslog and uses the given identity' do
       allow(Syslog).to receive(:opened?).and_return(true)
       expect(Syslog).to receive(:close)
       expect(Syslog).to receive(:open).with('myapp', Syslog::LOG_PID, Syslog::LOG_LOCAL6).and_return(double('syslog'))
@@ -176,7 +176,7 @@ describe Bluepill::Logger do
   end
 
   describe 'log methods' do
-    it 'alsoes write to stdout if requested' do
+    it 'also writes to stdout if requested' do
       inner = double('inner', debug: nil)
       expect($stdout).to receive(:puts).with('[debug]: [a:b] message')
       expect($stdout).to receive(:flush)

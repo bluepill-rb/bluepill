@@ -77,25 +77,16 @@ module Bluepill
     #
     # @api public
     def method_missing(name, *args)
-      attribute = name.to_s
-      key = attribute.sub(/[=!]\z/, "").to_sym
-      bang = attribute.end_with?("!")
-      reader = args.empty? && key.to_s.eql?(attribute)
-      value, = args
+      key, reader, value = attribute_call(name, args)
+      if key
+        return @attributes.fetch(key) if reader && @attributes.key?(key)
 
-      if !reader && !args.size.equal?(bang ? 0 : 1)
-        super
-      elsif reader && @attributes.key?(key)
-        @attributes.fetch(key)
-      elsif !self.class.attribute?(key)
-        unknown_attribute!(key)
-      elsif !reader
-        @attributes[key] = bang || value
-      # The same as the first branch, but it has to come after the checks
-      # between them, which a call with the wrong arguments must not reach
-      else # rubocop:disable Lint/DuplicateBranch
-        super
+        unknown_attribute!(key) unless self.class.attribute?(key)
+        return @attributes[key] = value unless reader
       end
+      # A call with the wrong number of values, or the reader of a known
+      # attribute that isn't set yet
+      super
     end
 
     # Return whether the proxy answers a name through method_missing
@@ -237,6 +228,30 @@ module Bluepill
     end
 
     private
+
+    # Return the attribute a call names, and the value it sets
+    #
+    # A name alone with no value reads the attribute. A name ending in `=`,
+    # or one alone, sets it to one value, and a name ending in `!` sets it
+    # to true with none.
+    #
+    # @param [Symbol] name the method's name
+    # @param [Array<Object>] args the call's arguments
+    #
+    # @return [Array(Symbol, Boolean), Array(Symbol, Boolean, Object), nil]
+    #   the attribute's name, whether the call reads it, and the value a
+    #   setter sets, or nil for a call with the wrong number of values
+    #
+    # @api private
+    def attribute_call(name, args)
+      attribute = name.to_s
+      key = attribute.sub(/[=!]\z/, "").to_sym
+      return [key, true] if args.empty? && key.to_s.eql?(attribute)
+
+      bang = attribute.end_with?("!")
+      value, = args
+      [key, false, bang || value] if args.size.equal?(bang ? 0 : 1)
+    end
 
     # Fail on an attribute a process doesn't have
     #

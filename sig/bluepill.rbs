@@ -738,6 +738,8 @@ module Bluepill
 
     private
 
+    def attribute_call: (Symbol name, Array[untyped] args) -> ([Symbol, bool] | [Symbol, bool, untyped])?
+
     def unknown_attribute!: (Symbol key) -> bot
 
     def suggest: (Symbol key) -> String?

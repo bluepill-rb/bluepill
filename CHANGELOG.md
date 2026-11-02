@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-02
+
 ### Removed
 
 - **Breaking:** support for Ruby 2.0. Bluepill 0.2.1 needs Ruby 2.1 or newer, or JRuby 9.0 or newer. Bluepill 0.2.0 still runs on Ruby 2.0.
@@ -820,7 +822,8 @@ Initial release.
 - Added the `bluepill` CLI with the `load`, `status`, `start`, `stop`, `restart`, `unmonitor`, `quit` and `log` commands.
 - Added syslog logging.
 
-[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.2.0...HEAD
+[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/bluepill-rb/bluepill/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/bluepill-rb/bluepill/compare/v0.1.6...v0.2.0
 [0.1.6]: https://github.com/bluepill-rb/bluepill/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/bluepill-rb/bluepill/compare/v0.1.4...v0.1.5

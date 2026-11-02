@@ -4,7 +4,7 @@ module Bluepill
   # The version of bluepill
   #
   # @example
-  #   Bluepill::Version.to_s # => "0.3.0"
+  #   Bluepill::Version.to_s # => "0.3.2"
   #
   # @api public
   module Version
@@ -31,12 +31,12 @@ module Bluepill
     # Return the patch version
     #
     # @example
-    #   Bluepill::Version.patch # => 0
+    #   Bluepill::Version.patch # => 2
     #
     # @return [Integer] the patch version
     #
     # @api public
-    def self.patch = 0
+    def self.patch = 2
 
     # Return the pre-release version
     #
@@ -52,7 +52,7 @@ module Bluepill
     # Return the version's parts by name
     #
     # @example
-    #   Bluepill::Version.to_h # => {major: 0, minor: 3, patch: 0, pre: nil}
+    #   Bluepill::Version.to_h # => {major: 0, minor: 3, patch: 2, pre: nil}
     #
     # @return [Hash{Symbol => Integer, nil}] the major, minor, patch and
     #   pre-release versions
@@ -70,7 +70,7 @@ module Bluepill
     # Return the version's parts, without a missing pre-release version
     #
     # @example
-    #   Bluepill::Version.to_a # => [0, 3, 0]
+    #   Bluepill::Version.to_a # => [0, 3, 2]
     #
     # @return [Array<Integer>] the parts of the version
     #
@@ -80,9 +80,9 @@ module Bluepill
     # Return the version as a string
     #
     # @example
-    #   Bluepill::Version.to_s # => "0.3.0"
+    #   Bluepill::Version.to_s # => "0.3.2"
     #
-    # @return [String] the version, such as "0.3.0"
+    # @return [String] the version, such as "0.3.2"
     #
     # @api public
     def self.to_s = to_a.join(".")

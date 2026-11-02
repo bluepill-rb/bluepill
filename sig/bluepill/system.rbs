@@ -368,9 +368,4 @@ module Bluepill
       def wait_for_atomic_fs_lock: (String lock, Integer attempts) -> void
     end
   end
-
-  # Where bluepill keeps the process journals
-  class BaseDirectory
-    def journals_dir: () -> String
-  end
 end

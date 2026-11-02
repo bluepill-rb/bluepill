@@ -223,6 +223,8 @@ module Bluepill
 
     def pids_dir: () -> String
 
+    def journals_dir: () -> String
+
     def socket_file: (String app) -> String
 
     def pid_file: (String app) -> String

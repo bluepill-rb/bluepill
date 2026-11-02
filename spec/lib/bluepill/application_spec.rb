@@ -204,14 +204,13 @@ describe Bluepill::Application do
 
     before do
       allow(Signal).to receive(:trap) { |signal, &block| traps[signal] = block }
-      allow(app).to receive(:puts)
+      allow($stdout).to receive(:puts)
       allow(app).to receive(:cleanup)
     end
 
     %w[TERM INT].each do |signal|
       it "says it terminates on #{signal}" do
-        traps[signal].call(Signal.list.fetch(signal))
-        expect(app).to have_received(:puts).with('Terminating...')
+        expect { traps[signal].call(Signal.list.fetch(signal)) }.to output("Terminating...\n").to_stdout
       end
 
       it "cleans up on #{signal}" do

@@ -130,7 +130,8 @@ describe Bluepill::Controller do
       write_pid('789')
       allow(Bluepill::System).to receive(:pid_alive?).and_return(false)
       allow(::Process).to receive(:kill)
-      allow(controller).to receive(:puts)
+      # Keep the examples that don't check the output quiet
+      allow($stdout).to receive(:puts)
     end
 
     def write_pid(pid)
@@ -142,17 +143,15 @@ describe Bluepill::Controller do
     end
 
     context 'when the daemon is running' do
-      before do
-        allow(Bluepill::System).to receive(:pid_alive?).with(789).and_return(true)
-        quit
-      end
+      before { allow(Bluepill::System).to receive(:pid_alive?).with(789).and_return(true) }
 
       it 'kills it' do
+        quit
         expect(::Process).to have_received(:kill).with('TERM', 789)
       end
 
       it 'says so' do
-        expect(controller).to have_received(:puts).with('Killing bluepilld[789]')
+        expect { quit }.to output("Killing bluepilld[789]\n").to_stdout
       end
     end
 
@@ -160,65 +159,62 @@ describe Bluepill::Controller do
       before do
         write_pid('1')
         allow(Bluepill::System).to receive(:pid_alive?).with(1).and_return(true)
-        quit
       end
 
       it 'kills it' do
+        quit
         expect(::Process).to have_received(:kill).with('TERM', 1)
       end
 
       it 'says so' do
-        expect(controller).to have_received(:puts).with('Killing bluepilld[1]')
+        expect { quit }.to output("Killing bluepilld[1]\n").to_stdout
       end
     end
 
     context 'without a pid file' do
-      before do
-        File.delete(File.join(base_dir, 'pids', 'app.pid'))
-        quit
-      end
+      before { File.delete(File.join(base_dir, 'pids', 'app.pid')) }
 
       it 'says the daemon is not running' do
-        expect(controller).to have_received(:puts).with('bluepilld[false] not running')
+        expect { quit }.to output("bluepilld[false] not running\n").to_stdout
       end
 
       it 'does not check a pid' do
+        quit
         expect(Bluepill::System).not_to have_received(:pid_alive?)
       end
     end
 
     context 'when the daemon is not running' do
-      before { quit }
-
       it 'says so' do
-        expect(controller).to have_received(:puts).with('bluepilld[789] not running')
+        expect { quit }.to output("bluepilld[789] not running\n").to_stdout
       end
 
       it 'checks its pid' do
+        quit
         expect(Bluepill::System).to have_received(:pid_alive?).with(789)
       end
 
       it 'does not kill it' do
+        quit
         expect(::Process).not_to have_received(:kill)
       end
     end
 
     ['', 'garbage'].each do |contents|
       context "when the pid file holds #{contents.inspect}" do
-        before do
-          write_pid(contents)
-          quit
-        end
+        before { write_pid(contents) }
 
         it 'says the daemon is not running' do
-          expect(controller).to have_received(:puts).with('bluepilld[false] not running')
+          expect { quit }.to output("bluepilld[false] not running\n").to_stdout
         end
 
         it 'does not check a pid' do
+          quit
           expect(Bluepill::System).not_to have_received(:pid_alive?)
         end
 
         it 'does not kill anything' do
+          quit
           expect(::Process).not_to have_received(:kill)
         end
       end
@@ -227,21 +223,20 @@ describe Bluepill::Controller do
 
   describe '#handle_command log' do
     before do
-      allow(controller).to receive(:puts)
+      # Keep the examples that don't check the output quiet
+      allow($stdout).to receive(:puts)
       allow(Kernel).to receive(:exec)
     end
 
     context 'with the log file reported by the daemon' do
-      before do
-        stub_daemon('log_file', '/tmp/app.log')
-        controller.handle_command('app', 'log', 'web')
-      end
+      before { stub_daemon('log_file', '/tmp/app.log') }
 
       it 'says what it tails' do
-        expect(controller).to have_received(:puts).with('Tailing log for web...')
+        expect { controller.handle_command('app', 'log', 'web') }.to output("Tailing log for web...\n").to_stdout
       end
 
       it 'tails the log file' do
+        controller.handle_command('app', 'log', 'web')
         expect(Kernel).to have_received(:exec).with("tail -n 100 -f /tmp/app.log | grep -E '\\[.*app:web.*'")
       end
     end

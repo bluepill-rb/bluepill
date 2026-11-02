@@ -28,7 +28,7 @@ describe Bluepill::Application do
 
     before do
       app.groups = {'web' => group, 'db' => other_group}
-      allow(app).to receive(:puts)
+      allow($stdout).to receive(:puts)
       allow(app).to receive(:cleanup)
       allow(Bluepill::System).to receive(:reset_data) { calls << [:reset_data, mutex_locked?] }
       allow(group).to receive(:tick) { calls << [:web, mutex_locked?] }

@@ -14,7 +14,7 @@ describe "Bluepill::Version" do
 
   describe ".patch" do
     it "is the patch version" do
-      expect(Bluepill::Version.patch).to eq(0)
+      expect(Bluepill::Version.patch).to eq(1)
     end
   end
 
@@ -26,7 +26,7 @@ describe "Bluepill::Version" do
 
   describe ".to_h" do
     it "has every part" do
-      expect(Bluepill::Version.to_h).to eq(major: 0, minor: 2, patch: 0, pre: nil)
+      expect(Bluepill::Version.to_h).to eq(major: 0, minor: 2, patch: 1, pre: nil)
     end
 
     it "has the pre-release version when there is one" do
@@ -37,13 +37,13 @@ describe "Bluepill::Version" do
 
   describe ".to_a" do
     it "has the parts without nil" do
-      expect(Bluepill::Version.to_a).to eq([0, 2, 0])
+      expect(Bluepill::Version.to_a).to eq([0, 2, 1])
     end
   end
 
   describe ".to_s" do
     it "is the dotted version" do
-      expect(Bluepill::Version.to_s).to eq("0.2.0")
+      expect(Bluepill::Version.to_s).to eq("0.2.1")
     end
   end
 end

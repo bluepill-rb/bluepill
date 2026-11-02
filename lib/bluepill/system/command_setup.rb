@@ -23,7 +23,7 @@ module Bluepill
         # Setting end PWD env emulates bash behavior when dealing with symlinks
         working_dir = options.working_dir
         Dir.chdir(ENV["PWD"] = working_dir.to_s) if working_dir
-        options.environment&.each { |key, value| ENV[key.to_s] = value.to_s }
+        options.environment.each { |key, value| ENV[key.to_s] = value.to_s }
       end
 
       # Switch to another user and groups, when bluepill runs as root

@@ -47,7 +47,7 @@ module Bluepill
       attr_reader gid: String?
       attr_reader supplementary_groups: Array[String]?
       attr_reader working_dir: String?
-      attr_reader environment: Hash[_ToS, _ToS]?
+      attr_reader environment: Hash[_ToS, _ToS]
       attr_reader stdin: String?
       attr_reader stdout: String?
       attr_reader stderr: String?

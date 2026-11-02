@@ -13,8 +13,8 @@ describe Bluepill::System::CommandOptions do
       expect(described_class.new(**all).to_h).to eq all
     end
 
-    it "has nil for each option it wasn't given" do
-      expect(described_class.new.to_h).to eq(all.transform_values { nil })
+    it "has nil for each option it wasn't given, and no environment variables" do
+      expect(described_class.new.to_h).to eq(all.transform_values { nil }.merge(environment: {}))
     end
   end
 

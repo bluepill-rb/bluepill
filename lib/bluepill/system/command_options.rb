@@ -40,7 +40,8 @@ module Bluepill
 
       # Return the environment variables the command gets
       #
-      # @return [Hash{#to_s => #to_s}, nil]
+      # @return [Hash{#to_s => #to_s}] the variables, empty when there are
+      #   none
       #
       # @api private
       attr_reader :environment
@@ -81,7 +82,7 @@ module Bluepill
       # @param [Array<String>, nil] supplementary_groups more groups' names
       # @param [String, nil] working_dir the directory to run in
       # @param [Hash{#to_s => #to_s}, nil] environment the environment
-      #   variables
+      #   variables, or nil for none
       # @param [String, nil] stdin a daemon's standard input
       # @param [String, nil] stdout a daemon's standard output
       # @param [String, nil] stderr a daemon's standard error
@@ -96,7 +97,7 @@ module Bluepill
         @gid = gid
         @supplementary_groups = supplementary_groups
         @working_dir = working_dir
-        @environment = environment
+        @environment = environment || {}
         @stdin = stdin
         @stdout = stdout
         @stderr = stderr
@@ -115,7 +116,7 @@ module Bluepill
       #
       # @api private
       def for_hook(env, timeout)
-        self.class.new(**to_h, environment: (environment || {}).merge(env), timeout: timeout)
+        self.class.new(**to_h, environment: environment.merge(env), timeout: timeout)
       end
 
       # Return the options as a Hash

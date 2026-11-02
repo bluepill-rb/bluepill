@@ -208,6 +208,11 @@ describe Bluepill::System, ".execute_blocking" do
       expect(Process).not_to have_received(:setpgid)
     end
 
+    it "stays in bluepill's process group with a nil timeout" do
+      described_class.execute_blocking("echo", timeout: nil)
+      expect(Process).not_to have_received(:setpgid)
+    end
+
     it "drops no privileges without options" do
       described_class.execute_blocking("cmd")
       expect(described_class).to have_received(:drop_privileges).with(nil, nil, nil)

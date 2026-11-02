@@ -296,5 +296,11 @@ describe Bluepill::Daemonize do
       described_class.redirect_io
       expect(events).to eq([[:stdin, File::NULL], [:stdout, File::NULL], [:stderr, STDOUT], [:sync=, true]])
     end
+
+    it "goes on past standard output if it will not reopen" do
+      failures.update(stdout: Errno::ENOENT)
+      described_class.redirect_io
+      expect(events).to eq([[:stdin, File::NULL], [:stdout, File::NULL], [:stderr, STDOUT], [:sync=, true]])
+    end
   end
 end

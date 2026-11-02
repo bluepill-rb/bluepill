@@ -126,18 +126,21 @@ module Bluepill
       def check?: (Integer value) -> true
     end
 
-    class CpuUsage < ProcessCondition[Float]
+    # Checks that a value is below the check's below: limit. V is the type
+    # of value that run returns.
+    class BelowThreshold[V < Numeric] < ProcessCondition[V]
       @below: Numeric
 
-      def run: (Integer? pid, boolish include_children) -> Float
+      def check?: (V value) -> bool
+    end
 
-      def check?: (Float value) -> bool
+    class CpuUsage < BelowThreshold[Float]
+      def run: (Integer? pid, boolish include_children) -> Float
     end
 
     # Seconds since the file changed, or the error that stopped bluepill
     # from finding out
-    class FileTime < ProcessCondition[Float | StandardError | nil]
-      @below: Numeric
+    class FileTime < BelowThreshold[Float]
       @filename: String
 
       def run: (Integer? pid, boolish include_children) -> (Float | StandardError | nil)
@@ -166,13 +169,11 @@ module Bluepill
     end
 
     # Memory usage in kilobytes
-    class MemUsage < ProcessCondition[Float]
+    class MemUsage < BelowThreshold[Float]
       MB: Integer
       FORMAT_STR: String
       MB_LABEL: String
       KB_LABEL: String
-
-      @below: Numeric
 
       def run: (Integer? pid, boolish include_children) -> Float
 
@@ -182,12 +183,8 @@ module Bluepill
     end
 
     # Seconds since the process started
-    class RunningTime < ProcessCondition[Integer]
-      @below: Numeric
-
+    class RunningTime < BelowThreshold[Integer]
       def run: (Integer? pid, boolish include_children) -> Integer
-
-      def check?: (Integer value) -> bool
     end
 
     # The process's command line, which says <defunct> for a zombie

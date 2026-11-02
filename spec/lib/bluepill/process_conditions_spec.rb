@@ -5,5 +5,9 @@ describe Bluepill::ProcessConditions do
         [Bluepill::ProcessConditions::CpuUsage, Bluepill::ProcessConditions::MemUsage]
       )
     end
+
+    it "has no check named below, which a config uses as an option" do
+      expect { described_class[:below] }.to raise_error(NameError)
+    end
   end
 end

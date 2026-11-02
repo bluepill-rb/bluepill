@@ -10,20 +10,7 @@ module Bluepill
     #   process.checks :cpu_usage, every: 10.seconds, below: 5, times: 3
     #
     # @api private
-    class CpuUsage < ProcessCondition
-      # Create the check
-      #
-      # @param [Hash{Symbol => Object}] options the check's options, with
-      #   :below, the highest percentage that's fine
-      #
-      # @return [void]
-      #
-      # @api private
-      def initialize(options = {})
-        super
-        @below = options[:below]
-      end
-
+    class CpuUsage < BelowThreshold
       # Read the process's CPU usage from the tick's ps table
       #
       # @param [Integer, nil] pid the process's pid
@@ -35,17 +22,6 @@ module Bluepill
       def run(pid, include_children)
         # third col in the ps axu output
         System.cpu_usage(pid, include_children).to_f
-      end
-
-      # Return whether the usage is below the limit
-      #
-      # @param [Float] value the percentage run read
-      #
-      # @return [Boolean] true when it's below the limit
-      #
-      # @api private
-      def check?(value)
-        value < @below
       end
     end
   end

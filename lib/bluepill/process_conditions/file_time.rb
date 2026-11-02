@@ -10,7 +10,7 @@ module Bluepill
     #   process.checks :file_time, every: 60.seconds, below: 3.minutes, filename: "/tmp/some_file.log", times: 2
     #
     # @api private
-    class FileTime < ProcessCondition
+    class FileTime < BelowThreshold
       # Create the check
       #
       # @param [Hash{Symbol => Object}] options the check's options, with
@@ -22,7 +22,6 @@ module Bluepill
       # @api private
       def initialize(options = {})
         super
-        @below = options[:below]
         @filename = options[:filename]
       end
 
@@ -50,7 +49,7 @@ module Bluepill
       #
       # @api private
       def check?(value)
-        value.is_a?(Numeric) && value < @below
+        value.is_a?(Numeric) && super
       end
     end
   end

@@ -10,7 +10,7 @@ module Bluepill
     #   process.checks :mem_usage, every: 10.seconds, below: 100.megabytes, times: [3, 5]
     #
     # @api private
-    class MemUsage < ProcessCondition
+    class MemUsage < BelowThreshold
       # The bytes in a megabyte, from which a value shows in megabytes
       #
       # @api private
@@ -30,19 +30,6 @@ module Bluepill
       #
       # @api private
       KB_LABEL = "KB".freeze
-
-      # Create the check
-      #
-      # @param [Hash{Symbol => Object}] options the check's options, with
-      #   :below, the most memory that's fine, in bytes
-      #
-      # @return [void]
-      #
-      # @api private
-      def initialize(options = {})
-        super
-        @below = options[:below]
-      end
 
       # Read the process's memory usage from the tick's ps table
       #

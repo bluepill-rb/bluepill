@@ -24,7 +24,7 @@ describe Bluepill::Application do
       describe '#base_dir' do
         subject { super().base_dir }
 
-        it { should eq(File.join(ENV.fetch('HOME', nil), '.bluepill')) }
+        it { is_expected.to eq(File.join(ENV.fetch('HOME', nil), '.bluepill')) }
       end
     end
     context 'when euid is root' do
@@ -33,7 +33,7 @@ describe Bluepill::Application do
       describe '#base_dir' do
         subject { super().base_dir }
 
-        it { should eq('/var/run/bluepill') }
+        it { is_expected.to eq('/var/run/bluepill') }
       end
 
       it 'does not need HOME' do
@@ -63,7 +63,7 @@ describe Bluepill::Application do
       describe '#base_dir' do
         subject { super().base_dir }
 
-        it { should eq(options[:base_dir]) }
+        it { is_expected.to eq(options[:base_dir]) }
       end
 
       it "gives the process journal the base dir and the app's name" do
@@ -94,7 +94,7 @@ describe Bluepill::Application do
       context 'and foreground is false' do
         let(:options) { {base_dir: '/var/bluepill', foreground: false} }
 
-        it { should_not be_foreground }
+        it { is_expected.to_not be_foreground }
       end
 
       it 'logs to the log file with the application name as prefix' do
@@ -130,7 +130,7 @@ describe Bluepill::Application do
       describe '#base_dir' do
         subject { super().base_dir }
 
-        it { should eq(ENV.fetch('BLUEPILL_BASE_DIR', nil)) }
+        it { is_expected.to eq(ENV.fetch('BLUEPILL_BASE_DIR', nil)) }
       end
 
       context 'and option base_dir is specified' do
@@ -139,7 +139,7 @@ describe Bluepill::Application do
         describe '#base_dir' do
           subject { super().base_dir }
 
-          it { should eq(options[:base_dir]) }
+          it { is_expected.to eq(options[:base_dir]) }
         end
       end
     end

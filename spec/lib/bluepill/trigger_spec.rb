@@ -78,7 +78,7 @@ describe Bluepill::Trigger do
 
     it 'sleeps for a duration in seconds' do
       subject.schedule_event(:start, 1.5.seconds).join
-      expect(subject).to have_received(:sleep) { |delay| expect(delay).to eql(1.5) }
+      expect(subject).to have_received(:sleep) { |delay| expect(delay).to be(1.5) }
     end
 
     it 'records the scheduled events in order until each one is dispatched' do

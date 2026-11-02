@@ -11,12 +11,12 @@ describe Bluepill::ProcessConditions::MemUsage do
 
   it 'returns the memory usage of the process in kilobytes as a float' do
     expect(Bluepill::System).to receive(:memory_usage).with(123, false).and_return(2048.5)
-    expect(subject.run(123, false)).to eql(2048.5)
+    expect(subject.run(123, false)).to be(2048.5)
   end
 
   it 'returns 0.0 for a process that ps does not list' do
     expect(Bluepill::System).to receive(:memory_usage).with(123, false).and_return(nil)
-    expect(subject.run(123, false)).to eql(0.0)
+    expect(subject.run(123, false)).to be(0.0)
   end
 
   describe '#check?' do

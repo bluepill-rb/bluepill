@@ -54,16 +54,16 @@ describe 'The README and example configs' do
   it 'reads durations as seconds and sizes as bytes' do
     eval(configs.detect { |c| c.include?(':file_time') }, binding, 'README.md') # rubocop:disable Security/Eval
     process = processes.fetch('process_name')
-    expect(watch(process, :mem_usage).instance_variable_get(:@every)).to eql(10)
-    expect(condition(process, :mem_usage).instance_variable_get(:@below)).to eql(104_857_600)
-    expect(condition(process, :file_time).instance_variable_get(:@below)).to eql(180)
+    expect(watch(process, :mem_usage).instance_variable_get(:@every)).to be(10)
+    expect(condition(process, :mem_usage).instance_variable_get(:@below)).to be(104_857_600)
+    expect(condition(process, :file_time).instance_variable_get(:@below)).to be(180)
   end
 
   it 'reads minutes and hours' do
     eval(configs.detect { |c| c.include?(':running_time') }, binding, 'README.md') # rubocop:disable Security/Eval
     process = processes.fetch('process_name')
-    expect(watch(process, :running_time).instance_variable_get(:@every)).to eql(600)
-    expect(condition(process, :running_time).instance_variable_get(:@below)).to eql(86_400)
+    expect(watch(process, :running_time).instance_variable_get(:@every)).to be(600)
+    expect(condition(process, :running_time).instance_variable_get(:@below)).to be(86_400)
   end
 
   it 'reads grace times' do
@@ -80,17 +80,17 @@ describe 'The README and example configs' do
   it 'loads the sample app, with its child limit in bytes' do
     load File.join(root, 'examples', 'sample_app.rb')
     process = processes.fetch('forking_server')
-    expect(process.stop_grace_time).to eql(5)
+    expect(process.stop_grace_time).to be(5)
     child_factory = process.child_process_factory
     child = child_factory.create_child_process('child', 1, double('logger').as_null_object)
-    expect(condition(child, :mem_usage).instance_variable_get(:@below)).to eql(52_428_800)
-    expect(process.triggers.first.within).to eql(30)
+    expect(condition(child, :mem_usage).instance_variable_get(:@below)).to be(52_428_800)
+    expect(process.triggers.first.within).to be(30)
   end
 
   it 'loads the runit example' do
     load File.join(root, 'examples', 'runit.rb')
     process = processes.fetch('runit-man')
-    expect(condition(process, :http).instance_variable_get(:@read_timeout)).to eql(3)
+    expect(condition(process, :http).instance_variable_get(:@read_timeout)).to be(3)
   end
 
   # ActiveSupport has to load before bluepill to be the one that defines

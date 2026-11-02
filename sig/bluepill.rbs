@@ -39,6 +39,8 @@ module Bluepill
   # The daemon: it holds the groups of processes and serves commands from
   # bluepill's socket
   class Application
+    include Listener
+
     PROCESS_COMMANDS: Array[Symbol]
 
     attr_accessor name: String
@@ -56,7 +58,6 @@ module Bluepill
     @foreground: bool?
     @log_level: (Symbol | String)?
     @mutex: Thread::Mutex
-    @listener_thread: Thread?
     @running: bool
 
     def initialize: (String name, ?Hash[Symbol, untyped] options) -> void
@@ -89,8 +90,6 @@ module Bluepill
 
     def send_to_process_or_group: (Symbol method, String? group_name, String? process_name) -> Array[String]
 
-    def start_listener: () -> Thread
-
     def start_server: () -> void
 
     def run: () -> void
@@ -106,6 +105,34 @@ module Bluepill
     def kill_previous_bluepill: () -> void
 
     def write_pid_file: () -> void
+
+    # Answers the CLI's commands on the socket, for Application only
+    module Listener : Object, _Host
+      # What Listener uses from Application
+      interface _Host
+        def socket: () -> UNIXServer?
+        def logger: () -> Logger
+        def mutex: [T] () { () -> T } -> T
+      end
+
+      @listener_thread: Thread?
+
+      # Ruby's protected methods are private in RBS
+
+      private
+
+      def start_listener: () -> Thread
+
+      def answer_next_client: () -> void
+
+      def answer_command: (UNIXSocket client) -> void
+
+      def run_command: (String? command, Array[String] args) -> untyped
+
+      def log_listener_error: (StandardError error) -> void
+
+      def close_client: (UNIXSocket? client) -> void
+    end
   end
 
   # Runs the bluepill commands, and sends them to the daemon over its socket

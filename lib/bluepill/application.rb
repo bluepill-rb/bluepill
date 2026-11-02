@@ -1,6 +1,7 @@
 require "thread"
 require "bluepill/system"
 require "bluepill/process_journal"
+require "bluepill/application/listener"
 
 module Bluepill
   # The bluepill daemon for one application
@@ -10,6 +11,8 @@ module Bluepill
   #
   # @api private
   class Application
+    include Listener
+
     # The commands that act on a process or group, and that the CLI sends
     PROCESS_COMMANDS = [:start, :stop, :restart, :unmonitor, :status].freeze
 
@@ -280,49 +283,6 @@ module Bluepill
         groups.values.collect do |group|
           group.public_send(method, process_name)
         end.flatten
-      end
-    end
-
-    # Start the thread that answers commands on the socket
-    #
-    # It kills the thread that a previous call started. Each command is a
-    # line, such as start:group:process, and the answer is the command's
-    # result, or the error it raised, marshaled.
-    #
-    # @return [Thread] the listener thread
-    #
-    # @api private
-    def start_listener
-      previous_thread = @listener_thread
-      previous_thread.kill if previous_thread
-      @listener_thread = Thread.new do
-        loop do
-          client = nil #: UNIXSocket?
-          begin
-            server = socket #: UNIXServer
-            client = server.accept
-            client.close_on_exec = true if client.respond_to?(:close_on_exec=)
-            # The target is group:process and the process name may contain ':'
-            command, *args = client.readline.strip.split(":", 3).reject(&:empty?)
-            response = begin
-              # An empty line leaves command nil, so public_send raises an error for the client
-              mutex { public_send(command, *args) } # steep:ignore ArgumentTypeMismatch
-            rescue => e
-              e
-            end
-            client.write(Marshal.dump(response))
-          rescue => e
-            logger.err(format("Got exception in cmd listener: %s `%s`", e.class.name, e.message))
-            Array(e.backtrace).each { |l| logger.err(l) }
-          ensure
-            begin
-              # Ruby before 3.0 never counts branches in ensure as covered
-              client && client.close
-            rescue IOError
-              # closed stream
-            end
-          end
-        end
       end
     end
 

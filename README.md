@@ -25,7 +25,8 @@ In order to take advantage of logging with syslog, you also need to setup your s
 
     local6.*          /var/log/bluepill.log
 
-Since Ruby 3.4, syslog is a separate gem, so install it too (`sudo gem install syslog`), or have bluepill write to a log file instead (see [Logging](#logging)).
+> [!IMPORTANT]
+> Bluepill logs to syslog by default, which on Ruby 3.4 and newer needs the `syslog` gem (`sudo gem install syslog`), since Ruby no longer includes it. Or have bluepill write to a log file instead (see [Logging](#logging)).
 
 You&apos;ll also want to add _/var/log/bluepill.log_ to _/etc/logrotate.d/syslog_ so that it gets rotated.
 

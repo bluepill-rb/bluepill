@@ -21,14 +21,23 @@ It's hosted on [rubygems.org][gem].
 
     sudo gem install bluepill
 
-In order to take advantage of logging with syslog, you also need to setup your syslog to log the local6 facility. Edit the appropriate config file for your syslogger (/etc/syslog.conf for syslog) and add a line for local6:
+Bluepill logs to syslog's local6 facility, as `bluepilld`. On a system with systemd, the journal keeps those messages, and `journalctl -t bluepilld` shows them. To also write them to a file with rsyslog, put a line for local6 in a file of its own, such as `/etc/rsyslog.d/bluepill.conf`, and restart rsyslog:
 
     local6.*          /var/log/bluepill.log
 
 > [!IMPORTANT]
 > Bluepill logs to syslog by default, which on Ruby 3.4 and newer needs the `syslog` gem (`sudo gem install syslog`), since Ruby no longer includes it. Or have bluepill write to a log file instead (see [Logging](#logging)).
 
-You'll also want to add `/var/log/bluepill.log` to `/etc/logrotate.d/syslog` so that it gets rotated.
+To keep that file from growing forever, rotate it with logrotate, from a file of its own such as `/etc/logrotate.d/bluepill`:
+
+    /var/log/bluepill.log {
+      weekly
+      rotate 4
+      compress
+      missingok
+      notifempty
+      copytruncate
+    }
 
 Bluepill keeps its pid and socket files in `/var/run/bluepill` when it runs as root, and in `~/.bluepill` otherwise. It creates the directory itself.
 

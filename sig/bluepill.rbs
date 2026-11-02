@@ -40,6 +40,7 @@ module Bluepill
   # bluepill's socket
   class Application
     include Listener
+    include Lifecycle
 
     PROCESS_COMMANDS: Array[Symbol]
 
@@ -58,7 +59,6 @@ module Bluepill
     @foreground: bool?
     @log_level: (Symbol | String)?
     @mutex: Thread::Mutex
-    @running: bool
 
     def initialize: (String name, ?Hash[Symbol, untyped] options) -> void
 
@@ -90,28 +90,12 @@ module Bluepill
 
     def send_to_process_or_group: (Symbol method, String? group_name, String? process_name) -> Array[String]
 
-    def start_server: () -> void
-
-    def run: () -> void
-
-    def cleanup: () -> void
-
-    def setup_signal_traps: () -> void
-
-    def setup_logger_and_pids_dir: () -> void
-
-    def setup_pids_dir: () -> void
-
-    def kill_previous_bluepill: () -> void
-
-    def write_pid_file: () -> void
-
     # Answers the CLI's commands on the socket, for Application only
     module Listener : Object, _Host
       # What Listener uses from Application
       interface _Host
-        def socket: () -> UNIXServer?
-        def logger: () -> Logger
+        %a{pure} def socket: () -> UNIXServer?
+        %a{pure} def logger: () -> Logger
         def mutex: [T] () { () -> T } -> T
       end
 
@@ -132,6 +116,55 @@ module Bluepill
       def log_listener_error: (StandardError error) -> void
 
       def close_client: (UNIXSocket? client) -> void
+    end
+
+    # Starts, runs and cleans up after the daemon, for Application only
+    module Lifecycle : Object, _Host, Listener
+      # What Lifecycle uses from Application
+      interface _Host
+        %a{pure} def name: () -> String
+        %a{pure} def logger: () -> Logger
+        def logger=: (Logger logger) -> Logger
+        %a{pure} def base_dir: () -> String
+        %a{pure} def socket: () -> UNIXServer?
+        def socket=: (UNIXServer? socket) -> UNIXServer?
+        %a{pure} def pid_file: () -> String
+        %a{pure} def pids_dir: () -> String
+        %a{pure} def log_file: () -> String?
+        %a{pure} def kill_timeout: () -> Integer
+        %a{pure} def groups: () -> Hash[String?, Group]
+        def foreground?: () -> bool
+        def mutex: [T] () { () -> T } -> T
+      end
+
+      @log_level: (Symbol | String)?
+      @running: bool
+
+      # Ruby's protected methods are private in RBS
+
+      private
+
+      def start_server: () -> void
+
+      def become_process_group_leader: () -> void
+
+      def daemonize_and_trap_signals: () -> void
+
+      def serve: () -> void
+
+      def run: () -> void
+
+      def cleanup: () -> void
+
+      def setup_signal_traps: () -> void
+
+      def setup_logger_and_pids_dir: () -> void
+
+      def setup_pids_dir: () -> void
+
+      def kill_previous_bluepill: () -> void
+
+      def write_pid_file: () -> void
     end
   end
 

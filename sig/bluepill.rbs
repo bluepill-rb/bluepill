@@ -137,14 +137,14 @@ module Bluepill
 
   # Runs the bluepill commands, and sends them to the daemon over its socket
   class Controller
+    include Directory
+
     attr_accessor base_dir: String
     attr_accessor log_file: String?
     attr_accessor sockets_dir: String
     attr_accessor pids_dir: String
 
     def initialize: (Hash[Symbol, untyped] options) -> void
-
-    def running_applications: () -> Array[String]
 
     def handle_command: (String application, String | Symbol command, *String args) -> void
 
@@ -165,13 +165,29 @@ module Bluepill
 
     def exit_with_daemon_error: (Exception error) -> void
 
-    def cleanup_bluepill_directory: () -> void
-
-    def pid_for: (String app) -> (Integer | false)
-
-    def setup_dir_structure: () -> void
-
     def verify_version!: (String application) -> void
+
+    # Finds the daemons in the base directory, for Controller only
+    module Directory : _Host
+      # What Directory uses from Controller
+      interface _Host
+        def sockets_dir: () -> String
+        def pids_dir: () -> String
+      end
+
+      @sockets_dir: String
+      @pids_dir: String
+
+      def running_applications: () -> Array[String]
+
+      private
+
+      def cleanup_bluepill_directory: () -> void
+
+      def pid_for: (String app) -> (Integer | false)
+
+      def setup_dir_structure: () -> void
+    end
   end
 
   module Socket

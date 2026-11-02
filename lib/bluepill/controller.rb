@@ -16,6 +16,9 @@ module Bluepill
   class Controller
     include Directory
 
+    # What the CLI says when the daemon runs another version of bluepill
+    OUT_OF_DATE = "The running version of your daemon seems to be out of date."
+
     attr_accessor :base_dir, :log_file
     attr_reader :base_directory
 
@@ -220,6 +223,10 @@ module Bluepill
 
     # Abort unless an application's daemon runs this version of bluepill
     #
+    # A daemon older than 0.2.9 answers with its Version module, which
+    # Marshal loads as the CLI's own, so it can't say which version it runs,
+    # and the CLI talks to it as before.
+    #
     # @param [String] application the application's name
     #
     # @return [void]
@@ -227,9 +234,11 @@ module Bluepill
     # @api private
     def verify_version!(application)
       version = Socket.client_command(base_dir, application, "version")
-      abort("The running version of your daemon seems to be out of date.\nDaemon Version: #{version}, CLI Version: #{Version}") unless version.equal?(Version)
+      return if version.equal?(Version) || Version.to_s.eql?(version)
+
+      abort("#{OUT_OF_DATE}\nDaemon Version: #{version}, CLI Version: #{Version}")
     rescue ArgumentError
-      abort("The running version of your daemon seems to be out of date.")
+      abort(OUT_OF_DATE)
     end
   end
 end

@@ -262,8 +262,12 @@ describe Bluepill::Application do
   end
 
   describe "#version" do
-    it "is the bluepill version" do
-      expect(app.version).to eq(Bluepill::Version)
+    it "is the bluepill version, as a String" do
+      expect(app.version).to eq(Bluepill::Version.to_s)
+    end
+
+    it "is still the version after Marshal sends it" do
+      expect(Marshal.load(Marshal.dump(app.version))).to eq(Bluepill::Version.to_s)
     end
   end
 

@@ -18,10 +18,6 @@ describe Bluepill::Application do
 
   after { FileUtils.remove_entry(base_dir) }
 
-  def exit_with(status)
-    raise_error(an_instance_of(SystemExit).and(having_attributes(status: status)))
-  end
-
   def with_env(name, value)
     original = ENV.fetch(name, nil)
     ENV[name] = value
@@ -94,9 +90,14 @@ describe Bluepill::Application do
         expect(app).to have_attributes(kill_timeout: 10, foreground?: false, groups: {})
       end
 
-      it "traps TERM, INT and HUP" do
+      it "doesn't trap signals before it starts" do
         app
-        expect(traps.keys).to contain_exactly("TERM", "INT", "HUP")
+        expect(traps).to eq({})
+      end
+
+      it "doesn't create the pids dir before it starts" do
+        app
+        expect(FileUtils).not_to have_received(:mkdir_p)
       end
 
       it "has a lock" do
@@ -158,43 +159,52 @@ describe Bluepill::Application do
     end
   end
 
-  describe "#initialize without permission to write its files" do
-    subject(:app) { described_class.new("test", base_dir: "/var/bluepill", log_file: "/var/log/bluepill.log") }
+  describe "without permission to write its files" do
+    let(:app) { described_class.new("test", base_dir: "/var/bluepill", log_file: "/var/log/bluepill.log") }
 
     def startup_failure(message)
-      exit_with(5).and output(
-        "Failed to start bluepill: #{message}\n" \
-        "The user running bluepill must be able to write to its log_file and base_dir. " \
-        "The uid and gid in the config only apply to the processes it monitors.\n"
-      ).to_stderr
+      raise_error(
+        an_instance_of(Bluepill::StartupError).and(having_attributes(exit_status: 5, message:
+          "Failed to start bluepill: #{message}\n" \
+          "The user running bluepill must be able to write to its log_file and base_dir. " \
+          "The uid and gid in the config only apply to the processes it monitors."))
+      )
     end
 
-    it "exits with a clear message when it cannot open the log file" do
+    it "raises a clear error when it cannot open the log file" do
       allow(Bluepill::Logger).to receive(:new).and_raise(Errno::EACCES, "/var/log/bluepill.log")
       expect { app }.to startup_failure("Permission denied - /var/log/bluepill.log")
     end
 
-    it "exits with a clear message when it cannot create the pids dir" do
+    it "raises a clear error when it cannot create the pids dir" do
       allow(FileUtils).to receive(:mkdir_p).and_raise(Errno::EACCES, "/var/bluepill/pids/test")
-      expect { app }.to startup_failure("Permission denied - /var/bluepill/pids/test")
+      expect { app.send(:setup_pids_dir) }.to startup_failure("Permission denied - /var/bluepill/pids/test")
+    end
+
+    it "raises a clear error when it cannot make the pids dir writable" do
+      allow(FileUtils).to receive(:mkdir_p)
+      allow(FileUtils).to receive(:chmod).and_raise(Errno::EPERM, "/var/bluepill/pids/test")
+      expect { app.send(:setup_pids_dir) }.to startup_failure("Operation not permitted - /var/bluepill/pids/test")
     end
   end
 
   describe "pids dir" do
+    def setup_pids_dir = app.send(:setup_pids_dir)
+
     it "is created" do
-      app
+      setup_pids_dir
       expect(File).to be_directory(pids_dir)
     end
 
     it "is created writable for everybody" do
-      app
+      setup_pids_dir
       expect(File.stat(pids_dir).mode & 0o777).to eq(0o777)
     end
 
     it "is made writable for everybody when it already exists" do
       FileUtils.mkdir_p(pids_dir)
       FileUtils.chmod(0o700, pids_dir)
-      app
+      setup_pids_dir
       expect(File.stat(pids_dir).mode & 0o777).to eq(0o777)
     end
   end
@@ -207,8 +217,11 @@ describe Bluepill::Application do
       allow($stdout).to receive(:puts)
       allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks)
       allow(Bluepill::System).to receive(:delete_if_exists)
-      # Creating the app traps the signals
-      app
+      app.send(:setup_signal_traps)
+    end
+
+    it "traps TERM, INT and HUP" do
+      expect(traps.keys).to contain_exactly("TERM", "INT", "HUP")
     end
 
     %w[TERM INT].each do |signal|

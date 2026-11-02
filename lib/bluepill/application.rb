@@ -96,8 +96,8 @@ module Bluepill
 
     # Create the daemon for an application
     #
-    # It sets up signal traps, the logger and the pids directory. It exits
-    # with status 5 if it can't write to its log file or base directory.
+    # It opens the log, so the pill file's processes can log through it.
+    # Starting the daemon traps signals and creates the pids directory.
     #
     # @param [String] name the application's name
     # @param [Boolean] foreground whether to run in the foreground, rather
@@ -112,6 +112,8 @@ module Bluepill
     #
     # @return [void]
     #
+    # @raise [StartupError] if it can't open its log file
+    #
     # @api private
     def initialize(name, foreground: false, log_file: nil, log_level: :debug, base_dir: nil, kill_timeout: 10)
       self.name = name
@@ -124,8 +126,7 @@ module Bluepill
 
       self.groups = {}
 
-      setup_signal_traps
-      setup_logger_and_pids_dir
+      setup_logger
 
       @mutex = Mutex.new
     end
@@ -151,19 +152,23 @@ module Bluepill
 
     # Start the daemon and monitor the application's processes
     #
-    # It prints what went wrong, and exits with status 5, if the daemon
-    # fails to start.
+    # It returns when a signal stops the daemon. Whatever stops it before
+    # then is logged at crit, with its backtrace, since a daemon's stderr
+    # is /dev/null, and raised as a {Bluepill::Error}.
     #
     # @return [void]
+    #
+    # @raise [Bluepill::Error] if the daemon fails to start, or stops
+    #   without a signal, such as a {StartupError} for any other error
     #
     # @api private
     def load
       start_server
     rescue => e
-      $stderr.puts("Failed to start bluepill:")
-      $stderr.puts(format("%s `%s`", e.class.name, e.message))
-      $stderr.puts(e.backtrace)
-      exit(5)
+      log_crash(e)
+      raise if e.is_a?(Error)
+
+      raise StartupError, ["Failed to start bluepill:", format("%s `%s`", e.class.name, e.message), e.backtrace].join("\n")
     end
 
     # @!method start(group_name = nil, process_name = nil)
@@ -257,6 +262,17 @@ module Bluepill
     def version = Version.to_s
 
     protected
+
+    # Log an error that stopped the daemon at crit, with its backtrace
+    #
+    # @param [StandardError] error the error
+    #
+    # @return [void]
+    #
+    # @api private
+    def log_crash(error)
+      [format("Bluepill stopped: %s `%s`", error.class, error.message), *error.backtrace].each { |line| logger.crit(line) }
+    end
 
     # Send a command to a process, a group, or every process
     #

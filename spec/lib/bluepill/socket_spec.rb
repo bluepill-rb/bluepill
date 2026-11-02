@@ -27,7 +27,6 @@ describe Bluepill::Socket do
       allow(Timeout).to receive(:timeout).with(Bluepill::Socket::TIMEOUT).and_yield
       allow(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
       allow(described_class).to receive(:puts) { |line| printed << line }
-      allow(described_class).to receive(:abort)
     end
 
     def client_command = described_class.client_command(base_dir, "app", "status")
@@ -79,42 +78,33 @@ describe Bluepill::Socket do
         client_command
         expect(printed).to eq(["Retry 1 of 5", "Retry 2 of 5"])
       end
-
-      it "does not abort" do
-        client_command
-        expect(described_class).not_to have_received(:abort)
-      end
     end
 
     context "when the daemon never answers" do
       before do
         allow(socket).to receive(:read).and_raise(EOFError)
-        allow(described_class).to receive(:abort).and_raise(SystemExit)
       end
 
-      def client_command_until_abort
+      def client_command_until_giving_up
         client_command
-      rescue SystemExit
+      rescue Bluepill::ConnectionError
         nil
       end
 
-      it "ends with the abort" do
-        expect { client_command }.to raise_error(SystemExit)
+      it "gives up with a ConnectionError" do
+        expect { client_command }.to raise_error(
+          an_instance_of(Bluepill::ConnectionError).and(having_attributes(message: "Socket Timeout: Server may not be responding", exit_status: 1))
+        )
       end
 
       it "tries MAX_ATTEMPTS times" do
-        client_command_until_abort
+        client_command_until_giving_up
         expect(UNIXSocket).to have_received(:open).exactly(Bluepill::Socket::MAX_ATTEMPTS).times
       end
 
       it "says it retries after each attempt but the last" do
-        client_command_until_abort
+        client_command_until_giving_up
         expect(printed).to eq(["Retry 1 of 5", "Retry 2 of 5", "Retry 3 of 5", "Retry 4 of 5"])
-      end
-
-      it "aborts once" do
-        client_command_until_abort
-        expect(described_class).to have_received(:abort).with("Socket Timeout: Server may not be responding").once
       end
     end
   end
@@ -150,11 +140,11 @@ describe Bluepill::Socket do
         expect(File).to have_received(:delete).with(socket_path)
       end
 
-      it "prints an error and exits when another server is listening" do
+      it "raises when another server is listening" do
         allow(UNIXSocket).to receive(:open).with(socket_path).and_return(socket)
         expect { described_class.server(base_dir, "app") }.to raise_error(
-          an_instance_of(SystemExit).and(having_attributes(status: 7))
-        ).and output("Server is already running!\n").to_stderr
+          an_instance_of(Bluepill::AlreadyRunningError).and(having_attributes(message: "Server is already running!", exit_status: 7))
+        )
       end
     end
   end

@@ -32,13 +32,15 @@ module Bluepill
     # Send a command to an application's daemon, and return its answer
     #
     # It tries MAX_ATTEMPTS times when the daemon hangs up or takes longer
-    # than TIMEOUT, and aborts after the last.
+    # than TIMEOUT.
     #
     # @param [String] base_dir the directory with the daemons' sockets
     # @param [String] name the application's name
     # @param [String] command the command, such as start:group:process
     #
     # @return [Object] what the daemon answered, unmarshaled
+    #
+    # @raise [ConnectionError] if the last attempt fails too
     #
     # @api private
     def self.client_command(base_dir, name, command)
@@ -47,7 +49,7 @@ module Bluepill
         res = send_command(base_dir, name, command)
         break
       rescue EOFError, Timeout::Error
-        retry_or_abort(current_attempt)
+        retry_or_give_up(current_attempt)
       end
       res
     end
@@ -73,27 +75,31 @@ module Bluepill
       end
     end
 
-    # Say that a client command tries again, or abort after the last attempt
+    # Say that a client command tries again, or give up after the last try
     #
     # @param [Integer] current_attempt the attempt that failed, from 0
     #
     # @return [void]
     #
+    # @raise [ConnectionError] after the last attempt
+    #
     # @api private
-    def self.retry_or_abort(current_attempt)
-      abort("Socket Timeout: Server may not be responding") if current_attempt.eql?(MAX_ATTEMPTS - 1)
+    def self.retry_or_give_up(current_attempt)
+      raise ConnectionError, "Socket Timeout: Server may not be responding" if current_attempt.eql?(MAX_ATTEMPTS - 1)
+
       puts "Retry #{current_attempt + 1} of #{MAX_ATTEMPTS}"
     end
 
     # Open the socket that an application's daemon listens on
     #
-    # It replaces a socket file that no daemon answers on, and exits with
-    # status 7 if a daemon already does.
+    # It replaces a socket file that no daemon answers on.
     #
     # @param [String] base_dir the directory with the daemons' sockets
     # @param [String] name the application's name
     #
     # @return [UNIXServer]
+    #
+    # @raise [AlreadyRunningError] if a daemon already answers on it
     #
     # @api private
     def self.server(base_dir, name)
@@ -106,12 +112,13 @@ module Bluepill
 
     # Open a daemon's socket in place of a socket file that already exists
     #
-    # It deletes the file and opens the socket if no daemon answers on it,
-    # and exits with status 7 if a daemon does.
+    # It deletes the file and opens the socket if no daemon answers on it.
     #
     # @param [String] path the socket file
     #
     # @return [UNIXServer]
+    #
+    # @raise [AlreadyRunningError] if a daemon answers on it
     #
     # @api private
     def self.replace_stale_socket(path)
@@ -121,8 +128,7 @@ module Bluepill
       File.delete(path)
       UNIXServer.open(path)
     else
-      $stderr.puts("Server is already running!")
-      exit(7)
+      raise AlreadyRunningError, "Server is already running!"
     end
 
     # Return the path of an application's socket

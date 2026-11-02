@@ -13,10 +13,12 @@ module Bluepill
 
       # Interrupt a daemon for this application that's still running
       #
-      # It waits up to kill_timeout half seconds for the daemon to exit, and
-      # exits with status 4 if it doesn't, or if signaling it fails.
+      # It waits up to kill_timeout half seconds for the daemon to exit.
       #
       # @return [void]
+      #
+      # @raise [PreviousDaemonError] if signaling it fails, or it doesn't
+      #   exit in time
       #
       # @api private
       def kill_previous_bluepill
@@ -26,10 +28,10 @@ module Bluepill
 
       # Interrupt the previous daemon, if its pid file names a live one
       #
-      # It exits with status 4 if signaling it fails, unless it's gone.
-      #
       # @return [Integer, nil] the previous daemon's pid, or nil if it
-      #   interrupted none
+      #   interrupted none, such as when it has just exited
+      #
+      # @raise [PreviousDaemonError] if signaling it fails
       #
       # @api private
       def interrupt_previous_bluepill
@@ -40,10 +42,11 @@ module Bluepill
         puts "Killing previous bluepilld[#{previous_pid}]"
         ::Process.kill(2, previous_pid)
         previous_pid
+      rescue Errno::ESRCH
+        # It exited after previous_bluepill_pid saw it alive
+        nil
       rescue => e
-        $stderr.puts "Encountered error trying to kill previous bluepill:"
-        $stderr.puts "#{e.class}: #{e}"
-        exit(4) unless e.instance_of?(Errno::ESRCH)
+        raise PreviousDaemonError, "Encountered error trying to kill previous bluepill:\n#{e.class}: #{e}"
       end
 
       # Return the pid of a previous daemon that's still running
@@ -59,11 +62,11 @@ module Bluepill
 
       # Wait up to kill_timeout half seconds for the previous daemon to exit
       #
-      # It exits with status 4 if the daemon is still running after.
-      #
       # @param [Integer] previous_pid the previous daemon's pid
       #
       # @return [void]
+      #
+      # @raise [PreviousDaemonError] if it's still running after
       #
       # @api private
       def wait_for_previous_bluepill(previous_pid)
@@ -73,10 +76,7 @@ module Bluepill
           break unless System.pid_alive?(previous_pid)
         end
 
-        return unless System.pid_alive?(previous_pid)
-
-        $stderr.puts "Previous bluepilld[#{previous_pid}] didn't die"
-        exit(4)
+        raise PreviousDaemonError, "Previous bluepilld[#{previous_pid}] didn't die" if System.pid_alive?(previous_pid)
       end
     end
   end

@@ -78,6 +78,17 @@ describe Bluepill do
         .and output("Config Error: bad\n").to_stderr
     end
 
+    it "prints another Bluepill::Error and exits with its status" do
+      allow(app).to receive(:load).and_raise(Bluepill::StartupError, "Failed to start bluepill")
+      expect { described_class.application(:app_name, **options) { nil } }
+        .to raise_error(an_instance_of(SystemExit).and(having_attributes(status: 5)))
+        .and output("Failed to start bluepill\n").to_stderr
+    end
+
+    it "lets other errors through" do
+      expect { described_class.application(:app_name, **options) { raise ArgumentError, "bad" } }.to raise_error(ArgumentError, "bad")
+    end
+
     it "defaults to no options" do
       allow(Bluepill::Application).to receive(:new).with("app_name").and_return(app)
       described_class.application(:app_name) { |_app| } # an app with no processes

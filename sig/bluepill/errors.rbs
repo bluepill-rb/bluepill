@@ -1,5 +1,41 @@
 module Bluepill
+  # An error that stops the bluepill command, with the status it exits with
+  class Error < StandardError
+    def exit_status: () -> Integer
+  end
+
   # A mistake in a pill file
-  class ConfigError < StandardError
+  class ConfigError < Error
+  end
+
+  # The daemon couldn't start
+  class StartupError < Error
+  end
+
+  # A previous daemon for the application couldn't be stopped
+  class PreviousDaemonError < Error
+  end
+
+  # A daemon for the application is already running
+  class AlreadyRunningError < Error
+  end
+
+  # The CLI couldn't reach the daemon
+  class ConnectionError < Error
+  end
+
+  # The daemon runs another version of bluepill
+  class VersionMismatchError < Error
+  end
+
+  # The CLI was given a command it doesn't know
+  class UnknownCommandError < Error
+  end
+
+  # The daemon answered a command with an error
+  class DaemonError < Error
+    attr_reader daemon_error: Exception
+
+    def initialize: (Exception daemon_error) -> void
   end
 end

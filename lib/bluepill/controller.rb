@@ -75,13 +75,17 @@ module Bluepill
     #
     # status prints the daemon's status, quit stops the daemon, log tails
     # the log for a process or group, and the PROCESS_COMMANDS go to the
-    # daemon. It exits with status 1 for an unknown command.
+    # daemon.
     #
     # @param [String] application the application's name
     # @param [String, Symbol] command the command
     # @param [Array<String>] args the group or process, for example
     #
     # @return [void]
+    #
+    # @raise [UnknownCommandError] for an unknown command
+    # @raise [Bluepill::Error] if the daemon can't be reached, runs another
+    #   version, or answers with an error
     #
     # @api private
     def handle_command(application, command, *args)
@@ -99,9 +103,7 @@ module Bluepill
 
     # Send a command to an application's daemon, and return its answer
     #
-    # It first checks that the daemon runs this version of bluepill. It
-    # prints an error that the daemon raised and exits with status 8, and
-    # aborts if the daemon isn't running.
+    # It first checks that the daemon runs this version of bluepill.
     #
     # @param [String] application the application's name
     # @param [String, Symbol] command the command
@@ -109,16 +111,22 @@ module Bluepill
     #
     # @return [Object] what the daemon answered
     #
+    # @raise [ConnectionError] if the daemon isn't running, or doesn't
+    #   answer
+    # @raise [VersionMismatchError] if it runs another version
+    # @raise [DaemonError] if it answers with an error that it raised
+    #
     # @api private
     def send_to_daemon(application, command, *args)
       verify_version!(application)
 
       command = [command, *args].join(":")
       response = Socket.client_command(base_dir, application, command)
-      exit_with_daemon_error(response) if response.is_a?(Exception)
+      raise DaemonError, response if response.is_a?(Exception)
+
       response
     rescue Errno::ECONNREFUSED
-      abort("Connection Refused: Server is not running")
+      raise ConnectionError, "Connection Refused: Server is not running"
     end
 
     # Return the pattern that finds a process or group's lines in the log
@@ -174,19 +182,18 @@ module Bluepill
 
     # Send one of the PROCESS_COMMANDS to the daemon and print what it did
     #
-    # It exits with status 1 for any other command.
-    #
     # @param [String] application the application's name
     # @param [String, Symbol] command the command
     # @param [Array<String>] args the group or process, for example
     #
     # @return [void]
     #
+    # @raise [UnknownCommandError] for any other command
+    #
     # @api private
     def send_process_command(application, command, *args)
       unless Application::PROCESS_COMMANDS.include?(command.to_sym)
-        $stderr.puts(format("Unknown command `%s` (or application `%s` has not been loaded yet)", command, command))
-        exit(1)
+        raise UnknownCommandError, format("Unknown command `%s` (or application `%s` has not been loaded yet)", command, command)
       end
 
       # these need to be sent to the daemon and the results printed out
@@ -212,22 +219,7 @@ module Bluepill
       end
     end
 
-    # Print an error that the daemon raised, and exit with status 8
-    #
-    # @param [Exception] error the error
-    #
-    # @return [void]
-    #
-    # @api private
-    def exit_with_daemon_error(error)
-      $stderr.puts "Received error from server:"
-      $stderr.puts error.inspect
-      # join flattens the backtrace and makes a missing one empty
-      $stderr.puts [error.backtrace].join("\n")
-      exit(8)
-    end
-
-    # Abort unless an application's daemon runs this version of bluepill
+    # Check that an application's daemon runs this version of bluepill
     #
     # A daemon older than 0.3.0 answers with its Version module, which
     # Marshal loads as the CLI's own, so it can't say which version it runs.
@@ -236,14 +228,16 @@ module Bluepill
     #
     # @return [void]
     #
+    # @raise [VersionMismatchError] if it runs another version
+    #
     # @api private
     def verify_version!(application)
       version = Socket.client_command(base_dir, application, "version")
       return if Version.to_s.eql?(version)
 
-      abort(version.instance_of?(String) ? "#{OUT_OF_DATE}\nDaemon Version: #{version}, CLI Version: #{Version}" : OUT_OF_DATE)
+      raise VersionMismatchError, version.instance_of?(String) ? "#{OUT_OF_DATE}\nDaemon Version: #{version}, CLI Version: #{Version}" : OUT_OF_DATE
     rescue ArgumentError
-      abort(OUT_OF_DATE)
+      raise VersionMismatchError, OUT_OF_DATE
     end
   end
 end

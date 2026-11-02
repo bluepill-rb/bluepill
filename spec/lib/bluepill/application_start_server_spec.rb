@@ -3,7 +3,7 @@
 require "tmpdir"
 
 describe Bluepill::Application do
-  let(:logger) { instance_double(Bluepill::Logger) }
+  let(:logger) { instance_double(Bluepill::Logger, crit: nil) }
   let(:base_dir) { Dir.mktmpdir }
   let(:app) { described_class.new("test", base_dir: base_dir) }
   let(:group) { instance_double(Bluepill::Group) }
@@ -20,10 +20,6 @@ describe Bluepill::Application do
 
   after { FileUtils.remove_entry(base_dir) }
 
-  def exit_with(status)
-    raise_error(an_instance_of(SystemExit).and(having_attributes(status: status)))
-  end
-
   # An error whose class has no name
   def anonymous_error(message) = Class.new(StandardError) { define_method(:message) { message } }
 
@@ -32,14 +28,18 @@ describe Bluepill::Application do
   # Stub and record what starting the server calls
   def stub_startup
     app.groups = {"web" => group}
-    # A previous bluepill's pid file, which kill_previous_bluepill reads
-    File.write(pid_file, "4321")
+    write_previous_pid
     record(Bluepill::System, :pid_alive?, false)
     record_startup_steps
-    # After creating the app, which traps signals too
     allow(Signal).to receive(:trap) { |signal| calls << [:trap, signal] }
     stub_listener_and_socket
     stop_after_first_tick
+  end
+
+  # Write a previous bluepill's pid file, which kill_previous_bluepill reads
+  def write_previous_pid
+    FileUtils.mkdir_p(File.dirname(pid_file))
+    File.write(pid_file, "4321")
   end
 
   # Record the steps of starting the server that return nothing
@@ -96,16 +96,65 @@ describe Bluepill::Application do
       expect(Bluepill::Socket).to have_received(:server)
     end
 
-    it "exits when the server fails to start" do
-      error = RuntimeError.new("boom")
-      error.set_backtrace(["a.rb:1"])
-      allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks).and_raise(error)
-      expect { app.load }.to exit_with(5).and output("Failed to start bluepill:\nRuntimeError `boom`\na.rb:1\n").to_stderr
+    # Raise error from opening the socket, after the other startup steps,
+    # which are stubbed
+    def fail_startup(error)
+      stub_startup
+      allow(Bluepill::Socket).to receive(:server).and_raise(error)
+    end
+
+    # Load the app, and return the Bluepill::Error it raises
+    def load_error
+      app.load
+    rescue Bluepill::Error => e
+      e
+    end
+
+    # An error with a backtrace of two lines
+    def boom = RuntimeError.new("boom").tap { |error| error.set_backtrace(["a.rb:1", "b.rb:2"]) }
+
+    it "raises a StartupError when the server fails to start" do
+      fail_startup(boom)
+      expect(load_error).to have_attributes(class: Bluepill::StartupError, message: "Failed to start bluepill:\nRuntimeError `boom`\na.rb:1\nb.rb:2")
+    end
+
+    it "logs the error and its backtrace at crit, since the daemon's stderr is /dev/null" do
+      fail_startup(boom)
+      load_error
+      [["Bluepill stopped: RuntimeError `boom`"], ["a.rb:1"], ["b.rb:2"]].each do |args|
+        expect(logger).to have_received(:crit).with(*args).ordered
+      end
+    end
+
+    context "with a Bluepill::Error" do
+      def already_running = @already_running ||= Bluepill::AlreadyRunningError.new("Server is already running!")
+
+      before { fail_startup(already_running) }
+
+      it "raises it as it is" do
+        expect(load_error).to be(already_running)
+      end
+
+      it "logs it at crit" do
+        load_error
+        expect(logger).to have_received(:crit).with("Bluepill stopped: Bluepill::AlreadyRunningError `Server is already running!`")
+      end
     end
 
     it "reports the message of an error from an anonymous class" do
-      allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks).and_raise(anonymous_error("boom"))
-      expect { app.load }.to exit_with(5).and output(/^ `boom`$/).to_stderr
+      fail_startup(anonymous_error("boom"))
+      expect(load_error.message).to match(/^ `boom`$/)
+    end
+
+    it "logs the message of an error from an anonymous class" do
+      fail_startup(anonymous_error("boom"))
+      load_error
+      expect(logger).to have_received(:crit).with(/\ABluepill stopped: #<Class:0x\h+> `boom`\z/)
+    end
+
+    it "lets a signal's exception through" do
+      fail_startup(SignalException.new("TERM"))
+      expect { app.load }.to raise_error(SignalException)
     end
   end
 
@@ -160,10 +209,17 @@ describe Bluepill::Application do
     context "when in the foreground" do
       let(:app) { described_class.new("test", base_dir: base_dir, foreground: true) }
 
-      it "does not daemonize, or trap signals again" do
+      it "does not daemonize" do
         start_server
-        expect(calls).to eq(startup_calls - [[:daemonize], [:trap, "TERM"], [:trap, "INT"], [:trap, "HUP"]])
+        expect(calls).to eq(startup_calls - [[:daemonize]])
       end
+    end
+
+    it "creates the pids dir first" do
+      allow(FileUtils).to receive(:mkdir_p) { |dir| calls << [:mkdir_p, dir] }
+      allow(FileUtils).to receive(:chmod)
+      start_server
+      expect(calls.first).to eq([:mkdir_p, File.join(base_dir, "pids", "test")])
     end
 
     it "ignores being unable to become a process group leader" do

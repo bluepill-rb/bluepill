@@ -37,6 +37,7 @@ describe Bluepill::Application do
         calls << [:sleep, mutex_locked?]
         traps["TERM"].call(15) if calls.collect(&:first).count(:sleep) == 2
       end
+      app.send(:setup_signal_traps)
       app.send(:run)
     end
 

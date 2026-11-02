@@ -51,6 +51,8 @@ module Bluepill
 
     private
 
+    def log_crash: (StandardError error) -> void
+
     def send_to_process_or_group: (Symbol method, String? group_name, String? process_name) -> Array[String]
 
     def send_to_groups: (Symbol method, *String args) -> Array[String]
@@ -119,8 +121,6 @@ module Bluepill
 
       def become_process_group_leader: () -> void
 
-      def daemonize_and_trap_signals: () -> void
-
       def serve: () -> void
 
       def run: () -> void
@@ -129,9 +129,11 @@ module Bluepill
 
       def setup_signal_traps: () -> void
 
-      def setup_logger_and_pids_dir: () -> void
+      def setup_logger: () -> void
 
       def setup_pids_dir: () -> void
+
+      def unwritable: (SystemCallError error) -> StartupError
 
       def write_pid_file: () -> void
     end
@@ -187,8 +189,6 @@ module Bluepill
     def send_process_command: (String application, String | Symbol command, *String args) -> void
 
     def print_affected: (String | Symbol command, Array[String] affected) -> void
-
-    def exit_with_daemon_error: (Exception error) -> void
 
     def verify_version!: (String application) -> void
 
@@ -249,7 +249,7 @@ module Bluepill
     # Returns the daemon's response, unmarshaled
     def self.send_command: (String base_dir, String name, String command) -> untyped
 
-    def self.retry_or_abort: (Integer current_attempt) -> void
+    def self.retry_or_give_up: (Integer current_attempt) -> void
 
     def self.server: (String base_dir, String name) -> UNIXServer
 

@@ -12,20 +12,28 @@ module Bluepill
 
       # Start the daemon
       #
-      # It stops a previous daemon for the application, clears journal locks
-      # it left behind, daemonizes unless it runs in the foreground, opens the
-      # socket, and runs until a signal stops it. Processes that are already
-      # running, from their pid files, are monitored again, not restarted, so
-      # bluepill can be upgraded without restarting them.
+      # It creates the pids directory, stops a previous daemon for the
+      # application, clears journal locks it left behind, daemonizes unless
+      # it runs in the foreground, traps signals, opens the socket, and runs
+      # until a signal stops it. Processes that are already running, from
+      # their pid files, are monitored again, not restarted, so bluepill can
+      # be upgraded without restarting them.
       #
       # @return [void]
       #
+      # @raise [StartupError] if it can't create the pids directory
+      # @raise [PreviousDaemonError] if it can't stop a previous daemon
+      # @raise [AlreadyRunningError] if a daemon answers on the socket
+      #
       # @api private
       def start_server
+        setup_pids_dir
         kill_previous_bluepill
         ProcessJournal.clear_all_atomic_fs_locks
         become_process_group_leader
-        daemonize_and_trap_signals unless foreground?
+        # Trapped after daemonizing, which ignores HUP
+        Daemonize.daemonize unless foreground?
+        setup_signal_traps
         logger.reopen
 
         $0 = "bluepilld: #{name}"
@@ -43,17 +51,6 @@ module Bluepill
         ::Process.setpgid(0, 0)
       rescue Errno::EPERM
         # A session leader can't, and it already leads its process group
-      end
-
-      # Daemonize, and trap the signals again
-      #
-      # @return [void]
-      #
-      # @api private
-      def daemonize_and_trap_signals
-        Daemonize.daemonize
-        # Daemonizing ignores HUP, so trap it again to reopen the log on HUP
-        setup_signal_traps
       end
 
       # Write the pid file, open the socket, and run the daemon
@@ -123,29 +120,28 @@ module Bluepill
         end
       end
 
-      # Create the logger and the pids directory
+      # Create the logger, prefixed with the application's name
       #
-      # Bluepill opens its log file and creates its pids dir as the user that
-      # runs it. The uid and gid in the config only apply to its processes.
-      # It exits with status 5 if it can't.
+      # Bluepill opens its log file as the user that runs it.
       #
       # @return [void]
       #
+      # @raise [StartupError] if it can't open the log file
+      #
       # @api private
-      def setup_logger_and_pids_dir
+      def setup_logger
         self.logger = ProcessJournal.logger = Logger.new(log_file: log_file, log_level: @log_level, stdout: foreground?).prefix_with(name)
-        setup_pids_dir
       rescue SystemCallError => e
-        $stderr.puts("Failed to start bluepill: #{e}")
-        message = "The user running bluepill must be able to write to its log_file and base_dir. " \
-                  "The uid and gid in the config only apply to the processes it monitors."
-        $stderr.puts(message)
-        exit(5)
+        raise unwritable(e)
       end
 
       # Create the pids directory, and let every user write to it
       #
+      # Bluepill creates it as the user that runs it.
+      #
       # @return [void]
+      #
+      # @raise [StartupError] if it can't
       #
       # @api private
       def setup_pids_dir
@@ -153,6 +149,24 @@ module Bluepill
         # we need everybody to be able to write to the pids_dir as processes managed by
         # bluepill will be writing to this dir after they've dropped privileges
         FileUtils.chmod(0o777, pids_dir)
+      rescue SystemCallError => e
+        raise unwritable(e)
+      end
+
+      # Return the error for a file that bluepill can't write to
+      #
+      # @param [SystemCallError] error what writing to it raised
+      #
+      # @return [StartupError] the error, which says the uid and gid in the
+      #   config only apply to the processes bluepill monitors
+      #
+      # @api private
+      def unwritable(error)
+        StartupError.new(
+          "Failed to start bluepill: #{error}\n" \
+          "The user running bluepill must be able to write to its log_file and base_dir. " \
+          "The uid and gid in the config only apply to the processes it monitors."
+        )
       end
 
       # Write the daemon's pid to its pid file

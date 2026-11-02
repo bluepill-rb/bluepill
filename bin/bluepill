@@ -115,5 +115,11 @@ if options[:command] == "load"
   end
 else
   target = ARGV.shift
-  controller.handle_command(options[:application], options[:command], target)
+  begin
+    controller.handle_command(options[:application], options[:command], target)
+  rescue Bluepill::Error => e
+    # The library raises what stops a command, with the status to exit with
+    $stderr.puts(e.message)
+    exit(e.exit_status)
+  end
 end

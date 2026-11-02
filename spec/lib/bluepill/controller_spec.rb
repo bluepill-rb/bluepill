@@ -18,8 +18,8 @@ describe Bluepill::Controller do
 
   def files_left = Dir[File.join(base_dir, "*", "*")]
 
-  def exit_with(status)
-    raise_error(an_instance_of(SystemExit).and(having_attributes(status: status)))
+  def raise_bluepill_error(error_class, message, exit_status = 1)
+    raise_error(an_instance_of(error_class).and(having_attributes(message: message, exit_status: exit_status)))
   end
 
   def stub_daemon(command, response)
@@ -116,10 +116,10 @@ describe Bluepill::Controller do
       end
     end
 
-    it "exits on an unknown command" do
-      expect { controller.handle_command("app", "bogus") }.to exit_with(1).and output(
-        "Unknown command `bogus` (or application `bogus` has not been loaded yet)\n"
-      ).to_stderr
+    it "raises on an unknown command" do
+      expect { controller.handle_command("app", "bogus") }.to raise_bluepill_error(
+        Bluepill::UnknownCommandError, "Unknown command `bogus` (or application `bogus` has not been loaded yet)"
+      )
     end
   end
 
@@ -272,82 +272,79 @@ describe Bluepill::Controller do
   end
 
   describe "#send_to_daemon" do
-    def send_to_daemon_until_exit
-      controller.send_to_daemon("app", :status)
-    rescue SystemExit
-      nil
-    end
-
     it "returns the response of the daemon" do
       stub_daemon("status:web:first", "up")
       expect(controller.send_to_daemon("app", :status, "web", "first")).to eq("up")
     end
 
-    it "exits when the daemon returns an error" do
-      error = RuntimeError.new("boom")
-      error.set_backtrace(["a.rb:1", "b.rb:2"])
-      stub_daemon("status", error)
-      expect { controller.send_to_daemon("app", :status) }.to exit_with(8).and output("Received error from server:\n#{error.inspect}\na.rb:1\nb.rb:2\n").to_stderr
+    # Send status to the daemon, and return the Bluepill::Error it raises
+    def send_error
+      controller.send_to_daemon("app", :status)
+    rescue Bluepill::Error => e
+      e
     end
 
-    it "prints the backtrace of an error from the daemon as one string" do
-      stub_daemon("status", RuntimeError.new("boom").tap { |e| e.set_backtrace(["a.rb:1", "b.rb:2"]) })
-      allow($stderr).to receive(:puts)
-      send_to_daemon_until_exit
-      expect($stderr).to have_received(:puts).with("a.rb:1\nb.rb:2")
-    end
-
-    it "prints an empty backtrace for an error from the daemon without one" do
-      stub_daemon("status", RuntimeError.new("boom"))
-      allow($stderr).to receive(:puts)
-      send_to_daemon_until_exit
-      expect($stderr).to have_received(:puts).with("")
-    end
-
-    it "exits when the daemon returns an error without a backtrace" do
-      error = RuntimeError.new("boom")
-      stub_daemon("status", error)
-      expect { controller.send_to_daemon("app", :status) }.to exit_with(8).and output(
-        "Received error from server:\n#{error.inspect}\n\n"
-      ).to_stderr
-    end
-
-    it "aborts when the daemon refuses the connection" do
-      allow(Bluepill::Socket).to receive(:client_command).and_raise(Errno::ECONNREFUSED)
-      expect { controller.send_to_daemon("app", :status) }.to exit_with(1).and output(
-        "Connection Refused: Server is not running\n"
-      ).to_stderr
-    end
-
-    it "aborts when the daemon version differs" do
-      stub_daemon("status", "up")
-      allow(Bluepill::Socket).to receive(:client_command)
-        .with(base_dir, "app", "version").and_return("0.0.1")
-      expect { controller.send_to_daemon("app", :status) }.to exit_with(1).and output("The running version of your daemon seems to be out of date.\nDaemon Version: 0.0.1, CLI Version: #{Bluepill::Version}\n").to_stderr
+    # Make the daemon answer the version command with version, or raise it
+    def answer_version(version)
+      stubbed = allow(Bluepill::Socket).to receive(:client_command).with(base_dir, "app", "version")
+      version.is_a?(Class) ? stubbed.and_raise(version) : stubbed.and_return(version)
     end
 
     # What a daemon's version answer is after Marshal sends it to the CLI
     def through_marshal(version) = Marshal.load(Marshal.dump(version))
 
-    it "accepts a daemon of the same version, through Marshal" do
-      stub_daemon("status", "up")
-      allow(Bluepill::Socket).to receive(:client_command)
-        .with(base_dir, "app", "version").and_return(through_marshal(Bluepill::Application.allocate.version))
-      expect(controller.send_to_daemon("app", :status)).to eq("up")
+    def out_of_date = "The running version of your daemon seems to be out of date."
+
+    context "when the daemon answers with an error" do
+      let(:error) { RuntimeError.new("boom") }
+
+      before { stub_daemon("status", error) }
+
+      it "raises a DaemonError with the error and its backtrace" do
+        error.set_backtrace(["a.rb:1", "b.rb:2"])
+        expect(send_error).to have_attributes(
+          class: Bluepill::DaemonError, message: "Received error from server:\n#{error.inspect}\na.rb:1\nb.rb:2", exit_status: 8
+        )
+      end
+
+      it "keeps the daemon's error" do
+        expect(send_error.daemon_error).to be(error)
+      end
+
+      it "leaves out a backtrace the error doesn't have" do
+        expect(send_error.message).to eq("Received error from server:\n#{error.inspect}")
+      end
     end
 
-    it "aborts when a daemon older than 0.3.0 answers with its Version module" do
-      stub_daemon("status", "up")
-      allow(Bluepill::Socket).to receive(:client_command)
-        .with(base_dir, "app", "version").and_return(through_marshal(Bluepill::Version))
-      expect { controller.send_to_daemon("app", :status) }.to exit_with(1).and output("The running version of your daemon seems to be out of date.\n").to_stderr
+    it "raises when the daemon refuses the connection" do
+      allow(Bluepill::Socket).to receive(:client_command).and_raise(Errno::ECONNREFUSED)
+      expect(send_error).to have_attributes(class: Bluepill::ConnectionError, message: "Connection Refused: Server is not running")
     end
 
-    it "aborts when the daemon does not understand the version command" do
-      stub_daemon("status", "up")
-      allow(Bluepill::Socket).to receive(:client_command)
-        .with(base_dir, "app", "version").and_raise(ArgumentError)
-      expect { controller.send_to_daemon("app", :status) }.to exit_with(1).and output("The running version of your daemon seems to be out of date.\n").to_stderr
+    context "when the daemon runs a version" do
+      before { stub_daemon("status", "up") }
+
+      it "accepts the same version, through Marshal" do
+        answer_version(through_marshal(Bluepill::Application.allocate.version))
+        expect(controller.send_to_daemon("app", :status)).to eq("up")
+      end
+
+      it "raises when the version differs" do
+        answer_version("0.0.1")
+        expect(send_error).to have_attributes(
+          class: Bluepill::VersionMismatchError, message: "#{out_of_date}\nDaemon Version: 0.0.1, CLI Version: #{Bluepill::Version}", exit_status: 1
+        )
+      end
+
+      it "raises when a daemon older than 0.3.0 answers with its Version module" do
+        answer_version(through_marshal(Bluepill::Version))
+        expect(send_error).to have_attributes(class: Bluepill::VersionMismatchError, message: out_of_date)
+      end
+
+      it "raises when the daemon does not understand the version command" do
+        answer_version(ArgumentError)
+        expect(send_error).to have_attributes(class: Bluepill::VersionMismatchError, message: out_of_date)
+      end
     end
   end
 

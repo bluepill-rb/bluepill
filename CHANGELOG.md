@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Breaking:** support for Ruby 2.3 and 2.4, and for JRuby 9.1, which runs Ruby 2.3 code. Bluepill 0.2.5 needs Ruby 2.5 or newer, or JRuby 9.2 or newer. Bluepill 0.2.3 still runs on them.
+
 ## [0.2.3] - 2026-11-02
 
 ### Changed

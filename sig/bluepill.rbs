@@ -1,9 +1,6 @@
 # Type signatures for bluepill
 
 module Bluepill
-  # The value of Bluepill::System.ps_axu: ps fields by pid
-  type ps_table = Hash[Integer, Array[String]]
-
   # A time in seconds. An ActiveSupport::Duration also works, since it
   # passes for its value.
   type seconds = Integer | Float

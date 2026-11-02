@@ -17,7 +17,7 @@ Bluepill is a simple process monitoring tool written in Ruby.
 [coveralls]: https://coveralls.io/github/bluepill-rb/bluepill?branch=master
 
 ## Installation
-It&apos;s hosted on [rubygems.org][rubygems].
+It&apos;s hosted on [rubygems.org][gem].
 
     sudo gem install bluepill
 
@@ -508,8 +508,6 @@ end
 
 > [!IMPORTANT]
 > Define only one application per config when using foreground mode.
-
-[rubygems]: http://rubygems.org/gems/bluepill
 
 ## Supported Ruby Versions
 This library aims to support and is [tested against][test] the following Ruby

@@ -73,12 +73,9 @@ module Bluepill
 
   # Builds processes from a process block in the config
   class ProcessFactory
-    include Children
-
+    @attributes: Hash[Symbol, untyped]
     @process_block: process_block
     @registry: Registry
-
-    attr_reader attributes: Hash[Symbol, untyped]
 
     def initialize: (Hash[Symbol, untyped] attributes, process_block process_block, ?Registry registry) -> void
 
@@ -87,7 +84,9 @@ module Bluepill
 
     private
 
-    def assign_default_pid_file: (Hash[Symbol, untyped] attributes, String process_name, String pids_dir) -> String?
+    def default_pid_file: (String process_name, String pids_dir) -> String
+
+    def children_attributes: (ProcessProxy process) -> Hash[Symbol, untyped]
 
     def validate_process!: (ProcessProxy process) -> void
 
@@ -103,7 +102,7 @@ module Bluepill
 
     def validate_stop_grace_time!: (Array[Symbol | Integer] stop_signals, Integer? stop_grace_time) -> void
 
-    def warn_unless_pid_known: (ProcessProxy process, String? default_pid_file) -> void
+    def warn_unless_pid_known: (ProcessProxy process, String default_pid_file) -> void
 
     def config_error!: (String message) -> bot
 
@@ -119,19 +118,19 @@ module Bluepill
       def add_pid_file?: (String pid_file) -> bool
     end
 
-    # Creates the processes of a process's children, for ProcessFactory,
-    # which is the only class that includes it
-    module Children
+    # Creates the processes of a process's children, and checks their
+    # block when it's made
+    class ChildFactory
       @attributes: Hash[Symbol, untyped]
-      @process_block: process_block
+      @child_process_block: process_block
+
+      def initialize: (String parent_name, Hash[Symbol, untyped] parent_attributes, process_block child_process_block) -> void
 
       def create_child_process: (String name, Integer pid, Logger logger) -> Process
 
       private
 
-      def inherited_attributes: () -> Hash[Symbol, untyped]
-
-      def validate_child_process!: (ProcessProxy child) -> void
+      def validate!: (String parent_name) -> void
     end
   end
 
@@ -143,20 +142,25 @@ module Bluepill
     extend DSL::Attributes::ClassMethods
 
     attr_reader name: String
+    attr_reader child_process_block: process_block?
+    attr_reader actual_pid: Integer?
 
     # The checks the block added, in order, with their options
     @checks: Array[[Symbol, Hash[Symbol, untyped]]]
 
-    def initialize: (String process_name, Hash[Symbol, untyped] attributes, process_block process_block) -> void
+    def initialize: (String process_name, Hash[Symbol, untyped] attributes, process_block process_block, ?actual_pid: Integer?) -> void
 
-    def actual_pid: () -> Integer?
+    # The readers of the attributes the factory uses
+    def group: () -> untyped
+    def pid_file: () -> String?
+    def stop_command: () -> String?
 
     def checks: (Symbol name, **untyped options) -> nil
 
     # The block configures the children like a process block
-    def monitor_children: () ?{ (ProcessProxy child) [self: ProcessProxy] -> void } -> process_block?
+    def monitor_children: () ?{ (ProcessProxy child) [self: ProcessProxy] -> void } -> process_block
 
-    def to_process: () -> Process
+    def to_process: (**untyped options) -> Process
 
     def attribute_owner: () -> String
   end

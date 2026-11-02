@@ -68,11 +68,6 @@ describe Bluepill::ProcessFactory do
       expect { described_class.new({}, proc { self.start_command = "run" }).create_process("web", "/pids") }.not_to raise_error
     end
 
-    it "exposes its attributes" do
-      factory = described_class.new({uid: "user"}, proc {})
-      expect(factory.attributes).to eq(uid: "user")
-    end
-
     context "when monitoring children" do
       let(:process) do
         create("web", proc do |p|
@@ -86,11 +81,19 @@ describe Bluepill::ProcessFactory do
       end
 
       it "creates a child process factory" do
-        expect(process.child_process_factory).to be_a(described_class)
+        expect(process.child_process_factory).to be_a(Bluepill::ProcessFactory::ChildFactory)
       end
 
-      it "keeps the child process block out of the child attributes" do
-        expect(process.child_process_factory.attributes).not_to have_key(:child_process_block)
+      it "gives the children the process's attributes" do
+        allow(Bluepill::ProcessFactory::ChildFactory).to receive(:new)
+        create("web", proc { (self.uid = "deploy") && monitor_children { self.stop_command = "halt" } }, start_command: "run")
+        expect(Bluepill::ProcessFactory::ChildFactory).to have_received(:new).with("web", hash_including(uid: "deploy"), Proc)
+      end
+
+      it "checks the children's config when the process's loads" do
+        expect_config_error("Config Error: You must specify a stop_command for the children of 'web'") do
+          create("web", proc { (self.start_command = "run") && monitor_children { self.uid = "user" } })
+        end
       end
 
       it "creates children from the child process block" do
@@ -100,9 +103,19 @@ describe Bluepill::ProcessFactory do
       end
     end
 
-    it "does not create a child process factory otherwise" do
+    it "does not monitor the children otherwise" do
       process = create("web", proc { self.start_command = "run" })
-      expect(process.child_process_factory).to be_nil
+      expect([process.monitor_children, process.child_process_factory]).to eq([false, nil])
+    end
+
+    it "lets the app give each process a pid file" do
+      expect(create("web", proc { self.start_command = "run" }, pid_file: "/var/web.pid").pid_file).to eq("/var/web.pid")
+    end
+
+    it "gives a block that reads the pid file the default one" do
+      pid_file = nil
+      create("web", proc { (self.start_command = "run") && pid_file = self.pid_file })
+      expect(pid_file).to eq("/pids/web.pid")
     end
 
     describe "validation" do
@@ -285,39 +298,6 @@ describe Bluepill::ProcessFactory do
           create_with_signals([:quit, 5, :term, 5, :kill], 10)
         end
       end
-    end
-  end
-
-  describe "#create_child_process" do
-    let(:logger) { instance_double(Bluepill::Logger) }
-    let(:attributes) { {start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 5, uid: "user", gid: "staff", supplementary_groups: ["rvm"], working_dir: "/srv"} }
-
-    before { allow(::Process).to receive(:kill).with(0, 123).and_return(1) }
-
-    def create_child(attributes, block)
-      described_class.new(attributes, block).create_child_process("child", 123, logger)
-    end
-
-    it "creates a child process with the grace times, user and groups of its parent" do
-      expect(create_child(attributes, proc { self.stop_command = "halt" })).to be_a(Bluepill::Process).and have_attributes(
-        state: :up, name: "child", actual_pid: 123, logger: logger, stop_command: "halt",
-        start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 5,
-        uid: "user", gid: "staff", supplementary_groups: ["rvm"], working_dir: nil
-      )
-    end
-
-    it "gives a child the default grace times when its parent sets none" do
-      child = create_child({}, proc { self.stop_command = "halt" })
-      expect([child.start_grace_time, child.stop_grace_time, child.restart_grace_time]).to eq([3, 3, 3])
-    end
-
-    # The daemon finds its children as it runs, long after the config
-    # loaded, so this exits rather than raising a ConfigError
-    it "requires a stop command" do
-      message = "Config Error: Invalid child process monitor for child\nYou must specify a stop command to monitor child processes.\n"
-      expect { create_child(attributes, proc {}) }
-        .to raise_error(an_instance_of(SystemExit).and(having_attributes(status: 6)))
-        .and output(message).to_stderr
     end
   end
 end

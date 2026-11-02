@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "bluepill/dsl/process_factory/children"
+require "bluepill/dsl/process_factory/child_factory"
 require "bluepill/dsl/process_factory/registry"
 
 module Bluepill
@@ -9,19 +9,10 @@ module Bluepill
   # A factory turns a process block into a {Process}, after it checks the
   # config for mistakes, such as two processes with the same name or pid
   # file, which it looks up in the application's {Registry}. A process that
-  # monitors its children gets a factory of its own for them.
+  # monitors its children gets a {ChildFactory} for them.
   #
   # @api private
   class ProcessFactory
-    include Children
-
-    # Return the attributes that each process starts with
-    #
-    # @return [Hash{Symbol => Object}] the attributes
-    #
-    # @api private
-    attr_reader :attributes
-
     # Create a factory of processes
     #
     # @param [Hash{Symbol => Object}] attributes the attributes that each
@@ -41,9 +32,9 @@ module Bluepill
 
     # Create a process from the factory's block, and check its config
     #
-    # The process starts with a copy of the factory's attributes, so the
-    # factory's own stay as they were. A process without a pid_file gets a
-    # default one in pids_dir.
+    # The process starts with the factory's attributes, and a default
+    # pid_file in pids_dir unless they set one, and its block can override
+    # them.
     #
     # @param [String] name the process's name
     # @param [String] pids_dir the directory of the default pid file
@@ -51,40 +42,57 @@ module Bluepill
     # @return [Array(Process, Object)] the process, and the group that its
     #   block set, or nil for none
     #
+    # @raise [ConfigError] for a mistake in the process's config
+    #
     # @api private
     def create_process(name, pids_dir)
-      attributes = @attributes.dup
-      default_pid_file = assign_default_pid_file(attributes, name, pids_dir)
+      default_pid_file = default_pid_file(name, pids_dir)
+      process = ProcessProxy.new(name, {pid_file: default_pid_file}.merge(@attributes), @process_block)
 
-      process = ProcessProxy.new(name, attributes, @process_block)
-      child_process_block = attributes.delete(:child_process_block)
-      attributes[:child_process_factory] = ProcessFactory.new(attributes, child_process_block) if child_process_block
-
-      validate_process! process
+      validate_process!(process)
       warn_unless_pid_known(process, default_pid_file)
-      [process.to_process, attributes[:group]]
+      [process.to_process(**children_attributes(process)), process.group]
     end
 
     protected
 
-    # Set the default pid file, unless the process sets its own
+    # Return the pid file of a process that sets none
     #
-    # @param [Hash{Symbol => Object}] attributes the process's attributes
+    # It's in pids_dir, named after the process and its group, if the
+    # factory's attributes give one.
+    #
     # @param [String] process_name the process's name
     # @param [String] pids_dir the directory of the pid file
     #
-    # @return [String, nil] the default pid file, or nil when the process
-    #   sets its own
+    # @return [String] the pid file
     #
     # @api private
-    def assign_default_pid_file(attributes, process_name, pids_dir)
-      return if attributes.key?(:pid_file)
-
-      default_pid_name = [attributes[:group], process_name].compact.join("_").gsub(/[^A-Za-z0-9_-]/, "_")
-      attributes[:pid_file] = File.join(pids_dir, "#{default_pid_name}.pid")
+    def default_pid_file(process_name, pids_dir)
+      default_pid_name = [@attributes[:group], process_name].compact.join("_").gsub(/[^A-Za-z0-9_-]/, "_")
+      File.join(pids_dir, "#{default_pid_name}.pid")
     end
 
-    # Check a process's config, and exit on a mistake
+    # Return the attributes that say whether a process monitors its children
+    #
+    # A process whose block calls monitor_children gets a factory of its
+    # children.
+    #
+    # @param [ProcessProxy] process the process's proxy
+    #
+    # @return [Hash{Symbol => Object}] monitor_children and the
+    #   child_process_factory, or nil for a process that doesn't monitor
+    #   its children
+    #
+    # @raise [ConfigError] for a mistake in the children's config
+    #
+    # @api private
+    def children_attributes(process)
+      child_process_block = process.child_process_block
+      factory = ChildFactory.new(process.name, process.attributes, child_process_block) if child_process_block
+      {monitor_children: !factory.nil?, child_process_factory: factory}
+    end
+
+    # Check a process's config, and fail on a mistake
     #
     # @param [ProcessProxy] process the process's proxy
     #
@@ -98,7 +106,7 @@ module Bluepill
       validate_stop_signals!(process)
     end
 
-    # Exit if another process in the group has the same name
+    # Fail if another process in the group has the same name
     #
     # @param [ProcessProxy] process the process's proxy
     #
@@ -114,7 +122,7 @@ module Bluepill
       config_error!(message)
     end
 
-    # Exit unless the process has a start_command
+    # Fail unless the process has a start_command
     #
     # @param [ProcessProxy] process the process's proxy
     #
@@ -127,7 +135,7 @@ module Bluepill
       config_error!("Config Error: You must specify a start_command for '#{process.name}'")
     end
 
-    # Exit if another process has the same pid file
+    # Fail if another process has the same pid file
     #
     # @param [ProcessProxy] process the process's proxy
     #
@@ -141,7 +149,7 @@ module Bluepill
       config_error!("Config Error: You have two entries with the pid file: #{pid_file}")
     end
 
-    # Exit on a mistake in stop_signals
+    # Fail on a mistake in stop_signals
     #
     # The signals and delays must alternate, starting and ending with a
     # signal, and stop_grace_time must be longer than the delays.
@@ -159,7 +167,7 @@ module Bluepill
       validate_stop_grace_time!(stop_signals, process.attributes[:stop_grace_time])
     end
 
-    # Exit unless stop_signals alternates signals and delays
+    # Fail unless stop_signals alternates signals and delays
     #
     # The signals and delays must alternate, starting and ending with a
     # signal. Checks the more specific problems before the 'odd number'
@@ -180,7 +188,7 @@ module Bluepill
       config_error!("Config Error: Invalid stop_signals!  Expected an odd number of elements.") unless stop_signals.size.odd?
     end
 
-    # Exit unless stop_grace_time is longer than the stop_signals delays
+    # Fail unless stop_grace_time is longer than the stop_signals delays
     #
     # @param [Array<Symbol, Integer>] stop_signals the signals and delays
     # @param [Integer, nil] stop_grace_time the process's stop_grace_time
@@ -201,15 +209,14 @@ module Bluepill
     # so it cannot find the pid of any other process that uses it.
     #
     # @param [ProcessProxy] process the process's proxy
-    # @param [String, nil] default_pid_file the default pid file, or nil when
-    #   the process sets its own
+    # @param [String] default_pid_file the default pid file
     #
     # @return [void]
     #
     # @api private
     def warn_unless_pid_known(process, default_pid_file)
       attributes = process.attributes
-      return if attributes[:daemonize] || attributes[:pid_command] || !attributes.fetch(:pid_file).eql?(default_pid_file)
+      return if attributes[:daemonize] || attributes[:pid_command] || !process.pid_file.eql?(default_pid_file)
 
       warning = "Config Warning: '#{process.name}' sets no daemonize, pid_file or pid_command, " \
                 "so bluepill cannot find its pid unless start_command writes it to #{default_pid_file}. " \

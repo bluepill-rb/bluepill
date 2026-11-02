@@ -32,36 +32,50 @@ module Bluepill
     # @api private
     attr_reader :name
 
-    # Create the proxy of a process, and run its block
+    # Return the block that monitor_children gave, to configure each child
     #
-    # @param [String] process_name the process's name
-    # @param [Hash{Symbol => Object}] attributes the attributes the process
-    #   starts with, which the block adds to
-    # @param [Proc] process_block the block that configures the process
-    #
-    # @return [void]
+    # @return [Proc, nil] the block
     #
     # @api private
-    def initialize(process_name, attributes, process_block)
-      @name = process_name
-      @attributes = attributes
-      @checks = []
-
-      # instance_eval also passes the proxy to a block that takes an argument
-      instance_eval(&process_block)
-    end
+    attr_reader :child_process_block
 
     # Return the pid of the child that a monitor_children block configures
     #
+    # It's nil when bluepill checks the block as the config loads, before
+    # it has found any children.
+    #
     # @example
     #   process.monitor_children do |child|
-    #     child.stop_command = "kill -QUIT #{child.actual_pid}"
+    #     child.stdout = "/var/log/child.#{child.actual_pid}.log"
     #   end
     #
     # @return [Integer, nil] the child's pid, or nil for a process
     #
     # @api public
-    def actual_pid = attributes[:actual_pid]
+    attr_reader :actual_pid
+
+    # Create the proxy of a process, and run its block
+    #
+    # @param [String] process_name the process's name
+    # @param [Hash{Symbol => Object}] attributes the attributes the process
+    #   starts with, which the block can override
+    # @param [Proc] process_block the block that configures the process
+    # @param [Integer, nil] actual_pid the pid of the child that the block
+    #   configures, or nil for a process
+    #
+    # @return [void]
+    #
+    # @api private
+    def initialize(process_name, attributes, process_block, actual_pid: nil)
+      @name = process_name
+      # A copy, so the block leaves the attributes it was given as they were
+      @attributes = attributes.dup
+      @actual_pid = actual_pid
+      @checks = []
+
+      # instance_eval also passes the proxy to a block that takes an argument
+      instance_eval(&process_block)
+    end
 
     # Add a check of the process, or a trigger such as :flapping
     #
@@ -87,7 +101,8 @@ module Bluepill
     # Monitor the process's children too
     #
     # The block configures each child the way a process block configures a
-    # process. It must set a stop_command.
+    # process. It must set a stop_command. Bluepill runs it once as the
+    # config loads, to check it, and then again for each child it finds.
     #
     # @example
     #   process.monitor_children do |child|
@@ -99,12 +114,15 @@ module Bluepill
     # @yieldparam [ProcessProxy] child the child's proxy, which is also self
     # @yieldreturn [void]
     #
-    # @return [Proc, nil] the block
+    # @return [Proc] the block
+    #
+    # @raise [ConfigError] without a block
     #
     # @api public
     def monitor_children(&child_process_block)
-      attributes[:monitor_children] = true
-      attributes[:child_process_block] = child_process_block
+      raise ConfigError, "monitor_children for process '#{@name}' needs a block that configures the children" unless child_process_block
+
+      @child_process_block = child_process_block
     end
 
     # Create the process that the block described
@@ -112,10 +130,15 @@ module Bluepill
     # The group isn't an attribute of the process: the application adds
     # the process to it.
     #
+    # @param [Hash{Symbol => Object}] options more of the process's options,
+    #   such as its logger, or the factory of its children
+    #
     # @return [Process] the process
     #
     # @api private
-    def to_process = Process.new(@name, @checks, **attributes.except(:group))
+    def to_process(**options)
+      Process.new(@name, @checks, actual_pid: @actual_pid, **attributes.except(:group), **options)
+    end
 
     # Name the process, for an unknown attribute's error
     #

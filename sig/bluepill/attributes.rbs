@@ -25,7 +25,7 @@ module Bluepill
     attr_accessor gid: String?
     attr_accessor cache_actual_pid: bool
     attr_accessor monitor_children: bool
-    attr_accessor child_process_factory: ProcessFactory?
+    attr_accessor child_process_factory: ProcessFactory::ChildFactory?
     attr_accessor pid_command: String?
     attr_accessor auto_start: bool?
     attr_accessor supplementary_groups: Array[String]?

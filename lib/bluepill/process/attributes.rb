@@ -298,7 +298,7 @@ module Bluepill
       #
       # monitor_children sets it, with the children's checks.
       #
-      # @return [ProcessFactory, nil]
+      # @return [ProcessFactory::ChildFactory, nil]
       #
       # @api private
       attr_accessor :child_process_factory

@@ -15,15 +15,24 @@ describe Bluepill::ProcessProxy do
     end
 
     it "exposes its name and attributes" do
+      proxy = described_class.new("web", {uid: "user"}, proc {})
+      expect(proxy).to have_attributes(name: "web", attributes: {uid: "user"}, actual_pid: nil, child_process_block: nil)
+    end
+
+    it "exposes the pid of a child" do
+      expect(described_class.new("child", {}, proc {}, actual_pid: 5).actual_pid).to eq(5)
+    end
+
+    it "leaves the attributes it was given as they were" do
       attributes = {uid: "user"}
-      proxy = described_class.new("web", attributes, proc {})
-      expect(proxy).to have_attributes(name: "web", attributes: equal(attributes))
+      described_class.new("web", attributes, proc { |p| p.uid = "other" })
+      expect(attributes).to eq(uid: "user")
     end
 
     it "starts with no checks" do
       allow(Bluepill::Process).to receive(:new)
       described_class.new("web", {}, proc {}).to_process
-      expect(Bluepill::Process).to have_received(:new).with("web", [])
+      expect(Bluepill::Process).to have_received(:new).with("web", [], actual_pid: nil)
     end
   end
 
@@ -110,8 +119,13 @@ describe Bluepill::ProcessProxy do
 
     it "reads a child process's pid" do
       value = nil
-      described_class.new("<child(pid:5)>", {actual_pid: 5}, proc { value = actual_pid })
+      described_class.new("<child(pid:5)>", {}, proc { value = actual_pid }, actual_pid: 5)
       expect(value).to eq(5)
+    end
+
+    it "doesn't set a child process's pid" do
+      expect { described_class.new("<child(pid:5)>", {}, proc { |p| p.actual_pid = 6 }, actual_pid: 5) }
+        .to raise_error(Bluepill::ConfigError, /Unknown attribute 'actual_pid'/)
     end
   end
 
@@ -123,7 +137,7 @@ describe Bluepill::ProcessProxy do
         checks :cpu_usage, every: 10, below: 5
         checks :always_true
       end).to_process
-      expect(Bluepill::Process).to have_received(:new).with("web", [[:cpu_usage, {every: 10, below: 5}], [:always_true, {}]])
+      expect(Bluepill::Process).to have_received(:new).with("web", [[:cpu_usage, {every: 10, below: 5}], [:always_true, {}]], actual_pid: nil)
     end
 
     it "keeps two checks of a kind" do
@@ -131,7 +145,7 @@ describe Bluepill::ProcessProxy do
         checks :http, url: "http://localhost/a"
         checks :http, url: "http://localhost/b"
       end).to_process
-      expect(Bluepill::Process).to have_received(:new).with("web", [[:http, {url: "http://localhost/a"}], [:http, {url: "http://localhost/b"}]])
+      expect(Bluepill::Process).to have_received(:new).with("web", [[:http, {url: "http://localhost/a"}], [:http, {url: "http://localhost/b"}]], actual_pid: nil)
     end
 
     it "returns nothing" do
@@ -142,10 +156,23 @@ describe Bluepill::ProcessProxy do
   end
 
   describe "#monitor_children" do
-    it "stores the child process block" do
+    it "keeps the child process block out of the attributes" do
       child_block = proc {}
       proxy = described_class.new("web", {}, proc { |p| p.monitor_children(&child_block) })
-      expect(proxy.attributes).to eq(monitor_children: true, child_process_block: child_block)
+      expect([proxy.child_process_block, proxy.attributes]).to eq([child_block, {}])
+    end
+
+    it "returns the block" do
+      child_block = proc {}
+      value = nil
+      described_class.new("web", {}, proc { |p| value = p.monitor_children(&child_block) })
+      expect(value).to be(child_block)
+    end
+
+    it "requires a block" do
+      expect { described_class.new("web", {}, proc { monitor_children }) }.to raise_error(
+        Bluepill::ConfigError, "monitor_children for process 'web' needs a block that configures the children"
+      )
     end
   end
 
@@ -166,7 +193,14 @@ describe Bluepill::ProcessProxy do
     it "leaves the group out of the process's attributes" do
       allow(Bluepill::Process).to receive(:new)
       described_class.new("web", {uid: "user"}, proc { self.group = "servers" }).to_process
-      expect(Bluepill::Process).to have_received(:new).with("web", [], uid: "user")
+      expect(Bluepill::Process).to have_received(:new).with("web", [], actual_pid: nil, uid: "user")
+    end
+
+    it "gives the process a child's pid, and more options" do
+      allow(Bluepill::Process).to receive(:new)
+      logger = instance_double(Bluepill::Logger)
+      described_class.new("child", {uid: "user"}, proc {}, actual_pid: 5).to_process(logger: logger)
+      expect(Bluepill::Process).to have_received(:new).with("child", [], actual_pid: 5, uid: "user", logger: logger)
     end
 
     it "gives the process a watch for each of two checks of a kind" do

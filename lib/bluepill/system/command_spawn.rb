@@ -26,7 +26,7 @@ module Bluepill
       # @param [CommandOptions] options its working_dir and environment
       # @param [String, nil] chdir the directory to run in without a
       #   working_dir, or nil for bluepill's
-      # @param [Hash{Symbol => Object}] redirects more of Process.spawn's
+      # @param [Hash{Symbol => Object}] redirects more of Kernel.spawn's
       #   options, such as where its standard streams go
       #
       # @return [Integer] the command's pid
@@ -39,7 +39,7 @@ module Bluepill
         dir = options.working_dir&.to_s || chdir
         redirects[:chdir] = dir if dir
         program, *args = Shellwords.shellwords(cmd)
-        ::Process.spawn(spawn_environment(options), program.to_s, *args, **redirects)
+        Kernel.spawn(spawn_environment(options), program.to_s, *args, **redirects)
       end
 
       # Run a command until it finishes, and return what it printed

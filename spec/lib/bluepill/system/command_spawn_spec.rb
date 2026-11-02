@@ -30,7 +30,7 @@ describe Bluepill::System::CommandSpawn do
   def record_spawns
     pids = []
     record = ->(spawn, *args, **kw) { spawn.call(*args, **kw).tap { |pid| pids << pid } }
-    allow(Process).to receive(:spawn).and_wrap_original(&record)
+    allow(Kernel).to receive(:spawn).and_wrap_original(&record)
     pids
   end
 
@@ -65,10 +65,10 @@ describe Bluepill::System::CommandSpawn do
       expect(output_of("pwd")).to eq("#{File.realpath(Dir.pwd)}\n")
     end
 
-    it "passes the working directory to Process.spawn as a String" do
-      allow(Process).to receive(:spawn).and_return(7)
+    it "passes the working directory to Kernel.spawn as a String" do
+      allow(Kernel).to receive(:spawn).and_return(7)
       spawner.spawn_command("prog a", opts(working_dir: Pathname(dir)), out: :err)
-      expect(Process).to have_received(:spawn).with({"PWD" => dir}, "prog", "a", out: :err, chdir: dir)
+      expect(Kernel).to have_received(:spawn).with({"PWD" => dir}, "prog", "a", out: :err, chdir: dir)
     end
 
     it "raises for an empty command" do
@@ -108,9 +108,9 @@ describe Bluepill::System::CommandSpawn do
     end
 
     it "gives the command /dev/null for standard input" do
-      allow(Process).to receive(:spawn).and_call_original
+      allow(Kernel).to receive(:spawn).and_call_original
       spawner.spawn_blocking("true", opts)
-      expect(Process).to have_received(:spawn).with(anything, "true", hash_including(in: File::NULL))
+      expect(Kernel).to have_received(:spawn).with(anything, "true", hash_including(in: File::NULL))
     end
 
     it "runs the command in its working directory, with its environment" do
@@ -126,7 +126,7 @@ describe Bluepill::System::CommandSpawn do
     it "says why with the error's message" do
       error = Errno::ENOENT.new("prog")
       def error.message = "the message"
-      allow(Process).to receive(:spawn).and_raise(error)
+      allow(Kernel).to receive(:spawn).and_raise(error)
       expect(spawner.spawn_blocking("prog", opts).stderr).to eq("Could not run prog: the message\n")
     end
 

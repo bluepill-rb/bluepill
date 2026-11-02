@@ -191,7 +191,7 @@ module Bluepill
     def self.start_daemon_bluepill
       dir = __dir__ #: String
       args = ["-I#{File.expand_path("..", dir)}", "-rbluepill", File.expand_path($PROGRAM_NAME), *ARGV]
-      ::Process.spawn({DAEMON_ENV => "1"}, RbConfig.ruby, *args, in: File::NULL, out: File::NULL, err: File::NULL)
+      Kernel.spawn({DAEMON_ENV => "1"}, RbConfig.ruby, *args, in: File::NULL, out: File::NULL, err: File::NULL)
       exit
     end
 

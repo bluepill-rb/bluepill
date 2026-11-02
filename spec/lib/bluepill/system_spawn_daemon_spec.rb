@@ -105,7 +105,7 @@ describe Bluepill::System, ".spawn_daemon" do
     context "with a program that can't be run" do
       # JRuby spawns a child that exits instead of raising
       before do
-        allow(Process).to receive(:spawn).and_raise(Errno::ENOENT, "no-such-bluepill-program")
+        allow(Kernel).to receive(:spawn).and_raise(Errno::ENOENT, "no-such-bluepill-program")
         allow(logger).to receive(:warning).and_return(true)
       end
 

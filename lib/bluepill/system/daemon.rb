@@ -102,7 +102,7 @@ module Bluepill
       #
       # @param [CommandOptions] options its stdin, stdout and stderr
       #
-      # @return [Hash{Symbol => Object}] Process.spawn's in, out and err
+      # @return [Hash{Symbol => Object}] Kernel.spawn's in, out and err
       #
       # @api private
       def daemon_streams(options)
@@ -119,7 +119,7 @@ module Bluepill
       # @param [String, nil] out the file for standard output
       # @param [String, nil] err the file for standard error
       #
-      # @return [Object] Process.spawn's err: standard output when they're
+      # @return [Object] Kernel.spawn's err: standard output when they're
       #   the same file, the file, or /dev/null
       #
       # @api private

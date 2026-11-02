@@ -247,7 +247,7 @@ describe Bluepill::Daemonize do
 
     before do
       stub_const("ARGV", ["--flag"])
-      allow(Process).to(receive(:spawn)) { |*args, **options| events << [:spawn, *args, options] }
+      allow(Kernel).to(receive(:spawn)) { |*args, **options| events << [:spawn, *args, options] }
       allow(described_class).to(receive(:exit)) do
         events << [:exit]
         raise SystemExit

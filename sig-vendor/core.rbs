@@ -1,12 +1,6 @@
 # Methods from Ruby and its standard library that bluepill uses, but that
 # the signatures from rbs leave out
 
-module Process
-  # The same as Kernel#spawn
-  def self.spawn: (String command, *String args, **untyped options) -> Integer
-                | (Hash[string, string?] env, String command, *String args, **untyped options) -> Integer
-end
-
 class UNIXSocket
   def self.open: (String path) -> instance
     | [T] (String path) { (instance socket) -> T } -> T

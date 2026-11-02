@@ -205,7 +205,10 @@ describe Bluepill::Application do
     before do
       allow(Signal).to receive(:trap) { |signal, &block| traps[signal] = block }
       allow($stdout).to receive(:puts)
-      allow(app).to receive(:cleanup)
+      allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks)
+      allow(Bluepill::System).to receive(:delete_if_exists)
+      # Creating the app traps the signals
+      app
     end
 
     %w[TERM INT].each do |signal|
@@ -213,9 +216,14 @@ describe Bluepill::Application do
         expect { traps[signal].call(Signal.list.fetch(signal)) }.to output("Terminating...\n").to_stdout
       end
 
-      it "cleans up on #{signal}" do
+      it "clears the journal locks on #{signal}" do
         traps[signal].call(Signal.list.fetch(signal))
-        expect(app).to have_received(:cleanup)
+        expect(Bluepill::ProcessJournal).to have_received(:clear_all_atomic_fs_locks)
+      end
+
+      it "deletes the pid file on #{signal}" do
+        traps[signal].call(Signal.list.fetch(signal))
+        expect(Bluepill::System).to have_received(:delete_if_exists).with(app.pid_file)
       end
 
       it "stops running on #{signal}" do

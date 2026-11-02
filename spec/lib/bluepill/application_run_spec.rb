@@ -29,7 +29,9 @@ describe Bluepill::Application do
     before do
       app.groups = {'web' => group, 'db' => other_group}
       allow($stdout).to receive(:puts)
-      allow(app).to receive(:cleanup)
+      # The TERM trap cleans up
+      allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks)
+      allow(Bluepill::System).to receive(:delete_if_exists)
       allow(Bluepill::System).to receive(:reset_data) { calls << [:reset_data, mutex_locked?] }
       allow(group).to receive(:tick) { calls << [:web, mutex_locked?] }
       allow(other_group).to receive(:tick) { calls << [:db, mutex_locked?] }

@@ -114,8 +114,9 @@ module Bluepill
     # and children left alone.
     #
     # @param [String] process_name the process's name
-    # @param [Hash{Symbol => Hash{Symbol => Object}}] checks options by
-    #   check name
+    # @param [Hash{Symbol => Hash{Symbol => Object}}, Array<Array(Symbol, Hash{Symbol => Object})>]
+    #   checks each check's name and options, as a Hash, or as a list of
+    #   pairs, which can name a check twice
     # @param [Logger, nil] logger the process's logger
     # @param [Integer, nil] actual_pid the pid of a child process that's
     #   already running
@@ -223,8 +224,9 @@ module Bluepill
     # A check is a trigger if one has its name, and a watch otherwise. Each
     # gets the logger.
     #
-    # @param [Hash{Symbol => Hash{Symbol => Object}}] checks options by
-    #   check name
+    # @param [Hash{Symbol => Hash{Symbol => Object}}, Array<Array(Symbol, Hash{Symbol => Object})>]
+    #   checks each check's name and options, as a Hash, or as a list of
+    #   pairs, which can name a check twice
     # @param [Logger] logger the logger to use
     #
     # @return [void]

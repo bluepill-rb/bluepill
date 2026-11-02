@@ -88,6 +88,21 @@ describe Bluepill::Process do
       end
     end
 
+    context "with checks as a list of names and options" do
+      subject(:process) do
+        described_class.new(:proc_name, [[:http, {url: "http://a/"}], [:http, {url: "http://b/"}], [:flapping, {}]], logger: logger)
+      end
+
+      it "keeps two checks of the same name" do
+        uris = process.watches.collect { |watch| watch.instance_variable_get(:@process_condition).instance_variable_get(:@uri).to_s }
+        expect(uris).to eq(%w[http://a/ http://b/])
+      end
+
+      it "adds the triggers among them" do
+        expect(process.triggers).to match [be_a(Bluepill::Triggers::Flapping)]
+      end
+    end
+
     it "accepts an actual pid" do
       process = described_class.new(:proc_name, [], logger: logger, actual_pid: 42)
       expect(process.actual_pid).to eq 42

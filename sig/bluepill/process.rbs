@@ -1,6 +1,10 @@
 module Bluepill
   # A monitored process
   class Process
+    # The checks a process is made with: each check's name and options, as
+    # a Hash or as a list of pairs, which can name a check twice
+    type checks = _Each[[Symbol, Hash[Symbol, untyped]]]
+
     include ProcessCommands
     include Attributes
     include Pid
@@ -40,7 +44,7 @@ module Bluepill
 
     # Methods bluepill defines
 
-    def initialize: (String process_name, Hash[Symbol, Hash[Symbol, untyped]] checks, ?logger: untyped, ?actual_pid: Integer?, **untyped attributes) -> void
+    def initialize: (String process_name, checks checks, ?logger: untyped, ?actual_pid: Integer?, **untyped attributes) -> void
 
     # Runs the state machine's tick event, then the watches and children
     def tick: () -> void
@@ -51,7 +55,7 @@ module Bluepill
 
     def dispatch!: (Symbol | String event, ?String? reason) -> bool
 
-    def add_checks: (Hash[Symbol, Hash[Symbol, untyped]] checks, Logger logger) -> void
+    def add_checks: (checks checks, Logger logger) -> void
 
     def add_trigger: (Symbol name, **untyped options) -> Array[Trigger]
 

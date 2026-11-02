@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading from 0.1
+
+Most pill files work with 0.2.0 unchanged. Check these before you upgrade:
+
+- **A setting bluepill doesn't know now fails the config.** 0.1 quietly ignored a misspelled or unsupported setting in a `process` block, such as `start_comand`. Now `bluepill load` stops with the setting's name and the closest one it knows. The config fails before bluepill touches anything, so a running daemon and its processes keep going, and loading the new config is a safe way to find out.
+- **Bluepill no longer loads ActiveSupport for you.** `10.seconds`, `2.minutes`, and `100.megabytes` still work, as plain numbers of seconds and bytes. A pill file that uses anything else from ActiveSupport, such as `5.minutes.ago`, `blank?`, or `present?`, needs the `activesupport` gem and a `require "active_support/all"` (or just the parts it uses) at the top.
+- **A process with a `uid` gets that user's groups.** It now runs with every group the user belongs to, as after logging in. Without a `gid`, it used to keep root's groups, and now it gets the user's primary group instead. Set `gid` or `supplementary_groups` for a process that needs a group the user isn't in.
+- **With `monitor_children`, the children's commands run as the parent's user.** A child's `stop_command` used to run as root. One that needs root has to get it some other way, such as `sudo`.
+- **A custom trigger's `notify` gets a smaller transition.** It now has `from_name`, `to_name`, and `loopback?`, which is all bluepill's own triggers use. The `from`, `to`, and `event` that state_machine's transitions also had are gone.
+
+To upgrade, install 0.2.0 and run `bluepill load` with the same pill file. It replaces the running 0.1 daemon and keeps monitoring the processes that are already running, without restarting them. Quitting the 0.1 daemon first works too, since `bluepill quit` leaves the processes running in both versions. Each app's journals now live in `journals/<app>`, and 0.2.0 still reads and clears the ones 0.1 wrote. If you go back to 0.1 later, it won't see the journals 0.2.0 wrote.
+
 ### Added
 
 - Custom checks have a `logger`, which writes to bluepill's log with the app's and the process's names, and the README shows how to write one ([#7](https://github.com/bluepill-rb/bluepill/issues/7)).

@@ -93,6 +93,9 @@ module Bluepill
     # does
     def self.underscore: (String name) -> String
 
+    # Logs an error at err, with a line for each backtrace line
+    def self.log_error: (Logger logger, String summary, Exception error) -> void
+
     # An array that drops its oldest element when it grows past its capacity
     class RotationalArray[Elem] < Array[Elem]
       @capacity: Integer

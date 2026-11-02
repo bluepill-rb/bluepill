@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- An exception in a check or trigger no longer stops the daemon. It's logged, with its backtrace a line each, and the check is skipped until its next interval, so it doesn't count toward `times`. Before, it stopped the daemon with exit status 5, and the log showed the backtrace as one Array.
+
 ## [0.2.7] - 2026-11-02
 
 ### Changed

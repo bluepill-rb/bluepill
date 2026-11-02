@@ -218,6 +218,8 @@ module Bluepill
     # Runs the state machine's tick event, then the watches and children
     def tick: () -> void
 
+    def tick_children: () -> void
+
     def logger=: (Logger logger) -> void
 
     def dispatch!: (Symbol | String event, ?String? reason) -> bool
@@ -506,6 +508,8 @@ module Bluepill
     def add_process: (Process process) -> Array[Process]
 
     def tick: () -> void
+
+    def tick_children: () -> void
 
     def determine_initial_state: () -> void
 

@@ -337,6 +337,39 @@ describe Bluepill::Process do
     end
   end
 
+  describe "#tick when something raises" do
+    let(:errors) { record_log(:err) }
+
+    before do
+      errors
+      process.state = :up
+      run_process
+      trigger = instance_double(Bluepill::Trigger, "trigger", :logger= => nil)
+      allow(trigger).to receive(:notify).and_raise(RuntimeError.new("boom").tap { |e| e.set_backtrace(["line 1", "line 2"]) })
+      process.triggers << trigger
+    end
+
+    it "logs the error and its backtrace" do
+      process.tick
+      expect(errors).to eq(["tick failed: RuntimeError: boom", "line 1", "line 2"])
+    end
+
+    it "keeps ticking" do
+      2.times { process.tick }
+      expect(errors.grep(/tick failed/).size).to eq(2)
+    end
+
+    it "stays in its state" do
+      process.tick
+      expect(process).to be_up
+    end
+
+    it "lets an error that isn't a StandardError through" do
+      allow(process.triggers.first).to receive(:notify).and_raise(NoMemoryError)
+      expect { process.tick }.to raise_error(NoMemoryError)
+    end
+  end
+
   describe "events" do
     context "with start" do
       before do
@@ -483,15 +516,9 @@ describe Bluepill::Process do
   describe "#notify_triggers" do
     let(:transition) { described_class::Transition.new(:up, :down) }
     let(:trigger) { instance_double(Bluepill::Trigger, "trigger", :logger= => nil, :notify => nil) }
-    let(:error) { RuntimeError.new("boom").tap { |e| e.set_backtrace(%w[a b]) } }
+    let(:error) { RuntimeError.new("boom") }
 
     before { process.triggers << trigger }
-
-    def notify_and_rescue
-      process.notify_triggers(transition)
-    rescue RuntimeError
-      nil
-    end
 
     it "notifies each trigger" do
       process.notify_triggers(transition)
@@ -501,12 +528,6 @@ describe Bluepill::Process do
     it "re-raises errors" do
       allow(trigger).to receive(:notify).and_raise(error)
       expect { process.notify_triggers(transition) }.to raise_error(error)
-    end
-
-    it "logs errors" do
-      allow(trigger).to receive(:notify).and_raise(error)
-      notify_and_rescue
-      expect(logger).to have_received(:err).with(%w[a b])
     end
   end
 

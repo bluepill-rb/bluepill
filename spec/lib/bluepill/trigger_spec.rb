@@ -161,15 +161,15 @@ describe Bluepill::Trigger do
     end
 
     it "logs errors without a backtrace" do
-      error = dispatch_error(nil)
+      dispatch_error(nil)
       trigger.schedule_event(:start, 0).join
-      expect(calls).to eq([[:err, error], [:err, ""]])
+      expect(calls).to eq([[:err, "Trigger failed to dispatch start: RuntimeError: boom"]])
     end
 
-    it "logs errors raised while dispatching" do
-      error = dispatch_error(["line 1", "line 2"])
+    it "logs errors raised while dispatching, a line for each backtrace line" do
+      dispatch_error(["line 1", "line 2"])
       trigger.schedule_event(:start, 0).join
-      expect(calls).to eq([[:err, error], [:err, "line 1\nline 2"]])
+      expect(calls).to eq([[:err, "Trigger failed to dispatch start: RuntimeError: boom"], [:err, "line 1"], [:err, "line 2"]])
     end
   end
 

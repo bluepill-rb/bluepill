@@ -235,11 +235,45 @@ describe Bluepill::ConditionWatch do
       expect(fired + run_at(w, 40)).to eq([[], [], [], [], [:restart]])
     end
 
-    it "logs and re-raises errors from the process condition" do
-      error = RuntimeError.new("boom")
-      error.set_backtrace(["line 1"])
-      allow(Bluepill::System).to receive(:cpu_usage).and_raise(error)
-      expect { watch.run(123, 0) }.to raise_error(error).and change(calls, :dup).to([[:err, ["line 1"]]])
+    %i[run check? format_value].each do |method|
+      context "when the check's #{method} raises" do
+        subject(:cpu_watch) { watch(times: [2, 3]) }
+
+        let(:condition) { cpu_watch.instance_variable_get(:@process_condition) }
+        let(:error) { RuntimeError.new("boom").tap { |e| e.set_backtrace(["line 1", "line 2"]) } }
+
+        before do
+          cpu_usage(90)
+          cpu_watch.run(123, 0)
+          calls.clear
+          allow(condition).to receive(method).and_raise(error)
+        end
+
+        it "logs the error and its backtrace, and skips the check" do
+          expect([cpu_watch.run(123, 10), calls]).to eq([[], [[:err, "cpu_usage check failed: RuntimeError: boom"], [:err, "line 1"], [:err, "line 2"]]])
+        end
+
+        it "records no value" do
+          cpu_watch.run(123, 10)
+          expect(cpu_watch.to_s).to eq("cpu_usage: [90.0*]\n")
+        end
+
+        it "does not count toward times" do
+          cpu_watch.run(123, 10)
+          allow(condition).to receive(method).and_call_original
+          expect(cpu_watch.run(123, 20)).to eq([:restart])
+        end
+
+        it "runs again at its next interval" do
+          cpu_watch.run(123, 10)
+          expect([cpu_watch.due?(19), cpu_watch.due?(20)]).to eq([false, true])
+        end
+      end
+    end
+
+    it "lets an error that isn't a StandardError through" do
+      allow(Bluepill::System).to receive(:cpu_usage).and_raise(NoMemoryError)
+      expect { watch.run(123, 0) }.to raise_error(NoMemoryError)
     end
 
     context "when ps fails" do
@@ -273,7 +307,7 @@ describe Bluepill::ConditionWatch do
 
       it "treats a kind of ps failure the same" do
         allow(Bluepill::System).to receive(:cpu_usage).and_raise(Class.new(Bluepill::System::PsError), "Could not run ps")
-        expect(cpu_watch.run(123, 10)).to eq([])
+        expect([cpu_watch.run(123, 10), calls.last]).to eq([[], [:warning, "cpu_usage: Could not run ps"]])
       end
     end
   end

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "bluepill/util/log_error"
+
 module Bluepill
   # Runs a process's check every so often, and fires its events when the
   # check fails often enough
@@ -144,9 +146,6 @@ module Bluepill
     # @return [Array<Symbol>] the events to fire, empty unless the check
     #   ran and failed often enough
     #
-    # @raise [StandardError] whatever the check raised, other than a
-    #   System::PsError, after logging it
-    #
     # @api private
     def run(pid, tick_number = Clock.now)
       # The same test as due?, written out to save a call on every check.
@@ -162,49 +161,45 @@ module Bluepill
 
     # Run the check, add its value to the history, and log the history
     #
+    # A check that raises is skipped: it adds nothing to the history and
+    # fires nothing, and runs again at its next interval.
+    #
     # @param [Integer, nil] pid the process's pid
     #
     # @return [Array<Symbol>] the events to fire, empty unless enough of
-    #   the last values failed for the watch to fire, or ps failed
-    #
-    # @raise [StandardError] whatever the check raised, other than a
-    #   System::PsError, after logging it
+    #   the last values failed for the watch to fire
     #
     # @api private
     def run_check(pid)
-      begin
-        value = @process_condition.run(pid, @include_children)
-      rescue => e
-        return check_failed(e)
-      end
+      value = @process_condition.run(pid, @include_children)
       @history << HistoryValue.new(@process_condition.format_value(value), @process_condition.check?(value))
       logger.info(to_s)
       # Fire when enough of the values in the window failed
       return @fires if @history.count { |v| !v.critical } >= @required
 
       EMPTY_ARRAY
+    rescue => e
+      check_failed(e)
     end
 
-    # Log an error the check raised, and re-raise it unless ps failed
+    # Log an error the check raised
     #
-    # Call it from where the error was rescued, so raise re-raises it.
+    # A failed ps is a warning, since it says nothing about the check. Any
+    # other error is logged with its backtrace. Either way, the check reads
+    # nothing this time.
     #
     # @param [StandardError] error what the check raised
     #
-    # @return [Array<Symbol>] no events, when ps failed
-    #
-    # @raise [StandardError] the error, unless it's a System::PsError
+    # @return [Array<Symbol>] no events
     #
     # @api private
     def check_failed(error)
       if error.is_a?(System::PsError)
-        # No data this time, so leave the history alone and check again next interval
         logger.warning("#{@name}: #{error}")
-        EMPTY_ARRAY
       else
-        logger.err(error.backtrace)
-        raise
+        Util.log_error(logger, "#{@name} check failed", error)
       end
+      EMPTY_ARRAY
     end
 
     # Forget the values the check read, as when the process changes state

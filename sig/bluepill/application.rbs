@@ -16,8 +16,6 @@ module Bluepill
     attr_accessor pid_file: String
     attr_accessor kill_timeout: Integer
     attr_accessor groups: Hash[String?, Group]
-    # Not used by bluepill
-    attr_accessor work_queue: untyped
     attr_accessor pids_dir: String
     attr_accessor log_file: String?
 

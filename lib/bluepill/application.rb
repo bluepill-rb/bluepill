@@ -26,7 +26,7 @@ module Bluepill
     # version, and log_file to find the log that it tails.
     DAEMON_COMMANDS = (PROCESS_COMMANDS + [:version, :log_file]).freeze
 
-    attr_accessor :name, :logger, :base_dir, :socket, :pid_file, :kill_timeout, :groups, :work_queue, :pids_dir, :log_file
+    attr_accessor :name, :logger, :base_dir, :socket, :pid_file, :kill_timeout, :groups, :pids_dir, :log_file
 
     # @!attribute [rw] name
     #   The application's name, which names its socket and pid file
@@ -74,13 +74,6 @@ module Bluepill
     #   The application's groups by name, with nil for processes in no group
     #
     #   @return [Hash{String, nil => Group}]
-    #
-    #   @api private
-
-    # @!attribute [rw] work_queue
-    #   An attribute that bluepill doesn't use
-    #
-    #   @return [Object]
     #
     #   @api private
 

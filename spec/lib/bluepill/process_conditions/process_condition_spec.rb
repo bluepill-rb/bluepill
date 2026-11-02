@@ -1,19 +1,19 @@
 describe Bluepill::ProcessConditions::ProcessCondition do
-  subject { described_class.new(below: 5) }
+  subject(:condition) { described_class.new(below: 5) }
 
   it 'stores its options' do
-    expect(subject.instance_variable_get(:@options)).to eq(below: 5)
+    expect(condition.instance_variable_get(:@options)).to eq(below: 5)
   end
 
   it 'takes its logger out of its options' do
     logger = double('logger')
-    condition = described_class.new(below: 5, logger: logger)
-    expect(condition.logger).to equal(logger)
-    expect(condition.instance_variable_get(:@options)).to eq(below: 5)
+    logged = described_class.new(below: 5, logger: logger)
+    expect(logged.logger).to equal(logger)
+    expect(logged.instance_variable_get(:@options)).to eq(below: 5)
   end
 
   it 'has no logger without one' do
-    expect(subject.logger).to be_nil
+    expect(condition.logger).to be_nil
   end
 
   it 'can be created without options' do
@@ -21,12 +21,12 @@ describe Bluepill::ProcessConditions::ProcessCondition do
   end
 
   it 'requires subclasses to implement #run' do
-    expect { subject.run(123, false) }.to raise_error('Implement in subclass!')
+    expect { condition.run(123, false) }.to raise_error('Implement in subclass!')
   end
 
   it 'requires subclasses to implement #check? or #check' do
-    expect { subject.check?(1) }.to raise_error('Implement in subclass!')
-    expect { subject.check(1) }.to raise_error('Implement in subclass!')
+    expect { condition.check?(1) }.to raise_error('Implement in subclass!')
+    expect { condition.check(1) }.to raise_error('Implement in subclass!')
   end
 
   it 'passes check? on to check, as bluepill 0.1 named it' do
@@ -40,6 +40,6 @@ describe Bluepill::ProcessConditions::ProcessCondition do
   end
 
   it 'formats values as is' do
-    expect(subject.format_value(42)).to eq(42)
+    expect(condition.format_value(42)).to eq(42)
   end
 end

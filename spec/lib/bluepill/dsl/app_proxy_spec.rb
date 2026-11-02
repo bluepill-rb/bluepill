@@ -1,5 +1,5 @@
 describe Bluepill::AppProxy do
-  subject { described_class.new(:app_name, {}) }
+  subject(:proxy) { described_class.new(:app_name, {}) }
 
   let(:app) { instance_double(Bluepill::Application, pids_dir: '/pids', add_process: nil) }
 
@@ -23,14 +23,14 @@ describe Bluepill::AppProxy do
   end
 
   it 'creates an application' do
-    expect(subject.app).to eq(app)
+    expect(proxy.app).to eq(app)
   end
 
   describe '#process' do
     it 'adds a process built from the app attributes to its group' do
-      subject.working_dir = '/work'
-      subject.uid = 'user'
-      subject.process('web') do
+      proxy.working_dir = '/work'
+      proxy.uid = 'user'
+      proxy.process('web') do
         start_command 'run'
         group 'servers'
       end
@@ -50,9 +50,9 @@ describe Bluepill::AppProxy do
     it "gives every process the app's supplementary groups, unless it sets its own" do
       groups = []
       allow(app).to receive(:add_process) { |process, _| groups << process.supplementary_groups }
-      subject.supplementary_groups = ['rvm']
-      subject.process('web') { start_command 'run' }
-      subject.process('worker') do
+      proxy.supplementary_groups = ['rvm']
+      proxy.process('web') { start_command 'run' }
+      proxy.process('worker') do
         start_command 'run'
         supplementary_groups ['ssl-cert']
       end
@@ -63,9 +63,9 @@ describe Bluepill::AppProxy do
     it "gives every process the app's notify_command, unless it sets its own" do
       commands = []
       allow(app).to receive(:add_process) { |process, _| commands << process.notify_command }
-      subject.notify_command = 'alert'
-      subject.process('web') { start_command 'run' }
-      subject.process('worker') do
+      proxy.notify_command = 'alert'
+      proxy.process('web') { start_command 'run' }
+      proxy.process('worker') do
         start_command 'run'
         notify_command 'page'
       end
@@ -73,7 +73,7 @@ describe Bluepill::AppProxy do
     end
 
     it 'adds a process without a group' do
-      subject.process('worker') { start_command 'run' }
+      proxy.process('worker') { start_command 'run' }
       expect(app).to have_received(:add_process).with(kind_of(Bluepill::Process), nil)
     end
   end

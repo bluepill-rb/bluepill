@@ -13,7 +13,7 @@ describe Bluepill::Application do
   end
 
   describe '#initialize' do
-    subject { described_class.new('test', options) }
+    subject(:app) { described_class.new('test', options) }
 
     let(:options) { {} }
 
@@ -42,7 +42,7 @@ describe Bluepill::Application do
       it 'does not need HOME' do
         home = ENV.delete('HOME')
         begin
-          expect(subject.base_dir).to eq('/var/run/bluepill')
+          expect(app.base_dir).to eq('/var/run/bluepill')
         ensure
           ENV['HOME'] = home
         end
@@ -50,13 +50,13 @@ describe Bluepill::Application do
     end
 
     context 'without options' do
-      subject { described_class.new('test') }
+      subject(:app) { described_class.new('test') }
 
       before { allow(::Process).to receive(:euid).and_return(0) }
 
       it 'uses the defaults' do
-        expect(subject.base_dir).to eq('/var/run/bluepill')
-        expect(subject).not_to be_foreground
+        expect(app.base_dir).to eq('/var/run/bluepill')
+        expect(app).not_to be_foreground
       end
     end
 
@@ -71,27 +71,27 @@ describe Bluepill::Application do
 
       it "gives the process journal the base dir and the app's name" do
         expect(Bluepill::ProcessJournal).to receive(:setup).with('/var/bluepill', 'test')
-        subject
+        app
       end
 
       it 'derives the pid file and pids dir' do
-        expect(subject.pid_file).to eq('/var/bluepill/pids/test.pid')
-        expect(subject.pids_dir).to eq('/var/bluepill/pids/test')
+        expect(app.pid_file).to eq('/var/bluepill/pids/test.pid')
+        expect(app.pids_dir).to eq('/var/bluepill/pids/test')
       end
 
       it 'defaults the kill timeout and foreground mode' do
-        expect(subject.kill_timeout).to eq(10)
-        expect(subject).not_to be_foreground
-        expect(subject.groups).to eq({})
+        expect(app.kill_timeout).to eq(10)
+        expect(app).not_to be_foreground
+        expect(app.groups).to eq({})
       end
 
       it 'traps TERM, INT and HUP' do
-        subject
+        app
         expect(traps.keys).to contain_exactly('TERM', 'INT', 'HUP')
       end
 
       it 'has a mutex' do
-        expect(subject.mutex { :result }).to eq(:result)
+        expect(app.mutex { :result }).to eq(:result)
       end
 
       context 'when foreground is false' do
@@ -104,7 +104,7 @@ describe Bluepill::Application do
         expect(Bluepill::Logger).to receive(:new).with(log_file: nil, log_level: nil, stdout: false).and_return(logger)
         expect(logger).to receive(:prefix_with).with('test').and_return(logger)
         expect(Bluepill::ProcessJournal).to receive(:logger=).with(logger)
-        expect(subject.logger).to eq(logger)
+        expect(app.logger).to eq(logger)
       end
 
       context 'with other options' do
@@ -112,9 +112,9 @@ describe Bluepill::Application do
 
         it 'uses them' do
           expect(Bluepill::Logger).to receive(:new).with(log_file: 'log', log_level: :info, stdout: true).and_return(logger)
-          expect(subject.kill_timeout).to eq(3)
-          expect(subject.log_file).to eq('log')
-          expect(subject).to be_foreground
+          expect(app.kill_timeout).to eq(3)
+          expect(app.log_file).to eq('log')
+          expect(app).to be_foreground
         end
       end
     end
@@ -149,7 +149,7 @@ describe Bluepill::Application do
   end
 
   describe '#initialize without permission to write its files' do
-    subject { described_class.new('test', base_dir: '/var/bluepill', log_file: '/var/log/bluepill.log') }
+    subject(:app) { described_class.new('test', base_dir: '/var/bluepill', log_file: '/var/log/bluepill.log') }
 
     def expect_startup_failure(message)
       expect($stderr).to receive(:puts).with("Failed to start bluepill: #{message}").ordered
@@ -157,7 +157,7 @@ describe Bluepill::Application do
         'The user running bluepill must be able to write to its log_file and base_dir. ' \
         'The uid and gid in the config only apply to the processes it monitors.'
       ).ordered
-      expect { subject }.to raise_error(SystemExit) { |error| expect(error.status).to be(5) }
+      expect { app }.to raise_error(SystemExit) { |error| expect(error.status).to be(5) }
     end
 
     it 'exits with a clear message when it cannot open the log file' do

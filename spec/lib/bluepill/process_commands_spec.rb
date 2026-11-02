@@ -85,7 +85,7 @@ describe Bluepill::Process do
 
       it "kills what earlier runs left" do
         process.start_process
-        expect(Bluepill::ProcessJournal).to have_received(:kill_all_from_journal).with(:proc_name)
+        expect(journal).to have_received(:kill_all)
       end
 
       it "daemonizes the start command with the process options" do
@@ -95,7 +95,7 @@ describe Bluepill::Process do
 
       it "journals the daemon pid" do
         process.start_process
-        expect(Bluepill::ProcessJournal).to have_received(:append_pid_to_journal).with(:proc_name, 99)
+        expect(journal).to have_received(:append).with(99)
       end
 
       it "journals children pids when monitoring children" do
@@ -103,13 +103,13 @@ describe Bluepill::Process do
         process.children << instance_double(described_class, "child", actual_pid: 100)
         journaled = record_journal
         process.start_process
-        expect(journaled).to eq [[:proc_name, 99], [:proc_name, 100]]
+        expect(journaled).to eq [99, 100]
       end
 
       it "does not journal when daemonizing fails" do
         allow(Bluepill::System).to receive(:daemonize).and_return(nil)
         process.start_process
-        expect(Bluepill::ProcessJournal).not_to have_received(:append_pid_to_journal)
+        expect(journal).not_to have_received(:append)
       end
     end
   end
@@ -206,7 +206,7 @@ describe Bluepill::Process do
       end
 
       it "cleans up the journal" do
-        expect(Bluepill::ProcessJournal).to have_received(:kill_all_from_journal).with(:proc_name)
+        expect(journal).to have_received(:kill_all)
       end
 
       it "deletes the pid file" do
@@ -225,7 +225,7 @@ describe Bluepill::Process do
         allow(Bluepill::System).to receive(:get_children).with(5).and_return([6, 7])
         journaled = record_journal
         process.stop_process
-        expect(journaled).to eq [[:proc_name, 6], [:proc_name, 7]]
+        expect(journaled).to eq [6, 7]
       end
 
       it "journals no children when stopped before it has a pid" do
@@ -284,7 +284,7 @@ describe Bluepill::Process do
 
       it "cleans up the journal of the process" do
         run_stop_signals([:quit])
-        expect(Bluepill::ProcessJournal).to have_received(:kill_all_from_journal).with(:proc_name)
+        expect(journal).to have_received(:kill_all)
       end
 
       it "sends each signal while the process is alive" do
@@ -881,7 +881,7 @@ describe Bluepill::Process do
     context "when the transition raises" do
       before do
         process.state = :up
-        allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal).and_raise("boom")
+        allow(journal).to receive(:kill_all).and_raise("boom")
       end
 
       it "raises" do

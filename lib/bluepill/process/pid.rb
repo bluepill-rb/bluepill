@@ -118,7 +118,7 @@ module Bluepill
       #
       # @api private
       def actual_pid=(pid)
-        ProcessJournal.append_pid_to_journal(name, pid) # be sure to always log the pid
+        journal.append(pid) # be sure to always log the pid
         @actual_pid = pid
       end
 
@@ -131,6 +131,13 @@ module Bluepill
       #
       # @api private
       def cached_pid = @actual_pid || @last_pid
+
+      # Return the process's journals, of the pids and process groups it had
+      #
+      # @return [ProcessJournal::Journal]
+      #
+      # @api private
+      def journal = @journal ||= ProcessJournal.for(name)
 
       # Forget the process's pid
       #

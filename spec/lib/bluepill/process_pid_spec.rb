@@ -163,11 +163,22 @@ describe Bluepill::Process do
     before { process.actual_pid = 12 }
 
     it "journals the pid" do
-      expect(Bluepill::ProcessJournal).to have_received(:append_pid_to_journal).with(:proc_name, 12)
+      expect(journal).to have_received(:append).with(12)
     end
 
     it "sets the pid" do
       expect(process.actual_pid).to eq 12
+    end
+  end
+
+  describe "#journal" do
+    it "is the process's journal" do
+      expect(process.journal).to be journal
+    end
+
+    it "is found by the process's name, once" do
+      2.times { process.journal }
+      expect(Bluepill::ProcessJournal).to have_received(:for).once.with(:proc_name)
     end
   end
 

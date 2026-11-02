@@ -17,6 +17,10 @@ describe Bluepill::BaseDirectory do
     expect(base_directory.pids_dir).to eq("/var/run/bluepill/pids")
   end
 
+  it "has the process journals in journals" do
+    expect(base_directory.journals_dir).to eq("/var/run/bluepill/journals")
+  end
+
   it "names an application's socket after it" do
     expect(base_directory.socket_file("app")).to eq("/var/run/bluepill/socks/app.sock")
   end

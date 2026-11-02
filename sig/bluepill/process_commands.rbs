@@ -30,6 +30,7 @@ module Bluepill
       def unlink_pid: () -> void
       def clear_pid: () -> void
       def skip_ticks_for: (seconds seconds) -> Integer
+      def journal: () -> ProcessJournal::Journal
       def dispatch!: (Symbol | String event, ?String? reason) -> bool
     end
 
@@ -184,6 +185,7 @@ module Bluepill
     @cache_actual_pid: bool
     @actual_pid: Integer?
     @last_pid: Integer?
+    @journal: ProcessJournal::Journal?
 
     def process_running?: (?bool force) -> bool
 
@@ -204,6 +206,8 @@ module Bluepill
     # The pid, or the last one it had if it has died
     def cached_pid: () -> Integer?
 
+    def journal: () -> ProcessJournal::Journal
+
     def clear_pid: () -> nil
 
     def unlink_pid: () -> void
@@ -219,6 +223,7 @@ module Bluepill
       %a{pure} def child_process_factory: () -> ProcessFactory?
       def daemonize?: () -> bool
       def actual_pid: () -> Integer?
+      def journal: () -> ProcessJournal::Journal
     end
 
     @children: Array[Process]

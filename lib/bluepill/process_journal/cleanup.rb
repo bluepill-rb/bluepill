@@ -6,70 +6,28 @@ module Bluepill
     #
     # Before bluepill starts a process, it kills the processes and process
     # groups its journals list that are still the ones bluepill journaled,
-    # and then clears the journals. ProcessJournal extends it.
+    # and then clears the journals. ProcessJournal extends it, and a
+    # Journal calls it.
     #
     # @api private
     module Cleanup
-      # Kill the processes and process groups that a process's journals list
-      #
-      # @param [String] journal_name the process's name
-      #
-      # @return [void]
-      #
-      # @api private
-      def kill_all_from_journal(journal_name)
-        kill_all_pids_from_journal(journal_name)
-        kill_all_pgids_from_journal(journal_name)
-      end
-
-      # Kill the process groups that a process's journals list
-      #
-      # That's the app's journal, and the one that bluepill 0.1 and earlier
-      # shared between apps.
-      #
-      # @param [String] journal_name the process's name
-      #
-      # @return [void]
-      #
-      # @api private
-      def kill_all_pgids_from_journal(journal_name) = kill_all_ids_from_journal(PGID, journal_name)
-
-      # Kill the processes that a process's journals list
-      #
-      # That's the app's journal, and the one that bluepill 0.1 and earlier
-      # shared between apps.
-      #
-      # @param [String] journal_name the process's name
-      #
-      # @return [void]
-      #
-      # @api private
-      def kill_all_pids_from_journal(journal_name) = kill_all_ids_from_journal(PID, journal_name)
-
       # Kill the ids that one kind of a process's journals list
       #
       # That's the app's journal, and the one that bluepill 0.1 and earlier
       # shared between apps.
       #
       # @param [Kind] kind PID or PGID
-      # @param [String] journal_name the process's name
+      # @param [#to_s] journal_name the process's name
       #
       # @return [void]
       #
       # @api private
-      def kill_all_ids_from_journal(kind, journal_name)
+      def kill_all(kind, journal_name)
         journal_dirs.each do |dir|
-          filename = journal_filename(kind, journal_name, dir)
+          filename = kind.filename(dir, journal_name)
           kill_all_from_journal_file(filename, journal_ids(kind, filename), kind)
         end
       end
-
-      # Return the directories a process's journals can be in
-      #
-      # @return [Array<String>] the app's, and then the one before 0.2
-      #
-      # @api private
-      def journal_dirs = [journal_base_dir, legacy_journal_dir]
 
       # Kill the ids a journal lists, and then delete the journal
       #

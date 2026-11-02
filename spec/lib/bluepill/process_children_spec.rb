@@ -47,7 +47,7 @@ describe Bluepill::Process do
       end
 
       it "journals no children when not daemonized" do
-        expect(Bluepill::ProcessJournal).not_to have_received(:append_pid_to_journal).with(:proc_name, 8)
+        expect(journal).not_to have_received(:append).with(8)
       end
     end
 
@@ -56,7 +56,7 @@ describe Bluepill::Process do
       allow(Bluepill::System).to receive(:get_children).and_return([8])
       allow(factory).to receive(:create_child_process).and_return(instance_double(described_class, "child"))
       process.refresh_children!
-      expect(Bluepill::ProcessJournal).to have_received(:append_pid_to_journal).with(:proc_name, 8)
+      expect(journal).to have_received(:append).with(8)
     end
 
     context "without new children" do

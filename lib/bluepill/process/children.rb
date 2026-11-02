@@ -61,7 +61,7 @@ module Bluepill
       #
       # @api private
       def new_child(factory, child_pid)
-        ProcessJournal.append_pid_to_journal(name, child_pid) if daemonize?
+        journal.append(child_pid) if daemonize?
         child_name = "<child(pid:#{child_pid})>"
         factory.create_child_process(child_name, child_pid, logger.prefix_with(child_name))
       end

@@ -2,6 +2,11 @@
 
 module Bluepill
   module ProcessJournal
+    # Raised when another process holds a journal's lock for too long
+    #
+    # @api private
+    class LockTimeoutError < StandardError; end
+
     # Lock a journal while bluepill reads and writes it
     #
     # Processes that run as other users write to the same journals, so each
@@ -22,7 +27,7 @@ module Bluepill
       #
       # @return [Object] what the block returns
       #
-      # @raise [RuntimeError] if the lock is still held after 10 tries
+      # @raise [LockTimeoutError] if the lock is still held after 10 tries
       #
       # @api private
       def acquire_atomic_fs_lock(name)
@@ -70,7 +75,7 @@ module Bluepill
       #
       # @return [void]
       #
-      # @raise [RuntimeError] if the lock is still held after 10 tries
+      # @raise [LockTimeoutError] if the lock is still held after 10 tries
       #
       # @api private
       def make_atomic_fs_lock(lock)
@@ -91,7 +96,7 @@ module Bluepill
       #
       # @return [void]
       #
-      # @raise [RuntimeError] after the 10th try
+      # @raise [LockTimeoutError] after the 10th try
       #
       # @api private
       def wait_for_atomic_fs_lock(lock, attempts)
@@ -100,7 +105,7 @@ module Bluepill
           sleep 1
         else
           logger.info("Timeout waiting for lock #{lock}")
-          raise "Timeout waiting for lock #{lock}"
+          raise LockTimeoutError, "Timeout waiting for lock #{lock}"
         end
       end
     end

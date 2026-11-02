@@ -4,8 +4,9 @@ module Bluepill
   # The paths in bluepill's base directory
   #
   # The daemons' sockets are in socks, and their pid files are in pids,
-  # next to a directory for each application's processes. The CLI and the
-  # daemon both find them here.
+  # next to a directory for each application's processes. The journals of
+  # the processes bluepill starts are in journals. The CLI and the daemon
+  # both find them here.
   #
   # @api private
   class BaseDirectory
@@ -43,6 +44,15 @@ module Bluepill
     #
     # @api private
     def pids_dir = File.join(path, "pids")
+
+    # Return the directory with the journals of the processes bluepill starts
+    #
+    # Each application's are in a directory of their own in it.
+    #
+    # @return [String]
+    #
+    # @api private
+    def journals_dir = File.join(path, "journals")
 
     # Return the socket that an application's daemon listens on
     #

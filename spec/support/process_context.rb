@@ -12,11 +12,12 @@ RSpec.shared_context "with a process" do
 
   let(:logger) { instance_double(Bluepill::Logger).as_null_object }
   let(:now) { 1_000_000 }
+  # The journals of every process, children too
+  let(:journal) { instance_double(Bluepill::ProcessJournal::Journal, append: nil, kill_all: nil) }
 
   before do
     allow(Bluepill::Clock).to receive(:now).and_return(now)
-    allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal)
-    allow(Bluepill::ProcessJournal).to receive(:append_pid_to_journal)
+    allow(Bluepill::ProcessJournal).to receive(:for).and_return(journal)
     allow(::Process).to receive(:kill).and_return(1)
     allow(Bluepill::System).to receive(:execute_blocking).and_return(exit_code: 0)
     allow(Bluepill::System).to receive(:delete_if_exists)
@@ -59,7 +60,7 @@ RSpec.shared_context "with a process" do
   # the process running until it has been sent alive times.
   def record_calls(alive = nil)
     calls = record_signals(alive)
-    allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal) { calls << :cleanup }
+    allow(journal).to receive(:kill_all) { calls << :cleanup }
     allow(Bluepill::System).to receive(:delete_if_exists) { calls << :unlink }
     allow(Bluepill::System).to receive(:execute_blocking) { |command, _options| {exit_code: 0}.tap { calls << command } }
     calls
@@ -85,10 +86,10 @@ RSpec.shared_context "with a process" do
     threads
   end
 
-  # Record the names and pids added to the journal from now on
+  # Record the pids added to the journal from now on
   def record_journal
     journaled = []
-    allow(Bluepill::ProcessJournal).to receive(:append_pid_to_journal) { |name, pid| journaled << [name, pid] }
+    allow(journal).to receive(:append) { |pid| journaled << pid }
     journaled
   end
 

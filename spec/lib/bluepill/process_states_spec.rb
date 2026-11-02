@@ -70,7 +70,7 @@ describe Bluepill::Process do
       calls << [:stop_process, process.state] if signal == "TERM"
       1
     end
-    allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal)
+    allow(Bluepill::ProcessJournal).to receive(:for).and_return(instance_double(Bluepill::ProcessJournal::Journal, append: nil, kill_all: nil))
     allow(Bluepill::System).to receive(:delete_if_exists)
     allow(Bluepill::System).to receive(:daemonize) do
       calls << [:start_process, process.state]

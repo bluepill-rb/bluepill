@@ -110,21 +110,26 @@ describe Bluepill::ProcessJournal do
     end
   end
 
-  %i[skip_pid? skip_pgid?].each do |method|
-    describe ".#{method}" do
-      it "skips non-integers and ids <= 1" do
-        ids = [nil, "5", -5, 0, 1, 2]
-        expect(ids.collect { |id| described_class.send(method, id) }).to eq [true, true, true, true, true, false]
-      end
+  describe ".skip_id?" do
+    it "skips non-integers and ids <= 1" do
+      ids = [nil, "5", -5, 0, 1, 2]
+      expect(ids.collect { |id| described_class.skip_id?(id) }).to eq [true, true, true, true, true, false]
+    end
 
-      # An Integer that isn't an instance of Integer. Every Integer is one
-      # since Ruby 2.4, so this keeps is_a? from passing as instance_of?.
-      it "accepts instances of Integer subclasses" do
-        id = instance_double(Integer)
-        allow(id).to receive(:is_a?).with(Integer).and_return(true)
-        allow(id).to receive(:<=).with(1).and_return(false)
-        expect(described_class.send(method, id)).to be false
-      end
+    # An Integer that isn't an instance of Integer. Every Integer is one
+    # since Ruby 2.4, so this keeps is_a? from passing as instance_of?.
+    it "accepts instances of Integer subclasses" do
+      id = instance_double(Integer)
+      allow(id).to receive(:is_a?).with(Integer).and_return(true)
+      allow(id).to receive(:<=).with(1).and_return(false)
+      expect(described_class.skip_id?(id)).to be false
+    end
+  end
+
+  describe ".for" do
+    it "is a process's journal" do
+      journal = described_class.for("web")
+      expect([journal.class, journal.name]).to eq [described_class::Journal, "web"]
     end
   end
 
@@ -193,13 +198,13 @@ describe Bluepill::ProcessJournal do
       # Try to take the lock, and carry on past the timeout
       def acquire
         described_class.acquire_atomic_fs_lock(name) { raise "should not yield" }
-      rescue RuntimeError
+      rescue described_class::LockTimeoutError
         nil
       end
 
       it "gives up after 10 attempts" do
         expect { described_class.acquire_atomic_fs_lock(name) { raise "should not yield" } }
-          .to raise_error("Timeout waiting for lock #{name}.lock")
+          .to raise_error(described_class::LockTimeoutError, "Timeout waiting for lock #{name}.lock")
       end
 
       it "waits a second between attempts" do
@@ -305,28 +310,33 @@ describe Bluepill::ProcessJournal do
     end
   end
 
-  describe ".pid_journal_filename" do
-    it "is in the journal directory" do
-      expect(described_class.pid_journal_filename("app")).to eq File.join(dir, ".bluepill_pids_journal.app")
+  describe described_class::Kind do
+    describe "#filename" do
+      it "is a pid journal's, in the directory" do
+        expect(Bluepill::ProcessJournal::PID.filename("/old", :app)).to eq "/old/.bluepill_pids_journal.app"
+      end
+
+      it "is a process group journal's, in the directory" do
+        expect(Bluepill::ProcessJournal::PGID.filename("/old", "app")).to eq "/old/.bluepill_pgids_journal.app"
+      end
     end
 
-    it "is in another journal directory when given one" do
-      expect(described_class.pid_journal_filename("app", "/old")).to eq "/old/.bluepill_pids_journal.app"
+    it "keeps what it's made with" do
+      kind = described_class.new("id", "thing", "ids", 2)
+      expect([kind.name, kind.label, kind.sign, kind.filename("/old", "app")]).to eq ["id", "thing", 2, "/old/.bluepill_ids_journal.app"]
+    end
+
+    it "describes pids" do
+      expect(%i[name label sign].collect { |attr| Bluepill::ProcessJournal::PID.public_send(attr) }).to eq ["pid", "process", 1]
+    end
+
+    it "describes process groups" do
+      expect(%i[name label sign].collect { |attr| Bluepill::ProcessJournal::PGID.public_send(attr) }).to eq ["pgid", "process group", -1]
     end
   end
 
-  describe ".pgid_journal_filename" do
-    it "is in the journal directory" do
-      expect(described_class.pgid_journal_filename("app")).to eq File.join(dir, ".bluepill_pgids_journal.app")
-    end
-
-    it "is in another journal directory when given one" do
-      expect(described_class.pgid_journal_filename("app", "/old")).to eq "/old/.bluepill_pgids_journal.app"
-    end
-  end
-
-  {pid_journal: "pid", pgid_journal: "pgid"}.each do |method, kind|
-    describe ".#{method}" do
+  {"pid" => described_class::PID, "pgid" => described_class::PGID}.each do |kind, journal_kind|
+    describe ".journal_ids of a #{kind} journal" do
       context "with a journal" do
         let(:filename) { File.join(dir, "j") }
 
@@ -335,11 +345,11 @@ describe Bluepill::ProcessJournal do
         end
 
         it "reads valid ids" do
-          expect(described_class.send(method, filename)).to eq [42, 43]
+          expect(described_class.journal_ids(journal_kind, filename)).to eq [42, 43]
         end
 
         it "logs the file and the ids" do
-          described_class.send(method, filename)
+          described_class.journal_ids(journal_kind, filename)
           expect(log).to eq [[:debug, "#{kind} journal file: #{filename}"], [:debug, "#{kind} journal = 42 43"]]
         end
       end
@@ -348,33 +358,32 @@ describe Bluepill::ProcessJournal do
         let(:filename) { File.join(dir, "missing") }
 
         it "is empty" do
-          expect(described_class.send(method, filename)).to eq []
+          expect(described_class.journal_ids(journal_kind, filename)).to eq []
         end
 
         it "logs the file" do
-          described_class.send(method, filename)
+          described_class.journal_ids(journal_kind, filename)
           expect(log).to eq [[:debug, "#{kind} journal file: #{filename}"]]
         end
       end
     end
   end
 
-  describe ".kill_all_from_journal" do
+  describe "Journal#kill_all" do
     it "kills pids, and then pgids" do
       calls = []
-      allow(described_class).to(receive(:kill_all_pids_from_journal)) { |name| calls << [:pids, name] }
-      allow(described_class).to(receive(:kill_all_pgids_from_journal)) { |name| calls << [:pgids, name] }
-      described_class.kill_all_from_journal("app")
-      expect(calls).to eq [[:pids, "app"], [:pgids, "app"]]
+      allow(described_class).to(receive(:kill_all)) { |kind, name| calls << [kind, name] }
+      described_class.for("app").kill_all
+      expect(calls).to eq [[described_class::PID, "app"], [described_class::PGID, "app"]]
     end
   end
 
   {
-    kill_all_pids_from_journal: [:pid_journal_filename, 1, "process", "pid"],
-    kill_all_pgids_from_journal: [:pgid_journal_filename, -1, "process group", "pgid"]
-  }.each do |method, (filename_method, sign, label, kind)|
-    describe ".#{method}" do
-      let(:filename) { described_class.send(filename_method, "app") }
+    described_class::PID => [1, "process", "pid"],
+    described_class::PGID => [-1, "process group", "pgid"]
+  }.each do |journal_kind, (sign, label, kind)|
+    describe ".kill_all of #{kind}s" do
+      let(:filename) { journal_kind.filename(dir, "app") }
       # The signals sent and the waits, in order
       let(:calls) { [] }
 
@@ -385,7 +394,7 @@ describe Bluepill::ProcessJournal do
 
       # The journal that bluepill 0.1 and earlier shared, in the directory before 0.2
       define_method(:legacy_filename) do
-        described_class.send(filename_method, "app", legacy_dir)
+        journal_kind.filename(legacy_dir, "app")
       end
 
       define_method(:journal_log) do |ids|
@@ -414,7 +423,7 @@ describe Bluepill::ProcessJournal do
       context "without a journal" do
         before do
           allow(Bluepill::System).to receive(:delete_if_exists)
-          described_class.send(method, "app")
+          described_class.kill_all(journal_kind, "app")
         end
 
         it "signals nothing" do
@@ -437,7 +446,7 @@ describe Bluepill::ProcessJournal do
         before do
           write_journal(filename, [42])
           write_journal(legacy_filename, [43])
-          described_class.send(method, "app")
+          described_class.kill_all(journal_kind, "app")
         end
 
         it "terms what both list, the app's first" do
@@ -457,7 +466,7 @@ describe Bluepill::ProcessJournal do
         before do
           File.write(filename, "42 20000\n")
           allow(Bluepill::System).to receive(:started_at).with(42).and_return(50_000)
-          described_class.send(method, "app")
+          described_class.kill_all(journal_kind, "app")
         end
 
         it "leaves it alone" do
@@ -476,13 +485,13 @@ describe Bluepill::ProcessJournal do
       context "with another app's journal" do
         # The journal of another app's process of the same name
         define_method(:other) do
-          described_class.send(filename_method, "app", File.join(legacy_dir, "other"))
+          journal_kind.filename(File.join(legacy_dir, "other"), "app")
         end
 
         before do
           Dir.mkdir(File.dirname(other))
           write_journal(other, [44])
-          described_class.send(method, "app")
+          described_class.kill_all(journal_kind, "app")
         end
 
         it "signals nothing" do
@@ -498,7 +507,7 @@ describe Bluepill::ProcessJournal do
         before do
           write_journal(filename, [42, 43])
           missing("TERM", 43)
-          described_class.send(method, "app")
+          described_class.kill_all(journal_kind, "app")
         end
 
         it "terms each, without waiting" do
@@ -518,7 +527,7 @@ describe Bluepill::ProcessJournal do
         before do
           write_journal(filename, [42])
           allow(Bluepill::System).to receive(:pid_alive?).with(sign * 42).and_return(true)
-          described_class.send(method, "app")
+          described_class.kill_all(journal_kind, "app")
         end
 
         it "terms it, waits a second, and kills it" do
@@ -544,7 +553,7 @@ describe Bluepill::ProcessJournal do
             alive[43] = false
           end
           missing("KILL", 42)
-          described_class.send(method, "app")
+          described_class.kill_all(journal_kind, "app")
         end
 
         it "only kills the ids still alive after the wait" do
@@ -562,12 +571,11 @@ describe Bluepill::ProcessJournal do
     end
   end
 
-  {append_pgid_to_journal: "pgid", append_pid_to_journal: "pid"}.each do |method, kind|
-    describe ".#{method}" do
-      let(:filename) { described_class.send("#{kind}_journal_filename", "app") }
+  {"pgid" => described_class::PGID, "pid" => described_class::PID}.each do |kind, journal_kind|
+    describe ".append of a #{kind}" do
+      let(:filename) { journal_kind.filename(dir, "app") }
 
       before do
-        allow(::Process).to receive(:getpgid).with(42).and_raise(Errno::ESRCH)
         allow(described_class).to receive(:acquire_atomic_fs_lock).and_call_original
         allow(File).to receive(:open).and_call_original
       end
@@ -579,7 +587,7 @@ describe Bluepill::ProcessJournal do
 
       context "when a new #{kind} is appended" do
         before do
-          described_class.send(method, "app", 42)
+          described_class.append(journal_kind, "app", 42)
         end
 
         it "journals it" do
@@ -601,9 +609,9 @@ describe Bluepill::ProcessJournal do
 
       context "when the #{kind} is appended again" do
         before do
-          described_class.send(method, "app", 42)
+          described_class.append(journal_kind, "app", 42)
           log.clear
-          described_class.send(method, "app", 42)
+          described_class.append(journal_kind, "app", 42)
         end
 
         it "journals it once" do
@@ -623,25 +631,30 @@ describe Bluepill::ProcessJournal do
         end
       end
 
+      it "yields a valid #{kind} before it journals it" do
+        journaled = nil
+        described_class.append(journal_kind, "app", 42) { |id| journaled = [id, File.exist?(filename)] }
+        expect(journaled).to eq [42, false]
+      end
+
       it "journals when the #{kind}'s process started" do
         allow(Bluepill::System).to receive(:started_at).with(42).and_return(1000)
-        described_class.send(method, "app", 42)
+        described_class.append(journal_kind, "app", 42)
         expect(File.read(filename)).to eq "42 1000\n"
       end
 
       [nil, 0, 1, "42"].each do |id|
         context "with the invalid #{kind} #{id.inspect}" do
           before do
-            allow(::Process).to receive(:getpgid)
-            described_class.send(method, "app", id)
+            described_class.append(journal_kind, "app", id)
           end
 
           it "skips it" do
             expect(File.exist?(filename)).to be false
           end
 
-          it "doesn't look up its process group" do
-            expect(::Process).not_to have_received(:getpgid)
+          it "yields nothing" do
+            expect { |block| described_class.append(journal_kind, "app", id, &block) }.not_to yield_control
           end
 
           it "logs that it skipped it" do
@@ -752,12 +765,13 @@ describe Bluepill::ProcessJournal do
     end
   end
 
-  describe ".append_pid_to_journal" do
-    let(:filename) { described_class.pid_journal_filename("app") }
+  describe "Journal#append" do
+    let(:filename) { described_class::PID.filename(dir, "app") }
+    let(:journal) { described_class.for("app") }
 
     # Return what the pid and pgid journals say, or false for one that isn't there
     def journals
-      pgid_filename = described_class.pgid_journal_filename("app")
+      pgid_filename = described_class::PGID.filename(dir, "app")
       {pid: File.read(filename), pgid: File.exist?(pgid_filename) && File.read(pgid_filename)}
     end
 
@@ -765,14 +779,14 @@ describe Bluepill::ProcessJournal do
       allow(::Process).to receive(:getpgid).with(42).and_return(40)
       allow(Bluepill::System).to receive(:started_at).with(42).and_return(1000)
       allow(Bluepill::System).to receive(:started_at).with(40).and_return(900)
-      described_class.append_pid_to_journal("app", 42)
+      journal.append(42)
       expect(journals).to eq(pid: "42 1000\n", pgid: "40 900\n")
     end
 
     context "when appended twice" do
       before do
         allow(::Process).to receive(:getpgid).with(42).and_return(40)
-        2.times { described_class.append_pid_to_journal("app", 42) }
+        2.times { journal.append(42) }
       end
 
       it "journals the pid and its process group once" do
@@ -784,10 +798,25 @@ describe Bluepill::ProcessJournal do
       end
     end
 
+    context "with an invalid pid" do
+      before do
+        allow(::Process).to receive(:getpgid)
+        journal.append(1)
+      end
+
+      it "journals nothing" do
+        expect([filename, described_class::PGID.filename(dir, "app")].select { |path| File.exist?(path) }).to be_empty
+      end
+
+      it "doesn't look up its process group" do
+        expect(::Process).not_to have_received(:getpgid)
+      end
+    end
+
     context "when the process is gone before its group is looked up" do
       before do
         allow(::Process).to receive(:getpgid).with(42).and_raise(Errno::ESRCH)
-        described_class.append_pid_to_journal("app", 42)
+        journal.append(42)
       end
 
       it "journals only the pid" do

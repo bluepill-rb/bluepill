@@ -27,7 +27,7 @@ module Bluepill
     def start_process
       # An old stop signal thread would otherwise signal and clean up the new process
       clean_threads
-      ProcessJournal.kill_all_from_journal(name) # be sure nothing else is running from previous runs
+      journal.kill_all # be sure nothing else is running from previous runs
       pre_start_process
       # ProcessFactory makes sure every process has a start command
       command = start_command #: String
@@ -71,10 +71,10 @@ module Bluepill
       daemon_id = System.daemonize(command, system_command_options)
       return unless daemon_id
 
-      ProcessJournal.append_pid_to_journal(name, daemon_id)
+      journal.append(daemon_id)
       # Only refresh_children! fills children, and only when monitoring them
       children.each do |child|
-        ProcessJournal.append_pid_to_journal(name, child.actual_pid)
+        journal.append(child.actual_pid)
       end
     end
 
@@ -103,7 +103,7 @@ module Bluepill
     # @api private
     def journal_children
       System.get_children(actual_pid).each do |child_pid|
-        ProcessJournal.append_pid_to_journal(name, child_pid)
+        journal.append(child_pid)
       end
     end
 
@@ -189,7 +189,7 @@ module Bluepill
     #
     # @api private
     def cleanup_process
-      ProcessJournal.kill_all_from_journal(name) # finish cleanup
+      journal.kill_all # finish cleanup
       unlink_pid
       clear_pid
       post_stop_process

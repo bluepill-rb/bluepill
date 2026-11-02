@@ -560,7 +560,7 @@ describe Bluepill::System do
 
     it 'stores assigned pairs' do
       described_class.store[:somekey] = 10
-      expect(described_class.store[:somekey]).to eql(10)
+      expect(described_class.store[:somekey]).to be(10)
     end
   end
 

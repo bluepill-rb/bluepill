@@ -24,20 +24,33 @@ describe Bluepill::Application do
 
   describe 'start_listener' do
     let(:client) { instance_double(UNIXSocket, readline: "status:web\n", write: nil, close: nil) }
-    let(:server_socket) { instance_double(UNIXServer, accept: client) }
     let(:logged) { [] }
 
     before do
-      app.socket = server_socket
+      app.socket = instance_double(UNIXServer)
+      accepting(client)
       # The listener's thread is its block, which listen calls
       allow(Thread).to receive(:new) { |&block| block }
-      allow(app).to receive(:loop).and_yield
       allow(app).to receive(:status).and_return([])
       allow(logger).to receive(:err) { |line| logged << line }
     end
 
+    # The socket accepts the client, or raises the error, once, and then
+    # raises Interrupt, which the listener doesn't rescue, to end its loop
+    def accepting(client_or_error)
+      accepted = false
+      allow(app.socket).to receive(:accept) do
+        raise Interrupt if accepted
+
+        accepted = true
+        client_or_error.is_a?(Exception) ? raise(client_or_error) : client_or_error
+      end
+    end
+
     def listen
       app.send(:start_listener).call
+    rescue Interrupt
+      nil
     end
 
     context 'with a command' do
@@ -49,7 +62,7 @@ describe Bluepill::Application do
       end
 
       it 'listens in a loop' do
-        expect(app).to have_received(:loop)
+        expect(app.socket).to have_received(:accept).twice
       end
 
       it 'keeps the client from leaking into processes it starts' do
@@ -132,15 +145,15 @@ describe Bluepill::Application do
       before do
         error = Errno::EMFILE.new
         error.set_backtrace(['a.rb:1'])
-        allow(server_socket).to receive(:accept).and_raise(error)
+        accepting(error)
+        listen
       end
 
       it 'keeps listening' do
-        expect { listen }.not_to raise_error
+        expect(app.socket).to have_received(:accept).twice
       end
 
       it 'logs the error and its backtrace' do
-        listen
         expect(logged).to eq(["Got exception in cmd listener: Errno::EMFILE `#{Errno::EMFILE.new.message}`", 'a.rb:1'])
       end
     end

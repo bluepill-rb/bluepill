@@ -7,7 +7,9 @@ module Bluepill
   # to an {AppProxy}, and also gets the proxy as an argument. Bluepill then
   # loads the application, which starts its daemon. A {Bluepill::Error},
   # such as a {ConfigError} for a mistake in the config, prints its message
-  # and exits with its exit_status, which is 6 for a ConfigError.
+  # and exits with its exit_status, which is 6 for a ConfigError. A
+  # ConfigError's message starts with the pill file's line, as in
+  # "app.pill.rb:5: Unknown attribute ...".
   #
   # @example
   #   Bluepill.application(:my_app, log_file: '/var/log/bluepill.log') do |app|
@@ -34,7 +36,8 @@ module Bluepill
     app_proxy.instance_eval(&block)
     app_proxy.app.load
   rescue Error => e
-    $stderr.puts(e)
+    location = e.location if e.is_a?(ConfigError)
+    $stderr.puts(location ? "#{location}: #{e}" : e)
     exit(e.exit_status)
   end
 end

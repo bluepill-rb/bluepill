@@ -6,6 +6,13 @@ module Bluepill
 
   # A mistake in a pill file
   class ConfigError < Error
+    LIBRARY_DIR: String
+
+    def location: () -> String?
+
+    private
+
+    def outside_library?: (Thread::Backtrace::Location frame) -> bool
   end
 
   # The daemon couldn't start

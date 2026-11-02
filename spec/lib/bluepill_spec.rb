@@ -72,10 +72,23 @@ describe Bluepill do
       expect(app).to have_received(:load)
     end
 
-    it "prints a config error and exits with status 6" do
+    it "prints a config error after the pill file's line, and exits with status 6" do
+      line = __LINE__ + 1
       expect { described_class.application(:app_name, **options) { raise Bluepill::ConfigError, "Config Error: bad" } }
         .to raise_error(an_instance_of(SystemExit).and(having_attributes(status: 6)))
-        .and output("Config Error: bad\n").to_stderr
+        .and output("#{__FILE__}:#{line}: Config Error: bad\n").to_stderr
+    end
+
+    it "prints the pill file's line for a subclass of ConfigError too" do
+      line = __LINE__ + 1
+      expect { described_class.application(:app_name, **options) { raise Class.new(Bluepill::ConfigError), "Config Error: bad" } }
+        .to raise_error(SystemExit).and output("#{__FILE__}:#{line}: Config Error: bad\n").to_stderr
+    end
+
+    it "prints only the message of a config error that has no location" do
+      allow(app).to receive(:load).and_raise(Bluepill::ConfigError.new("Config Error: bad").tap { |e| allow(e).to receive(:location).and_return(nil) })
+      expect { described_class.application(:app_name, **options) { nil } }
+        .to raise_error(SystemExit).and output("Config Error: bad\n").to_stderr
     end
 
     it "prints another Bluepill::Error and exits with its status" do

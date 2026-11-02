@@ -131,6 +131,8 @@ module Bluepill
 
   # Runs the bluepill commands, and sends them to the daemon over its socket
   class Controller
+    TAIL_COMMAND: String
+
     OUT_OF_DATE: String
 
     UNKNOWN_VERSION: String

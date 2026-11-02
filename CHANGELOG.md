@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An exception in a check, other than a failed `ps`, or in a trigger stopped the daemon, which exited with status 5 and left the processes unmonitored. Bluepill now logs it at `err`, with a line for each line of its backtrace, and keeps monitoring. The check adds nothing to its history and fires nothing, so it doesn't count toward `times`, and it runs again at its next interval. A tick that raises for any other reason is logged the same way, and the process ticks again next second.
 - The CLI's check that the daemon runs the same version of bluepill never failed, since the daemon answered with its `Version` module, which Marshal loads as the CLI's own. The daemon now answers with its version as a String, and the CLI stops when it differs. A daemon from before 0.1.7 can't say which version it runs, so the CLI warns about it and goes on, as before. Run `bluepill load` again after upgrading to replace it.
 
+### Security
+
+- `bluepill log` built a shell command with the log file's path and the pattern unquoted, so a path with a space broke the command, and a quote or `$(...)` in the path or the process name ran as shell code. It now passes them to `tail` and `grep` as the shell's arguments, so they are never parsed.
+
 ## [0.1.6] - 2026-11-02
 
 ### Security

@@ -9,6 +9,12 @@ module Bluepill
   #
   # @api private
   class Controller
+    # The shell command that tails a log file ($1) through grep -E ($2)
+    #
+    # The path and the pattern are the shell's arguments, so they're never
+    # parsed as shell code, whatever characters they hold.
+    TAIL_COMMAND = 'tail -n 100 -f "$1" | grep -E "$2"'.freeze
+
     # What the CLI says when the daemon runs another version of bluepill
     OUT_OF_DATE = 'The running version of your daemon seems to be out of date.'.freeze
 
@@ -102,15 +108,13 @@ module Bluepill
           puts "bluepilld[#{pid}] not running"
         end
       when :log
-        log_file_location = send_to_daemon(application, :log_file)
-        log_file_location = log_file if log_file_location.to_s.rstrip.empty?
+        log_file_location = send_to_daemon(application, :log_file).to_s
+        log_file_location = log_file.to_s if log_file_location.rstrip.empty?
 
         requested_pattern = args.first
-        pattern = grep_pattern(application, requested_pattern)
-
-        tail = "tail -n 100 -f #{log_file_location} | grep -E '#{pattern}'"
         puts "Tailing log for #{requested_pattern}..."
-        Kernel.exec(tail)
+        # The path and the pattern are the shell's arguments, not its code
+        Kernel.exec('sh', '-c', TAIL_COMMAND, 'sh', log_file_location, grep_pattern(application, requested_pattern))
       when *Application::PROCESS_COMMANDS
         # these need to be sent to the daemon and the results printed out
         affected = send_to_daemon(application, command, *args)

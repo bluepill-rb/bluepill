@@ -730,6 +730,12 @@ module Bluepill
   # self in a process block. Any attribute can be set with `name = value`,
   # `name value` or `name!` (for true), and read back with `name`.
   class ProcessProxy
+    ATTRIBUTES_ADDED_IN_0_2: Array[Symbol]
+
+    # Whether bluepill 0.2.0 knows a process attribute, which it fails the
+    # config without
+    def self.known_in_0_2?: (Symbol name) -> bool
+
     attr_reader attributes: Hash[Symbol, untyped]
     attr_reader watches: Hash[Symbol, Hash[Symbol, untyped]]
     attr_reader name: String
@@ -747,6 +753,11 @@ module Bluepill
     def monitor_children: () ?{ (ProcessProxy child) [self: ProcessProxy] -> void } -> process_block?
 
     def to_process: () -> Process
+
+    private
+
+    # Sets an attribute, and warns about one that 0.2.0 doesn't know
+    def set_attribute: (Symbol key, untyped value) -> untyped
   end
 
   # Memoizes ps output for a tick, and runs commands as daemons or until

@@ -14,6 +14,12 @@ module Bluepill
   #
   # @api public
   class ProcessProxy
+    # The attributes that bluepill 0.2.0 adds, which it knows along with
+    # the ones bluepill 0.1 has
+    #
+    # @api private
+    ATTRIBUTES_ADDED_IN_0_2 = [:post_start_command, :pre_stop_command, :post_stop_command, :notify_command, :hook_timeout].freeze
+
     # Return the attributes that the block set, by name
     #
     # @return [Hash{Symbol => Object}] the attributes
@@ -80,10 +86,10 @@ module Bluepill
       case args.size
       when 1
         value, = args
-        @attributes[attribute.chomp('=').to_sym] = value
+        set_attribute(attribute.chomp('=').to_sym, value)
       when 0
         if attribute.end_with?('!')
-          @attributes[attribute.chomp('!').to_sym] = true
+          set_attribute(attribute.chomp('!').to_sym, true)
         elsif @attributes.key?(name)
           @attributes.fetch(name)
         else
@@ -149,6 +155,20 @@ module Bluepill
       @attributes[:child_process_block] = child_process_block
     end
 
+    # Return whether bluepill 0.2.0 knows a process attribute
+    #
+    # It knows a process's configurable attributes, the group, and the
+    # hooks it adds. It fails the config on any other.
+    #
+    # @param [Symbol] name the attribute's name
+    #
+    # @return [Boolean]
+    #
+    # @api private
+    def self.known_in_0_2?(name)
+      Process::CONFIGURABLE_ATTRIBUTES.include?(name) || name.eql?(:group) || ATTRIBUTES_ADDED_IN_0_2.include?(name)
+    end
+
     # Create the process that the block described
     #
     # @return [Process] the process
@@ -156,6 +176,25 @@ module Bluepill
     # @api private
     def to_process
       Process.new(@name, @watches, @attributes)
+    end
+
+  private
+
+    # Set an attribute, and warn about one that bluepill 0.2.0 doesn't know
+    #
+    # @param [Symbol] key the attribute's name
+    # @param [Object] value its value
+    #
+    # @return [Object] the value
+    #
+    # @api private
+    def set_attribute(key, value)
+      unless self.class.known_in_0_2?(key)
+        message = "bluepill 0.2.0 fails the config on the process attribute '#{key}', which bluepill doesn't know, " \
+                  'where 0.1 ignores it. Remove it, or fix its name.'
+        Deprecation.warn(message, message)
+      end
+      @attributes[key] = value
     end
   end
 end

@@ -54,6 +54,35 @@ describe Bluepill::ProcessProxy do
       expect(value).to eq('run')
     end
 
+    def unknown(name)
+      "DEPRECATION: bluepill 0.2.0 fails the config on the process attribute '#{name}', which bluepill doesn't know, " \
+        "where 0.1 ignores it. Remove it, or fix its name.\n"
+    end
+
+    it 'warns, once for each, about an attribute that bluepill 0.2.0 does not know, and sets it' do
+      proxy = nil
+      expect do
+        proxy = Bluepill::ProcessProxy.new('web', {}, proc do |p|
+          p.start_comand = 'run'
+          p.start_comand = 'again'
+          p.stop_comand 'halt'
+          p.demonize!
+        end)
+      end.to output(unknown(:start_comand) + unknown(:stop_comand) + unknown(:demonize)).to_stderr
+      expect(proxy.attributes).to eq(start_comand: 'again', stop_comand: 'halt', demonize: true)
+    end
+
+    it 'does not warn about the attributes that bluepill 0.2.0 knows' do
+      expect do
+        Bluepill::ProcessProxy.new('web', {}, proc do |p|
+          p.start_command = 'run'
+          p.group = 'servers'
+          p.hook_timeout = 60
+          p.daemonize!
+        end)
+      end.not_to output.to_stderr
+    end
+
     it 'raises NameError for unknown attributes without arguments' do
       expect { Bluepill::ProcessProxy.new('web', {}, proc { start_command }) }.to raise_error(NameError)
     end
@@ -92,6 +121,26 @@ describe Bluepill::ProcessProxy do
       expect(process.name).to eq('web')
       expect(process.start_command).to eq('run')
       expect(process.watches.size).to eq(1)
+    end
+  end
+
+  describe '.known_in_0_2?' do
+    it 'knows the attributes of a process' do
+      Bluepill::Process::CONFIGURABLE_ATTRIBUTES.each do |name|
+        expect(Bluepill::ProcessProxy.known_in_0_2?(name)).to be(true)
+      end
+    end
+
+    it 'knows the group and the hooks that bluepill 0.2.0 adds' do
+      [:group, :post_start_command, :pre_stop_command, :post_stop_command, :notify_command, :hook_timeout].each do |name|
+        expect(Bluepill::ProcessProxy.known_in_0_2?(name)).to be(true)
+      end
+    end
+
+    it 'knows no other attribute' do
+      expect(Bluepill::ProcessProxy.known_in_0_2?(:start_comand)).to be(false)
+      expect(Bluepill::ProcessProxy.known_in_0_2?('start_command')).to be(false)
+      expect(Bluepill::ProcessProxy.known_in_0_2?(:child_process_block)).to be(false)
     end
   end
 end

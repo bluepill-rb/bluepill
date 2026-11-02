@@ -1,0 +1,489 @@
+module Bluepill
+  # Runs commands for a Process, which is the only class that includes it
+  module ProcessCommands : _Host
+    # What ProcessCommands, and the modules it includes, use from Process
+    interface _Host
+      include Hooks::_Host
+
+      %a{pure} def children: () -> Array[Process]
+      %a{pure} def start_command: () -> String?
+      %a{pure} def stop_command: () -> String?
+      %a{pure} def restart_command: () -> String?
+      %a{pure} def stop_signals: () -> Array[Symbol | Integer]?
+      %a{pure} def start_grace_time: () -> seconds
+      %a{pure} def stop_grace_time: () -> seconds
+      %a{pure} def restart_grace_time: () -> seconds
+      %a{pure} def on_start_timeout: () -> (String | Symbol)
+      %a{pure} def monitor_children: () -> bool
+      %a{pure} def uid: () -> String?
+      %a{pure} def gid: () -> String?
+      %a{pure} def working_dir: () -> String?
+      %a{pure} def pid_file: () -> String?
+      %a{pure} def stdin: () -> String?
+      %a{pure} def stdout: () -> String?
+      %a{pure} def stderr: () -> String?
+      %a{pure} def supplementary_groups: () -> Array[String]?
+      def daemonize?: () -> bool
+      def monitor_children?: () -> bool
+      def clean_threads: () -> void
+      def signal_process: (Integer | String | Symbol code) -> bool
+      def unlink_pid: () -> void
+      def clear_pid: () -> void
+      def skip_ticks_for: (seconds seconds) -> Integer
+      def dispatch!: (Symbol | String event, ?String? reason) -> bool
+    end
+
+    include Execution
+    include Hooks
+    include StopSignals
+
+    @threads: Array[Thread]
+    @stopping_pid: Integer?
+
+    def start_process: () -> Integer
+
+    def run_start_command: (String command) -> void
+
+    def daemonize_process: (String command) -> void
+
+    def stop_process: () -> Integer
+
+    def journal_children: () -> void
+
+    def send_stop: () -> void
+
+    def run_stop_command: (String command) -> void
+
+    def restart_process: () -> Integer
+
+    def run_restart_command: (String command) -> Integer
+
+    def cleanup_process: () -> void
+  end
+
+  # Stops a Process with its stop_signals, with their delays
+  module ProcessCommands::StopSignals : ProcessCommands::StopSignals::_Host
+    # What StopSignals uses from Process
+    interface _Host
+      %a{pure} def logger: () -> Logger
+      %a{pure} def stop_grace_time: () -> seconds
+      def actual_pid: () -> Integer?
+      def signal_process: (Integer | String | Symbol code) -> bool
+      def cleanup_process: () -> void
+    end
+
+    @threads: Array[Thread]
+
+    def send_stop_signals_in_background: (Array[Symbol | Integer] signals) -> Array[Thread]
+
+    def send_stop_signals: (Array[Symbol | Integer] signals) -> void
+
+    def send_later_stop_signals: (Array[Symbol | Integer] signals) -> seconds?
+
+    def send_stop_signal: (Symbol | Integer signal) -> bool
+
+    def running_after?: (Integer delay) -> bool
+
+    def wait_for_stop: (seconds seconds) -> void
+  end
+
+  # Runs a Process's commands as its user, in its working_dir, with its
+  # environment and standard streams
+  module ProcessCommands::Execution : ProcessCommands::Execution::_Host
+    # What Execution uses from Process
+    interface _Host
+      %a{pure} def logger: () -> Logger
+      %a{pure} def uid: () -> String?
+      %a{pure} def gid: () -> String?
+      %a{pure} def working_dir: () -> String?
+      %a{pure} def environment: () -> Hash[_ToS, _ToS]?
+      %a{pure} def pid_file: () -> String?
+      %a{pure} def stdin: () -> String?
+      %a{pure} def stdout: () -> String?
+      %a{pure} def stderr: () -> String?
+      %a{pure} def supplementary_groups: () -> Array[String]?
+      def actual_pid: () -> Integer?
+      def dispatch!: (Symbol | String event, ?String? reason) -> bool
+    end
+
+    def prepare_command: (String command) -> String
+
+    def system_command_options: () -> System::command_options
+
+    # Runs the block, and dispatches next_state if it takes longer than secs
+    def with_timeout: [T] (seconds secs, String | Symbol next_state) { (Numeric secs) -> T } -> (T | bool)
+
+    def run_command: (String cmd, String description, ?System::command_options options) -> void
+  end
+
+  # Runs the commands a Process has around its starts and stops, and on each
+  # change of state
+  module ProcessCommands::Hooks : ProcessCommands::Hooks::_Host
+    # What Hooks uses from Process
+    interface _Host
+      %a{pure} def name: () -> String
+      %a{pure} def logger: () -> Logger
+      %a{pure} def pre_start_command: () -> String?
+      %a{pure} def post_start_command: () -> String?
+      %a{pure} def pre_stop_command: () -> String?
+      %a{pure} def post_stop_command: () -> String?
+      %a{pure} def notify_command: () -> String?
+      %a{pure} def hook_timeout: () -> seconds
+      %a{pure} def app_name: () -> String?
+      %a{pure} def group_name: () -> String?
+      %a{pure} def environment: () -> Hash[_ToS, _ToS]?
+      def actual_pid: () -> Integer?
+      def system_command_options: () -> System::command_options
+      def run_command: (String cmd, String description, ?System::command_options options) -> void
+    end
+
+    @stopping_pid: Integer?
+    @actual_pid: Integer?
+    @last_pid: Integer?
+    @transition_reason: String?
+
+    def pre_start_process: () -> void
+
+    def pre_stop_process: () -> void
+
+    def post_stop_process: () -> Thread?
+
+    def post_start_process: () -> Thread?
+
+    def notify_transition: (_Transition transition) -> Thread?
+
+    def notify_environment: (_Transition transition, Integer? pid) -> Hash[String, String]
+
+    def run_hook_in_background: (String command, String description, Integer? pid, ?Hash[String, String] env) -> Thread
+
+    def run_hook: (String command, String description, Integer? pid, ?Hash[String, String] env) -> void
+
+    def hook_options: (Hash[String, String] env) -> System::command_options
+  end
+
+  # A monitored process
+  class Process
+    include ProcessCommands
+    include Attributes
+    include Pid
+    include Children
+    include StateMachine
+    include Checks
+    include UserCommands
+
+    attr_accessor name: String
+    attr_accessor watches: Array[ConditionWatch]
+    attr_accessor triggers: Array[Trigger]
+    attr_accessor skip_ticks_until: Integer?
+    attr_accessor process_running: bool?
+
+    attr_reader children: Array[Process]
+    attr_reader statistics: ProcessStatistics
+    attr_reader logger: Logger
+
+    @event_mutex: Monitor
+    @threads: Array[Thread]
+    @actual_pid: Integer?
+    @transition_reason: String?
+
+    attr_accessor app_name: String?
+    attr_accessor group_name: String?
+
+    # A process's move from one state to another
+    class Transition
+      attr_reader from_name: Symbol
+      attr_reader to_name: Symbol
+
+      def initialize: (Symbol from_name, Symbol to_name) -> void
+
+      def loopback?: () -> bool
+    end
+
+    # Methods bluepill defines
+
+    def initialize: (String process_name, Hash[Symbol, Hash[Symbol, untyped]] checks, ?Hash[Symbol, untyped] options) -> void
+
+    # Runs the state machine's tick event, then the watches and children
+    def tick: () -> void
+
+    def logger=: (Logger logger) -> void
+
+    def dispatch!: (Symbol | String event, ?String? reason) -> bool
+
+    def add_checks: (Hash[Symbol, Hash[Symbol, untyped]] checks, Logger logger) -> void
+
+    def add_watch: (Symbol name, Hash[Symbol, untyped] options) -> Array[ConditionWatch]
+
+    def add_trigger: (Symbol name, Hash[Symbol, untyped] options) -> Array[Trigger]
+
+    def clean_threads: () -> void
+
+    def daemonize?: () -> bool
+
+    def skip_ticks_for: (seconds seconds) -> Integer
+
+    def skipping_ticks?: () -> bool?
+  end
+
+  # The options a config can set for a Process, and their defaults
+  module Process::Attributes
+    CONFIGURABLE_ATTRIBUTES: Array[Symbol]
+
+    attr_accessor pre_start_command: String?
+    attr_accessor start_command: String?
+    attr_accessor stop_command: String?
+    attr_accessor restart_command: String?
+    attr_accessor stdout: String?
+    attr_accessor stderr: String?
+    attr_accessor stdin: String?
+    attr_accessor daemonize: bool?
+    attr_accessor pid_file: String?
+    attr_accessor working_dir: String?
+    attr_accessor environment: Hash[_ToS, _ToS]?
+    attr_accessor start_grace_time: seconds
+    attr_accessor stop_grace_time: seconds
+    attr_accessor restart_grace_time: seconds
+    attr_accessor uid: String?
+    attr_accessor gid: String?
+    attr_accessor cache_actual_pid: bool
+    attr_accessor monitor_children: bool
+    attr_accessor child_process_factory: ProcessFactory?
+    attr_accessor pid_command: String?
+    attr_accessor auto_start: bool?
+    attr_accessor supplementary_groups: Array[String]?
+    # Signal names alternating with delays in seconds
+    attr_accessor stop_signals: Array[Symbol | Integer]?
+    attr_accessor on_start_timeout: String | Symbol
+    attr_accessor post_start_command: String?
+    attr_accessor pre_stop_command: String?
+    attr_accessor post_stop_command: String?
+    attr_accessor notify_command: String?
+    attr_accessor hook_timeout: seconds
+    attr_accessor group_start_noblock: bool
+    attr_accessor group_restart_noblock: bool
+    attr_accessor group_stop_noblock: bool
+    attr_accessor group_unmonitor_noblock: bool
+
+    def configure: (Hash[Symbol, untyped] options) -> void
+
+    def apply_defaults: () -> void
+  end
+
+  # Finds, signals and forgets a Process's pid
+  module Process::Pid : Process::Pid::_Host
+    # What Pid uses from Process
+    interface _Host
+      %a{pure} def name: () -> String
+      %a{pure} def logger: () -> Logger
+      %a{pure} def pid_file: () -> String?
+      %a{pure} def pid_command: () -> String?
+    end
+
+    @process_running: bool?
+    @cache_actual_pid: bool
+    @actual_pid: Integer?
+    @last_pid: Integer?
+
+    def process_running?: (?bool force) -> bool
+
+    def signal_process: (Integer | String | Symbol code) -> bool
+
+    def cache_actual_pid?: () -> bool
+
+    def actual_pid: () -> Integer?
+
+    def pid_from_file: () -> Integer?
+
+    def pid_from_command: () -> Integer?
+
+    def positive_pid: (Integer pid) -> Integer?
+
+    def actual_pid=: (Integer pid) -> void
+
+    def clear_pid: () -> nil
+
+    def unlink_pid: () -> void
+  end
+
+  # Keeps a Process for each of a Process's children, when it monitors them
+  module Process::Children : Process::Children::_Host
+    # What Children uses from Process
+    interface _Host
+      %a{pure} def name: () -> String
+      %a{pure} def logger: () -> Logger
+      %a{pure} def monitor_children: () -> bool
+      %a{pure} def child_process_factory: () -> ProcessFactory?
+      def daemonize?: () -> bool
+      def actual_pid: () -> Integer?
+    end
+
+    @children: Array[Process]
+
+    def monitor_children?: () -> bool
+
+    def refresh_children!: () -> void
+
+    def add_children: (Array[Integer] child_pids) -> void
+
+    def new_child: (ProcessFactory factory, Integer child_pid) -> Process
+  end
+
+  # Moves a Process between its states, and runs the callbacks on the way
+  module Process::StateMachine : Process::StateMachine::_Host
+    # What StateMachine uses from Process
+    interface _Host
+      %a{pure} def auto_start: () -> bool?
+      def process_running?: (?bool force) -> bool
+      def clean_threads: () -> void
+      def start_process: () -> Integer
+      def stop_process: () -> Integer
+      def restart_process: () -> Integer
+      def post_start_process: () -> Thread?
+      def notify_transition: (_Transition transition) -> Thread?
+      def record_transition: (_Transition transition) -> void
+      def notify_triggers: (_Transition transition) -> void
+    end
+
+    TICKS: Hash[Symbol, Array[Symbol]]
+    STARTS: Array[Symbol]
+
+    TRANSITIONS: Hash[Symbol, Hash[Symbol, Symbol]]
+
+    attr_accessor state: String
+
+    def unmonitored?: () -> bool
+
+    def up?: () -> bool
+
+    def down?: () -> bool
+
+    def starting?: () -> bool
+
+    def stopping?: () -> bool
+
+    def restarting?: () -> bool
+
+    def start: () -> bool
+
+    def stop: () -> bool
+
+    def unmonitor: () -> bool
+
+    def restart: () -> bool
+
+    # Moves the process to the state an event leads to, and returns whether
+    # it moved
+    def fire_event: (Symbol event) -> bool
+
+    def tick_target: (Symbol from) -> Symbol?
+
+    def before_transition: (Process::Transition transition) -> true
+
+    def after_transition: (Process::Transition transition) -> void
+
+    def determine_initial_state: () -> void
+  end
+
+  # Runs a Process's watches, and tells its triggers about its transitions
+  module Process::Checks : Process::Checks::_Host
+    # What Checks uses from Process
+    interface _Host
+      %a{pure} def logger: () -> Logger
+      %a{pure} def watches: () -> Array[ConditionWatch]
+      %a{pure} def triggers: () -> Array[Trigger]
+      %a{pure} def children: () -> Array[Process]
+      def monitor_children?: () -> bool
+      def actual_pid: () -> Integer?
+      def dispatch!: (Symbol | String event, ?String? reason) -> bool
+    end
+
+    @transitioned: bool
+
+    def record_transition: (_Transition transition) -> void
+
+    def notify_triggers: (_Transition transition) -> void
+
+    def run_watches: () -> void
+
+    def watch_events: (Array[[ConditionWatch, Thread]] threads) -> Array[[Symbol, String]]
+
+    def dispatch_watch_events: (Array[[Symbol, String]] events) -> void
+  end
+
+  # Carries out the commands a user gives a Process from the command line
+  module Process::UserCommands : Process::UserCommands::_Host
+    # What UserCommands uses from Process
+    interface _Host
+      %a{pure} def logger: () -> Logger
+      %a{pure} def triggers: () -> Array[Trigger]
+      def process_running?: (?bool force) -> bool
+      def dispatch!: (Symbol | String event, ?String? reason) -> bool
+      def stop_process: () -> Integer
+      def restart_process: () -> Integer
+    end
+
+    def handle_user_command: (String cmd) -> void
+
+    def user_start: () -> void
+
+    def user_stop: () -> void
+
+    def user_restart: () -> void
+
+    def user_unmonitor: () -> void
+  end
+
+  # Keeps a short history of a process's events
+  class ProcessStatistics
+    type event = [Symbol | String, String?, Time]
+
+    STRFTIME: String
+    EVENTS_TO_PERSIST: Integer
+
+    attr_reader events: Util::RotationalArray[event]
+
+    def initialize: () -> void
+
+    def record_event: (Symbol | String event, String? reason) -> Util::RotationalArray[event]
+
+    def to_s: () -> String
+  end
+
+  # Processes that share a group name. Processes without one are in the
+  # group named nil.
+  class Group
+    attr_accessor name: String?
+    attr_accessor processes: Array[Process]
+    attr_accessor logger: Logger
+    # Not used by bluepill
+    attr_accessor process_logger: untyped
+
+    def initialize: (String? name, ?{ ?logger: Logger } options) -> void
+
+    def add_process: (Process process) -> Array[Process]
+
+    def tick: () -> void
+
+    def determine_initial_state: () -> void
+
+    # Proxied events, which return the affected processes as group:process
+
+    def start: (?String? process_name) -> Array[String]
+
+    def unmonitor: (?String? process_name) -> Array[String]
+
+    def stop: (?String? process_name) -> Array[String]
+
+    def restart: (?String? process_name) -> Array[String]
+
+    def status: (?String? process_name) -> Array[String]
+
+    private
+
+    def add_group_status: (Array[String] lines) -> void
+
+    def add_children_status: (Array[Process] children, String? prefix, Array[String] lines) -> void
+
+    def add_process_status: (String process_name, Array[String] lines) -> void
+  end
+end

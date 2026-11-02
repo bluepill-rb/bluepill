@@ -1,0 +1,194 @@
+module Bluepill
+  # A value a ConditionWatch got, and whether it passed the check
+  class HistoryValue < Struct[_ToS]
+    attr_accessor value: _ToS
+    attr_accessor critical: bool
+
+    def self.new: (_ToS value, bool critical) -> HistoryValue
+  end
+
+  # Runs a process condition every so often, and fires its events when the
+  # check fails often enough
+  class ConditionWatch
+    EMPTY_ARRAY: Array[Symbol]
+
+    attr_reader logger: Logger
+    attr_accessor name: Symbol
+
+    @fires: Array[Symbol]
+    @every: Integer
+    @times: Array[Integer]
+    @include_children: bool
+    @history: Util::RotationalArray[HistoryValue]
+    @process_condition: ProcessConditions::ProcessCondition[untyped]
+    @last_ran_at: Integer?
+
+    def initialize: (Symbol name, ?Hash[Symbol, untyped] options) -> void
+
+    # Sets the logger of the watch and its condition
+    def logger=: (Logger logger) -> void
+
+    # Returns the events to fire
+    def due?: (Integer tick_number) -> bool
+    def run: (Integer? pid, ?Integer tick_number) -> Array[Symbol]
+
+    def run_check: (Integer? pid) -> Array[Symbol]
+
+    def check_failed: (StandardError error) -> Array[Symbol]
+
+    def clear_history!: () -> Util::RotationalArray[HistoryValue]
+
+    def to_s: () -> String
+  end
+
+  # Reacts to a process's state transitions. Subclasses register themselves
+  # by their underscored name.
+  class Trigger
+    self.@implementations: Hash[Symbol, singleton(Trigger)]
+
+    def self.inherited: (singleton(Trigger) klass) -> void
+
+    def self.[]: %a{implicitly-returns-nil} (Symbol name) -> singleton(Trigger)
+
+    attr_accessor process: Process
+    attr_accessor logger: Logger
+    attr_accessor mutex: Thread::Mutex
+    attr_accessor scheduled_events: Array[[Symbol, Thread]]
+
+    def initialize: (Process process, ?Hash[Symbol, untyped] options) -> void
+
+    def reset!: () -> void
+
+    def notify: (_Transition transition) -> void
+
+    def dispatch!: (Symbol event) -> bool
+
+    def schedule_event: (Symbol event, seconds delay) -> Thread
+
+    def run_scheduled_event: (Symbol event, seconds delay) -> void
+
+    def cancel_all_events: () -> void
+  end
+
+  module Triggers
+    # Unmonitors a process that starts or restarts too often, and starts it
+    # again later
+    class Flapping < Trigger
+      TRIGGER_STATES: Array[Symbol]
+      PARAMS: Array[Symbol]
+
+      attr_accessor times: Integer
+      attr_accessor within: Integer
+      attr_accessor retry_in: Integer
+      attr_reader timeline: Util::RotationalArray[Integer]
+
+      def initialize: (Process process, ?Hash[Symbol, untyped] options) -> void
+
+      def notify: (_Transition transition) -> void
+
+      def reset!: () -> void
+
+      def check_flapping: () -> void
+    end
+  end
+
+  module ProcessConditions
+    def self.[]: (Symbol | String name) -> singleton(ProcessCondition)
+
+    # Checks something about a process. V is the type of value that run
+    # returns and check tests.
+    class ProcessCondition[V]
+      @options: Hash[Symbol, untyped]
+
+      # The watch's logger
+      attr_accessor logger: Logger?
+
+      def initialize: (?Hash[Symbol, untyped] options) -> void
+
+      def run: (Integer? pid, boolish include_children) -> V
+
+      # Whether the value is fine
+      def check?: (V value) -> bool
+      def check: (V value) -> bool
+
+      def format_value: (V value) -> V
+    end
+
+    class AlwaysTrue < ProcessCondition[Integer]
+      def run: (Integer? pid, boolish include_children) -> Integer
+
+      def check?: (Integer value) -> true
+    end
+
+    class CpuUsage < ProcessCondition[Float]
+      @below: Numeric
+
+      def run: (Integer? pid, boolish include_children) -> Float
+
+      def check?: (Float value) -> bool
+    end
+
+    # Seconds since the file changed, or the error that stopped bluepill
+    # from finding out
+    class FileTime < ProcessCondition[Float | StandardError | nil]
+      @below: Numeric
+      @filename: String
+
+      def run: (Integer? pid, boolish include_children) -> (Float | StandardError | nil)
+
+      def check?: (Float | StandardError | nil value) -> bool
+    end
+
+    class Http < ProcessCondition[Net::HTTPResponse | StandardError]
+      @uri: URI::HTTP
+      @kind: Class
+      @pattern: Regexp?
+      @open_timeout: Integer
+      @read_timeout: Integer
+
+      def run: (Integer? pid, boolish include_children) -> (Net::HTTPResponse | StandardError)
+
+      def check?: (Net::HTTPResponse | StandardError value) -> bool
+
+      private
+
+      def response_class: (untyped kind) -> Class
+
+      def new_session: () -> Net::HTTP
+
+      def hide_net_http_bug: [T] () { () -> T } -> T
+    end
+
+    # Memory usage in kilobytes
+    class MemUsage < ProcessCondition[Float]
+      MB: Integer
+      FORMAT_STR: String
+      MB_LABEL: String
+      KB_LABEL: String
+
+      @below: Numeric
+
+      def run: (Integer? pid, boolish include_children) -> Float
+
+      def check?: (Float value) -> bool
+
+      def format_value: (Float value) -> String
+    end
+
+    # Seconds since the process started
+    class RunningTime < ProcessCondition[Integer]
+      @below: Numeric
+
+      def run: (Integer? pid, boolish include_children) -> Integer
+
+      def check?: (Integer value) -> bool
+    end
+
+    # The process's command line, which says <defunct> for a zombie
+    class ZombieProcess < ProcessCondition[String?]
+      def run: (Integer? pid, boolish include_children) -> String?
+
+      def check?: (String? value) -> bool
+    end
+  end
+end

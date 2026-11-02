@@ -1,0 +1,114 @@
+module Bluepill
+  # self in an application block
+  class AppProxy
+    APP_ATTRIBUTES: Array[Symbol]
+
+    attr_accessor working_dir: String?
+    attr_accessor uid: String?
+    attr_accessor gid: String?
+    attr_accessor supplementary_groups: Array[String]?
+    attr_accessor environment: Hash[_ToS, _ToS]?
+    attr_accessor auto_start: bool?
+    attr_accessor notify_command: String?
+    attr_reader app: Application
+
+    def initialize: (_ToS app_name, Hash[Symbol, untyped] options) -> void
+
+    # The block runs with self set to the ProcessProxy, and also gets it as
+    # an argument
+    def process: (String process_name) { (ProcessProxy process) [self: ProcessProxy] -> void } -> Array[Process]
+  end
+
+  # Builds processes from a process block in the config
+  class ProcessFactory
+    include Children
+
+    @@process_keys: Hash[Array[String?], nil]
+    @@pid_files: Hash[String, nil]
+
+    @process_block: process_block
+
+    attr_reader attributes: Hash[Symbol, untyped]
+
+    def initialize: (Hash[Symbol, untyped] attributes, process_block process_block) -> void
+
+    def create_process: (String name, String pids_dir) -> Process
+
+    private
+
+    def assign_default_pid_file: (String process_name, String pids_dir) -> String?
+
+    def validate_process!: (ProcessProxy process) -> void
+
+    def validate_unique_process!: (ProcessProxy process) -> void
+
+    def validate_required_attributes!: (ProcessProxy process) -> void
+
+    def validate_unique_pid_file!: () -> void
+
+    def validate_stop_signals!: () -> void
+
+    def validate_stop_signal_order!: (Array[Symbol | Integer] stop_signals) -> void
+
+    def validate_stop_grace_time!: (Array[Symbol | Integer] stop_signals) -> void
+
+    def warn_unless_pid_known: (ProcessProxy process, String? default_pid_file) -> void
+
+    def config_error!: (String message) -> bot
+
+    # Creates the processes of a process's children, for ProcessFactory,
+    # which is the only class that includes it
+    module Children
+      @attributes: Hash[Symbol, untyped]
+      @process_block: process_block
+
+      def create_child_process: (String name, Integer pid, Logger logger) -> Process
+
+      private
+
+      def inherited_attributes: () -> Hash[Symbol, untyped]
+
+      def validate_child_process!: (ProcessProxy child) -> void
+    end
+  end
+
+  # self in a process block. Any attribute can be set with `name = value`,
+  # `name value` or `name!` (for true), and read back with `name`.
+  class ProcessProxy
+    attr_reader attributes: Hash[Symbol, untyped]
+    attr_reader watches: Hash[Symbol, Hash[Symbol, untyped]]
+    attr_reader name: String
+
+    def initialize: (String process_name, Hash[Symbol, untyped] attributes, process_block process_block) -> void
+
+    # Sets or reads an attribute
+    def method_missing: (Symbol name, *untyped args) -> untyped
+
+    def respond_to_missing?: (Symbol name, bool? include_private) -> bool
+
+    # Whether a config can set the attribute on a process
+    def self.attribute?: (Symbol name) -> bool
+
+    def self.attribute_names: () -> Array[Symbol]
+
+    # The Levenshtein distance between two names
+    def self.distance: (String from, String to) -> Integer
+
+    def self.next_row!: (Array[Integer] row, Integer from_length, String from_char, String to) -> void
+
+    def checks: (Symbol name, ?Hash[Symbol, untyped] options) -> Hash[Symbol, untyped]
+
+    # The block configures the children like a process block
+    def monitor_children: () ?{ (ProcessProxy child) [self: ProcessProxy] -> void } -> process_block?
+
+    def to_process: () -> Process
+
+    private
+
+    def attribute_call: (Symbol name, Array[untyped] args) -> ([Symbol, bool] | [Symbol, bool, untyped])?
+
+    def unknown_attribute!: (Symbol key) -> bot
+
+    def suggest: (Symbol key) -> String?
+  end
+end

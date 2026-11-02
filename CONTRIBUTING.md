@@ -8,11 +8,11 @@ As more OS options are added, this should also simplify the steps necessary to r
 Type checking
 -------------
 
-The RBS signatures in `sig/bluepill.rbs` ship with the gem, and CI checks `lib` against them with [Steep](https://github.com/soutaro/steep) in strict mode. Steep needs Ruby 3.3 or newer. To run the check locally:
+The RBS signatures in `sig/` ship with the gem, and CI checks `lib` against them with [Steep](https://github.com/soutaro/steep) in strict mode. Steep needs Ruby 3.3 or newer. To run the check locally:
 
     bundle exec rake steep
 
-This installs the signatures of the dependencies into `.gem_rbs_collection`, validates the signatures and runs `steep check`. `sig-vendor` has stubs for the dependencies that publish no signatures. Update `sig/bluepill.rbs` when you change a method in `lib`.
+This installs the signatures of the dependencies into `.gem_rbs_collection`, validates the signatures and runs `steep check`. `sig-vendor` has stubs for the dependencies that publish no signatures. Update the signatures when you change a method in `lib`: `sig/bluepill.rbs` has the shared types, and `sig/bluepill/` has a file for each part of the gem.
 
 Mutation testing
 ----------------

@@ -1,0 +1,104 @@
+module Bluepill
+  # Logs to a file or syslog, with nested prefixes
+  class Logger
+    # Where a Logger without a parent logger writes: a LoggerAdapter, or
+    # Syslog
+    interface _Backend
+      def emerg: (String message) -> void
+
+      def alert: (String message) -> void
+
+      def crit: (String message) -> void
+
+      def err: (String message) -> void
+
+      def warning: (String message) -> void
+
+      def notice: (String message) -> void
+
+      def info: (String message) -> void
+
+      def debug: (String message) -> void
+    end
+
+    type options = {
+      ?logger: Logger,
+      ?prefix: String?,
+      ?stdout: bool,
+      ?log_file: String?,
+      ?identity: String,
+      ?log_level: (Symbol | String)?
+    }
+
+    LOG_METHODS: Array[Symbol]
+
+    # A ::Logger that also answers to the syslog method names
+    class LoggerAdapter < ::Logger
+      LOGGER_EQUIVALENTS: Hash[Symbol, Symbol]
+
+      alias err error
+
+      alias warning warn
+
+      alias emerg fatal
+
+      alias alert warn
+
+      alias crit fatal
+
+      alias notice info
+    end
+
+    @options: options
+    @logger: Logger | (Object & _Backend)
+    @prefix: String?
+    @stdout: bool?
+    @level: Integer
+    @names: Array[String?]
+    @label: String?
+    @sink: Array[Object & _Backend]
+    @prefixes: Hash[String?, Logger]
+
+    def initialize: (?options options) -> void
+
+    def emerg: (_ToS msg, ?Array[String?]? prefix) -> void
+
+    def alert: (_ToS msg, ?Array[String?]? prefix) -> void
+
+    def crit: (_ToS msg, ?Array[String?]? prefix) -> void
+
+    def err: (_ToS msg, ?Array[String?]? prefix) -> void
+
+    def warning: (_ToS msg, ?Array[String?]? prefix) -> void
+
+    def notice: (_ToS msg, ?Array[String?]? prefix) -> void
+
+    def info: (_ToS msg, ?Array[String?]? prefix) -> void
+
+    def debug: (_ToS msg, ?Array[String?]? prefix) -> void
+
+    def prefix_with: (String? prefix) -> Logger
+
+    def reopen: () -> void
+
+    attr_reader level: Integer
+
+    attr_reader stdout: bool?
+
+    attr_reader sink: Array[Object & _Backend]
+
+    attr_reader names: Array[String?]
+
+    private
+
+    def settings_from: (Logger | (Object & _Backend) parent, Integer level) -> [Integer, Array[String?], bool?, Array[Object & _Backend]]
+
+    def label: (Array[String?] names) -> String?
+
+    def priority: (Symbol | String level) -> Integer
+
+    def create_logger: () -> (Object & _Backend)
+
+    def require_syslog: () -> void
+  end
+end

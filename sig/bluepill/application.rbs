@@ -1,0 +1,235 @@
+module Bluepill
+  # The daemon: it holds the groups of processes and serves commands from
+  # bluepill's socket
+  class Application
+    include Listener
+    include Lifecycle
+    include PreviousDaemon
+
+    PROCESS_COMMANDS: Array[Symbol]
+
+    attr_accessor name: String
+    attr_accessor logger: Logger
+    attr_accessor base_dir: String
+    attr_accessor socket: UNIXServer?
+    attr_accessor pid_file: String
+    attr_accessor kill_timeout: Integer
+    attr_accessor groups: Hash[String?, Group]
+    # Not used by bluepill
+    attr_accessor work_queue: untyped
+    attr_accessor pids_dir: String
+    attr_accessor log_file: String?
+
+    @foreground: bool?
+    @log_level: (Symbol | String)?
+    @mutex: Thread::Mutex
+
+    def initialize: (String name, ?Hash[Symbol, untyped] options) -> void
+
+    def foreground?: () -> bool
+
+    def mutex: [T] () { () -> T } -> T
+
+    def load: () -> void
+
+    # The PROCESS_COMMANDS, which return the affected processes, or the
+    # status lines for status
+    def start: (?String? group_name, ?String? process_name) -> Array[String]
+
+    def stop: (?String? group_name, ?String? process_name) -> Array[String]
+
+    def restart: (?String? group_name, ?String? process_name) -> Array[String]
+
+    def unmonitor: (?String? group_name, ?String? process_name) -> Array[String]
+
+    def status: (?String? group_name, ?String? process_name) -> Array[String]
+
+    def add_process: (Process process, ?_ToS? group_name) -> Array[Process]
+
+    def version: () -> singleton(Version)
+
+    # Ruby's protected methods are private in RBS
+
+    private
+
+    def send_to_process_or_group: (Symbol method, String? group_name, String? process_name) -> Array[String]
+
+    def send_to_groups: (Symbol method, *String args) -> Array[String]
+
+    def setup_base_dir: (String? dir) -> void
+
+    def default_base_dir: () -> String
+
+    # Answers the CLI's commands on the socket, for Application only
+    module Listener : Object, _Host
+      # What Listener uses from Application
+      interface _Host
+        %a{pure} def socket: () -> UNIXServer?
+        %a{pure} def logger: () -> Logger
+        def mutex: [T] () { () -> T } -> T
+      end
+
+      @listener_thread: Thread?
+
+      # Ruby's protected methods are private in RBS
+
+      private
+
+      def start_listener: () -> Thread
+
+      def answer_next_client: () -> void
+
+      def answer_command: (UNIXSocket client) -> void
+
+      def run_command: (String? command, Array[String] args) -> untyped
+
+      def log_listener_error: (StandardError error) -> void
+
+      def close_client: (UNIXSocket? client) -> void
+    end
+
+    # Starts, runs and cleans up after the daemon, for Application only
+    module Lifecycle : Object, _Host, Listener, PreviousDaemon
+      # What Lifecycle uses from Application
+      interface _Host
+        %a{pure} def name: () -> String
+        %a{pure} def logger: () -> Logger
+        def logger=: (Logger logger) -> Logger
+        %a{pure} def base_dir: () -> String
+        %a{pure} def socket: () -> UNIXServer?
+        def socket=: (UNIXServer? socket) -> UNIXServer?
+        %a{pure} def pid_file: () -> String
+        %a{pure} def pids_dir: () -> String
+        %a{pure} def log_file: () -> String?
+        %a{pure} def kill_timeout: () -> Integer
+        %a{pure} def groups: () -> Hash[String?, Group]
+        def foreground?: () -> bool
+        def mutex: [T] () { () -> T } -> T
+      end
+
+      @log_level: (Symbol | String)?
+      @running: bool
+
+      # Ruby's protected methods are private in RBS
+
+      private
+
+      def start_server: () -> void
+
+      def become_process_group_leader: () -> void
+
+      def daemonize_and_trap_signals: () -> void
+
+      def serve: () -> void
+
+      def run: () -> void
+
+      def cleanup: () -> void
+
+      def setup_signal_traps: () -> void
+
+      def setup_logger_and_pids_dir: () -> void
+
+      def setup_pids_dir: () -> void
+
+      def write_pid_file: () -> void
+    end
+
+    # Stops a previous daemon for the application, for Application only
+    module PreviousDaemon : Object, _Host
+      # What PreviousDaemon uses from Application
+      interface _Host
+        %a{pure} def pid_file: () -> String
+        %a{pure} def kill_timeout: () -> Integer
+      end
+
+      # Ruby's protected methods are private in RBS
+
+      private
+
+      def kill_previous_bluepill: () -> void
+
+      def interrupt_previous_bluepill: () -> Integer?
+
+      def previous_bluepill_pid: () -> Integer?
+
+      def wait_for_previous_bluepill: (Integer previous_pid) -> void
+    end
+  end
+
+  # Runs the bluepill commands, and sends them to the daemon over its socket
+  class Controller
+    include Directory
+
+    attr_accessor base_dir: String
+    attr_accessor log_file: String?
+    attr_accessor sockets_dir: String
+    attr_accessor pids_dir: String
+
+    def initialize: (Hash[Symbol, untyped] options) -> void
+
+    def handle_command: (String application, String | Symbol command, *String args) -> void
+
+    # Returns what the daemon responds with, which is unmarshaled from the socket
+    def send_to_daemon: (String application, String | Symbol command, *String args) -> untyped
+
+    def grep_pattern: (String application, ?String? query) -> String
+
+    private
+
+    def quit_daemon: (String application) -> void
+
+    def tail_log: (String application, String? requested_pattern) -> void
+
+    def send_process_command: (String application, String | Symbol command, *String args) -> void
+
+    def print_affected: (String | Symbol command, Array[String] affected) -> void
+
+    def exit_with_daemon_error: (Exception error) -> void
+
+    def verify_version!: (String application) -> void
+
+    # Finds the daemons in the base directory, for Controller only
+    module Directory : _Host
+      # What Directory uses from Controller
+      interface _Host
+        def sockets_dir: () -> String
+        def pids_dir: () -> String
+      end
+
+      @sockets_dir: String
+      @pids_dir: String
+
+      def running_applications: () -> Array[String]
+
+      private
+
+      def cleanup_bluepill_directory: () -> void
+
+      def pid_for: (String app) -> (Integer | false)
+
+      def setup_dir_structure: () -> void
+    end
+  end
+
+  module Socket
+    TIMEOUT: Integer
+    MAX_ATTEMPTS: Integer
+
+    def self.client: [T] (String base_dir, String name) { (UNIXSocket socket) -> T } -> T
+
+    # Returns the daemon's response, unmarshaled
+    def self.client_command: (String base_dir, String name, String command) -> untyped
+
+    # Returns the daemon's response, unmarshaled
+    def self.send_command: (String base_dir, String name, String command) -> untyped
+
+    def self.retry_or_abort: (Integer current_attempt) -> void
+
+    def self.server: (String base_dir, String name) -> UNIXServer
+
+    def self.replace_stale_socket: (String path) -> UNIXServer
+
+    def self.socket_path: (String base_dir, String name) -> String
+  end
+end

@@ -93,8 +93,10 @@ module Bluepill
   # `name value` or `name!` (for true), and read back with `name`.
   class ProcessProxy
     attr_reader attributes: Hash[Symbol, untyped]
-    attr_reader watches: Hash[Symbol, Hash[Symbol, untyped]]
     attr_reader name: String
+
+    # The checks the block added, in order, with their options
+    @checks: Array[[Symbol, Hash[Symbol, untyped]]]
 
     def initialize: (String process_name, Hash[Symbol, untyped] attributes, process_block process_block) -> void
 
@@ -108,7 +110,7 @@ module Bluepill
 
     def self.attribute_names: () -> Array[Symbol]
 
-    def checks: (Symbol name, **untyped options) -> Hash[Symbol, untyped]
+    def checks: (Symbol name, **untyped options) -> nil
 
     # The block configures the children like a process block
     def monitor_children: () ?{ (ProcessProxy child) [self: ProcessProxy] -> void } -> process_block?

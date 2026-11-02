@@ -25,13 +25,6 @@ module Bluepill
     # @api private
     attr_reader :attributes
 
-    # Return the checks that the block added, with their options, by name
-    #
-    # @return [Hash{Symbol => Hash{Symbol => Object}}] the checks
-    #
-    # @api private
-    attr_reader :watches
-
     # Return the process's name
     #
     # @return [String] the name
@@ -52,7 +45,7 @@ module Bluepill
     def initialize(process_name, attributes, process_block)
       @name = process_name
       @attributes = attributes
-      @watches = {}
+      @checks = []
 
       # instance_eval also passes the proxy to a block that takes an argument
       instance_eval(&process_block)
@@ -134,6 +127,9 @@ module Bluepill
 
     # Add a check of the process, or a trigger such as :flapping
     #
+    # A process can have more than one check of a kind, such as two :http
+    # checks of different URLs.
+    #
     # @example
     #   process.checks :cpu_usage, every: 10.seconds, below: 50, times: [3, 5]
     #   process.checks :flapping, times: 2, within: 30.seconds, retry_in: 7.seconds
@@ -142,10 +138,13 @@ module Bluepill
     # @param [Hash{Symbol => Object}] options the check's options, such as
     #   :every, :below and :times
     #
-    # @return [Hash{Symbol => Object}] the options
+    # @return [void]
     #
     # @api public
-    def checks(name, **options) = @watches[name] = options
+    def checks(name, **options)
+      @checks << [name, options]
+      nil
+    end
 
     # Monitor the process's children too
     #
@@ -175,7 +174,7 @@ module Bluepill
     # @return [Process] the process
     #
     # @api private
-    def to_process = Process.new(@name, @watches, **@attributes)
+    def to_process = Process.new(@name, @checks, **@attributes)
 
     private
 

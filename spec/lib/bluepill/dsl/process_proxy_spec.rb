@@ -17,7 +17,13 @@ describe Bluepill::ProcessProxy do
     it "exposes its name and attributes" do
       attributes = {uid: "user"}
       proxy = described_class.new("web", attributes, proc {})
-      expect(proxy).to have_attributes(name: "web", attributes: equal(attributes), watches: {})
+      expect(proxy).to have_attributes(name: "web", attributes: equal(attributes))
+    end
+
+    it "starts with no checks" do
+      allow(Bluepill::Process).to receive(:new)
+      described_class.new("web", {}, proc {}).to_process
+      expect(Bluepill::Process).to have_received(:new).with("web", [])
     end
   end
 
@@ -157,12 +163,28 @@ describe Bluepill::ProcessProxy do
   end
 
   describe "#checks" do
-    it "records a watch with its options" do
-      proxy = described_class.new("web", {}, proc do
+    before { allow(Bluepill::Process).to receive(:new) }
+
+    it "gives the process each check with its options, in order" do
+      described_class.new("web", {}, proc do
         checks :cpu_usage, every: 10, below: 5
         checks :always_true
-      end)
-      expect(proxy.watches).to eq(cpu_usage: {every: 10, below: 5}, always_true: {})
+      end).to_process
+      expect(Bluepill::Process).to have_received(:new).with("web", [[:cpu_usage, {every: 10, below: 5}], [:always_true, {}]])
+    end
+
+    it "keeps two checks of a kind" do
+      described_class.new("web", {}, proc do
+        checks :http, url: "http://localhost/a"
+        checks :http, url: "http://localhost/b"
+      end).to_process
+      expect(Bluepill::Process).to have_received(:new).with("web", [[:http, {url: "http://localhost/a"}], [:http, {url: "http://localhost/b"}]])
+    end
+
+    it "returns nothing" do
+      value = :unset
+      described_class.new("web", {}, proc { value = checks(:always_true) })
+      expect(value).to be_nil
     end
   end
 
@@ -186,6 +208,14 @@ describe Bluepill::ProcessProxy do
       expect(proxy.to_process).to be_a(Bluepill::Process).and have_attributes(
         name: "web", start_command: "run", watches: have_attributes(count: 1)
       )
+    end
+
+    it "gives the process a watch for each of two checks of a kind" do
+      proxy = described_class.new("web", {}, proc do
+        checks :always_true, every: 10
+        checks :always_true, every: 20
+      end)
+      expect(proxy.to_process.watches.collect(&:name)).to eq(%i[always_true always_true])
     end
   end
 end

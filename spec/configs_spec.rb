@@ -44,6 +44,10 @@ describe "The README and example configs", type: :integration do
       expect(Bluepill::Application).to have_received(:new).with("app_name", kind_of(Hash))
     end
 
+    it "loads README config #{i + 1} with nothing that bluepill 0.3.0 rejects" do
+      expect { eval(config, binding, "README.md") }.not_to output(/DEPRECATION/).to_stderr # rubocop:disable Security/Eval
+    end
+
     # A few only show the application's options, with no processes
     next unless config.include?(".process(")
 
@@ -83,6 +87,12 @@ describe "The README and example configs", type: :integration do
     child = process.child_process_factory.create_child_process("child", 1, instance_double(Bluepill::Logger).as_null_object)
     values = [process.stop_grace_time, below(child, :mem_usage), process.triggers.first.within]
     expect(values).to eql([5, 52_428_800, 30])
+  end
+
+  %w[sample_app.rb runit.rb].each do |example|
+    it "loads the #{example} example with nothing that bluepill 0.3.0 rejects" do
+      expect { load File.join(BLUEPILL_ROOT, "examples", example) }.not_to output(/DEPRECATION/).to_stderr
+    end
   end
 
   it "loads the runit example" do

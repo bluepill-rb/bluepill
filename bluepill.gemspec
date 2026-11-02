@@ -22,7 +22,7 @@ Gem::Specification.new do |spec|
     "rubygems_mfa_required" => "true"
   }
 
-  spec.required_ruby_version = ">= 2.5"
+  spec.required_ruby_version = ">= 2.7"
 
   # sig has the RBS signatures, and the standard libraries they use in manifest.yaml
   spec.executables = %w[bluepill bpsv]

@@ -17,14 +17,8 @@ end
 require "rspec/core/rake_task"
 RSpec::Core::RakeTask.new
 
-begin
-  require "rubocop/rake_task"
-  RuboCop::RakeTask.new
-rescue LoadError
-  task :rubocop do
-    $stderr.puts "RuboCop is disabled"
-  end
-end
+require "rubocop/rake_task"
+RuboCop::RakeTask.new
 
 # Steep needs Ruby 3.3 or newer, so the Gemfile only installs it there
 begin
@@ -102,22 +96,14 @@ rescue LoadError
   $stderr.puts "Please install YARD with: gem install yard"
 end
 
-# Yardstick needs Ruby 2.7 or newer, so the Gemfile only installs it there
-begin
-  require "yardstick/rake/measurement"
-  require "yardstick/rake/verify"
-  yardstick = true
-rescue LoadError
-  yardstick = false
-end
+require "yardstick/rake/measurement"
+require "yardstick/rake/verify"
 
-if yardstick
-  Yardstick::Rake::Measurement.new(:yardstick_measure)
+Yardstick::Rake::Measurement.new(:yardstick_measure)
 
-  # Fails unless every method in lib is documented
-  Yardstick::Rake::Verify.new(:yardstick) do |verify|
-    verify.threshold = 100
-  end
+# Fails unless every method in lib is documented
+Yardstick::Rake::Verify.new(:yardstick) do |verify|
+  verify.threshold = 100
 end
 
 desc "Run the specs, like rake spec"
@@ -133,7 +119,7 @@ end
 
 default_tasks = %i[spec rubocop]
 default_tasks << :standard if standard
-default_tasks << :yardstick if yardstick
+default_tasks << :yardstick
 default_tasks << :steep if steep
 default_tasks << :mutant if mutant
 task default: default_tasks

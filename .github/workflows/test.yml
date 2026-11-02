@@ -19,8 +19,6 @@ jobs:
       fail-fast: false
       matrix:
         ruby:
-          - '2.5'
-          - '2.6'
           - '2.7'
           - '3.0'
           - '3.1'
@@ -28,8 +26,6 @@ jobs:
           - '3.3'
           - '3.4'
           - '4.0'
-          - jruby-9.2
-          - jruby-9.3
           - jruby-9.4
           - jruby-10.0
           - jruby-10.1

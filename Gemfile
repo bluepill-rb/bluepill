@@ -22,7 +22,7 @@ end
 group :doc do
   gem "maruku", ">= 0.7"
   gem "yard", ">= 0.8"
-  gem "yardstick", ">= 0.9.9", require: false if RUBY_VERSION >= "2.7"
+  gem "yardstick", ">= 0.9.9", require: false
 end
 
 group :test do
@@ -30,12 +30,10 @@ group :test do
   # and sizes still work
   gem "activesupport", ">= 3.2"
   gem "rspec", ">= 3"
-  if RUBY_VERSION >= "2.7"
-    # Standard needs RuboCop 1.91
-    gem "rubocop", "~> 1.91"
-    gem "rubocop-rake"
-    gem "rubocop-rspec"
-  end
+  # Standard needs RuboCop 1.91
+  gem "rubocop", "~> 1.91"
+  gem "rubocop-rake"
+  gem "rubocop-rspec"
   # Standard, and its performance rules, need Ruby 3.0 or newer
   if RUBY_VERSION >= "3.0"
     gem "standard", ">= 1.57", require: false

@@ -504,10 +504,10 @@ JRuby allows you to run bluepill only in the foreground.
 This library aims to support and is [tested against][ci] the following Ruby
 implementations:
 
-* Ruby 2.5 through 2.7
+* Ruby 2.7
 * Ruby 3.0 through 3.4
 * Ruby 4.0
-* JRuby 9.2 through 9.4 (only in the foreground)
+* JRuby 9.4 (only in the foreground)
 * JRuby 10.0 and 10.1 (only in the foreground)
 
 If something doesn't work on one of these interpreters, please open an issue.

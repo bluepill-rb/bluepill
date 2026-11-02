@@ -20,7 +20,7 @@ describe Bluepill::Process do
   end
 
   describe '#initialize' do
-    context 'defaults' do
+    describe 'defaults' do
       [
         :start_command, :stop_command, :restart_command, :stdout, :stderr, :stdin,
         :daemonize, :pid_file, :working_dir, :uid, :gid, :child_process_factory,
@@ -108,7 +108,7 @@ describe Bluepill::Process do
       expect(process.instance_variable_get(:@event_mutex)).to be_a(Monitor)
     end
 
-    context 'overrides' do
+    describe 'overrides' do
       subject { described_class.new(:proc_name, [], start_grace_time: 17) }
 
       describe '#start_grace_time' do

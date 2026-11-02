@@ -208,7 +208,7 @@ describe Bluepill::System do
       allow(IO).to receive(:pipe).and_return([rd, wr])
     end
 
-    context 'in the parent' do
+    context 'when in the parent' do
       before do
         allow(Bluepill::Daemonize).to receive(:safefork).and_return(123)
         allow(Process).to receive(:detach)
@@ -238,7 +238,7 @@ describe Bluepill::System do
       end
     end
 
-    context 'in the child' do
+    context 'when in the child' do
       let(:pid_file) { '/var/run/test.pid' }
       let(:options) do
         {
@@ -375,7 +375,7 @@ describe Bluepill::System do
     let(:rd) { double('rd', close: nil) }
     let(:wr) { double('wr', close: nil, write: nil) }
 
-    context 'in the parent' do
+    context 'when in the parent' do
       let(:waiter) { double('waiter', join: nil) }
 
       before do
@@ -454,7 +454,7 @@ describe Bluepill::System do
       end
     end
 
-    context 'in the child' do
+    context 'when in the child' do
       let(:out_rd) { double('out_rd', close: nil, read: 'out') }
       let(:out_wr) { double('out_wr', close: nil) }
       let(:err_rd) { double('err_rd', close: nil, read: 'err') }
@@ -653,7 +653,7 @@ describe Bluepill::System do
       expect(Process::Sys).not_to have_received(:setuid)
     end
 
-    context 'as root' do
+    context 'when running as root' do
       before do
         allow(Process::Sys).to receive(:geteuid).and_return(0)
       end

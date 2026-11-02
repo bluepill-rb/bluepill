@@ -87,7 +87,7 @@ describe Bluepill::ProcessFactory do
       expect(process.child_process_factory).to be_nil
     end
 
-    context 'validation' do
+    describe 'validation' do
       it 'rejects duplicate process names in a group' do
         create('web', proc { start_command 'run' }, group: 'servers')
         expect_config_error("Config Error: You have two entries for the process name 'web' in the group 'servers'\n") do
@@ -185,7 +185,7 @@ describe Bluepill::ProcessFactory do
         end
       end
 
-      context 'stop_signals' do
+      describe 'stop_signals' do
         def create_with_signals(signals, grace_time)
           create('web', proc do
             start_command 'run'

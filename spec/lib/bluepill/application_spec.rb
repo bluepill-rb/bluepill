@@ -94,7 +94,7 @@ describe Bluepill::Application do
         expect(subject.mutex { :result }).to eq(:result)
       end
 
-      context 'and foreground is false' do
+      context 'when foreground is false' do
         let(:options) { {base_dir: '/var/bluepill', foreground: false} }
 
         it { is_expected.not_to be_foreground }
@@ -107,7 +107,7 @@ describe Bluepill::Application do
         expect(subject.logger).to eq(logger)
       end
 
-      context 'and other options are specified' do
+      context 'with other options' do
         let(:options) { {base_dir: '/var/bluepill', foreground: true, log_file: 'log', log_level: :info, kill_timeout: 3} }
 
         it 'uses them' do
@@ -136,7 +136,7 @@ describe Bluepill::Application do
         it { is_expected.to eq(ENV.fetch('BLUEPILL_BASE_DIR', nil)) }
       end
 
-      context 'and option base_dir is specified' do
+      context 'with a base_dir option' do
         let(:options) { {base_dir: '/var/bluepill'} }
 
         describe '#base_dir' do
@@ -377,7 +377,7 @@ describe Bluepill::Application do
         app.send(:start_server)
       end
 
-      context 'in the foreground' do
+      context 'when in the foreground' do
         let(:foreground) { true }
 
         it 'does not daemonize, or trap signals again' do

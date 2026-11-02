@@ -57,7 +57,7 @@ describe Bluepill::Daemonize do
       expect(described_class.call_as_daemon(block)).to eq(0)
     end
 
-    context 'in the forked copies of the bluepill daemon' do
+    context 'when in a forked copy of the bluepill daemon' do
       before do
         # https://github.com/bluepill-rb/bluepill/issues/1: exit would run
         # the real daemon's ensure blocks in the copy

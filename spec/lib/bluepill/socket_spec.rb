@@ -86,7 +86,7 @@ describe Bluepill::Socket do
         expect(described_class.server(base_dir, 'app')).to be(server)
       end
 
-      context 'and another server is listening' do
+      context 'when another server is listening' do
         before do
           allow(UNIXSocket).to receive(:open).with(socket_path).and_return(socket)
         end

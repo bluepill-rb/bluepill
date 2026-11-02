@@ -81,7 +81,7 @@ describe Bluepill::Controller do
       controller.handle_command('app', 'status')
     end
 
-    context 'quit' do
+    describe 'quit' do
       before do
         controller
         touch('pids', 'app.pid') { |f| f.write('789') }
@@ -127,7 +127,7 @@ describe Bluepill::Controller do
       end
     end
 
-    context 'log' do
+    describe 'log' do
       before { allow(controller).to receive(:puts) }
 
       it 'tails the log file reported by the daemon' do
@@ -156,7 +156,7 @@ describe Bluepill::Controller do
       end
     end
 
-    context 'process commands' do
+    describe 'process commands' do
       it 'prints the affected processes' do
         stub_daemon('start:web', ['web:first', 'web:second'])
         expect(controller).to receive(:puts).with('Sent start to:').ordered

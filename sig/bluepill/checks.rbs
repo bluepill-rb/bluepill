@@ -182,8 +182,9 @@ module Bluepill
       @pattern: Regexp?
       @open_timeout: Integer
       @read_timeout: Integer
+      @verify_ssl: boolish
 
-      def initialize: (url: String, ?kind: Integer | String | Symbol | nil, ?pattern: Regexp?, ?timeout: untyped, ?open_timeout: untyped, ?read_timeout: untyped, **untyped options) -> void
+      def initialize: (url: String, ?kind: Integer | String | Symbol | nil, ?pattern: Regexp?, ?timeout: untyped, ?open_timeout: untyped, ?read_timeout: untyped, ?verify_ssl: boolish, **untyped options) -> void
 
       def run: (Integer? pid, boolish include_children) -> (Net::HTTPResponse | StandardError)
 

@@ -56,6 +56,14 @@ describe Bluepill::ProcessConditions::Http do
       expect(http(kind: :not_found).instance_variable_get(:@kind)).to eq(Net::HTTPNotFound)
     end
 
+    it "verifies certificates by default" do
+      expect(http.instance_variable_get(:@verify_ssl)).to be(true)
+    end
+
+    it "accepts verify_ssl: false" do
+      expect(http(verify_ssl: false).instance_variable_get(:@verify_ssl)).to be(false)
+    end
+
     it "uses a default timeout of 5 seconds" do
       expect(timeouts(http)).to eq([5, 5])
     end
@@ -127,8 +135,13 @@ describe Bluepill::ProcessConditions::Http do
         expect(session).to have_received(:use_ssl=).with(true)
       end
 
-      it "does not verify the certificate" do
+      it "verifies the certificate" do
         https.run(123, false)
+        expect(session).to have_received(:verify_mode=).with(OpenSSL::SSL::VERIFY_PEER)
+      end
+
+      it "does not verify the certificate with verify_ssl: false" do
+        http(url: "https://example.com/status?full=1", verify_ssl: false).run(123, false)
         expect(session).to have_received(:verify_mode=).with(OpenSSL::SSL::VERIFY_NONE)
       end
     end

@@ -11,10 +11,14 @@ module Bluepill
     # response it should be (a Net::HTTP class name such as :success or
     # :ok, or a status code such as 200, :success by default), pattern: a
     # Regexp its body should match, and timeout: (or open_timeout: and
-    # read_timeout:) in seconds, 5 by default.
+    # read_timeout:) in seconds, 5 by default. An https URL's certificate
+    # must be valid, unless verify_ssl: is false, as for a self-signed one.
     #
     # @example
     #   process.checks :http, url: 'http://localhost:4567/', kind: :success, pattern: /html/, timeout: 3.seconds
+    #
+    # @example A server with a self-signed certificate
+    #   process.checks :http, url: 'https://localhost:4443/', verify_ssl: false
     #
     # @api private
     class Http < ProcessCondition
@@ -29,6 +33,8 @@ module Bluepill
       #   to read, unless open_timeout or read_timeout is given
       # @param [Numeric, String] open_timeout the seconds to wait to connect
       # @param [Numeric, String] read_timeout the seconds to wait to read
+      # @param [Boolean] verify_ssl whether an https URL's certificate must
+      #   be valid, true by default
       # @param [Hash{Symbol => Object}] options the check's other options
       #
       # @return [void]
@@ -38,8 +44,9 @@ module Bluepill
       # @raise [NameError] for a kind that names no Net::HTTP response
       #
       # @api private
-      def initialize(url:, kind: nil, pattern: nil, timeout: 5, open_timeout: timeout, read_timeout: timeout, **options)
+      def initialize(url:, kind: nil, pattern: nil, timeout: 5, open_timeout: timeout, read_timeout: timeout, verify_ssl: true, **options)
         super(**options)
+        @verify_ssl = verify_ssl
         @uri = URI.parse(url) #: URI::HTTP
         @kind = response_class(kind)
         @pattern = pattern
@@ -48,8 +55,6 @@ module Bluepill
       end
 
       # Get the URL
-      #
-      # HTTPS is checked without verifying the certificate.
       #
       # @param [Integer, nil] _pid the process's pid
       # @param [Boolean] _include_children whether to include its children
@@ -110,7 +115,7 @@ module Bluepill
 
       # Return a session with the URL's host, set up to get the URL
       #
-      # HTTPS is checked without verifying the certificate.
+      # HTTPS verifies the server's certificate, unless verify_ssl is false.
       #
       # @return [Net::HTTP] the session, not started yet
       #
@@ -121,7 +126,7 @@ module Bluepill
         if @uri.scheme.eql?("https")
           require "net/https"
           session.use_ssl = true
-          session.verify_mode = OpenSSL::SSL::VERIFY_NONE
+          session.verify_mode = @verify_ssl ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
         end
         session.open_timeout = @open_timeout
         session.read_timeout = @read_timeout

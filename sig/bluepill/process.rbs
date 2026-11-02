@@ -220,7 +220,7 @@ module Bluepill
 
   # Keeps a short history of a process's events
   class ProcessStatistics
-    type event = [Symbol | String, String?, Time]
+    type event = [Symbol, String?, Time]
 
     STRFTIME: String
     EVENTS_TO_PERSIST: Integer
@@ -229,7 +229,7 @@ module Bluepill
 
     def initialize: () -> void
 
-    def record_event: (Symbol | String event, String? reason) -> Util::RotationalArray[event]
+    def record_event: (Symbol event, String? reason) -> Util::RotationalArray[event]
 
     def to_s: () -> String
   end

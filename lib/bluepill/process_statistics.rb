@@ -28,7 +28,7 @@ module Bluepill
 
     # Add an event to the history, with the time it happened
     #
-    # @param [Symbol, String] event the event, such as :restart
+    # @param [Symbol] event the event, such as :restart
     # @param [String, nil] reason why it happened
     #
     # @return [Util::RotationalArray<Array(Symbol, String, nil, Time)>] the

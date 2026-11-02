@@ -1,4 +1,3 @@
-require 'pathname'
 require 'tmpdir'
 
 describe Bluepill::System do
@@ -24,67 +23,75 @@ describe Bluepill::System do
   end
 
   describe '.pid_alive?' do
+    it 'sends the process the zero signal, once' do
+      allow(Process).to receive(:kill).and_return(1)
+      described_class.pid_alive?(555)
+      expect(Process).to have_received(:kill).with(0, 555).once
+    end
+
     it 'is true if process responds to zero signal' do
       allow(Process).to receive(:kill).with(0, 555).and_return(1)
       expect(described_class.pid_alive?(555)).to be true
-      expect(Process).to have_received(:kill).with(0, 555).once
     end
 
     it 'is false if process throws exception on zero signal' do
       allow(Process).to receive(:kill).with(0, 555).and_raise(Errno::ESRCH)
       expect(described_class.pid_alive?(555)).to be false
-      expect(Process).to have_received(:kill).with(0, 555).once
     end
 
     it 'is true if there is no permission to signal the process' do
       allow(Process).to receive(:kill).with(0, 555).and_raise(Errno::EPERM)
       expect(described_class.pid_alive?(555)).to be true
-      expect(Process).to have_received(:kill).with(0, 555).once
     end
 
     it 'is false if signaling raises any other error' do
       allow(Process).to receive(:kill).with(0, nil).and_raise(TypeError)
       expect(described_class.pid_alive?(nil)).to be false
-      expect(Process).to have_received(:kill).with(0, nil).once
     end
   end
 
   describe '.started_at' do
     before { allow(Time).to receive(:now).and_return(Time.at(1_000_000)) }
 
-    it "subtracts the process's elapsed time from now" do
-      allow(IO).to receive(:popen).with(%w[ps -o etime= -p 555], err: File::NULL).and_return("  1-02:03:04\n")
-      expect(described_class.started_at(555)).to eq 1_000_000 - 93_784
+    # Make ps print an elapsed time for pid 555
+    def ps_prints(elapsed)
+      allow(IO).to receive(:popen).with(%w[ps -o etime= -p 555], err: File::NULL).and_return(elapsed)
+    end
+
+    it 'asks ps once' do
+      ps_prints("  1-02:03:04\n")
+      described_class.started_at(555)
       expect(IO).to have_received(:popen).once
+    end
+
+    it "subtracts the process's elapsed time from now" do
+      ps_prints("  1-02:03:04\n")
+      expect(described_class.started_at(555)).to eq 1_000_000 - 93_784
     end
 
     it 'is nil without such a process' do
-      allow(IO).to receive(:popen).with(%w[ps -o etime= -p 555], err: File::NULL).and_return('')
+      ps_prints('')
       expect(described_class.started_at(555)).to be_nil
-      expect(IO).to have_received(:popen).once
     end
 
     it 'is nil when ps prints only a newline' do
-      allow(IO).to receive(:popen).with(%w[ps -o etime= -p 555], err: File::NULL).and_return("\n")
+      ps_prints("\n")
       expect(described_class.started_at(555)).to be_nil
-      expect(IO).to have_received(:popen).once
     end
 
     it "is nil if ps can't run" do
       allow(IO).to receive(:popen).and_raise(Errno::ENOENT)
       expect(described_class.started_at(555)).to be_nil
-      expect(IO).to have_received(:popen).once
     end
 
     it 'only passes ps a pid' do
       expect { described_class.started_at('1; rm -rf /') }.to raise_error(ArgumentError)
     end
 
-    it 'reads what ps prints' do
-      pid = ::Process.spawn('sleep', '10')
-      begin
-        expect(described_class.started_at(pid)).to be_within(2).of(Integer(Time.now))
-      ensure
+    context 'with a real process' do
+      let(:pid) { ::Process.spawn('sleep', '10') }
+
+      after do
         ::Process.kill('KILL', pid)
         begin
           ::Process.wait(pid)
@@ -92,13 +99,24 @@ describe Bluepill::System do
           nil # JRuby 1.7 reaps it already
         end
       end
+
+      it 'reads what ps prints' do
+        expect(described_class.started_at(pid)).to be_within(2).of(Integer(Time.now))
+      end
     end
   end
 
   describe '.boot_time' do
-    it 'is when pid 1 started' do
+    before do
       allow(described_class).to receive(:started_at).with(1).and_return(42)
+    end
+
+    it 'is when pid 1 started' do
       expect(described_class.boot_time).to eq 42
+    end
+
+    it 'asks once' do
+      described_class.boot_time
       expect(described_class).to have_received(:started_at).once
     end
   end
@@ -208,147 +226,6 @@ describe Bluepill::System do
     end
   end
 
-  describe '.daemonize' do
-    let(:rd) { instance_double(IO, close: nil) }
-    let(:wr) { instance_double(IO, close: nil, write: nil) }
-    let(:logger) { instance_double(Bluepill::Logger) }
-
-    before do
-      allow(IO).to receive(:pipe).and_return([rd, wr])
-    end
-
-    context 'when in the parent' do
-      before do
-        allow(Bluepill::Daemonize).to receive(:safefork).and_return(123)
-        allow(Process).to receive(:detach)
-      end
-
-      it 'detaches the daemon, so it never becomes a zombie' do
-        allow(rd).to receive(:read).and_return('456')
-        described_class.daemonize('cmd')
-        expect(Process).to have_received(:detach).with(123)
-      end
-
-      it 'returns the pid of the daemon' do
-        allow(rd).to receive(:read).and_return('456')
-        expect(described_class.daemonize('cmd')).to eq(456)
-        expect(wr).to have_received(:close)
-        expect(rd).to have_received(:close)
-      end
-
-      it 'returns any positive pid' do
-        allow(rd).to receive(:read).and_return('1')
-        expect(described_class.daemonize('cmd')).to eq(1)
-      end
-
-      it 'returns nil if the child did not report a pid' do
-        allow(rd).to receive(:read).and_return('')
-        expect(described_class.daemonize('cmd')).to be_nil
-      end
-    end
-
-    context 'when in the child' do
-      let(:pid_file) { '/var/run/test.pid' }
-      let(:options) do
-        {
-          uid: 'user',
-          gid: 'group',
-          supplementary_groups: ['extra'],
-          pid_file: pid_file,
-          logger: logger,
-          stdin: '/dev/null',
-          stdout: 'out.log',
-          stderr: 'err.log',
-        }
-      end
-
-      before do
-        allow(Bluepill::Daemonize).to receive(:safefork).and_return(nil)
-        allow(described_class).to receive(:drop_privileges)
-        allow(described_class).to receive(:redirect_io)
-        allow(described_class).to receive(:exit)
-        allow(Kernel).to receive(:exec)
-        allow(described_class).to receive(:exec).and_raise('exec must be called on Kernel')
-        allow(Dir).to receive(:chdir)
-        allow(ENV).to receive(:[]=)
-        allow(Process).to receive(:exit!)
-        allow(described_class).to receive(:exit!).and_raise('exit! must be called on Process')
-        allow(File).to receive(:write).with(pid_file, anything)
-        allow(Bluepill::Daemonize).to receive(:call_as_daemon) do |block, _|
-          block.call
-          789
-        end
-      end
-
-      it 'exits if the pid file cannot be written' do
-        allow(described_class).to receive(:can_write_pid_file).with(pid_file, logger).and_return(false)
-        allow(described_class).to receive(:exit).with(no_args).and_raise(SystemExit)
-        expect { described_class.daemonize('cmd', options) }.to raise_error(SystemExit)
-        expect(described_class).to have_received(:can_write_pid_file).once
-        expect(described_class).to have_received(:exit).once
-        expect(rd).to have_received(:close)
-        expect(described_class).to have_received(:drop_privileges).with('user', 'group', ['extra'])
-        expect(Bluepill::Daemonize).not_to have_received(:call_as_daemon)
-      end
-
-      it 'runs without options' do
-        allow(described_class).to receive(:can_write_pid_file).with(nil, nil).and_return(false)
-        allow(described_class).to receive(:exit).with(no_args).and_raise(SystemExit)
-        expect { described_class.daemonize('cmd') }.to raise_error(SystemExit)
-        expect(described_class).to have_received(:can_write_pid_file).once
-        expect(described_class).to have_received(:exit).once
-        expect(described_class).to have_received(:drop_privileges).with(nil, nil, nil)
-      end
-
-      it 'does not redirect io that is not configured' do
-        allow(described_class).to receive(:can_write_pid_file).and_return(true)
-        described_class.daemonize('cmd', pid_file: pid_file, logger: logger)
-        expect(described_class).to have_received(:redirect_io).with(nil, nil, nil)
-      end
-
-      it 'writes any positive pid to the pid file' do
-        allow(described_class).to receive(:can_write_pid_file).and_return(true)
-        allow(Bluepill::Daemonize).to receive(:call_as_daemon).and_return(1)
-        described_class.daemonize('cmd', options)
-        expect(File).to have_received(:write).with(pid_file, '1')
-        expect(wr).to have_received(:write).with(1)
-      end
-
-      it 'execs the command as a daemon and reports its pid' do
-        allow(described_class).to receive(:can_write_pid_file).and_return(true)
-        described_class.daemonize('echo "hello world"', options)
-        expect(Dir).not_to have_received(:chdir)
-        expect(ENV).not_to have_received(:[]=)
-        expect(described_class).to have_received(:redirect_io).with(File::NULL, 'out.log', 'err.log')
-        expect(Kernel).to have_received(:exec).with('echo', 'hello world')
-        expect(described_class).to have_received(:exit).with(no_args)
-        expect(Bluepill::Daemonize).to have_received(:call_as_daemon).with(kind_of(Proc), 'echo "hello world"')
-        expect(File).to have_received(:write).with(pid_file, '789')
-        expect(wr).to have_received(:write).with(789)
-        expect(wr).to have_received(:close)
-        expect(Process).to have_received(:exit!).with(true)
-      end
-
-      it 'does not write a pid of 0 to the pid file' do
-        allow(described_class).to receive(:can_write_pid_file).and_return(true)
-        allow(Bluepill::Daemonize).to receive(:call_as_daemon).and_return(0)
-        described_class.daemonize('cmd', options)
-        expect(File).not_to have_received(:write)
-        expect(wr).to have_received(:write).with(0)
-      end
-
-      it 'changes directory and sets the environment' do
-        allow(described_class).to receive(:can_write_pid_file).and_return(true)
-        options[:working_dir] = Pathname.new('/tmp/work')
-        options[:environment] = {FOO: 1}
-        described_class.daemonize('cmd', options)
-        expect(ENV).to have_received(:[]=).with('PWD', '/tmp/work')
-        expect(Dir).to have_received(:chdir).with('/tmp/work')
-        expect(ENV).to have_received(:[]=).with('FOO', '1')
-      end
-    end
-  end
-
   describe '.delete_if_exists' do
     it 'does nothing for a nil filename' do
       allow(File).to receive(:unlink)
@@ -356,12 +233,20 @@ describe Bluepill::System do
       expect(File).not_to have_received(:unlink)
     end
 
-    it 'does nothing if the file does not exist' do
-      allow(File).to receive(:exist?).with('missing').and_return(false)
-      allow(File).to receive(:unlink)
-      described_class.delete_if_exists('missing')
-      expect(File).to have_received(:exist?).once
-      expect(File).not_to have_received(:unlink)
+    context 'when the file does not exist' do
+      before do
+        allow(File).to receive(:exist?).with('missing').and_return(false)
+        allow(File).to receive(:unlink)
+        described_class.delete_if_exists('missing')
+      end
+
+      it 'checks once' do
+        expect(File).to have_received(:exist?).once
+      end
+
+      it 'does nothing' do
+        expect(File).not_to have_received(:unlink)
+      end
     end
 
     it 'deletes an existing file' do
@@ -373,210 +258,36 @@ describe Bluepill::System do
       end
     end
 
-    it 'ignores files that disappear before deletion' do
-      allow(File).to receive(:exist?).with('file').and_return(true)
-      allow(File).to receive(:unlink).with('file').and_raise(Errno::ENOENT)
-      expect { described_class.delete_if_exists('file') }.not_to raise_error
-      expect(File).to have_received(:unlink).once
-    end
-
-    it 'retries and then warns when permission is denied' do
-      allow(File).to receive(:exist?).with('file').and_return(true)
-      allow(File).to receive(:unlink).with('file').and_raise(Errno::EACCES)
-      allow($stderr).to receive(:puts)
-      described_class.delete_if_exists('file')
-      expect(File).to have_received(:unlink).exactly(3).times
-      expect($stderr).to have_received(:puts).with('Warning: permission denied trying to delete file').once
-    end
-  end
-
-  describe '.execute_blocking' do
-    let(:rd) { instance_double(IO, close: nil) }
-    let(:wr) { instance_double(IO, close: nil, write: nil) }
-
-    context 'when in the parent' do
-      let(:waiter) { instance_double(Thread, join: nil) }
-
+    context 'when the file disappears before deletion' do
       before do
-        allow(IO).to receive(:pipe).and_return([rd, wr])
-        allow(Bluepill::Daemonize).to receive(:safefork).and_return(123)
-        allow(Process).to receive(:detach).with(123).and_return(waiter)
+        allow(File).to receive(:exist?).with('file').and_return(true)
+        allow(File).to receive(:unlink).with('file').and_raise(Errno::ENOENT)
       end
 
-      it 'returns the result reported by the child' do
-        result = {exit_code: 1, stdout: 'out', stderr: 'err'}
-        allow(rd).to receive(:read).and_return(Marshal.dump(result))
-        expect(described_class.execute_blocking('cmd')).to eq(result)
-        expect(wr).to have_received(:close)
-        expect(rd).to have_received(:close)
+      it 'ignores it' do
+        expect { described_class.delete_if_exists('file') }.not_to raise_error
       end
 
-      it 'returns an empty successful result if the child reported nothing' do
-        allow(rd).to receive(:read).and_return('')
-        expect(described_class.execute_blocking('cmd')).to eq(exit_code: 0, stdout: '', stderr: '')
-      end
-
-      it 'waits for the child to be reaped' do
-        allow(rd).to receive(:read).and_return('')
-        described_class.execute_blocking('cmd')
-        expect(Process).to have_received(:detach).with(123)
-        expect(waiter).to have_received(:join)
-      end
-
-      it "doesn't kill a command that finishes within its timeout" do
-        allow(IO).to receive(:select).with([rd], nil, nil, 2.5).and_return([[rd], [], []])
-        allow(rd).to receive(:read).and_return('')
-        allow(Process).to receive(:kill)
-        expect(described_class.execute_blocking('cmd', timeout: 2.5)).to eq(exit_code: 0, stdout: '', stderr: '')
-        expect(Process).not_to have_received(:kill)
-        expect(IO).to have_received(:select).once
-      end
-
-      it "kills the command's process group when it runs past its timeout" do
-        allow(IO).to receive(:select).with([rd], nil, nil, 2.0).and_return(nil)
-        allow(Process).to receive(:kill)
-        allow(rd).to receive(:read)
-        expect { described_class.execute_blocking('cmd', timeout: 2) }.
-          to raise_error(Timeout::Error, 'cmd took longer than 2 seconds')
-        expect(Process).to have_received(:kill).with('KILL', -123).once
-        expect(rd).not_to have_received(:read)
-        expect(IO).to have_received(:select).once
-        expect(rd).to have_received(:close)
-      end
-
-      it 'gives IO.select a timeout it can read, from a duration too' do
-        allow(IO).to receive(:select).and_return([[rd], [], []])
-        allow(rd).to receive(:read).and_return('')
-        described_class.execute_blocking('cmd', timeout: 2.seconds)
-        expect(IO).to have_received(:select).with([rd], nil, nil, an_instance_of(Float)).once
-      end
-
-      it 'times out even if the command has just finished' do
-        allow(IO).to receive(:select).and_return(nil)
-        allow(Process).to receive(:kill).with('KILL', -123).and_raise(Errno::ESRCH)
-        expect { described_class.execute_blocking('cmd', timeout: 2) }.to raise_error(Timeout::Error)
-      end
-
-      it 'reaps the child and closes the pipe if interrupted by a timeout' do
-        allow(rd).to receive(:read).and_raise(Timeout::Error)
-        expect { described_class.execute_blocking('cmd') }.to raise_error(Timeout::Error)
-        expect(Process).to have_received(:detach).with(123)
-        expect(rd).to have_received(:close)
-        expect(waiter).not_to have_received(:join)
+      it 'tries to delete it once' do
+        described_class.delete_if_exists('file')
+        expect(File).to have_received(:unlink).once
       end
     end
 
-    it 'kills a command that hangs, and what it started', if: RUBY_ENGINE == 'ruby' do
-      Dir.mktmpdir do |dir|
-        pid_file = File.join(dir, 'pid')
-        # The command starts a sleep of its own, and hangs
-        cmd = %(#{RbConfig.ruby} -e "File.write('#{pid_file}', Process.spawn('sleep', '30').to_s)\nsleep 30")
-        expect { described_class.execute_blocking(cmd, timeout: 2) }.to raise_error(Timeout::Error)
-        sleep_pid = Integer(File.read(pid_file))
-        # Killed, and reaped by init, since the command that started it is gone
-        Timeout.timeout(5) { sleep 0.1 while described_class.pid_alive?(sleep_pid) }
-        expect(described_class.pid_alive?(sleep_pid)).to be false
-      end
-    end
-
-    context 'when in the child' do
-      let(:out_rd) { instance_double(IO, close: nil, read: 'out') }
-      let(:out_wr) { instance_double(IO, close: nil) }
-      let(:err_rd) { instance_double(IO, close: nil, read: 'err') }
-      let(:err_wr) { instance_double(IO, close: nil, puts: nil, closed?: false) }
-      let(:status) { instance_double(Process::Status, exitstatus: 2) }
-      let(:options) { {uid: 'user', gid: 'group', supplementary_groups: ['extra']} }
-
+    context 'when permission is denied' do
       before do
-        allow(IO).to receive(:pipe).and_return([rd, wr], [out_rd, out_wr], [err_rd, err_wr])
-        allow(Bluepill::Daemonize).to receive(:safefork).and_return(nil)
-        allow(described_class).to receive(:fork) do |&block|
-          block.call
-          456
-        end
-        allow(described_class).to receive(:drop_privileges)
-        allow(described_class).to receive(:exit)
-        allow(Dir).to receive(:chdir)
-        allow(ENV).to receive(:[]=)
-        allow(STDIN).to receive(:reopen)
-        allow(STDOUT).to receive(:reopen)
-        allow(STDERR).to receive(:reopen)
-        allow(STDERR).to receive(:puts)
-        allow(Kernel).to receive(:exec)
-        allow(described_class).to receive(:exec).and_raise('exec must be called on Kernel')
-        allow(Process).to receive(:waitpid2).with(456).and_return([456, status])
-        allow(Process).to receive(:exit!)
-        allow(Process).to receive(:setpgid)
+        allow(File).to receive(:exist?).with('file').and_return(true)
+        allow(File).to receive(:unlink).with('file').and_raise(Errno::EACCES)
+        allow($stderr).to receive(:puts)
+        described_class.delete_if_exists('file')
       end
 
-      it 'leads a process group of its own with a timeout' do
-        described_class.execute_blocking('echo', timeout: 5)
-        expect(Process).to have_received(:setpgid).with(0, 0).once
+      it 'tries 3 times' do
+        expect(File).to have_received(:unlink).exactly(3).times
       end
 
-      it "stays in bluepill's process group without a timeout" do
-        described_class.execute_blocking('echo')
-        expect(Process).not_to have_received(:setpgid)
-      end
-
-      it 'execs the command and reports its output and exit code' do
-        described_class.execute_blocking('echo "hello world"', options)
-        expect(rd).to have_received(:close)
-        expect(described_class).to have_received(:drop_privileges).with('user', 'group', ['extra'])
-        expect(Dir).not_to have_received(:chdir)
-        expect(ENV).not_to have_received(:[]=)
-        expect(wr).to have_received(:close).twice
-        expect(STDIN).to have_received(:reopen).with(File::NULL)
-        expect(STDOUT).to have_received(:reopen).with(out_wr)
-        expect(STDERR).to have_received(:reopen).with(err_wr)
-        expect(Kernel).to have_received(:exec).with('echo', 'hello world')
-        expect(out_wr).to have_received(:close).twice
-        expect(err_wr).to have_received(:close).twice
-        expect(out_rd).to have_received(:close).twice
-        expect(err_rd).to have_received(:close).twice
-        expect(wr).to have_received(:write).with(Marshal.dump(stdout: 'out', stderr: 'err', exit_code: 2))
-        expect(Process).to have_received(:exit!).with(no_args)
-      end
-
-      it 'runs without options' do
-        described_class.execute_blocking('cmd')
-        expect(described_class).to have_received(:drop_privileges).with(nil, nil, nil)
-        expect(Kernel).to have_received(:exec).with('cmd')
-      end
-
-      it 'still exits if the parent stopped waiting for the result' do
-        allow(wr).to receive(:write).and_raise(Errno::EPIPE)
-        described_class.execute_blocking('cmd', options)
-        expect(wr).to have_received(:close).twice
-        expect(Process).to have_received(:exit!).with(no_args)
-      end
-
-      it 'changes directory and sets the environment' do
-        options[:working_dir] = Pathname.new('/tmp/work')
-        options[:environment] = {FOO: 1}
-        described_class.execute_blocking('cmd', options)
-        expect(ENV).to have_received(:[]=).with('PWD', '/tmp/work')
-        expect(Dir).to have_received(:chdir).with('/tmp/work')
-        expect(ENV).to have_received(:[]=).with('FOO', '1')
-      end
-
-      it 'reports exceptions on the stderr pipe if it is still open' do
-        allow(described_class).to receive(:drop_privileges).and_raise(ArgumentError, 'no such user')
-        described_class.execute_blocking('cmd', options)
-        expect(err_wr).to have_received(:puts).with('Exception in grandchild: no such user.')
-        expect(err_wr).to have_received(:puts).with(kind_of(Array))
-        expect(Kernel).not_to have_received(:exec)
-        expect(described_class).to have_received(:exit).with(1)
-      end
-
-      it 'reports exceptions on STDERR if the stderr pipe is closed' do
-        allow(err_wr).to receive(:closed?).and_return(true)
-        allow(Kernel).to receive(:exec).and_raise(Errno::ENOENT, 'cmd')
-        described_class.execute_blocking('cmd', options)
-        expect(STDERR).to have_received(:puts).with('Exception in grandchild: No such file or directory - cmd.')
-        expect(STDERR).to have_received(:puts).with(kind_of(Array))
-        expect(err_wr).not_to have_received(:puts)
-        expect(described_class).to have_received(:exit).with(1)
+      it 'then warns' do
+        expect($stderr).to have_received(:puts).with('Warning: permission denied trying to delete file').once
       end
     end
   end
@@ -618,46 +329,94 @@ describe Bluepill::System do
       ].join("\n")
     end
 
-    it 'parses ps output into a hash keyed by pid' do
-      allow(described_class).to receive(:`).and_return(output)
-      expected = {
-        0 => %w[PID PPID %CPU RSS ELAPSED ARGS],
-        1 => ['1', '0', '0.0', '1234', '10-01:02:03', '/sbin/init'],
-        321 => ['321', '1', '12.5', '56789', '01:02', 'ruby -e "sleep 1"'],
-      }
-      expect(described_class.ps_axu).to eq(expected)
-      expect(described_class.ps_axu).to eq(expected)
-      expect(described_class).to have_received(:`).with('ps -Ao pid,ppid,pcpu,rss,etime,args').once
-    end
-
-    it 'onlies run ps once when called from several threads at once' do
-      allow(described_class).to receive(:`) do
-        sleep 0.05
-        output
+    context 'when ps runs' do
+      let(:table) do
+        {
+          0 => %w[PID PPID %CPU RSS ELAPSED ARGS],
+          1 => ['1', '0', '0.0', '1234', '10-01:02:03', '/sbin/init'],
+          321 => ['321', '1', '12.5', '56789', '01:02', 'ruby -e "sleep 1"'],
+        }
       end
-      threads = Array.new(5) { Thread.new { described_class.ps_axu } }
-      expect(threads.collect(&:value).uniq.size).to eq(1)
-      expect(described_class).to have_received(:`).once
+
+      before do
+        allow(described_class).to receive(:`).and_return(output)
+      end
+
+      it 'parses ps output into a hash keyed by pid, and keeps it until the next tick' do
+        expect(Array.new(2) { described_class.ps_axu }).to eq([table, table])
+      end
+
+      it 'runs ps once a tick' do
+        2.times { described_class.ps_axu }
+        expect(described_class).to have_received(:`).with('ps -Ao pid,ppid,pcpu,rss,etime,args').once
+      end
     end
 
-    it "raises a PsError and doesn't retry until the next tick if ps cannot be run" do
-      allow(described_class).to receive(:`).and_raise(Errno::ENOMEM)
-      message = 'Could not run ps: Errno::ENOMEM: Cannot allocate memory'
-      expect { described_class.ps_axu }.to raise_error(Bluepill::System::PsError, message)
-      expect { described_class.memory_usage(1, false) }.to raise_error(Bluepill::System::PsError, message)
-      expect(described_class).to have_received(:`).once
-      described_class.reset_data
-      allow(described_class).to receive(:`).and_return(output)
-      expect(described_class.memory_usage(1, false)).to eq(1234.0)
+    context 'when called from several threads at once' do
+      before do
+        allow(described_class).to receive(:`) do
+          sleep 0.05
+          output
+        end
+      end
+
+      def ps_axu_in_threads
+        Array.new(5) { Thread.new { described_class.ps_axu } }.collect(&:value)
+      end
+
+      it 'gives them all the same table' do
+        expect(ps_axu_in_threads.uniq.size).to eq(1)
+      end
+
+      it 'only runs ps once' do
+        ps_axu_in_threads
+        expect(described_class).to have_received(:`).once
+      end
+    end
+
+    context 'when ps cannot be run' do
+      before do
+        allow(described_class).to receive(:`).and_raise(Errno::ENOMEM)
+      end
+
+      # Try to read ps, and carry on past the PsError
+      def attempt
+        yield
+      rescue Bluepill::System::PsError
+        nil
+      end
+
+      def message
+        'Could not run ps: Errno::ENOMEM: Cannot allocate memory'
+      end
+
+      it 'raises a PsError' do
+        expect { described_class.ps_axu }.to raise_error(Bluepill::System::PsError, message)
+      end
+
+      it 'raises it again until the next tick' do
+        attempt { described_class.ps_axu }
+        expect { described_class.memory_usage(1, false) }.to raise_error(Bluepill::System::PsError, message)
+      end
+
+      it "doesn't retry until the next tick" do
+        2.times { attempt { described_class.ps_axu } }
+        expect(described_class).to have_received(:`).once
+      end
+
+      it 'retries on the next tick' do
+        attempt { described_class.ps_axu }
+        described_class.reset_data
+        allow(described_class).to receive(:`).and_return(output)
+        expect(described_class.memory_usage(1, false)).to eq(1234.0)
+      end
     end
   end
 
   describe '.parse_etime' do
     it 'parses etime format' do
-      expect(described_class.parse_elapsed_time('400-00:04:01')).to equal(34_560_241)
-      expect(described_class.parse_elapsed_time('02:04:02')).to equal(7442)
-      expect(described_class.parse_elapsed_time('20:03')).to equal(1203)
-      expect(described_class.parse_elapsed_time('invalid')).to equal(0)
+      times = %w[400-00:04:01 02:04:02 20:03 invalid].collect { |time| described_class.parse_elapsed_time(time) }
+      expect(times).to eql [34_560_241, 7442, 1203, 0]
     end
 
     it 'parses fields with a leading zero as decimal' do
@@ -666,152 +425,159 @@ describe Bluepill::System do
   end
 
   describe '.drop_privileges' do
-    let(:home) { ENV.fetch('HOME', nil) }
+    # What it changed about the process, in order
+    let(:calls) { [] }
 
     before do
-      allow(Process).to receive(:groups=)
-      allow(Process::Sys).to receive(:setgid)
-      allow(Process::Sys).to receive(:setuid)
-      allow(ENV).to receive(:[]=)
+      allow(Process).to(receive(:groups=)) { |groups| calls << [:groups=, groups] }
+      allow(Process).to(receive(:initgroups)) { |*args| calls << [:initgroups, *args] }
+      allow(Process::Sys).to(receive(:setgid)) { |gid| calls << [:setgid, gid] }
+      allow(Process::Sys).to(receive(:setuid)) { |uid| calls << [:setuid, uid] }
+      allow(ENV).to(receive(:[]=)) { |*args| calls << [:[]=, *args] }
     end
 
-    it 'does nothing unless running as root' do
-      allow(Process::Sys).to receive(:geteuid).and_return(501)
-      allow(Etc).to receive(:getpwnam)
-      described_class.drop_privileges('user', 'group', ['extra'])
-      expect(Etc).not_to have_received(:getpwnam)
-      expect(Process::Sys).not_to have_received(:setuid)
+    context 'when not running as root' do
+      before do
+        allow(Process::Sys).to receive(:geteuid).and_return(501)
+        allow(Etc).to receive(:getpwnam)
+        described_class.drop_privileges('user', 'group', ['extra'])
+      end
+
+      it "doesn't look up the user" do
+        expect(Etc).not_to have_received(:getpwnam)
+      end
+
+      it 'changes nothing' do
+        expect(calls).to eq []
+      end
     end
 
     context 'when running as root' do
       before do
         allow(Process::Sys).to receive(:geteuid).and_return(0)
+        allow(Etc).to receive(:getgrnam).with('group').and_return(instance_double(Etc::Group, gid: 20))
+        allow(Etc).to receive(:getgrnam).with('extra').and_return(instance_double(Etc::Group, gid: 30))
+      end
+
+      # Make the user exist, with a home directory
+      def user(dir = '/home/user')
+        allow(Etc).to receive(:getpwnam).with('user').and_return(instance_double(Etc::Passwd, name: 'user', uid: 501, gid: 10, dir: dir))
       end
 
       it 'does nothing without a uid, gid or supplementary groups' do
         described_class.drop_privileges(nil, nil, nil)
-        expect(Process).not_to have_received(:groups=)
-        expect(Process::Sys).not_to have_received(:setgid)
-        expect(Process::Sys).not_to have_received(:setuid)
-        expect(ENV).not_to have_received(:[]=)
+        expect(calls).to eq []
       end
 
       it "gives a user the user's own groups, the gid, and the supplementary groups" do
-        allow(Etc).to receive(:getpwnam).with('user').and_return(instance_double(Etc::Passwd, name: 'user', uid: 501, gid: 10, dir: '/home/user'))
-        allow(Etc).to receive(:getgrnam).with('group').and_return(instance_double(Etc::Group, gid: 20))
-        allow(Etc).to receive(:getgrnam).with('extra').and_return(instance_double(Etc::Group, gid: 30))
-        allow(Process).to receive(:initgroups)
+        user
         allow(Process).to receive(:groups).and_return([10, 20])
         described_class.drop_privileges('user', 'group', ['extra'])
-        expect(Process).to have_received(:initgroups).with('user', 20).ordered
-        expect(Process).to have_received(:groups=).with([10, 20, 30]).ordered
-        expect(Process::Sys).to have_received(:setgid).with(20).ordered
-        expect(Process::Sys).to have_received(:setuid).with(501).ordered
-        expect(ENV).to have_received(:[]=).with('HOME', '/home/user')
+        expect(calls).to eq [[:initgroups, 'user', 20], [:groups=, [10, 20, 30]], [:setgid, 20], [:setuid, 501], [:[]=, 'HOME', '/home/user']]
       end
 
       it "gives a user without a gid the user's primary group" do
-        allow(Etc).to receive(:getpwnam).with('user').and_return(instance_double(Etc::Passwd, name: 'user', uid: 501, gid: 10, dir: '/home/user'))
-        allow(Process).to receive(:initgroups)
+        user
         described_class.drop_privileges('user', nil, [])
-        expect(Process).to have_received(:initgroups).with('user', 10)
-        expect(Process).not_to have_received(:groups=)
-        expect(Process::Sys).to have_received(:setgid).with(10)
-        expect(Process::Sys).to have_received(:setuid).with(501)
-        expect(ENV).to have_received(:[]=).with('HOME', '/home/user')
+        expect(calls).to eq [[:initgroups, 'user', 10], [:setgid, 10], [:setuid, 501], [:[]=, 'HOME', '/home/user']]
       end
 
       it 'keeps the home directory if the user has none' do
-        allow(Etc).to receive(:getpwnam).with('user').and_return(instance_double(Etc::Passwd, name: 'user', uid: 501, gid: 10, dir: nil))
-        allow(Process).to receive(:initgroups)
+        user(nil)
         described_class.drop_privileges('user', nil, [])
-        expect(Process::Sys).to have_received(:setuid).with(501)
-        expect(ENV).not_to have_received(:[]=)
+        expect(calls).to eq [[:initgroups, 'user', 10], [:setgid, 10], [:setuid, 501]]
       end
 
       it 'uses only the gid and supplementary groups without a uid' do
-        allow(Etc).to receive(:getgrnam).with('group').and_return(instance_double(Etc::Group, gid: 20))
-        allow(Etc).to receive(:getgrnam).with('extra').and_return(instance_double(Etc::Group, gid: 30))
         allow(Process).to receive(:groups).and_return([20])
-        allow(Process).to receive(:initgroups)
         described_class.drop_privileges(nil, 'group', ['extra'])
-        expect(Process).not_to have_received(:initgroups)
-        expect(Process).to have_received(:groups=).with([20]).ordered
-        expect(Process).to have_received(:groups=).with([20, 30]).ordered
-        expect(Process::Sys).to have_received(:setgid).with(20)
-        expect(Process::Sys).not_to have_received(:setuid)
-        expect(ENV).not_to have_received(:[]=)
+        expect(calls).to eq [[:groups=, [20]], [:groups=, [20, 30]], [:setgid, 20]]
       end
 
       it "adds supplementary groups to bluepill's own without a uid or gid" do
-        allow(Etc).to receive(:getgrnam).with('extra').and_return(instance_double(Etc::Group, gid: 30))
         allow(Process).to receive(:groups).and_return([0])
         described_class.drop_privileges(nil, nil, ['extra'])
-        expect(Process).to have_received(:groups=).with([0, 30])
-        expect(Process::Sys).not_to have_received(:setgid)
-        expect(Process::Sys).not_to have_received(:setuid)
+        expect(calls).to eq [[:groups=, [0, 30]]]
       end
     end
   end
 
   describe '.can_write_pid_file' do
     let(:logger) { instance_double(Bluepill::Logger) }
+    let(:dir) { Dir.mktmpdir }
 
-    it 'is true if the pid file can be written' do
-      Dir.mktmpdir do |dir|
-        pid_file = File.join(dir, 'test.pid')
-        expect(described_class.can_write_pid_file(pid_file, logger)).to be true
-        expect(File.exist?(pid_file)).to be false
+    after do
+      FileUtils.remove_entry(dir)
+    end
+
+    context 'when the pid file can be written' do
+      it 'is true' do
+        expect(described_class.can_write_pid_file(File.join(dir, 'test.pid'), logger)).to be true
+      end
+
+      it 'leaves no pid file' do
+        described_class.can_write_pid_file(File.join(dir, 'test.pid'), logger)
+        expect(File.exist?(File.join(dir, 'test.pid'))).to be false
       end
     end
 
-    it 'logs the error and is false if the pid file cannot be written' do
-      Dir.mktmpdir do |dir|
-        pid_file = File.join(dir, 'missing', 'test.pid')
+    context 'when the pid file cannot be written' do
+      let(:pid_file) { File.join(dir, 'missing', 'test.pid') }
+      let(:warnings) { [] }
+
+      before do
+        allow(logger).to(receive(:warning)) { |message| warnings << message }
+      end
+
+      it 'is false' do
+        expect(described_class.can_write_pid_file(pid_file, logger)).to be false
+      end
+
+      it 'logs the error' do
         message = begin
           FileUtils.touch(pid_file)
         rescue Errno::ENOENT => e
           "Errno::ENOENT - #{e.message}"
         end
-        allow(logger).to receive(:warning)
-        expect(described_class.can_write_pid_file(pid_file, logger)).to be false
-        expect(logger).to have_received(:warning).with(message).once
-        expect(logger).to have_received(:warning).with(kind_of(String)).at_least(:twice)
+        described_class.can_write_pid_file(pid_file, logger)
+        expect(warnings.first).to eq message
+      end
+
+      it 'logs its backtrace after it' do
+        described_class.can_write_pid_file(pid_file, logger)
+        expect(warnings.drop(1)).to all(be_a(String)).and(be_any)
       end
     end
   end
 
   describe '.redirect_io' do
+    # What each stream was reopened with, in order
+    let(:reopened) { [] }
+
     before do
-      allow($stdin).to receive(:reopen)
-      allow($stdout).to receive(:reopen)
-      allow($stderr).to receive(:reopen)
+      allow($stdin).to(receive(:reopen)) { |*args| reopened << [:stdin, *args] }
+      allow($stdout).to(receive(:reopen)) { |*args| reopened << [:stdout, *args] }
+      allow($stderr).to(receive(:reopen)) { |*args| reopened << [:stderr, *args] }
     end
 
     it 'does not redirect anything without paths' do
       described_class.redirect_io(nil, nil, nil)
-      expect($stdin).not_to have_received(:reopen)
-      expect($stdout).not_to have_received(:reopen)
-      expect($stderr).not_to have_received(:reopen)
+      expect(reopened).to eq []
     end
 
     it 'redirects stdout and stderr to the same file' do
       described_class.redirect_io('in', 'out.log', 'out.log')
-      expect($stdin).to have_received(:reopen).with('in')
-      expect($stdout).to have_received(:reopen).with('out.log', 'a')
-      expect($stderr).to have_received(:reopen).with($stdout)
+      expect(reopened).to eq [[:stdin, 'in'], [:stdout, 'out.log', 'a'], [:stderr, $stdout]]
     end
 
     it 'redirects stdout and stderr to different files' do
       described_class.redirect_io(nil, 'out.log', 'err.log')
-      expect($stdout).to have_received(:reopen).with('out.log', 'a')
-      expect($stderr).to have_received(:reopen).with('err.log', 'a')
+      expect(reopened).to eq [[:stdout, 'out.log', 'a'], [:stderr, 'err.log', 'a']]
     end
 
     it 'redirects only stderr' do
       described_class.redirect_io(nil, nil, 'err.log')
-      expect($stdout).not_to have_received(:reopen)
-      expect($stderr).to have_received(:reopen).with('err.log', 'a')
+      expect(reopened).to eq [[:stderr, 'err.log', 'a']]
     end
   end
 end

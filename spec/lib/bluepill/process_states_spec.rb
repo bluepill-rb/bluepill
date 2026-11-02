@@ -102,18 +102,28 @@ describe Bluepill::Process do
     expected << [:notify_transition, from, to, to]
   end
 
+  # The callbacks a tick runs, in order. It runs the watches once it's up.
+  def tick_callbacks(from, to)
+    to == 'up' ? callbacks(from, to) << [:run_watches, 'up'] : callbacks(from, to)
+  end
+
+  # The message of what the block raises, or nil if it raises nothing
+  def error_from
+    yield
+    nil
+  rescue StandardError => e
+    e.message
+  end
+
   it 'starts unmonitored' do
-    expect(process.state).to eq('unmonitored')
-    expect(process).to be_unmonitored
+    expect(process).to have_attributes(state: 'unmonitored', unmonitored?: true)
   end
 
   PROCESS_STATES.each do |state|
     it "answers the predicates in #{state}" do
       process.state = state
-      expect(process.state).to eq(state)
-      PROCESS_STATES.each do |other|
-        expect(process.public_send("#{other}?")).to be(other == state)
-      end
+      predicates = PROCESS_STATES.collect { |other| process.public_send("#{other}?") }
+      expect([process.state, predicates]).to eq([state, PROCESS_STATES.collect { |other| other == state }])
     end
   end
 
@@ -122,16 +132,12 @@ describe Bluepill::Process do
       if to
         it "goes from #{from} to #{to} on #{event}" do
           process.state = from
-          expect(process.public_send(event)).to be true
-          expect(process.state).to eq(to)
-          expect(calls).to eq(callbacks(from, to))
+          expect([process.public_send(event), process.state, calls]).to eq([true, to, callbacks(from, to)])
         end
       else
         it "stays #{from} on #{event}, with no callbacks" do
           process.state = from
-          expect(process.public_send(event)).to be false
-          expect(process.state).to eq(from)
-          expect(calls).to be_empty
+          expect([process.public_send(event), process.state, calls]).to eq([false, from, []])
         end
       end
     end
@@ -146,10 +152,7 @@ describe Bluepill::Process do
           it "goes from #{from} to #{to}" do
             process.state = from
             process.tick
-            expect(process.state).to eq(to)
-            expected = callbacks(from, to)
-            expected << [:run_watches, 'up'] if to == 'up'
-            expect(calls).to eq(expected)
+            expect([process.state, calls]).to eq([to, tick_callbacks(from, to)])
           end
         end
       end
@@ -157,8 +160,7 @@ describe Bluepill::Process do
 
     it 'stays unmonitored, running no transition callbacks' do
       process.tick
-      expect(process.state).to eq('unmonitored')
-      expect(calls).to eq([[:clean_threads, 'unmonitored']])
+      expect([process.state, calls]).to eq(['unmonitored', [[:clean_threads, 'unmonitored']]])
     end
   end
 
@@ -169,16 +171,13 @@ describe Bluepill::Process do
 
     it 'cancels the transition and the callbacks after it' do
       process.state = 'down'
-      expect(process.start).to be false
-      expect(process.state).to eq('down')
-      expect(calls).to be_empty
+      expect([process.start, process.state, calls]).to eq([false, 'down', []])
     end
 
     it 'cancels a tick from stopping before it cleans up threads' do
       process.state = 'stopping'
       process.tick
-      expect(process.state).to eq('stopping')
-      expect(calls).to be_empty
+      expect([process.state, calls]).to eq(['stopping', []])
     end
   end
 
@@ -186,15 +185,13 @@ describe Bluepill::Process do
     it 'leaves the state alone when it raises before the transition' do
       allow(process.triggers.first).to receive(:notify).and_raise('trigger failed')
       process.state = 'up'
-      expect { process.restart }.to raise_error('trigger failed')
-      expect(process.state).to eq('up')
+      expect([error_from { process.restart }, process.state]).to eq(['trigger failed', 'up'])
     end
 
-    it 'keeps the new state when it raises after the transition' do
+    it 'keeps the new state when it raises after the transition, without recording it' do
       allow(Bluepill::System).to receive(:daemonize).and_raise('start failed')
-      expect { process.start }.to raise_error('start failed')
-      expect(process.state).to eq('starting')
-      expect(process.watches.first).not_to have_received(:clear_history!)
+      expected = [[:notify_triggers, :unmonitored, :starting, false, 'unmonitored'], [:clean_threads, 'starting']]
+      expect([error_from { process.start }, process.state, calls]).to eq(['start failed', 'starting', expected])
     end
   end
 
@@ -204,9 +201,7 @@ describe Bluepill::Process do
       allow(process.triggers.first).to receive(:notify) { |transition| transitions << transition }
       process.state = 'up'
       process.stop
-      expect(transitions.first.from_name).to eq(:up)
-      expect(transitions.first.to_name).to eq(:stopping)
-      expect(transitions.first.loopback?).to be false
+      expect(transitions.first).to have_attributes(from_name: :up, to_name: :stopping, loopback?: false)
     end
   end
 end

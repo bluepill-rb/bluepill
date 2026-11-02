@@ -1,17 +1,28 @@
 describe Bluepill::Group do
-  let(:logger) { instance_double(Bluepill::Logger, debug: nil) }
-  let(:process_logger) { instance_double(Bluepill::Logger) }
+  # What the processes, the logger and the command threads are told to do,
+  # in order
+  let(:calls) { [] }
+  let(:logger) do
+    logger = instance_double(Bluepill::Logger)
+    prefixed = Hash.new { |loggers, name| loggers[name] = instance_double(Bluepill::Logger, "#{name} logger") }
+    allow(logger).to receive(:prefix_with) { |name| prefixed[name] }
+    allow(logger).to receive(:debug) { |message| calls << [:debug, message] }
+    logger
+  end
   let(:group) { described_class.new('web', logger: logger) }
 
-  def process_double(name, attributes = {})
-    instance_double(Bluepill::Process, name, {name: name, :logger= => nil}.merge(attributes))
+  # A process that records what it's told to do as [method, name, *args]
+  def process_double(name)
+    process = instance_double(Bluepill::Process, name, name: name)
+    [:logger=, :tick, :determine_initial_state, :handle_user_command].each do |method|
+      allow(process).to receive(method) { |*args| calls << [method, name, *args] }
+    end
+    process
   end
 
   describe '#initialize' do
     it 'sets the name, logger and an empty process list' do
-      expect(group.name).to eq('web')
-      expect(group.logger).to eq(logger)
-      expect(group.processes).to eq([])
+      expect(group).to have_attributes(name: 'web', logger: logger, processes: [])
     end
 
     it 'has no logger without options' do
@@ -22,47 +33,40 @@ describe Bluepill::Group do
   describe '#add_process' do
     it 'gives the process a prefixed logger and stores it' do
       process = process_double('unicorn')
-      allow(logger).to receive(:prefix_with).with('unicorn').and_return(process_logger)
       group.add_process(process)
-      expect(logger).to have_received(:prefix_with)
-      expect(process).to have_received(:logger=).with(process_logger)
-      expect(group.processes).to eq([process])
+      expect([calls, group.processes]).to eq([[[:logger=, 'unicorn', logger.prefix_with('unicorn')]], [process]])
     end
   end
 
   context 'with processes' do
-    let(:first) { process_double('first') }
-    let(:second) { process_double('second') }
+    let(:processes) { [process_double('first'), process_double('second')] }
 
     before do
-      allow(logger).to receive(:prefix_with).and_return(process_logger)
-      group.add_process(first)
-      group.add_process(second)
+      processes.each { |process| group.add_process(process) }
+      calls.clear
     end
 
     describe '#tick' do
       it 'ticks every process' do
-        allow(first).to receive(:tick)
-        allow(second).to receive(:tick)
         group.tick
-        expect(first).to have_received(:tick)
-        expect(second).to have_received(:tick)
+        expect(calls).to eq([[:tick, 'first'], [:tick, 'second']])
       end
     end
 
     describe '#determine_initial_state' do
       it 'determines the initial state of every process' do
-        allow(first).to receive(:determine_initial_state)
-        allow(second).to receive(:determine_initial_state)
         group.determine_initial_state
-        expect(first).to have_received(:determine_initial_state)
-        expect(second).to have_received(:determine_initial_state)
+        expect(calls).to eq([[:determine_initial_state, 'first'], [:determine_initial_state, 'second']])
       end
     end
 
     [:start, :unmonitor, :stop, :restart].each do |event|
       describe "##{event}" do
-        let(:thread) { instance_double(Thread, join: nil) }
+        let(:thread) do
+          thread = instance_double(Thread)
+          allow(thread).to receive(:join) { calls << [:join] }
+          thread
+        end
 
         before do
           allow(Thread).to receive(:new) do |&block|
@@ -71,39 +75,31 @@ describe Bluepill::Group do
           end
         end
 
+        # Make the processes run the event's command blocking or not
+        def noblock(event, value, targets = processes)
+          targets.each { |process| allow(process).to receive("group_#{event}_noblock").and_return(value) }
+        end
+
+        # What running the event's command on a process logs and calls
+        def command(event, mode, name)
+          [[:debug, "Command #{event} running in #{mode} mode."], [:handle_user_command, name, event.to_s]]
+        end
+
         it 'runs blocking commands one at a time' do
-          [first, second].each do |process|
-            allow(process).to receive("group_#{event}_noblock").and_return(false)
-            allow(process).to receive(:handle_user_command)
-          end
-          expect(group.send(event)).to eq(['web:first', 'web:second'])
-          [first, second].each do |process|
-            expect(process).to have_received(:handle_user_command).with(event.to_s)
-          end
-          expect(logger).to have_received(:debug).with("Command #{event} running in blocking mode.").twice
-          expect(thread).to have_received(:join).twice
+          noblock(event, false)
+          expected = command(event, 'blocking', 'first') + [[:join]] + command(event, 'blocking', 'second') + [[:join]]
+          expect([group.send(event), calls]).to eq([['web:first', 'web:second'], expected])
         end
 
         it 'runs non-blocking commands in parallel' do
-          [first, second].each do |process|
-            allow(process).to receive("group_#{event}_noblock").and_return(true)
-            allow(process).to receive(:handle_user_command)
-          end
-          expect(group.send(event)).to eq(['web:first', 'web:second'])
-          [first, second].each do |process|
-            expect(process).to have_received(:handle_user_command).with(event.to_s)
-          end
-          expect(logger).to have_received(:debug).with("Command #{event} running in non-blocking mode.").twice
-          expect(thread).to have_received(:join).twice
+          noblock(event, true)
+          expected = command(event, 'non-blocking', 'first') + command(event, 'non-blocking', 'second') + [[:join], [:join]]
+          expect([group.send(event), calls]).to eq([['web:first', 'web:second'], expected])
         end
 
         it 'only affects the named process' do
-          allow(second).to receive("group_#{event}_noblock").and_return(false)
-          allow(first).to receive(:handle_user_command)
-          allow(second).to receive(:handle_user_command)
-          expect(group.send(event, 'second')).to eq(['web:second'])
-          expect(first).not_to have_received(:handle_user_command)
-          expect(second).to have_received(:handle_user_command).with(event.to_s)
+          noblock(event, false, [processes.last])
+          expect([group.send(event, 'second'), calls]).to eq([['web:second'], command(event, 'blocking', 'second') + [[:join]]])
         end
       end
     end
@@ -112,34 +108,21 @@ describe Bluepill::Group do
       let(:child) { instance_double(Bluepill::Process, name: 'child', state: 'up') }
 
       before do
-        allow(first).to receive_messages(actual_pid: 1, state: 'up', monitor_children?: true, children: [child])
-        allow(second).to receive_messages(actual_pid: 2, state: 'down', monitor_children?: false)
+        allow(processes.first).to receive_messages(actual_pid: 1, state: 'up', monitor_children?: true, children: [child])
+        allow(processes.last).to receive_messages(actual_pid: 2, state: 'down', monitor_children?: false)
       end
 
       it 'lists every process and monitored child under the group name' do
-        expected = [
-          'web:',
-          '  first(pid:1): up',
-          '    child: up',
-          '  second(pid:2): down',
-          '',
-        ]
-        expect(group.status).to eq(expected)
+        expect(group.status).to eq(['web:', '  first(pid:1): up', '    child: up', '  second(pid:2): down', ''])
       end
 
       it 'lists processes without indentation when the group has no name' do
         group.name = nil
-        expected = [
-          'first(pid:1): up',
-          '  child: up',
-          'second(pid:2): down',
-          '',
-        ]
-        expect(group.status).to eq(expected)
+        expect(group.status).to eq(['first(pid:1): up', '  child: up', 'second(pid:2): down', ''])
       end
 
       it 'lists the named process with its statistics' do
-        allow(second).to receive(:statistics).and_return(instance_double(Bluepill::ProcessStatistics, to_s: 'stats'))
+        allow(processes.last).to receive(:statistics).and_return(instance_double(Bluepill::ProcessStatistics, to_s: 'stats'))
         expect(group.status('second')).to eq(['second(pid:2): down', 'stats', ''])
       end
 

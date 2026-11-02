@@ -12,6 +12,10 @@ describe Bluepill::Application do
     allow(Signal).to receive(:trap) { |signal, &block| traps[signal] = block }
   end
 
+  def exit_with(status)
+    raise_error(an_instance_of(SystemExit).and(having_attributes(status: status)))
+  end
+
   describe '#initialize' do
     subject(:app) { described_class.new('test', options) }
 
@@ -55,8 +59,7 @@ describe Bluepill::Application do
       before { allow(::Process).to receive(:euid).and_return(0) }
 
       it 'uses the defaults' do
-        expect(app.base_dir).to eq('/var/run/bluepill')
-        expect(app).not_to be_foreground
+        expect(app).to have_attributes(base_dir: '/var/run/bluepill', foreground?: false)
       end
     end
 
@@ -75,14 +78,11 @@ describe Bluepill::Application do
       end
 
       it 'derives the pid file and pids dir' do
-        expect(app.pid_file).to eq('/var/bluepill/pids/test.pid')
-        expect(app.pids_dir).to eq('/var/bluepill/pids/test')
+        expect(app).to have_attributes(pid_file: '/var/bluepill/pids/test.pid', pids_dir: '/var/bluepill/pids/test')
       end
 
       it 'defaults the kill timeout and foreground mode' do
-        expect(app.kill_timeout).to eq(10)
-        expect(app).not_to be_foreground
-        expect(app.groups).to eq({})
+        expect(app).to have_attributes(kill_timeout: 10, foreground?: false, groups: {})
       end
 
       it 'traps TERM, INT and HUP' do
@@ -101,9 +101,14 @@ describe Bluepill::Application do
       end
 
       it 'logs to the log file with the application name as prefix' do
+        log = instance_double(Bluepill::Logger)
+        allow(Bluepill::Logger).to receive(:new).with(log_file: nil, log_level: nil, stdout: false).and_return(log)
+        allow(log).to receive(:prefix_with).with('test').and_return(logger)
         expect(app.logger).to eq(logger)
-        expect(Bluepill::Logger).to have_received(:new).with(log_file: nil, log_level: nil, stdout: false)
-        expect(logger).to have_received(:prefix_with).with('test')
+      end
+
+      it 'gives the process journal the same logger' do
+        app
         expect(Bluepill::ProcessJournal).to have_received(:logger=).with(logger)
       end
 
@@ -111,9 +116,11 @@ describe Bluepill::Application do
         let(:options) { {base_dir: '/var/bluepill', foreground: true, log_file: 'log', log_level: :info, kill_timeout: 3} }
 
         it 'uses them' do
-          expect(app.kill_timeout).to eq(3)
-          expect(app.log_file).to eq('log')
-          expect(app).to be_foreground
+          expect(app).to have_attributes(kill_timeout: 3, log_file: 'log', foreground?: true)
+        end
+
+        it 'logs to the log file at the log level, and to stdout' do
+          app
           expect(Bluepill::Logger).to have_received(:new).with(log_file: 'log', log_level: :info, stdout: true)
         end
       end
@@ -146,9 +153,6 @@ describe Bluepill::Application do
         end
       end
     end
-  end
-  def exit_with(status)
-    raise_error(an_instance_of(SystemExit).and(having_attributes(status: status)))
   end
 
   describe '#initialize without permission to write its files' do
@@ -185,9 +189,13 @@ describe Bluepill::Application do
     after { FileUtils.remove_entry(base_dir) }
 
     describe 'pids dir' do
+      it 'is created' do
+        app
+        expect(File).to be_directory(pids_dir)
+      end
+
       it 'is created writable for everybody' do
         app
-        expect(File.directory?(pids_dir)).to be true
         expect(File.stat(pids_dir).mode & 0o777).to eq(0o777)
       end
 
@@ -200,13 +208,24 @@ describe Bluepill::Application do
     end
 
     describe 'signal traps' do
-      before { app }
+      before do
+        allow(app).to receive(:puts)
+        allow(app).to receive(:cleanup)
+      end
 
       %w[TERM INT].each do |signal|
-        it "terminates on #{signal}" do
-          allow(app).to receive(:cleanup)
-          expect { traps[signal].call(Signal.list.fetch(signal)) }.to output("Terminating...\n").to_stdout
+        it "says it terminates on #{signal}" do
+          traps[signal].call(Signal.list.fetch(signal))
+          expect(app).to have_received(:puts).with('Terminating...')
+        end
+
+        it "cleans up on #{signal}" do
+          traps[signal].call(Signal.list.fetch(signal))
           expect(app).to have_received(:cleanup)
+        end
+
+        it "stops running on #{signal}" do
+          traps[signal].call(Signal.list.fetch(signal))
           expect(app.instance_variable_get(:@running)).to be false
         end
       end
@@ -237,32 +256,51 @@ describe Bluepill::Application do
     describe '#add_process' do
       let(:process) { instance_double(Bluepill::Process, :app_name= => nil, :group_name= => nil) }
 
-      it 'adds the process to a new group named after the group name' do
-        group_logger = instance_double(Bluepill::Logger)
-        allow(logger).to receive(:prefix_with).with('web').and_return(group_logger)
-        allow(Bluepill::Group).to receive(:new).with('web', logger: group_logger).and_return(group)
-        allow(group).to receive(:add_process)
-        app.add_process(process, :web)
-        expect(app.groups).to eq('web' => group)
-        expect(group).to have_received(:add_process).with(process)
+      before { allow(group).to receive(:add_process) }
+
+      context 'with a group name' do
+        before do
+          group_logger = instance_double(Bluepill::Logger)
+          allow(logger).to receive(:prefix_with).with('web').and_return(group_logger)
+          allow(Bluepill::Group).to receive(:new).with('web', logger: group_logger).and_return(group)
+          app.add_process(process, :web)
+        end
+
+        it 'adds a new group named after the group name' do
+          expect(app.groups).to eq('web' => group)
+        end
+
+        it 'adds the process to the group' do
+          expect(group).to have_received(:add_process).with(process)
+        end
+
+        it "tells the process its app's name, for notify_command" do
+          expect(process).to have_received(:app_name=).with('test')
+        end
+
+        it "tells the process its group's name, for notify_command" do
+          expect(process).to have_received(:group_name=).with('web')
+        end
       end
 
-      it 'adds processes without a group to the nil group' do
-        allow(Bluepill::Group).to receive(:new).with(nil, logger: logger).and_return(group)
-        allow(group).to receive(:add_process)
-        app.add_process(process)
-        app.add_process(process)
-        expect(app.groups).to eq(nil => group)
-        expect(Bluepill::Group).to have_received(:new).once
-        expect(group).to have_received(:add_process).with(process).twice
-      end
+      context 'without a group name' do
+        before do
+          allow(Bluepill::Group).to receive(:new).with(nil, logger: logger).and_return(group)
+          app.add_process(process)
+          app.add_process(process)
+        end
 
-      it "tells the process its app's and group's names, for notify_command" do
-        allow(Bluepill::Group).to receive(:new).and_return(group)
-        allow(group).to receive(:add_process)
-        app.add_process(process, :web)
-        expect(process).to have_received(:app_name=).with('test')
-        expect(process).to have_received(:group_name=).with('web')
+        it 'adds processes to the nil group' do
+          expect(app.groups).to eq(nil => group)
+        end
+
+        it 'creates the nil group once' do
+          expect(Bluepill::Group).to have_received(:new).once
+        end
+
+        it 'adds each process to the nil group' do
+          expect(group).to have_received(:add_process).with(process).twice
+        end
       end
     end
 
@@ -302,8 +340,13 @@ describe Bluepill::Application do
 
           it 'prefers the named group over a process name containing a colon' do
             allow(group).to receive(command).with('job:a').and_return(['web:job:a'])
-            allow(other_group).to receive(command)
             expect(app.send(command, 'web', 'job:a')).to eq(['web:job:a'])
+          end
+
+          it 'is not sent to the other groups when a group is named' do
+            allow(group).to receive(command).and_return([])
+            allow(other_group).to receive(command)
+            app.send(command, 'web', 'job:a')
             expect(other_group).not_to have_received(command)
           end
         end
@@ -337,30 +380,23 @@ describe Bluepill::Application do
 
     describe 'start_server' do
       let(:socket) { instance_double(UNIXServer) }
-      let(:program_name) { $0 }
+      let(:calls) { [] }
 
-      before do
-        program_name
-        app.groups = {'web' => group}
-        allow(app).to receive(:kill_previous_bluepill)
-        allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks)
-        allow(::Process).to receive(:setpgid)
-        allow(Bluepill::Daemonize).to receive(:daemonize)
-        allow(app).to receive(:setup_signal_traps)
-        allow(group).to receive(:determine_initial_state)
-        allow(Bluepill::Socket).to receive(:server).and_return(socket)
-        allow(app).to receive(:start_listener)
-        allow(app).to receive(:run)
+      around do |example|
+        program_name = $0
+        begin
+          example.run
+        ensure
+          $0 = program_name
+        end
       end
 
-      after { $0 = program_name }
-
-      it 'daemonizes and runs the application' do
-        calls = []
+      before do
+        app.groups = {'web' => group}
         [
           [app, :kill_previous_bluepill], [Bluepill::ProcessJournal, :clear_all_atomic_fs_locks],
           [::Process, :setpgid], [Bluepill::Daemonize, :daemonize], [app, :setup_signal_traps],
-          [logger, :reopen], [group, :determine_initial_state], [app, :start_listener], [app, :run],
+          [logger, :reopen], [group, :determine_initial_state], [app, :start_listener], [app, :run]
         ].each do |object, method|
           allow(object).to receive(method) { |*args| calls << [method, *args] }
         end
@@ -368,16 +404,31 @@ describe Bluepill::Application do
           calls << [:server, *args]
           socket
         end
+      end
+
+      it 'daemonizes and runs the application' do
         app.send(:start_server)
         expect(calls).to eq(
           [
             [:kill_previous_bluepill], [:clear_all_atomic_fs_locks], [:setpgid, 0, 0], [:daemonize],
             [:setup_signal_traps], [:reopen], [:determine_initial_state], [:server, base_dir, 'test'],
-            [:start_listener], [:run],
+            [:start_listener], [:run]
           ]
         )
+      end
+
+      it 'names its process after the application' do
+        app.send(:start_server)
         expect($0).to eq('bluepilld: test')
+      end
+
+      it 'writes its pid file' do
+        app.send(:start_server)
         expect(File.read(pid_file)).to eq(::Process.pid.to_s)
+      end
+
+      it 'keeps the socket' do
+        app.send(:start_server)
         expect(app.socket).to eq(socket)
       end
 
@@ -392,9 +443,12 @@ describe Bluepill::Application do
 
         it 'does not daemonize, or trap signals again' do
           app.send(:start_server)
-          expect(Bluepill::Daemonize).not_to have_received(:daemonize)
-          expect(app).not_to have_received(:setup_signal_traps)
-          expect(app).to have_received(:run)
+          expect(calls).to eq(
+            [
+              [:kill_previous_bluepill], [:clear_all_atomic_fs_locks], [:setpgid, 0, 0],
+              [:reopen], [:determine_initial_state], [:server, base_dir, 'test'], [:start_listener], [:run]
+            ]
+          )
         end
       end
 
@@ -483,36 +537,47 @@ describe Bluepill::Application do
     describe 'start_listener' do
       let(:client) { instance_double(UNIXSocket, readline: "status:web\n", write: nil, close: nil) }
       let(:server_socket) { instance_double(UNIXServer, accept: client) }
-      let(:thread) { instance_double(Thread) }
-      let(:listener) { [] }
+      let(:logged) { [] }
 
       before do
         app.socket = server_socket
-        allow(Thread).to receive(:new) do |&block|
-          listener << block
-          thread
-        end
+        # The listener's thread is its block, which listen calls
+        allow(Thread).to receive(:new) { |&block| block }
         allow(app).to receive(:loop).and_yield
+        allow(app).to receive(:status).and_return([])
+        allow(logger).to receive(:err) { |line| logged << line }
       end
 
       def listen
-        app.send(:start_listener)
-        listener.last.call
+        app.send(:start_listener).call
       end
 
-      it 'answers a command with the marshaled response' do
-        allow(client).to receive(:close_on_exec=)
-        allow(app).to receive(:status).with('web').and_return(['web:a'])
-        listen
-        expect(app).to have_received(:loop)
-        expect(client).to have_received(:close_on_exec=).with(true)
-        expect(client).to have_received(:write).with(Marshal.dump(['web:a']))
-        expect(client).to have_received(:close)
+      context 'with a command' do
+        before do
+          allow(client).to receive(:close_on_exec=)
+          allow(app).to receive(:status).with('web').and_return(['web:a'])
+          listen
+        end
+
+        it 'listens in a loop' do
+          expect(app).to have_received(:loop)
+        end
+
+        it 'keeps the client from leaking into processes it starts' do
+          expect(client).to have_received(:close_on_exec=).with(true)
+        end
+
+        it 'answers with the marshaled response' do
+          expect(client).to have_received(:write).with(Marshal.dump(['web:a']))
+        end
+
+        it 'closes the client' do
+          expect(client).to have_received(:close)
+        end
       end
 
       it 'ignores whitespace around the command' do
         allow(client).to receive(:readline).and_return(" status:web\n")
-        allow(app).to receive(:status).and_return([])
         listen
         expect(app).to have_received(:status).with('web')
       end
@@ -525,45 +590,46 @@ describe Bluepill::Application do
           locked = false
           result
         end
-        locked_during_status = nil
-        allow(app).to receive(:status) { locked_during_status = locked }
+        allow(app).to receive(:status) { locked }
         listen
-        expect(locked_during_status).to be true
+        expect(client).to have_received(:write).with(Marshal.dump(true))
       end
 
       it 'sends a command without a target' do
         allow(client).to receive(:readline).and_return("status:\n")
-        allow(app).to receive(:status).and_return([])
         listen
         expect(app).to have_received(:status).with(no_args)
       end
 
       it 'keeps the colons in a process name' do
         allow(client).to receive(:readline).and_return("status:jobs:job_1:IMPORT\n")
-        allow(app).to receive(:status).and_return([])
         listen
         expect(app).to have_received(:status).with('jobs', 'job_1:IMPORT')
       end
 
       it 'answers with the error raised by a command' do
-        error = RuntimeError.new('boom')
-        allow(app).to receive(:status).and_raise(error)
+        allow(app).to receive(:status).and_raise(RuntimeError, 'boom')
         response = nil
         allow(client).to receive(:write) { |data| response = Marshal.load(data) }
         listen
-        expect(response).to be_a(RuntimeError)
-        expect(response.message).to eq('boom')
+        expect(response).to be_a(RuntimeError).and have_attributes(message: 'boom')
       end
 
-      it 'logs errors while handling a client' do
-        allow(app).to receive(:status).and_return([])
-        error = RuntimeError.new('broken pipe')
-        error.set_backtrace(['a.rb:1'])
-        allow(client).to receive(:write).and_raise(error)
-        listen
-        expect(logger).to have_received(:err).with('Got exception in cmd listener: RuntimeError `broken pipe`').ordered
-        expect(logger).to have_received(:err).with('a.rb:1').ordered
-        expect(client).to have_received(:close)
+      context 'when handling a client fails' do
+        before do
+          error = RuntimeError.new('broken pipe')
+          error.set_backtrace(['a.rb:1'])
+          allow(client).to receive(:write).and_raise(error)
+          listen
+        end
+
+        it 'logs the error and its backtrace' do
+          expect(logged).to eq(['Got exception in cmd listener: RuntimeError `broken pipe`', 'a.rb:1'])
+        end
+
+        it 'closes the client' do
+          expect(client).to have_received(:close)
+        end
       end
 
       it 'logs the message of an error from an anonymous class' do
@@ -572,38 +638,44 @@ describe Bluepill::Application do
             'broken pipe'
           end
         end
-        allow(app).to receive(:status).and_return([])
         allow(client).to receive(:write).and_raise(error_class)
         listen
-        expect(logger).to have_received(:err).with('Got exception in cmd listener:  `broken pipe`')
+        expect(logged.first).to eq('Got exception in cmd listener:  `broken pipe`')
       end
 
       it 'logs an error without a backtrace' do
         error = RuntimeError.new('broken pipe')
         allow(error).to receive(:backtrace).and_return(nil)
-        allow(app).to receive(:status).and_return([])
         allow(client).to receive(:write).and_raise(error)
         listen
-        expect(logger).to have_received(:err).once
+        expect(logged).to eq(['Got exception in cmd listener: RuntimeError `broken pipe`'])
       end
 
-      it 'keeps listening when accepting a client fails' do
-        error = Errno::EMFILE.new
-        error.set_backtrace(['a.rb:1'])
-        allow(server_socket).to receive(:accept).and_raise(error)
-        expect { listen }.not_to raise_error
-        expect(logger).to have_received(:err).with("Got exception in cmd listener: Errno::EMFILE `#{error.message}`").ordered
-        expect(logger).to have_received(:err).with('a.rb:1').ordered
+      context 'when accepting a client fails' do
+        let(:error) do
+          Errno::EMFILE.new.tap { |e| e.set_backtrace(['a.rb:1']) }
+        end
+
+        before { allow(server_socket).to receive(:accept).and_raise(error) }
+
+        it 'keeps listening' do
+          expect { listen }.not_to raise_error
+        end
+
+        it 'logs the error and its backtrace' do
+          listen
+          expect(logged).to eq(["Got exception in cmd listener: Errno::EMFILE `#{error.message}`", 'a.rb:1'])
+        end
       end
 
       it 'ignores an already closed client' do
-        allow(app).to receive(:status).and_return([])
         allow(client).to receive(:close).and_raise(IOError)
         expect { listen }.not_to raise_error
       end
 
       it 'kills the previous listener' do
-        allow(thread).to receive(:kill)
+        thread = instance_double(Thread, kill: nil)
+        allow(Thread).to receive(:new).and_return(thread)
         app.send(:start_listener)
         app.send(:start_listener)
         expect(thread).to have_received(:kill).once
@@ -611,8 +683,8 @@ describe Bluepill::Application do
     end
 
     describe 'kill_previous_bluepill' do
-      def write_pid
-        File.write(pid_file, '1234')
+      def write_pid(pid = '1234')
+        File.write(pid_file, pid)
       end
 
       def kill_previous_bluepill
@@ -630,56 +702,100 @@ describe Bluepill::Application do
         expect(Bluepill::System).not_to have_received(:pid_alive?)
       end
 
-      it 'does nothing when the previous bluepill is not running' do
+      it 'checks whether the previous bluepill is running' do
         write_pid
         kill_previous_bluepill
         expect(Bluepill::System).to have_received(:pid_alive?).with(1234)
+      end
+
+      it 'does nothing when the previous bluepill is not running' do
+        write_pid
+        kill_previous_bluepill
         expect(::Process).not_to have_received(:kill)
       end
 
       it 'checks a previous bluepill with pid 1, as in a container' do
-        File.write(pid_file, '1')
+        write_pid('1')
         kill_previous_bluepill
         expect(Bluepill::System).to have_received(:pid_alive?).with(1)
       end
 
       ['', 'garbage'].each do |contents|
-        it "does nothing when the pid file holds #{contents.inspect}" do
-          File.write(pid_file, contents)
-          expect { kill_previous_bluepill }.not_to output.to_stdout
-          expect(Bluepill::System).not_to have_received(:pid_alive?)
-          expect(::Process).not_to have_received(:kill)
+        context "when the pid file holds #{contents.inspect}" do
+          before { write_pid(contents) }
+
+          it 'prints nothing, and does not exit' do
+            expect { kill_previous_bluepill }.not_to output.to_stdout
+          end
+
+          it 'does not check a pid' do
+            kill_previous_bluepill
+            expect(Bluepill::System).not_to have_received(:pid_alive?)
+          end
+
+          it 'does not signal anything' do
+            kill_previous_bluepill
+            expect(::Process).not_to have_received(:kill)
+          end
         end
       end
 
       context 'when the previous bluepill is running' do
+        let(:calls) { [] }
+
+        def kill_previous_bluepill_until_exit
+          kill_previous_bluepill
+        rescue SystemExit
+          nil
+        end
+
         before do
           write_pid
           allow(Bluepill::System).to receive(:pid_alive?).with(1234).and_return(true)
-          allow(app).to receive(:puts)
-          allow(app).to receive(:sleep)
+          allow(::Process).to receive(:kill) { |signal, pid| calls << [:kill, signal, pid] }
+          allow(app).to receive(:puts) { |line| calls << [:puts, line] }
+          allow(app).to receive(:sleep) { |seconds| calls << [:sleep, seconds] }
         end
 
         it 'interrupts it and waits for it to die' do
           allow(Bluepill::System).to receive(:pid_alive?).with(1234).and_return(true, true, false)
           kill_previous_bluepill
-          expect(::Process).to have_received(:kill).with(0, 1234).ordered
-          expect(::Process).to have_received(:kill).with(2, 1234).ordered
-          expect(app).to have_received(:puts).with('Killing previous bluepilld[1234]')
-          expect(app).to have_received(:sleep).with(0.5).twice
+          expect(calls).to eq(
+            [[:kill, 0, 1234], [:puts, 'Killing previous bluepilld[1234]'], [:kill, 2, 1234], [:sleep, 0.5], [:sleep, 0.5]]
+          )
         end
 
         it 'exits when it does not die' do
           expect { kill_previous_bluepill }.to exit_with(4).and output("Previous bluepilld[1234] didn't die\n").to_stderr
-          expect(app).to have_received(:sleep).with(0.5).exactly(10).times
         end
 
-        it 'carries on when it has just died' do
-          allow(::Process).to receive(:kill).and_raise(Errno::ESRCH)
-          expect { kill_previous_bluepill }.to output(
-            "Encountered error trying to kill previous bluepill:\nErrno::ESRCH: #{Errno::ESRCH.new.message}\n"
-          ).to_stderr
-          expect(app).not_to have_received(:sleep)
+        it 'waits kill_timeout half seconds for it to die' do
+          allow($stderr).to receive(:puts)
+          kill_previous_bluepill_until_exit
+          expect(calls).to eq(
+            [[:kill, 0, 1234], [:puts, 'Killing previous bluepilld[1234]'], [:kill, 2, 1234]] + ([[:sleep, 0.5]] * 10)
+          )
+        end
+
+        context 'when it has just died' do
+          before do
+            allow(::Process).to receive(:kill) do |signal, pid|
+              calls << [:kill, signal, pid]
+              raise Errno::ESRCH
+            end
+          end
+
+          it 'says so, and does not exit' do
+            expect { kill_previous_bluepill }.to output(
+              "Encountered error trying to kill previous bluepill:\nErrno::ESRCH: #{Errno::ESRCH.new.message}\n"
+            ).to_stderr
+          end
+
+          it 'carries on without waiting' do
+            allow($stderr).to receive(:puts)
+            kill_previous_bluepill
+            expect(calls).to eq([[:kill, 0, 1234]])
+          end
         end
 
         it 'exits when it cannot be killed' do

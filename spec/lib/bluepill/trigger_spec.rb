@@ -1,8 +1,18 @@
 describe Bluepill::Trigger do
   subject(:trigger) { described_class.new(process, logger: logger) }
 
-  let(:process) { instance_double(Bluepill::Process, dispatch!: nil) }
-  let(:logger) { instance_double(Bluepill::Logger, info: nil, err: nil) }
+  # What the process is told to dispatch and what the logger logs, in order
+  let(:calls) { [] }
+  let(:process) { record(instance_double(Bluepill::Process), :dispatch!) }
+  let(:logger) { record(instance_double(Bluepill::Logger), :info, :err) }
+
+  # Record each method's calls in calls, as [method, *args]
+  def record(double, *methods)
+    methods.each do |method|
+      allow(double).to receive(method) { |*args| calls << [method, *args] }
+    end
+    double
+  end
 
   describe '.[]' do
     it 'looks up registered triggers by name' do
@@ -39,10 +49,7 @@ describe Bluepill::Trigger do
 
   describe '#initialize' do
     it 'sets up the trigger' do
-      expect(trigger.process).to eq(process)
-      expect(trigger.logger).to eq(logger)
-      expect(trigger.mutex).to be_a(Mutex)
-      expect(trigger.scheduled_events).to eq([])
+      expect(trigger).to have_attributes(process: process, logger: logger, mutex: be_a(Mutex), scheduled_events: [])
     end
 
     it 'can be created without options' do
@@ -59,7 +66,7 @@ describe Bluepill::Trigger do
   describe '#dispatch!' do
     it 'dispatches the event to the process with the trigger name as reason' do
       trigger.dispatch!(:start)
-      expect(process).to have_received(:dispatch!).with(:start, 'Trigger')
+      expect(calls).to eq([[:dispatch!, :start, 'Trigger']])
     end
   end
 
@@ -76,19 +83,44 @@ describe Bluepill::Trigger do
       end
     end
 
-    it 'sleeps before it dispatches the event' do
-      events = []
-      allow(process).to receive(:dispatch!) { events << :dispatched }
-      thread = trigger.schedule_event(:start, 60)
-      Thread.pass while thread.status == 'run'
-      events << thread.status
-      finish(thread)
-      expect(events).to eq(['sleep', :dispatched])
+    # The scheduled events after each thread finishes, one at a time
+    def events_after_finishing(*threads)
+      threads.collect do |thread|
+        finish(thread)
+        trigger.scheduled_events.dup
+      end
     end
 
-    it 'dispatches the event once it wakes' do
-      finish(trigger.schedule_event(:start, 60))
-      expect(process).to have_received(:dispatch!).with(:start, 'Trigger')
+    # Hold back recording an event until its thread has dispatched it and
+    # is waiting for the lock or done
+    def record_after_dispatch
+      dispatched = Queue.new
+      worker = nil
+      allow(process).to receive(:dispatch!) do
+        worker = Thread.current
+        dispatched.push(nil)
+      end
+      allow(trigger.scheduled_events).to receive(:push).and_wrap_original do |push, *args|
+        dispatched.pop
+        Thread.pass while worker.status == 'run'
+        push.call(*args)
+      end
+    end
+
+    # An error to raise while dispatching, with the given backtrace
+    def dispatch_error(backtrace)
+      error = RuntimeError.new('boom')
+      allow(error).to receive(:backtrace).and_return(backtrace)
+      allow(process).to receive(:dispatch!).and_raise(error)
+      error
+    end
+
+    it 'sleeps before it dispatches the event' do
+      thread = trigger.schedule_event(:start, 60)
+      Thread.pass while thread.status == 'run'
+      calls << thread.status
+      finish(thread)
+      expect(calls).to eq(['sleep', [:dispatch!, :start, 'Trigger']])
     end
 
     it 'sleeps for a duration in seconds' do
@@ -100,60 +132,36 @@ describe Bluepill::Trigger do
     it 'records the scheduled events in order until each one is dispatched' do
       first = trigger.schedule_event(:start, 60)
       second = trigger.schedule_event(:stop, 60)
-      expect(trigger.scheduled_events).to eq([[:start, first], [:stop, second]])
-      finish(first)
-      expect(trigger.scheduled_events).to eq([[:stop, second]])
-      finish(second)
-      expect(trigger.scheduled_events).to eq([])
+      events = [trigger.scheduled_events.dup] + events_after_finishing(first, second)
+      expect(events).to eq([[[:start, first], [:stop, second]], [[:stop, second]], []])
     end
 
     it 'removes a dispatched event only after it was recorded' do
-      dispatched = Queue.new
-      worker = nil
-      allow(process).to receive(:dispatch!) do
-        worker = Thread.current
-        dispatched.push(nil)
-      end
-      allow(trigger.scheduled_events).to receive(:push).and_wrap_original do |push, *args|
-        # Wait until the event thread has dispatched and is waiting for the lock or done
-        dispatched.pop
-        Thread.pass while worker.status == 'run'
-        push.call(*args)
-      end
+      record_after_dispatch
       trigger.schedule_event(:start, 0).join
       expect(trigger.scheduled_events).to eq([])
     end
 
     it 'logs errors without a backtrace' do
-      error = RuntimeError.new('boom')
-      allow(error).to receive(:backtrace).and_return(nil)
-      allow(process).to receive(:dispatch!).and_raise(error)
+      error = dispatch_error(nil)
       trigger.schedule_event(:start, 0).join
-      expect(logger).to have_received(:err).with(error)
-      expect(logger).to have_received(:err).with('')
+      expect(calls).to eq([[:err, error], [:err, '']])
     end
 
     it 'logs errors raised while dispatching' do
-      error = RuntimeError.new('boom')
-      error.set_backtrace(['line 1', 'line 2'])
-      allow(process).to receive(:dispatch!).and_raise(error)
+      error = dispatch_error(['line 1', 'line 2'])
       trigger.schedule_event(:start, 0).join
-      expect(logger).to have_received(:err).with(error)
-      expect(logger).to have_received(:err).with("line 1\nline 2")
+      expect(calls).to eq([[:err, error], [:err, "line 1\nline 2"]])
     end
   end
 
   describe '#reset!' do
-    it 'cancels all scheduled events' do
+    it 'cancels all scheduled events while it holds the lock' do
       thread = instance_double(Thread)
-      locked = nil
-      allow(thread).to receive(:kill) { locked = trigger.mutex.locked? }
+      allow(thread).to receive(:kill) { calls << [:kill, trigger.mutex.locked?] }
       trigger.scheduled_events.push([:start, thread])
       trigger.reset!
-      expect(logger).to have_received(:info).with('Canceling all scheduled events')
-      expect(thread).to have_received(:kill)
-      expect(locked).to be true
-      expect(trigger.scheduled_events).to eq([])
+      expect([calls, trigger.scheduled_events]).to eq([[[:info, 'Canceling all scheduled events'], [:kill, true]], []])
     end
   end
 end

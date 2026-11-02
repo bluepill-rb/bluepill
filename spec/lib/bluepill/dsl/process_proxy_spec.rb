@@ -15,9 +15,7 @@ describe Bluepill::ProcessProxy do
     it 'exposes its name and attributes' do
       attributes = {uid: 'user'}
       proxy = described_class.new('web', attributes, proc {})
-      expect(proxy.name).to eq('web')
-      expect(proxy.attributes).to equal(attributes)
-      expect(proxy.watches).to eq({})
+      expect(proxy).to have_attributes(name: 'web', attributes: equal(attributes), watches: {})
     end
   end
 
@@ -39,9 +37,11 @@ describe Bluepill::ProcessProxy do
 
     it 'responds to setters, bang methods and attributes that have been set' do
       proxy = described_class.new('web', {uid: 'user'}, proc {})
-      expect(proxy).to respond_to(:start_command=)
-      expect(proxy).to respond_to(:daemonize!)
-      expect(proxy).to respond_to(:uid)
+      expect(proxy).to respond_to(:start_command=, :daemonize!, :uid)
+    end
+
+    it 'does not respond to attributes that have not been set' do
+      proxy = described_class.new('web', {uid: 'user'}, proc {})
       expect(proxy).not_to respond_to(:gid)
     end
 
@@ -89,9 +89,9 @@ describe Bluepill::ProcessProxy do
     end
 
     it 'names the unknown attribute in the error' do
-      expect { described_class.new('web', {}, proc { |p| p.start_comand = 'run' }) }.to raise_error(NoMethodError) do |error|
-        expect(error.name).to eq(:start_comand)
-      end
+      expect { described_class.new('web', {}, proc { |p| p.start_comand = 'run' }) }.to raise_error(
+        a_kind_of(NoMethodError).and(having_attributes(name: :start_comand))
+      )
     end
 
     it 'rejects an unknown attribute set with an argument' do
@@ -136,10 +136,8 @@ describe Bluepill::ProcessProxy do
 
     it 'suggests an attribute at most a third of the name away' do
       proxy = described_class.new('web', {}, proc {})
-      expect(proxy.send(:suggest, :auto_srt)).to eq('auto_start')
-      expect(proxy.send(:suggest, :uidx)).to eq('uid')
-      expect(proxy.send(:suggest, :gids)).to eq('gid')
-      expect(proxy.send(:suggest, :ui)).to be_nil
+      suggestions = [:auto_srt, :uidx, :gids, :ui].collect { |name| proxy.send(:suggest, name) }
+      expect(suggestions).to eq(['auto_start', 'uid', 'gid', nil])
     end
 
     it 'suggests the first in order among attributes as close as each other' do
@@ -150,35 +148,37 @@ describe Bluepill::ProcessProxy do
 
   describe '.distance' do
     it 'counts the insertions, deletions and replacements between two names' do
-      expect(described_class.distance('start_comand', 'start_command')).to eq(1)
-      expect(described_class.distance('pid_file', 'pidfile')).to eq(1)
-      expect(described_class.distance('daemonise', 'daemonize')).to eq(1)
-      expect(described_class.distance('kitten', 'sitting')).to eq(3)
-      expect(described_class.distance('sitting', 'kitten')).to eq(3)
-      expect(described_class.distance('flaw', 'lawn')).to eq(2)
-      expect(described_class.distance('ab', 'ba')).to eq(2)
+      pairs = [
+        %w[start_comand start_command], %w[pid_file pidfile], %w[daemonise daemonize],
+        %w[kitten sitting], %w[sitting kitten], %w[flaw lawn], %w[ab ba]
+      ]
+      expect(pairs.collect { |a, b| described_class.distance(a, b) }).to eq([1, 1, 1, 3, 3, 2, 2])
     end
 
     it 'counts every character against an empty name' do
-      expect(described_class.distance('', 'uid')).to eq(3)
-      expect(described_class.distance('gid', '')).to eq(3)
-      expect(described_class.distance('', '')).to eq(0)
+      pairs = [['', 'uid'], ['gid', ''], ['', '']]
+      expect(pairs.collect { |a, b| described_class.distance(a, b) }).to eq([3, 3, 0])
     end
 
     it 'is 0 between a name and itself' do
       expect(described_class.distance('stop_command', 'stop_command')).to eq(0)
     end
 
-    it 'leaves a bang method with an argument, or a setter without one, to NoMethodError' do
+    it 'leaves a bang method with an argument to NoMethodError' do
       expect { described_class.new('web', {}, proc { daemonize! true }) }.to raise_error(NoMethodError, /undefined method/)
+    end
+
+    it 'leaves a setter without an argument to NoMethodError' do
       expect { described_class.new('web', {}, proc { |p| p.__send__(:start_command=) }) }.to raise_error(NoMethodError, /undefined method/)
     end
 
     it 'responds to unknown attributes no more than it accepts them' do
       proxy = described_class.new('web', {}, proc {})
-      expect(proxy).not_to respond_to(:start_comand=)
-      expect(proxy).not_to respond_to(:daemonise!)
-      expect(proxy).not_to respond_to(:pidfile)
+      expect(proxy).not_to respond_to(:start_comand=, :daemonise!, :pidfile)
+    end
+
+    it 'responds to the group setter' do
+      proxy = described_class.new('web', {}, proc {})
       expect(proxy).to respond_to(:group=)
     end
   end
@@ -207,11 +207,9 @@ describe Bluepill::ProcessProxy do
         start_command 'run'
         checks :always_true, every: 10
       end)
-      process = proxy.to_process
-      expect(process).to be_a(Bluepill::Process)
-      expect(process.name).to eq('web')
-      expect(process.start_command).to eq('run')
-      expect(process.watches.size).to eq(1)
+      expect(proxy.to_process).to be_a(Bluepill::Process).and have_attributes(
+        name: 'web', start_command: 'run', watches: have_attributes(size: 1)
+      )
     end
   end
 end

@@ -29,9 +29,7 @@ describe Bluepill::ProcessFactory do
   describe '#create_process' do
     it 'creates a process' do
       process = create('web', proc { start_command 'run' })
-      expect(process).to be_a(Bluepill::Process)
-      expect(process.name).to eq('web')
-      expect(process.start_command).to eq('run')
+      expect(process).to be_a(Bluepill::Process).and have_attributes(name: 'web', start_command: 'run')
     end
 
     it 'assigns a default pid file from the process name' do
@@ -59,19 +57,31 @@ describe Bluepill::ProcessFactory do
       expect(factory.attributes).to eq(uid: 'user')
     end
 
-    it 'creates a child process factory when monitoring children' do
-      child_block = proc { stop_command 'halt' }
-      process = create('web', proc do |p|
-        p.start_command 'run'
-        p.monitor_children(&child_block)
-      end)
-      expect(process.monitor_children).to be true
-      expect(process.child_process_factory).to be_a(described_class)
-      expect(process.child_process_factory.attributes).not_to have_key(:child_process_block)
-      allow(::Process).to receive(:kill).with(0, 123).and_return(1)
-      child = process.child_process_factory.create_child_process('child', 123, instance_double(Bluepill::Logger))
-      expect(child.stop_command).to eq('halt')
-      expect(child.state).to eq('up')
+    context 'when monitoring children' do
+      let(:process) do
+        create('web', proc do |p|
+          p.start_command 'run'
+          p.monitor_children { stop_command 'halt' }
+        end)
+      end
+
+      it 'monitors the children' do
+        expect(process.monitor_children).to be true
+      end
+
+      it 'creates a child process factory' do
+        expect(process.child_process_factory).to be_a(described_class)
+      end
+
+      it 'keeps the child process block out of the child attributes' do
+        expect(process.child_process_factory.attributes).not_to have_key(:child_process_block)
+      end
+
+      it 'creates children from the child process block' do
+        allow(::Process).to receive(:kill).with(0, 123).and_return(1)
+        child = process.child_process_factory.create_child_process('child', 123, instance_double(Bluepill::Logger))
+        expect(child).to have_attributes(stop_command: 'halt', state: 'up')
+      end
     end
 
     it 'does not create a child process factory when monitor_children is false' do
@@ -271,15 +281,11 @@ describe Bluepill::ProcessFactory do
       factory = described_class.new(attributes, proc { stop_command 'halt' })
       child = factory.create_child_process('child', 123, logger)
 
-      expect(child).to be_a(Bluepill::Process)
-      expect(child.state).to eq('up')
-      expect(child.name).to eq('child')
-      expect(child.actual_pid).to eq(123)
-      expect(child.logger).to eq(logger)
-      expect(child.stop_command).to eq('halt')
-      expect([child.start_grace_time, child.stop_grace_time, child.restart_grace_time]).to eq([1, 2, 5])
-      expect([child.uid, child.gid, child.supplementary_groups]).to eq(['user', 'staff', ['rvm']])
-      expect(child.working_dir).to be_nil
+      expect(child).to be_a(Bluepill::Process).and have_attributes(
+        state: 'up', name: 'child', actual_pid: 123, logger: logger, stop_command: 'halt',
+        start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 5,
+        uid: 'user', gid: 'staff', supplementary_groups: ['rvm'], working_dir: nil
+      )
     end
 
     it 'gives a child the default grace times when its parent sets none' do

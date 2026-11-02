@@ -23,9 +23,9 @@ describe Bluepill::Util::RotationalArray do
   it 'starts empty again when re-initialized' do
     array.push(1).push(2)
     array.send(:initialize, 1)
-    expect(array).to eq([])
+    emptied = array.to_a
     array.push(1).push(2)
-    expect(array).to eq([2])
+    expect([emptied, array]).to eq([[], [2]])
   end
 
   it 'returns itself from push' do

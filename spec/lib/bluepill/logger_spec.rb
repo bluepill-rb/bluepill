@@ -11,30 +11,55 @@ describe Bluepill::Logger do
     logger
   end
 
+  # Record each method's calls in lines, as [method, *args]
+  def record(double, *methods)
+    methods.each do |method|
+      allow(double).to receive(method) { |*args| lines << [method, *args] }
+    end
+    double
+  end
+
+  # Make Syslog record that it's closed and opened, answering opened? with
+  # each of the given values in turn, and give a syslog that records what
+  # it logs
+  def stub_syslog(*opened)
+    allow(Syslog).to receive(:opened?).and_return(*opened)
+    record(Syslog, :close)
+    syslog = record(class_double(Syslog), :info)
+    allow(Syslog).to receive(:open) do |*args|
+      lines << [:open, *args]
+      syslog
+    end
+  end
+
+  # Make $stdout record what's written and flushed
+  def record_stdout
+    record($stdout, :puts, :flush)
+  end
+
+  # The messages in the log file, without its header or each line's start
+  def log_file_messages
+    File.read(log_file).scan(/ -- : (.*)$/).flatten
+  end
+
   let(:dir) { Dir.mktmpdir }
   let(:log_file) { File.join(dir, 'bluepill.log') }
+  let(:lines) { [] }
+  let(:sink) { record(instance_double(Bluepill::Logger::LoggerAdapter), *described_class::LOG_METHODS) }
 
   after { FileUtils.remove_entry(dir) }
 
   describe '#initialize' do
     it 'logs to syslog without a log file' do
-      syslog = class_double(Syslog, info: nil)
-      allow(Syslog).to receive(:opened?).and_return(false)
-      allow(Syslog).to receive(:close)
-      allow(Syslog).to receive(:open).with('bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6).and_return(syslog)
+      stub_syslog(false)
       described_class.new.info('hello')
-      expect(Syslog).not_to have_received(:close)
-      expect(Syslog).to have_received(:open)
-      expect(syslog).to have_received(:info).with('hello')
+      expect(lines).to eq([[:open, 'bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6], [:info, 'hello']])
     end
 
     it 'closes an already opened syslog and uses the given identity' do
-      allow(Syslog).to receive(:opened?).and_return(true)
-      allow(Syslog).to receive(:close)
-      allow(Syslog).to receive(:open).with('myapp', Syslog::LOG_PID, Syslog::LOG_LOCAL6).and_return(class_double(Syslog))
+      stub_syslog(true)
       described_class.new(identity: 'myapp')
-      expect(Syslog).to have_received(:close).ordered
-      expect(Syslog).to have_received(:open).ordered
+      expect(lines).to eq([[:close], [:open, 'myapp', Syslog::LOG_PID, Syslog::LOG_LOCAL6]])
     end
 
     it 'explains how to fix a missing syslog library' do
@@ -55,138 +80,112 @@ describe Bluepill::Logger do
     end
 
     it 'logs to syslog when log_file is nil' do
-      allow(Syslog).to receive(:opened?).and_return(false)
-      allow(Syslog).to receive(:open).with('bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6).and_return(class_double(Syslog))
+      stub_syslog(false)
       described_class.new(log_file: nil)
-      expect(Syslog).to have_received(:open)
+      expect(lines).to eq([[:open, 'bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6]])
     end
 
     it 'prefixes messages with the given prefix' do
-      inner = instance_double(Bluepill::Logger::LoggerAdapter, info: nil)
-      parent = described_class.new(logger: inner)
+      parent = described_class.new(logger: sink)
       described_class.new(logger: parent, prefix: 'app').info('message')
-      expect(inner).to have_received(:info).with('[app] message')
+      expect(lines).to eq([[:info, '[app] message']])
     end
 
     it 'writes to stdout if requested' do
-      inner = instance_double(Bluepill::Logger::LoggerAdapter, info: nil)
-      allow($stdout).to receive_messages(puts: nil, flush: nil)
-      described_class.new(logger: inner, stdout: true).info('message')
-      expect($stdout).to have_received(:puts).with('[info]: message').ordered
-      expect($stdout).to have_received(:flush).ordered
+      record_stdout
+      described_class.new(logger: sink, stdout: true).info('message')
+      expect(lines).to eq([[:puts, '[info]: message'], [:flush], [:info, 'message']])
     end
 
     it 'does not write to stdout when stdout is false' do
-      inner = instance_double(Bluepill::Logger::LoggerAdapter, info: nil)
-      allow($stdout).to receive(:puts)
-      described_class.new(logger: inner, stdout: false).info('message')
-      expect($stdout).not_to have_received(:puts)
+      record_stdout
+      described_class.new(logger: sink, stdout: false).info('message')
+      expect(lines).to eq([[:info, 'message']])
     end
 
     it 'starts without prefixed loggers' do
-      expect(described_class.new(logger: instance_double(Bluepill::Logger::LoggerAdapter)).prefix_with('app')).to be_a(described_class)
+      expect(described_class.new(logger: sink).prefix_with('app')).to be_a(described_class)
     end
 
     it 'uses a given logger' do
-      inner = instance_double(Bluepill::Logger::LoggerAdapter, warning: nil)
-      described_class.new(logger: inner).warning('careful')
-      expect(inner).to have_received(:warning).with('careful')
+      described_class.new(logger: sink).warning('careful')
+      expect(lines).to eq([[:warning, 'careful']])
     end
 
     context 'with a log_level' do
-      let(:inner) { instance_double(Bluepill::Logger::LoggerAdapter, emerg: nil, err: nil, warning: nil, notice: nil, info: nil, debug: nil) }
-
       it 'logs everything by default' do
-        described_class.new(logger: inner).debug('details')
-        expect(inner).to have_received(:debug).with('details')
+        described_class.new(logger: sink).debug('details')
+        expect(lines).to eq([[:debug, 'details']])
       end
 
       it 'logs messages at or above the level' do
-        logger = described_class.new(logger: inner, log_level: :warning)
+        logger = described_class.new(logger: sink, log_level: :warning)
         logger.warning('careful')
         logger.err('failed')
         logger.emerg('down')
-        expect(inner).to have_received(:warning).with('careful')
-        expect(inner).to have_received(:err).with('failed')
-        expect(inner).to have_received(:emerg).with('down')
+        expect(lines).to eq([[:warning, 'careful'], [:err, 'failed'], [:emerg, 'down']])
       end
 
       it 'drops messages below the level without formatting them' do
-        message = instance_double(Object, to_s: 'message')
-        allow($stdout).to receive(:puts)
-        logger = described_class.new(logger: inner, log_level: :warning, stdout: true)
-        logger.notice(message)
-        logger.info(message)
-        logger.debug(message)
-        expect(message).not_to have_received(:to_s)
-        expect($stdout).not_to have_received(:puts)
-        expect(inner).not_to have_received(:notice)
-        expect(inner).not_to have_received(:info)
-        expect(inner).not_to have_received(:debug)
+        message = record(instance_double(Object), :to_s)
+        record_stdout
+        logger = described_class.new(logger: sink, log_level: :warning, stdout: true)
+        [:notice, :info, :debug].each { |method| logger.public_send(method, message) }
+        expect(lines).to eq([])
       end
 
       it 'logs only the most severe messages at emerg' do
-        logger = described_class.new(logger: inner, log_level: :emerg)
+        logger = described_class.new(logger: sink, log_level: :emerg)
         logger.err('failed')
         logger.emerg('down')
-        expect(inner).not_to have_received(:err)
-        expect(inner).to have_received(:emerg).with('down')
+        expect(lines).to eq([[:emerg, 'down']])
       end
 
       it 'takes the level as a string' do
-        described_class.new(logger: inner, log_level: 'notice').info('hello')
-        expect(inner).not_to have_received(:info)
+        described_class.new(logger: sink, log_level: 'notice').info('hello')
+        expect(lines).to eq([])
       end
 
       it 'drops messages below the level in a log file' do
         logger = described_class.new(log_file: log_file, log_level: :err)
         logger.warning('careful')
         logger.err('failed')
-        expect(File.read(log_file)).not_to include('careful')
-        expect(File.read(log_file)).to include('ERROR -- : failed')
+        expect(log_file_messages).to eq(['failed'])
       end
 
       it 'keeps the stricter of a prefixed logger level and its parent' do
-        inner = instance_double(Bluepill::Logger::LoggerAdapter, warning: nil, info: nil, debug: nil)
-        parent = described_class.new(logger: inner, log_level: :info)
+        parent = described_class.new(logger: sink, log_level: :info)
         described_class.new(logger: parent, prefix: 'app', log_level: :debug).debug('details')
         described_class.new(logger: parent, prefix: 'app', log_level: :warning).info('hello')
         described_class.new(logger: parent, prefix: 'app', log_level: :warning).warning('careful')
-        expect(inner).not_to have_received(:debug)
-        expect(inner).not_to have_received(:info)
-        expect(inner).to have_received(:warning).with('[app] careful')
+        expect(lines).to eq([[:warning, '[app] careful']])
       end
 
       it 'echoes prefixed messages to stdout from the parent' do
-        inner = instance_double(Bluepill::Logger::LoggerAdapter, info: nil)
-        allow($stdout).to receive_messages(puts: nil, flush: nil)
-        described_class.new(logger: inner, stdout: true).prefix_with('app').info('hello')
-        expect($stdout).to have_received(:puts).with('[info]: [app] hello').ordered
-        expect($stdout).to have_received(:flush).ordered
+        record_stdout
+        described_class.new(logger: sink, stdout: true).prefix_with('app').info('hello')
+        expect(lines).to eq([[:puts, '[info]: [app] hello'], [:flush], [:info, '[app] hello']])
       end
 
       it 'adds more prefixes after its own' do
-        inner = instance_double(Bluepill::Logger::LoggerAdapter, info: nil)
-        described_class.new(logger: inner).prefix_with('app').info('hello', ['web', nil])
-        expect(inner).to have_received(:info).with('[app:web] hello')
+        described_class.new(logger: sink).prefix_with('app').info('hello', ['web', nil])
+        expect(lines).to eq([[:info, '[app:web] hello']])
       end
 
       it 'adds every parent prefix, the outermost first' do
-        inner = instance_double(Bluepill::Logger::LoggerAdapter, info: nil)
-        app = described_class.new(logger: described_class.new(logger: inner), prefix: 'app')
+        app = described_class.new(logger: described_class.new(logger: sink), prefix: 'app')
         described_class.new(logger: app, prefix: 'web').info('hello')
-        expect(inner).to have_received(:info).with('[app:web] hello')
+        expect(lines).to eq([[:info, '[app:web] hello']])
       end
 
       it 'does not echo prefixed messages unless the parent does' do
-        inner = instance_double(Bluepill::Logger::LoggerAdapter, info: nil)
-        allow($stdout).to receive(:puts)
-        described_class.new(logger: described_class.new(logger: inner), prefix: 'app').info('hello')
-        expect($stdout).not_to have_received(:puts)
+        record_stdout
+        described_class.new(logger: described_class.new(logger: sink), prefix: 'app').info('hello')
+        expect(lines).to eq([[:info, '[app] hello']])
       end
 
       it 'rejects an unknown level' do
-        expect { described_class.new(logger: inner, log_level: :verbose) }.to raise_error(
+        expect { described_class.new(logger: sink, log_level: :verbose) }.to raise_error(
           ArgumentError, 'Unknown log_level :verbose. Use one of: emerg, alert, crit, err, warning, notice, info, debug'
         )
       end
@@ -195,31 +194,25 @@ describe Bluepill::Logger do
 
   describe 'log methods' do
     it 'also writes to stdout if requested' do
-      inner = instance_double(Bluepill::Logger::LoggerAdapter, debug: nil)
-      allow($stdout).to receive_messages(puts: nil, flush: nil)
-      described_class.new(logger: inner, stdout: true).debug('message', ['a', nil, 'b'])
-      expect($stdout).to have_received(:puts).with('[debug]: [a:b] message').ordered
-      expect($stdout).to have_received(:flush).ordered
-      expect(inner).to have_received(:debug).with('[a:b] message')
+      record_stdout
+      described_class.new(logger: sink, stdout: true).debug('message', ['a', nil, 'b'])
+      expect(lines).to eq([[:puts, '[debug]: [a:b] message'], [:flush], [:debug, '[a:b] message']])
     end
   end
 
   describe '#prefix_with' do
-    let(:inner) { instance_double(Bluepill::Logger::LoggerAdapter, notice: nil) }
-    let(:logger) { described_class.new(logger: inner) }
+    let(:logger) { described_class.new(logger: sink) }
 
     it 'prefixes messages' do
       logger.prefix_with('app').prefix_with('proc').notice('message')
-      expect(inner).to have_received(:notice).with('[app:proc] message')
+      expect(lines).to eq([[:notice, '[app:proc] message']])
     end
 
     it 'gives prefixed loggers the same level' do
-      inner = instance_double(Bluepill::Logger::LoggerAdapter, debug: nil, info: nil)
-      prefixed = described_class.new(logger: inner, log_level: :info).prefix_with('app')
+      prefixed = described_class.new(logger: sink, log_level: :info).prefix_with('app')
       prefixed.debug('details')
       prefixed.info('hello')
-      expect(inner).not_to have_received(:debug)
-      expect(inner).to have_received(:info).with('[app] hello')
+      expect(lines).to eq([[:info, '[app] hello']])
     end
 
     it 'memoizes prefixed loggers' do
@@ -235,17 +228,14 @@ describe Bluepill::Logger do
       File.rename(log_file, "#{log_file}.1")
       logger.reopen
       logger.info('after')
-      expect(File.read(log_file)).to include('after')
-      expect(File.read(log_file)).not_to include('before')
+      expect(log_file_messages).to eq(['after'])
     end
 
     it 'reopens syslog' do
-      allow(Syslog).to receive(:opened?).and_return(false, true)
-      allow(Syslog).to receive(:close)
-      allow(Syslog).to receive(:open).with('bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6).and_return(class_double(Syslog))
+      stub_syslog(false, true)
       described_class.new.reopen
-      expect(Syslog).to have_received(:close).once
-      expect(Syslog).to have_received(:open).twice
+      opened = [:open, 'bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6]
+      expect(lines).to eq([opened, [:close], opened])
     end
 
     it 'does not require syslog again once it is loaded' do

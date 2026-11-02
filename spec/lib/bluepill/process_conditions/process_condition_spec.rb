@@ -5,11 +5,18 @@ describe Bluepill::ProcessConditions::ProcessCondition do
     expect(condition.instance_variable_get(:@options)).to eq(below: 5)
   end
 
-  it 'takes its logger out of its options' do
-    logger = instance_double(Bluepill::Logger)
-    logged = described_class.new(below: 5, logger: logger)
-    expect(logged.logger).to equal(logger)
-    expect(logged.instance_variable_get(:@options)).to eq(below: 5)
+  context 'with a logger' do
+    subject(:condition) { described_class.new(below: 5, logger: logger) }
+
+    let(:logger) { instance_double(Bluepill::Logger) }
+
+    it 'takes its logger out of its options' do
+      expect(condition.logger).to equal(logger)
+    end
+
+    it 'leaves the logger out of the options it stores' do
+      expect(condition.instance_variable_get(:@options)).to eq(below: 5)
+    end
   end
 
   it 'has no logger without one' do
@@ -24,8 +31,11 @@ describe Bluepill::ProcessConditions::ProcessCondition do
     expect { condition.run(123, false) }.to raise_error('Implement in subclass!')
   end
 
-  it 'requires subclasses to implement #check? or #check' do
+  it 'requires subclasses to implement #check?' do
     expect { condition.check?(1) }.to raise_error('Implement in subclass!')
+  end
+
+  it 'requires subclasses to implement #check, if they call it' do
     expect { condition.check(1) }.to raise_error('Implement in subclass!')
   end
 
@@ -35,8 +45,7 @@ describe Bluepill::ProcessConditions::ProcessCondition do
         value > 1
       end
     end.new
-    expect(old_style.check?(2)).to be true
-    expect(old_style.check?(1)).to be false
+    expect([old_style.check?(2), old_style.check?(1)]).to eq([true, false])
   end
 
   it 'formats values as is' do

@@ -44,25 +44,34 @@ describe 'The README and example configs', type: :integration do
   README_CONFIGS.each_with_index do |config, i|
     it "loads README config #{i + 1}" do
       eval(config, binding, 'README.md') # rubocop:disable Security/Eval
-      # A few only show the application's options, with no processes
-      expect(processes).not_to be_empty if config.include?('.process(')
       expect(Bluepill::Application).to have_received(:new).with('app_name', kind_of(Hash))
+    end
+
+    # A few only show the application's options, with no processes
+    next unless config.include?('.process(')
+
+    it "adds the processes of README config #{i + 1}" do
+      eval(config, binding, 'README.md') # rubocop:disable Security/Eval
+      expect(processes).not_to be_empty
     end
   end
 
   it 'reads durations as seconds and sizes as bytes' do
     eval(README_CONFIGS.detect { |c| c.include?(':file_time') }, binding, 'README.md') # rubocop:disable Security/Eval
     process = processes.fetch('process_name')
-    expect(watch(process, :mem_usage).instance_variable_get(:@every)).to be(10)
-    expect(condition(process, :mem_usage).instance_variable_get(:@below)).to be(104_857_600)
-    expect(condition(process, :file_time).instance_variable_get(:@below)).to be(180)
+    values = [
+      watch(process, :mem_usage).instance_variable_get(:@every),
+      condition(process, :mem_usage).instance_variable_get(:@below),
+      condition(process, :file_time).instance_variable_get(:@below),
+    ]
+    expect(values).to eql([10, 104_857_600, 180])
   end
 
   it 'reads minutes and hours' do
     eval(README_CONFIGS.detect { |c| c.include?(':running_time') }, binding, 'README.md') # rubocop:disable Security/Eval
     process = processes.fetch('process_name')
-    expect(watch(process, :running_time).instance_variable_get(:@every)).to be(600)
-    expect(condition(process, :running_time).instance_variable_get(:@below)).to be(86_400)
+    values = [watch(process, :running_time).instance_variable_get(:@every), condition(process, :running_time).instance_variable_get(:@below)]
+    expect(values).to eql([600, 86_400])
   end
 
   it 'reads grace times' do
@@ -79,11 +88,9 @@ describe 'The README and example configs', type: :integration do
   it 'loads the sample app, with its child limit in bytes' do
     load File.join(BLUEPILL_ROOT, 'examples', 'sample_app.rb')
     process = processes.fetch('forking_server')
-    expect(process.stop_grace_time).to be(5)
-    child_factory = process.child_process_factory
-    child = child_factory.create_child_process('child', 1, instance_double(Bluepill::Logger).as_null_object)
-    expect(condition(child, :mem_usage).instance_variable_get(:@below)).to be(52_428_800)
-    expect(process.triggers.first.within).to be(30)
+    child = process.child_process_factory.create_child_process('child', 1, instance_double(Bluepill::Logger).as_null_object)
+    values = [process.stop_grace_time, condition(child, :mem_usage).instance_variable_get(:@below), process.triggers.first.within]
+    expect(values).to eql([5, 52_428_800, 30])
   end
 
   it 'loads the runit example' do
@@ -98,7 +105,6 @@ describe 'The README and example configs', type: :integration do
     script = File.join(BLUEPILL_ROOT, 'spec', 'support', 'active_support_config.rb')
     ruby = File.join(RbConfig::CONFIG['bindir'], RbConfig::CONFIG['ruby_install_name'])
     output = IO.popen([ruby, '-I', File.join(BLUEPILL_ROOT, 'lib'), script, {err: [:child, :out]}], &:read)
-    expect(output).to end_with("ok\n")
-    expect($?).to be_success
+    expect([output, $?.success?]).to match([end_with("ok\n"), true])
   end
 end

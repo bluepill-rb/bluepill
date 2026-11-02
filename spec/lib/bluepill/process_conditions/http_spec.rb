@@ -3,6 +3,10 @@ describe Bluepill::ProcessConditions::Http do
     Bluepill::ProcessConditions::Http.new({url: 'http://example.com:8080/status?full=1'}.merge(options))
   end
 
+  def timeouts(condition)
+    [condition.instance_variable_get(:@open_timeout), condition.instance_variable_get(:@read_timeout)]
+  end
+
   def response(klass, code, body = nil)
     res = klass.new('1.1', code, 'message')
     allow(res).to receive(:body).and_return(body)
@@ -51,27 +55,19 @@ describe Bluepill::ProcessConditions::Http do
     end
 
     it 'uses a default timeout of 5 seconds' do
-      condition = http
-      expect(condition.instance_variable_get(:@open_timeout)).to eq(5)
-      expect(condition.instance_variable_get(:@read_timeout)).to eq(5)
+      expect(timeouts(http)).to eq([5, 5])
     end
 
     it 'accepts a timeout' do
-      condition = http(timeout: 10)
-      expect(condition.instance_variable_get(:@open_timeout)).to eq(10)
-      expect(condition.instance_variable_get(:@read_timeout)).to eq(10)
+      expect(timeouts(http(timeout: 10))).to eq([10, 10])
     end
 
     it 'accepts separate open and read timeouts' do
-      condition = http(timeout: 10, open_timeout: 2, read_timeout: 3.5)
-      expect(condition.instance_variable_get(:@open_timeout)).to eq(2)
-      expect(condition.instance_variable_get(:@read_timeout)).to eq(3)
+      expect(timeouts(http(timeout: 10, open_timeout: 2, read_timeout: 3.5))).to eq([2, 3])
     end
 
     it 'accepts timeouts as strings' do
-      condition = http(open_timeout: '2.5', read_timeout: '3.5')
-      expect(condition.instance_variable_get(:@open_timeout)).to eq(2)
-      expect(condition.instance_variable_get(:@read_timeout)).to eq(3)
+      expect(timeouts(http(open_timeout: '2.5', read_timeout: '3.5'))).to eq([2, 3])
     end
   end
 
@@ -85,26 +81,59 @@ describe Bluepill::ProcessConditions::Http do
       allow(connection).to receive(:get).with('/status?full=1').and_return(ok)
     end
 
-    it 'requests the url over http' do
-      allow(Net::HTTP).to receive(:new).with('example.com', 8080).and_return(session)
-      expect(http(open_timeout: 1, read_timeout: 2).run(123, false)).to eq(ok)
-      expect(session).to have_received(:open_timeout=).with(1)
-      expect(session).to have_received(:read_timeout=).with(2)
+    context 'with an http url' do
+      before do
+        allow(Net::HTTP).to receive(:new).with('example.com', 8080).and_return(session)
+      end
+
+      it 'returns the response' do
+        expect(http.run(123, false)).to eq(ok)
+      end
+
+      it 'sets the open timeout' do
+        http(open_timeout: 1, read_timeout: 2).run(123, false)
+        expect(session).to have_received(:open_timeout=).with(1)
+      end
+
+      it 'sets the read timeout' do
+        http(open_timeout: 1, read_timeout: 2).run(123, false)
+        expect(session).to have_received(:read_timeout=).with(2)
+      end
     end
 
-    it 'requests the url over https without verifying the certificate' do
-      condition = http(url: 'https://example.com/status?full=1')
-      allow(condition).to receive(:require).and_call_original
-      allow(session).to receive(:use_ssl=)
-      allow(session).to receive(:verify_mode=)
-      allow(Net::HTTP).to receive(:new).with('example.com', 443).and_return(session)
-      expect(condition.run(123, false)).to eq(ok)
-      expect(condition).to have_received(:require).with('net/https')
-      expect(session).to have_received(:use_ssl=).with(true)
-      expect(session).to have_received(:verify_mode=).with(OpenSSL::SSL::VERIFY_NONE)
+    context 'with an https url' do
+      let(:https) { http(url: 'https://example.com/status?full=1') }
+
+      before do
+        allow(https).to receive(:require).and_call_original
+        allow(session).to receive(:use_ssl=)
+        allow(session).to receive(:verify_mode=)
+        allow(Net::HTTP).to receive(:new).with('example.com', 443).and_return(session)
+      end
+
+      it 'returns the response' do
+        expect(https.run(123, false)).to eq(ok)
+      end
+
+      it 'loads net/https' do
+        https.run(123, false)
+        expect(https).to have_received(:require).with('net/https')
+      end
+
+      it 'uses ssl' do
+        https.run(123, false)
+        expect(session).to have_received(:use_ssl=).with(true)
+      end
+
+      it 'does not verify the certificate' do
+        https.run(123, false)
+        expect(session).to have_received(:verify_mode=).with(OpenSSL::SSL::VERIFY_NONE)
+      end
     end
 
     context 'when the request fails' do
+      let(:refused) { 'Connection refused - Connection refused attempting to contact http://example.com:8080' }
+
       before do
         allow(Net::HTTP).to receive(:new).and_return(session)
       end
@@ -117,16 +146,12 @@ describe Bluepill::ProcessConditions::Http do
 
       it 'turns the Net::HTTP closed? bug into a connection refused error before Ruby 3.4' do
         allow(session).to receive(:start).and_raise(NoMethodError.new("undefined method `closed?' for nil:NilClass"))
-        error = http.run(123, false)
-        expect(error).to be_a(Errno::ECONNREFUSED)
-        expect(error.message).to eq('Connection refused - Connection refused attempting to contact http://example.com:8080')
+        expect(http.run(123, false)).to be_a(Errno::ECONNREFUSED).and have_attributes(message: refused)
       end
 
       it 'turns the Net::HTTP closed? bug into a connection refused error on Ruby 3.4 and newer' do
         allow(session).to receive(:start).and_raise(NoMethodError.new("undefined method 'closed?' for nil"))
-        error = http.run(123, false)
-        expect(error).to be_a(Errno::ECONNREFUSED)
-        expect(error.message).to eq('Connection refused - Connection refused attempting to contact http://example.com:8080')
+        expect(http.run(123, false)).to be_a(Errno::ECONNREFUSED).and have_attributes(message: refused)
       end
 
       it 'finds the Net::HTTP closed? bug anywhere in the message' do

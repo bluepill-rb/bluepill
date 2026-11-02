@@ -10,7 +10,6 @@ describe "Loading bluepill's changes to Ruby's own classes", type: :integration 
     ruby = File.join(RbConfig::CONFIG['bindir'], RbConfig::CONFIG['ruby_install_name'])
     # Only stdout, since older JRubies print JVM warnings on stderr
     output = IO.popen([ruby, script], &:read)
-    expect(output).to eq("Numeric includes Bluepill::Units\n")
-    expect($?).to be_success
+    expect([output, $?.success?]).to eq(["Numeric includes Bluepill::Units\n", true])
   end
 end

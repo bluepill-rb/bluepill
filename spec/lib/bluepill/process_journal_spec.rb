@@ -8,29 +8,28 @@ describe Bluepill::ProcessJournal do
       allow(logger).to(receive(:info)) { |message| log << [:info, message] }
     end
   end
-  let(:journal) { described_class }
-  # The journal directory before 0.2, and the app's journal directory in it
+  # The journal directory before 0.2
   let(:legacy_dir) { Dir.mktmpdir }
-  let(:dir) { File.join(legacy_dir, 'app').tap { |app_dir| Dir.mkdir(app_dir) } }
 
   around do |example|
-    old_logger = journal.instance_variable_get(:@logger)
-    old_base_dir = journal.instance_variable_get(:@journal_base_dir)
-    old_legacy_dir = journal.instance_variable_get(:@legacy_journal_dir)
+    old_logger = described_class.instance_variable_get(:@logger)
+    old_base_dir = described_class.instance_variable_get(:@journal_base_dir)
+    old_legacy_dir = described_class.instance_variable_get(:@legacy_journal_dir)
     begin
       example.run
     ensure
-      journal.instance_variable_set(:@logger, old_logger)
-      journal.instance_variable_set(:@journal_base_dir, old_base_dir)
-      journal.instance_variable_set(:@legacy_journal_dir, old_legacy_dir)
+      described_class.instance_variable_set(:@logger, old_logger)
+      described_class.instance_variable_set(:@journal_base_dir, old_base_dir)
+      described_class.instance_variable_set(:@legacy_journal_dir, old_legacy_dir)
     end
   end
 
   before do
-    journal.instance_variable_set(:@logger, logger)
-    journal.instance_variable_set(:@journal_base_dir, dir)
-    journal.instance_variable_set(:@legacy_journal_dir, legacy_dir)
-    allow(journal).to receive(:sleep)
+    Dir.mkdir(dir)
+    described_class.instance_variable_set(:@logger, logger)
+    described_class.instance_variable_set(:@journal_base_dir, dir)
+    described_class.instance_variable_set(:@legacy_journal_dir, legacy_dir)
+    allow(described_class).to receive(:sleep)
     allow(::Process).to receive(:kill)
     # Ids without a start time, journaled since the machine booted
     allow(Bluepill::System).to receive_messages(pid_alive?: false, started_at: nil, boot_time: 0)
@@ -38,6 +37,11 @@ describe Bluepill::ProcessJournal do
 
   after do
     FileUtils.remove_entry(legacy_dir)
+  end
+
+  # The app's journal directory, in the one before 0.2
+  def dir
+    File.join(legacy_dir, 'app')
   end
 
   def write_journal(filename, ids)
@@ -48,64 +52,77 @@ describe Bluepill::ProcessJournal do
     [[:debug, "Acquired lock #{filename}.lock"], [:debug, "Cleared lock #{filename}.lock"]]
   end
 
+  # Return each file's permissions
+  def modes(*files)
+    files.collect { |file| File.stat(file).mode & 0o777 }
+  end
+
   describe '.logger=' do
     it 'only sets the logger once' do
-      journal.instance_variable_set(:@logger, nil)
-      journal.logger = logger
-      journal.logger = instance_double(Bluepill::Logger)
-      expect(journal.logger).to eq logger
+      described_class.instance_variable_set(:@logger, nil)
+      described_class.logger = logger
+      described_class.logger = instance_double(Bluepill::Logger)
+      expect(described_class.logger).to eq logger
     end
   end
 
   describe '.setup' do
     before do
-      journal.instance_variable_set(:@journal_base_dir, nil)
-      journal.instance_variable_set(:@legacy_journal_dir, nil)
+      described_class.instance_variable_set(:@journal_base_dir, nil)
+      described_class.instance_variable_set(:@legacy_journal_dir, nil)
     end
 
-    it "creates the app's journal directory once" do
-      journal.setup(dir, :web)
-      legacy = File.join(dir, 'journals')
-      expected = File.join(legacy, 'web')
-      expect(journal.journal_base_dir).to eq expected
-      expect(journal.legacy_journal_dir).to eq legacy
-      [legacy, expected].each do |dir|
-        expect(File.directory?(dir)).to be true
-        expect(File.stat(dir).mode & 0o777).to eq 0o777
+    def journals
+      File.join(dir, 'journals')
+    end
+
+    def journal_dirs
+      [described_class.journal_base_dir, described_class.legacy_journal_dir]
+    end
+
+    context 'when first set up' do
+      before do
+        described_class.setup(dir, :web)
       end
 
-      journal.setup(File.join(dir, 'other'), :api)
-      expect(journal.journal_base_dir).to eq expected
-      expect(journal.legacy_journal_dir).to eq legacy
-      expect(File.exist?(File.join(dir, 'other'))).to be false
-      expect(File.exist?(File.join(legacy, 'api'))).to be false
+      it "sets the app's journal directory, in the one before 0.2" do
+        expect(journal_dirs).to eq [File.join(journals, 'web'), journals]
+      end
+
+      it 'creates them, writable by everyone' do
+        expect(journal_dirs.collect { |journal_dir| File.directory?(journal_dir) && modes(journal_dir) }).to eq [[0o777], [0o777]]
+      end
+
+      it 'keeps them when set up again' do
+        described_class.setup(File.join(dir, 'other'), :api)
+        expect(journal_dirs).to eq [File.join(journals, 'web'), journals]
+      end
+
+      it 'creates no others when set up again' do
+        described_class.setup(File.join(dir, 'other'), :api)
+        expect([File.join(dir, 'other'), File.join(journals, 'api')].select { |path| File.exist?(path) }).to be_empty
+      end
     end
 
     it 'only makes the journal directories writable if they exist' do
-      legacy = File.join(dir, 'journals')
-      Dir.mkdir(legacy, 0o700)
-      Dir.mkdir(File.join(legacy, 'web'), 0o700)
-      journal.setup(dir, 'web')
-      expect(File.stat(legacy).mode & 0o777).to eq 0o777
-      expect(File.stat(File.join(legacy, 'web')).mode & 0o777).to eq 0o777
+      Dir.mkdir(journals, 0o700)
+      Dir.mkdir(File.join(journals, 'web'), 0o700)
+      described_class.setup(dir, 'web')
+      expect(modes(journals, File.join(journals, 'web'))).to eq [0o777, 0o777]
     end
   end
 
   describe '.journal_dirs' do
     it "lists the app's journal directory, then the one before 0.2" do
-      expect(journal.journal_dirs).to eq [dir, legacy_dir]
+      expect(described_class.journal_dirs).to eq [dir, legacy_dir]
     end
   end
 
   [:skip_pid?, :skip_pgid?].each do |method|
     describe ".#{method}" do
       it 'skips non-integers and ids <= 1' do
-        expect(journal.send(method, nil)).to be true
-        expect(journal.send(method, '5')).to be true
-        expect(journal.send(method, -5)).to be true
-        expect(journal.send(method, 0)).to be true
-        expect(journal.send(method, 1)).to be true
-        expect(journal.send(method, 2)).to be false
+        ids = [nil, '5', -5, 0, 1, 2]
+        expect(ids.collect { |id| described_class.send(method, id) }).to eq [true, true, true, true, true, false]
       end
 
       # On Ruby before 2.4 ids are Fixnums or Bignums, subclasses of Integer
@@ -113,7 +130,7 @@ describe Bluepill::ProcessJournal do
         id = instance_double(Integer)
         allow(id).to receive(:is_a?).with(Integer).and_return(true)
         allow(id).to receive(:<=).with(1).and_return(false)
-        expect(journal.send(method, id)).to be false
+        expect(described_class.send(method, id)).to be false
       end
     end
   end
@@ -121,140 +138,241 @@ describe Bluepill::ProcessJournal do
   describe '.acquire_atomic_fs_lock' do
     let(:name) { File.join(dir, 'journal') }
 
-    it 'holds a private lock directory while yielding and removes it afterwards' do
-      held = nil
-      mode = nil
+    around do |example|
       old_umask = File.umask(0o022)
       begin
-        result = journal.acquire_atomic_fs_lock(name) do
-          held = File.directory?("#{name}.lock")
-          mode = File.stat("#{name}.lock").mode & 0o777
-          :result
-        end
-        expect(result).to eq :result
+        example.run
       ensure
         File.umask(old_umask)
       end
-      expect(held).to be true
-      expect(mode).to eq 0o700
+    end
+
+    it 'returns what the block returns' do
+      expect(described_class.acquire_atomic_fs_lock(name) { :result }).to eq :result
+    end
+
+    it 'holds a private lock directory while yielding' do
+      held = described_class.acquire_atomic_fs_lock(name) { File.directory?("#{name}.lock") && modes("#{name}.lock") }
+      expect(held).to eq [0o700]
+    end
+
+    it 'removes the lock afterwards' do
+      described_class.acquire_atomic_fs_lock(name) { nil }
       expect(File.exist?("#{name}.lock")).to be false
+    end
+
+    it 'logs acquiring and clearing the lock' do
+      described_class.acquire_atomic_fs_lock(name) { nil }
       expect(log).to eq lock_log(name)
     end
 
-    it 'waits until the lock is released' do
-      Dir.mkdir("#{name}.lock")
-      yielded = false
-      allow(journal).to(receive(:sleep) { Dir.rmdir("#{name}.lock") })
-      journal.acquire_atomic_fs_lock(name) { yielded = true }
-      expect(journal).to have_received(:sleep).with(1).once
-      expect(yielded).to be true
-      expect(File.exist?("#{name}.lock")).to be false
-      expect(File.exist?("#{name}.lock.lock")).to be false
-      expect(log).to eq [[:debug, "Waiting for lock #{name}.lock"]] + lock_log(name)
+    context 'when another process holds the lock for a second' do
+      before do
+        Dir.mkdir("#{name}.lock")
+        allow(described_class).to(receive(:sleep) { Dir.rmdir("#{name}.lock") })
+      end
+
+      it 'waits a second for it' do
+        described_class.acquire_atomic_fs_lock(name) { nil }
+        expect(described_class).to have_received(:sleep).with(1).once
+      end
+
+      it 'yields once the lock is released' do
+        expect { |block| described_class.acquire_atomic_fs_lock(name, &block) }.to yield_control.once
+      end
+
+      it 'leaves no lock behind' do
+        described_class.acquire_atomic_fs_lock(name) { nil }
+        expect(Dir.glob("#{name}*")).to be_empty
+      end
+
+      it 'logs the wait' do
+        described_class.acquire_atomic_fs_lock(name) { nil }
+        expect(log).to eq [[:debug, "Waiting for lock #{name}.lock"]] + lock_log(name)
+      end
     end
 
-    it 'gives up after 10 attempts without removing the other lock' do
-      Dir.mkdir("#{name}.lock")
-      expect do
-        journal.acquire_atomic_fs_lock(name) { raise 'should not yield' }
-      end.to raise_error("Timeout waiting for lock #{name}.lock")
-      expect(journal).to have_received(:sleep).with(1).exactly(9).times
-      expect(File.directory?("#{name}.lock")).to be true
-      expect(log).to eq ([[:debug, "Waiting for lock #{name}.lock"]] * 9) +
-        [[:info, "Timeout waiting for lock #{name}.lock"]]
+    context 'when another process keeps the lock' do
+      before do
+        Dir.mkdir("#{name}.lock")
+      end
+
+      # Try to take the lock, and carry on past the timeout
+      def acquire
+        described_class.acquire_atomic_fs_lock(name) { raise 'should not yield' }
+      rescue RuntimeError
+        nil
+      end
+
+      it 'gives up after 10 attempts' do
+        expect { described_class.acquire_atomic_fs_lock(name) { raise 'should not yield' } }.
+          to raise_error("Timeout waiting for lock #{name}.lock")
+      end
+
+      it 'waits a second between attempts' do
+        acquire
+        expect(described_class).to have_received(:sleep).with(1).exactly(9).times
+      end
+
+      it 'leaves the other lock' do
+        acquire
+        expect(File.directory?("#{name}.lock")).to be true
+      end
+
+      it 'logs each wait, and the timeout' do
+        acquire
+        expect(log).to eq ([[:debug, "Waiting for lock #{name}.lock"]] * 9) + [[:info, "Timeout waiting for lock #{name}.lock"]]
+      end
     end
 
-    it 'removes the lock when the block raises' do
-      expect do
-        journal.acquire_atomic_fs_lock(name) { raise Errno::EEXIST }
-      end.to raise_error(Errno::EEXIST)
-      expect(File.exist?("#{name}.lock")).to be false
-      expect(log).to eq lock_log(name)
+    context 'when the block raises' do
+      # Take the lock, and carry on past what the block raises
+      def acquire
+        described_class.acquire_atomic_fs_lock(name) { raise Errno::EEXIST }
+      rescue Errno::EEXIST
+        nil
+      end
+
+      it 'raises it' do
+        expect { described_class.acquire_atomic_fs_lock(name) { raise Errno::EEXIST } }.to raise_error(Errno::EEXIST)
+      end
+
+      it 'removes the lock' do
+        acquire
+        expect(File.exist?("#{name}.lock")).to be false
+      end
+
+      it 'logs acquiring and clearing the lock' do
+        acquire
+        expect(log).to eq lock_log(name)
+      end
     end
   end
 
   describe '.clear_atomic_fs_lock' do
-    it 'does nothing when the lock does not exist' do
-      allow(Dir).to receive(:rmdir).and_call_original
-      journal.clear_atomic_fs_lock(File.join(dir, 'missing.lock'))
-      expect(Dir).not_to have_received(:rmdir)
-      expect(log).to eq []
+    context 'when the lock does not exist' do
+      before do
+        allow(Dir).to receive(:rmdir).and_call_original
+        described_class.clear_atomic_fs_lock(File.join(dir, 'missing.lock'))
+      end
+
+      it 'removes nothing' do
+        expect(Dir).not_to have_received(:rmdir)
+      end
+
+      it 'logs nothing' do
+        expect(log).to eq []
+      end
     end
 
-    it 'removes the lock directory' do
-      lock = File.join(dir, 'journal.lock')
-      Dir.mkdir(lock)
-      journal.clear_atomic_fs_lock(lock)
-      expect(File.exist?(lock)).to be false
-      expect(log).to eq [[:debug, "Cleared lock #{lock}"]]
+    context 'when the lock exists' do
+      before do
+        Dir.mkdir(File.join(dir, 'journal.lock'))
+        described_class.clear_atomic_fs_lock(File.join(dir, 'journal.lock'))
+      end
+
+      it 'removes the lock directory' do
+        expect(File.exist?(File.join(dir, 'journal.lock'))).to be false
+      end
+
+      it 'logs it' do
+        expect(log).to eq [[:debug, "Cleared lock #{File.join(dir, 'journal.lock')}"]]
+      end
     end
   end
 
   describe '.clear_all_atomic_fs_locks' do
-    it "removes the app's lock directories, and nothing else" do
-      lock = File.join(dir, '.bluepill_pids_journal.web.lock')
-      file = File.join(dir, '.b.lock')
-      other_app = File.join(legacy_dir, 'other')
-      other_lock = File.join(other_app, '.bluepill_pids_journal.web.lock')
-      legacy_lock = File.join(legacy_dir, '.bluepill_pids_journal.web.lock')
-      [lock, other_app, other_lock, legacy_lock].each { |dir| Dir.mkdir(dir) }
+    let(:lock) { File.join(dir, '.bluepill_pids_journal.web.lock') }
+    # A file, another app's lock, and a lock before 0.2
+    let(:others) do
+      [
+        File.join(dir, '.b.lock'),
+        File.join(legacy_dir, 'other', '.bluepill_pids_journal.web.lock'),
+        File.join(legacy_dir, '.bluepill_pids_journal.web.lock'),
+      ]
+    end
+
+    before do
+      file, other_lock, legacy_lock = others
+      [lock, File.dirname(other_lock), other_lock, legacy_lock].each { |lock_dir| Dir.mkdir(lock_dir) }
       File.write(file, '')
-      Dir.chdir(legacy_dir) { journal.clear_all_atomic_fs_locks }
+      Dir.chdir(legacy_dir) { described_class.clear_all_atomic_fs_locks }
+    end
+
+    it "removes the app's lock directories" do
       expect(File.exist?(lock)).to be false
-      expect(File.exist?(file)).to be true
-      expect(File.directory?(other_lock)).to be true
-      expect(File.directory?(legacy_lock)).to be true
+    end
+
+    it "leaves files, other apps' locks, and locks before 0.2" do
+      expect(others.collect { |path| [File.file?(path), File.directory?(path)] }).to eq [[true, false], [false, true], [false, true]]
+    end
+
+    it 'logs the locks it removes' do
       expect(log).to eq [[:debug, "Cleared lock #{lock}"]]
     end
   end
 
   describe '.pid_journal_filename' do
     it 'is in the journal directory' do
-      expect(journal.pid_journal_filename('app')).to eq File.join(dir, '.bluepill_pids_journal.app')
+      expect(described_class.pid_journal_filename('app')).to eq File.join(dir, '.bluepill_pids_journal.app')
     end
 
     it 'is in another journal directory when given one' do
-      expect(journal.pid_journal_filename('app', '/old')).to eq '/old/.bluepill_pids_journal.app'
+      expect(described_class.pid_journal_filename('app', '/old')).to eq '/old/.bluepill_pids_journal.app'
     end
   end
 
   describe '.pgid_journal_filename' do
     it 'is in the journal directory' do
-      expect(journal.pgid_journal_filename('app')).to eq File.join(dir, '.bluepill_pgids_journal.app')
+      expect(described_class.pgid_journal_filename('app')).to eq File.join(dir, '.bluepill_pgids_journal.app')
     end
 
     it 'is in another journal directory when given one' do
-      expect(journal.pgid_journal_filename('app', '/old')).to eq '/old/.bluepill_pgids_journal.app'
+      expect(described_class.pgid_journal_filename('app', '/old')).to eq '/old/.bluepill_pgids_journal.app'
     end
   end
 
   {pid_journal: 'pid', pgid_journal: 'pgid'}.each do |method, kind|
     describe ".#{method}" do
-      it 'reads valid ids' do
-        filename = File.join(dir, 'j')
-        write_journal(filename, [0, 1, 42, 43])
-        expect(journal.send(method, filename)).to eq [42, 43]
-        expect(log).to eq [
-          [:debug, "#{kind} journal file: #{filename}"],
-          [:debug, "#{kind} journal = 42 43"],
-        ]
+      context 'with a journal' do
+        let(:filename) { File.join(dir, 'j') }
+
+        before do
+          write_journal(filename, [0, 1, 42, 43])
+        end
+
+        it 'reads valid ids' do
+          expect(described_class.send(method, filename)).to eq [42, 43]
+        end
+
+        it 'logs the file and the ids' do
+          described_class.send(method, filename)
+          expect(log).to eq [[:debug, "#{kind} journal file: #{filename}"], [:debug, "#{kind} journal = 42 43"]]
+        end
       end
 
-      it 'is empty without a journal' do
-        filename = File.join(dir, 'missing')
-        expect(journal.send(method, filename)).to eq []
-        expect(log).to eq [[:debug, "#{kind} journal file: #{filename}"]]
+      context 'without a journal' do
+        let(:filename) { File.join(dir, 'missing') }
+
+        it 'is empty' do
+          expect(described_class.send(method, filename)).to eq []
+        end
+
+        it 'logs the file' do
+          described_class.send(method, filename)
+          expect(log).to eq [[:debug, "#{kind} journal file: #{filename}"]]
+        end
       end
     end
   end
 
   describe '.kill_all_from_journal' do
-    it 'kills pids and pgids' do
-      allow(journal).to receive(:kill_all_pids_from_journal)
-      allow(journal).to receive(:kill_all_pgids_from_journal)
-      journal.kill_all_from_journal('app')
-      expect(journal).to have_received(:kill_all_pids_from_journal).with('app').once
-      expect(journal).to have_received(:kill_all_pgids_from_journal).with('app').once
+    it 'kills pids, and then pgids' do
+      calls = []
+      allow(described_class).to(receive(:kill_all_pids_from_journal)) { |name| calls << [:pids, name] }
+      allow(described_class).to(receive(:kill_all_pgids_from_journal)) { |name| calls << [:pgids, name] }
+      described_class.kill_all_from_journal('app')
+      expect(calls).to eq [[:pids, 'app'], [:pgids, 'app']]
     end
   end
 
@@ -263,8 +381,19 @@ describe Bluepill::ProcessJournal do
     kill_all_pgids_from_journal: [:pgid_journal_filename, -1, 'process group', 'pgid'],
   }.each do |method, (filename_method, sign, label, kind)|
     describe ".#{method}" do
-      let(:filename) { journal.send(filename_method, 'app') }
-      let(:legacy_filename) { journal.send(filename_method, 'app', legacy_dir) }
+      let(:filename) { described_class.send(filename_method, 'app') }
+      # The signals sent and the waits, in order
+      let(:calls) { [] }
+
+      before do
+        allow(::Process).to(receive(:kill)) { |*args| calls << args }
+        allow(described_class).to(receive(:sleep)) { |seconds| calls << [:sleep, seconds] }
+      end
+
+      # The journal that bluepill 0.1 and earlier shared, in the directory before 0.2
+      define_method(:legacy_filename) do
+        described_class.send(filename_method, 'app', legacy_dir)
+      end
 
       define_method(:journal_log) do |ids|
         [[:debug, "#{kind} journal file: #{filename}"], [:debug, "#{kind} journal = #{ids.join(' ')}"]]
@@ -275,145 +404,266 @@ describe Bluepill::ProcessJournal do
         [[:debug, "#{kind} journal file: #{legacy_filename}"], [:debug, 'No previous process journal - Skipping cleanup']]
       end
 
-      it 'skips cleanup without a journal' do
-        allow(Bluepill::System).to receive(:delete_if_exists)
-        journal.send(method, 'app')
-        expect(::Process).not_to have_received(:kill)
-        expect(Bluepill::System).not_to have_received(:delete_if_exists)
-        expect(log).to eq [
-          [:debug, "#{kind} journal file: #{filename}"],
-          [:debug, 'No previous process journal - Skipping cleanup'],
-        ] + no_legacy_journal_log
+      # Make an id's process exit before the signal reaches it
+      define_method(:missing) do |signal, id|
+        allow(::Process).to(receive(:kill).with(signal, sign * id)) do |*args|
+          calls << args
+          raise Errno::ESRCH
+        end
       end
 
-      it 'also kills what the journal from before 0.2 lists, and resets it' do
-        write_journal(filename, [42])
-        write_journal(legacy_filename, [43])
-        journal.send(method, 'app')
-        expect(::Process).to have_received(:kill).with('TERM', sign * 42).once.ordered
-        expect(::Process).to have_received(:kill).with('TERM', sign * 43).once.ordered
-        expect(File.exist?(filename)).to be false
-        expect(File.exist?(legacy_filename)).to be false
-        expect(File.exist?("#{legacy_filename}.lock")).to be false
-        expect(log).to include([:info, "Termed old #{label} 43"])
+      context 'without a journal' do
+        before do
+          allow(Bluepill::System).to receive(:delete_if_exists)
+          described_class.send(method, 'app')
+        end
+
+        it 'signals nothing' do
+          expect(calls).to be_empty
+        end
+
+        it 'deletes nothing' do
+          expect(Bluepill::System).not_to have_received(:delete_if_exists)
+        end
+
+        it 'skips cleanup' do
+          expect(log).to eq [
+            [:debug, "#{kind} journal file: #{filename}"],
+            [:debug, 'No previous process journal - Skipping cleanup'],
+          ] + no_legacy_journal_log
+        end
       end
 
-      it 'leaves alone an id that now belongs to another process, and resets the journal' do
-        File.write(filename, "42 20000\n")
-        allow(Bluepill::System).to receive(:started_at).with(42).and_return(50_000)
-        journal.send(method, 'app')
-        expect(::Process).not_to have_received(:kill)
-        expect(File.exist?(filename)).to be false
-        expect(log).to include([:info, "Skipping old #{label} 42, which isn't the one bluepill started"])
+      context 'with a journal from before 0.2 too' do
+        before do
+          write_journal(filename, [42])
+          write_journal(legacy_filename, [43])
+          described_class.send(method, 'app')
+        end
+
+        it "terms what both list, the app's first" do
+          expect(calls).to eq [['TERM', sign * 42], ['TERM', sign * 43]]
+        end
+
+        it 'resets both, and leaves no lock' do
+          expect([filename, legacy_filename, "#{legacy_filename}.lock"].select { |path| File.exist?(path) }).to be_empty
+        end
+
+        it 'logs what it termed from the one before 0.2' do
+          expect(log).to include([:info, "Termed old #{label} 43"])
+        end
       end
 
-      it "doesn't touch another app's journal" do
-        other = journal.send(filename_method, 'app', File.join(legacy_dir, 'other'))
-        Dir.mkdir(File.dirname(other))
-        write_journal(other, [44])
-        journal.send(method, 'app')
-        expect(::Process).not_to have_received(:kill)
-        expect(File.read(other)).to eq "44\n"
+      context 'with an id that now belongs to another process' do
+        before do
+          File.write(filename, "42 20000\n")
+          allow(Bluepill::System).to receive(:started_at).with(42).and_return(50_000)
+          described_class.send(method, 'app')
+        end
+
+        it 'leaves it alone' do
+          expect(calls).to be_empty
+        end
+
+        it 'resets the journal' do
+          expect(File.exist?(filename)).to be false
+        end
+
+        it 'logs that it skipped it' do
+          expect(log).to include([:info, "Skipping old #{label} 42, which isn't the one bluepill started"])
+        end
       end
 
-      it 'terms the journaled ids and resets the journal' do
-        write_journal(filename, [42, 43])
-        allow(::Process).to receive(:kill).with('TERM', sign * 43).and_raise(Errno::ESRCH)
-        journal.send(method, 'app')
-        expect(::Process).to have_received(:kill).with('TERM', sign * 42).once
-        expect(journal).not_to have_received(:sleep)
-        expect(File.exist?(filename)).to be false
-        expect(File.exist?("#{filename}.lock")).to be false
-        expect(log).to eq journal_log([42, 43]) + [
-          [:debug, "Acquired lock #{filename}.lock"],
-          [:info, "Termed old #{label} 42"],
-          [:debug, "Unable to term missing #{label} 43"],
-          [:debug, 'Journal cleanup completed'],
-          [:debug, "Cleared lock #{filename}.lock"],
-        ] + no_legacy_journal_log
+      context "with another app's journal" do
+        # The journal of another app's process of the same name
+        define_method(:other) do
+          described_class.send(filename_method, 'app', File.join(legacy_dir, 'other'))
+        end
+
+        before do
+          Dir.mkdir(File.dirname(other))
+          write_journal(other, [44])
+          described_class.send(method, 'app')
+        end
+
+        it 'signals nothing' do
+          expect(calls).to be_empty
+        end
+
+        it 'leaves it alone' do
+          expect(File.read(other)).to eq "44\n"
+        end
       end
 
-      it 'kills a single id that survives TERM' do
-        write_journal(filename, [42])
-        allow(Bluepill::System).to receive(:pid_alive?).with(sign * 42).and_return(true)
-        journal.send(method, 'app')
-        expect(::Process).to have_received(:kill).with('TERM', sign * 42).once
-        expect(journal).to have_received(:sleep).with(1).once
-        expect(::Process).to have_received(:kill).with('KILL', sign * 42).once
-        expect(File.exist?(filename)).to be false
-        expect(log).to eq journal_log([42]) + [
-          [:debug, "Acquired lock #{filename}.lock"],
-          [:info, "Termed old #{label} 42"],
-          [:info, "Killed old #{label} 42"],
-          [:debug, 'Journal cleanup completed'],
-          [:debug, "Cleared lock #{filename}.lock"],
-        ] + no_legacy_journal_log
+      context 'with ids that exit on TERM' do
+        before do
+          write_journal(filename, [42, 43])
+          missing('TERM', 43)
+          described_class.send(method, 'app')
+        end
+
+        it 'terms each, without waiting' do
+          expect(calls).to eq [['TERM', sign * 42], ['TERM', sign * 43]]
+        end
+
+        it 'resets the journal, and leaves no lock' do
+          expect([filename, "#{filename}.lock"].select { |path| File.exist?(path) }).to be_empty
+        end
+
+        it 'logs each, under the lock' do
+          expect(log).to eq journal_log([42, 43]) + [
+            [:debug, "Acquired lock #{filename}.lock"],
+            [:info, "Termed old #{label} 42"],
+            [:debug, "Unable to term missing #{label} 43"],
+            [:debug, 'Journal cleanup completed'],
+            [:debug, "Cleared lock #{filename}.lock"],
+          ] + no_legacy_journal_log
+        end
       end
 
-      it 'only kills ids still alive after the wait' do
-        write_journal(filename, [42, 43, 44])
-        alive = {42 => true, 43 => true, 44 => false}
-        allow(Bluepill::System).to receive(:pid_alive?) { |id| alive[sign * id] }
-        allow(journal).to(receive(:sleep) { alive[43] = false })
-        allow(::Process).to receive(:kill).with('KILL', sign * 42).and_raise(Errno::ESRCH)
-        journal.send(method, 'app')
-        expect(journal).to have_received(:sleep).with(1).once
-        expect(::Process).not_to have_received(:kill).with('KILL', sign * 43)
-        expect(::Process).not_to have_received(:kill).with('KILL', sign * 44)
-        expect(File.exist?(filename)).to be false
-        expect(log).to include([:debug, "Unable to kill missing #{label} 42"])
+      context 'with an id that survives TERM' do
+        before do
+          write_journal(filename, [42])
+          allow(Bluepill::System).to receive(:pid_alive?).with(sign * 42).and_return(true)
+          described_class.send(method, 'app')
+        end
+
+        it 'terms it, waits a second, and kills it' do
+          expect(calls).to eq [['TERM', sign * 42], [:sleep, 1], ['KILL', sign * 42]]
+        end
+
+        it 'resets the journal' do
+          expect(File.exist?(filename)).to be false
+        end
+
+        it 'logs both signals' do
+          expect(log).to eq journal_log([42]) + [
+            [:debug, "Acquired lock #{filename}.lock"],
+            [:info, "Termed old #{label} 42"],
+            [:info, "Killed old #{label} 42"],
+            [:debug, 'Journal cleanup completed'],
+            [:debug, "Cleared lock #{filename}.lock"],
+          ] + no_legacy_journal_log
+        end
+      end
+
+      context 'with ids that survive TERM, and some that exit during the wait' do
+        before do
+          write_journal(filename, [42, 43, 44])
+          alive = {42 => true, 43 => true, 44 => false}
+          allow(Bluepill::System).to receive(:pid_alive?) { |id| alive[sign * id] }
+          allow(described_class).to(receive(:sleep)) do |seconds|
+            calls << [:sleep, seconds]
+            alive[43] = false
+          end
+          missing('KILL', 42)
+          described_class.send(method, 'app')
+        end
+
+        it 'only kills the ids still alive after the wait' do
+          expect(calls).to eq [['TERM', sign * 42], ['TERM', sign * 43], ['TERM', sign * 44], [:sleep, 1], ['KILL', sign * 42]]
+        end
+
+        it 'resets the journal' do
+          expect(File.exist?(filename)).to be false
+        end
+
+        it 'logs one that exited before KILL reached it' do
+          expect(log).to include([:debug, "Unable to kill missing #{label} 42"])
+        end
       end
     end
   end
 
   {append_pgid_to_journal: 'pgid', append_pid_to_journal: 'pid'}.each do |method, kind|
     describe ".#{method}" do
-      let(:filename) { journal.send("#{kind}_journal_filename", 'app') }
+      let(:filename) { described_class.send("#{kind}_journal_filename", 'app') }
 
       before do
         allow(::Process).to receive(:getpgid).with(42).and_raise(Errno::ESRCH)
+        allow(described_class).to receive(:acquire_atomic_fs_lock).and_call_original
+        allow(File).to receive(:open).and_call_original
       end
 
-      it "appends new #{kind}s once, under the journal lock" do
-        allow(journal).to receive(:acquire_atomic_fs_lock).and_call_original
-        allow(File).to receive(:open).and_call_original
-        journal.send(method, 'app', 42)
-        expect(log).to eq [
-          [:debug, "Acquired lock #{filename}.lock"],
-          [:debug, "#{kind} journal file: #{filename}"],
-          [:debug, "Saving #{kind} 42 to process journal app"],
-          [:info, "Saved #{kind} 42 to journal app"],
-          [:debug, "Journal now = 42\n"],
-          [:debug, "Cleared lock #{filename}.lock"],
-        ]
-        log.clear
-        journal.send(method, 'app', 42)
-        expect(log).to eq [
-          [:debug, "Acquired lock #{filename}.lock"],
-          [:debug, "#{kind} journal file: #{filename}"],
-          [:debug, "#{kind} journal = 42"],
-          [:debug, "Skipping duplicate #{kind} 42 already in journal app"],
-          [:debug, "Cleared lock #{filename}.lock"],
-        ]
-        expect(File.read(filename)).to eq "42\n"
-        expect(File.stat(filename).mode & 0o777).to eq 0o600
-        expect(journal).to have_received(:acquire_atomic_fs_lock).with(filename).twice
-        expect(File).to have_received(:open).with(filename, 'a+', 0o600).once
+      context "when a new #{kind} is appended" do
+        before do
+          described_class.send(method, 'app', 42)
+        end
+
+        it 'journals it' do
+          expect(File.read(filename)).to eq "42\n"
+        end
+
+        it 'keeps the journal private' do
+          expect(modes(filename)).to eq [0o600]
+        end
+
+        it 'logs it, under the journal lock' do
+          expect(log).to eq [
+            [:debug, "Acquired lock #{filename}.lock"],
+            [:debug, "#{kind} journal file: #{filename}"],
+            [:debug, "Saving #{kind} 42 to process journal app"],
+            [:info, "Saved #{kind} 42 to journal app"],
+            [:debug, "Journal now = 42\n"],
+            [:debug, "Cleared lock #{filename}.lock"],
+          ]
+        end
+      end
+
+      context "when the #{kind} is appended again" do
+        before do
+          described_class.send(method, 'app', 42)
+          log.clear
+          described_class.send(method, 'app', 42)
+        end
+
+        it 'journals it once' do
+          expect(File.read(filename)).to eq "42\n"
+        end
+
+        it 'opens the journal to append to it once' do
+          expect(File).to have_received(:open).with(filename, 'a+', 0o600).once
+        end
+
+        it 'takes the journal lock each time' do
+          expect(described_class).to have_received(:acquire_atomic_fs_lock).with(filename).twice
+        end
+
+        it 'logs that it skipped the duplicate, under the journal lock' do
+          expect(log).to eq [
+            [:debug, "Acquired lock #{filename}.lock"],
+            [:debug, "#{kind} journal file: #{filename}"],
+            [:debug, "#{kind} journal = 42"],
+            [:debug, "Skipping duplicate #{kind} 42 already in journal app"],
+            [:debug, "Cleared lock #{filename}.lock"],
+          ]
+        end
       end
 
       it "journals when the #{kind}'s process started" do
         allow(Bluepill::System).to receive(:started_at).with(42).and_return(1000)
-        journal.send(method, 'app', 42)
+        described_class.send(method, 'app', 42)
         expect(File.read(filename)).to eq "42 1000\n"
       end
 
       [nil, 0, 1, '42'].each do |id|
-        it "skips the invalid #{kind} #{id.inspect}" do
-          allow(::Process).to receive(:getpgid)
-          journal.send(method, 'app', id)
-          expect(::Process).not_to have_received(:getpgid)
-          expect(File.exist?(filename)).to be false
-          expect(log).to eq [[:debug, "Skipping invalid #{kind} #{id} (class #{id.class})"]]
+        context "with the invalid #{kind} #{id.inspect}" do
+          before do
+            allow(::Process).to receive(:getpgid)
+            described_class.send(method, 'app', id)
+          end
+
+          it 'skips it' do
+            expect(File.exist?(filename)).to be false
+          end
+
+          it "doesn't look up its process group" do
+            expect(::Process).not_to have_received(:getpgid)
+          end
+
+          it 'logs that it skipped it' do
+            expect(log).to eq [[:debug, "Skipping invalid #{kind} #{id} (class #{id.class})"]]
+          end
         end
       end
     end
@@ -423,24 +673,24 @@ describe Bluepill::ProcessJournal do
     it 'reads each id, with when its process started if the line says' do
       filename = File.join(dir, 'journal')
       File.write(filename, "42 1000\n43\n\n")
-      expect(journal.journal_entries(filename)).to eq [[42, 1000], [43, nil], [0, nil]]
+      expect(described_class.journal_entries(filename)).to eq [[42, 1000], [43, nil], [0, nil]]
     end
 
     it 'reads a garbled start time as 0, which no running process started at' do
       filename = File.join(dir, 'journal')
       File.write(filename, "42 junk\n")
-      expect(journal.journal_entries(filename)).to eq [[42, 0]]
+      expect(described_class.journal_entries(filename)).to eq [[42, 0]]
     end
   end
 
   describe '.journal_line' do
     it 'has the id and when its process started' do
       allow(Bluepill::System).to receive(:started_at).with(42).and_return(1000)
-      expect(journal.journal_line(42)).to eq '42 1000'
+      expect(described_class.journal_line(42)).to eq '42 1000'
     end
 
     it "has only the id when ps can't tell when it started" do
-      expect(journal.journal_line(42)).to eq '42'
+      expect(described_class.journal_line(42)).to eq '42'
     end
   end
 
@@ -456,19 +706,30 @@ describe Bluepill::ProcessJournal do
 
     def journaled(started)
       allow(Bluepill::System).to receive(:started_at).with(42).and_return(started)
-      journal.journaled_ids(filename, [42], 'process')
+      described_class.journaled_ids(filename, [42], 'process')
+    end
+
+    # The journaled ids of 43, which has no start time in the journal
+    def journaled_without_start_time
+      allow(Bluepill::System).to receive(:started_at).with(43).and_return(30_000)
+      described_class.journaled_ids(filename, [43], 'process')
     end
 
     it 'keeps a running process that started when the journal says' do
-      expect(journaled(20_000)).to eq [42]
-      expect(journaled(20_002)).to eq [42]
-      expect(journaled(19_998)).to eq [42]
+      expect([20_000, 20_002, 19_998].collect { |started| journaled(started) }).to eq [[42], [42], [42]]
+    end
+
+    it "doesn't log the ones it keeps" do
+      [20_000, 20_002, 19_998].each { |started| journaled(started) }
       expect(log).to eq []
     end
 
     it 'skips a running process that started at another time' do
-      expect(journaled(20_003)).to eq []
-      expect(journaled(19_997)).to eq []
+      expect([20_003, 19_997].collect { |started| journaled(started) }).to eq [[], []]
+    end
+
+    it 'logs the ones it skips' do
+      [20_003, 19_997].each { |started| journaled(started) }
       expect(log).to eq [[:info, "Skipping old process 42, which isn't the one bluepill started"]] * 2
     end
 
@@ -483,57 +744,76 @@ describe Bluepill::ProcessJournal do
     end
 
     it 'keeps one without a start time if the journal was written since the machine booted' do
-      allow(Bluepill::System).to receive(:started_at).with(43).and_return(30_000)
-      expect(journal.journaled_ids(filename, [43], 'process')).to eq [43]
+      expect(journaled_without_start_time).to eq [43]
+    end
+
+    it 'keeps one without a start time if the journal was written up to 2 seconds before the machine booted' do
       File.utime(boot - 2, boot - 2, filename)
-      expect(journal.journaled_ids(filename, [43], 'process')).to eq [43]
+      expect(journaled_without_start_time).to eq [43]
     end
 
     it 'skips one without a start time if the journal was written before the machine booted' do
       File.utime(boot - 3, boot - 3, filename)
-      expect(journal.journaled_ids(filename, [43], 'process')).to eq []
+      expect(described_class.journaled_ids(filename, [43], 'process')).to eq []
     end
 
     it "only keeps a running process that started when the journal says if ps can't tell when the machine booted" do
       allow(Bluepill::System).to receive(:boot_time).and_return(nil)
-      expect(journaled(20_000)).to eq [42]
-      expect(journaled(nil)).to eq []
-      expect(journal.journaled_ids(filename, [43], 'process')).to eq []
+      kept = [journaled(20_000), journaled(nil), described_class.journaled_ids(filename, [43], 'process')]
+      expect(kept).to eq [[42], [], []]
     end
 
     it 'keeps nothing if the journal was cleared since its ids were read' do
       File.delete(filename)
-      expect(journal.journaled_ids(filename, [42], 'process')).to eq []
+      expect(described_class.journaled_ids(filename, [42], 'process')).to eq []
     end
   end
 
   describe '.append_pid_to_journal' do
-    let(:filename) { journal.pid_journal_filename('app') }
+    let(:filename) { described_class.pid_journal_filename('app') }
+
+    # Return what the pid and pgid journals say, or false for one that isn't there
+    def journals
+      pgid_filename = described_class.pgid_journal_filename('app')
+      {pid: File.read(filename), pgid: File.exist?(pgid_filename) && File.read(pgid_filename)}
+    end
 
     it 'journals when the process and its group leader started' do
       allow(::Process).to receive(:getpgid).with(42).and_return(40)
       allow(Bluepill::System).to receive(:started_at).with(42).and_return(1000)
       allow(Bluepill::System).to receive(:started_at).with(40).and_return(900)
-      journal.append_pid_to_journal('app', 42)
-      expect(File.read(filename)).to eq "42 1000\n"
-      expect(File.read(journal.pgid_journal_filename('app'))).to eq "40 900\n"
+      described_class.append_pid_to_journal('app', 42)
+      expect(journals).to eq(pid: "42 1000\n", pgid: "40 900\n")
     end
 
-    it 'journals the pid and its process group' do
-      allow(::Process).to receive(:getpgid).with(42).and_return(40)
-      journal.append_pid_to_journal('app', 42)
-      journal.append_pid_to_journal('app', 42)
-      expect(::Process).to have_received(:getpgid).twice
-      expect(File.read(filename)).to eq "42\n"
-      expect(File.read(journal.pgid_journal_filename('app'))).to eq "40\n"
+    context 'when appended twice' do
+      before do
+        allow(::Process).to receive(:getpgid).with(42).and_return(40)
+        2.times { described_class.append_pid_to_journal('app', 42) }
+      end
+
+      it 'journals the pid and its process group once' do
+        expect(journals).to eq(pid: "42\n", pgid: "40\n")
+      end
+
+      it 'looks up the process group each time' do
+        expect(::Process).to have_received(:getpgid).twice
+      end
     end
 
-    it 'ignores missing processes when looking up the process group' do
-      allow(::Process).to receive(:getpgid).with(42).and_raise(Errno::ESRCH)
-      journal.append_pid_to_journal('app', 42)
-      expect(::Process).to have_received(:getpgid).once
-      expect(File.read(filename)).to eq "42\n"
-      expect(File.exist?(journal.pgid_journal_filename('app'))).to be false
+    context 'when the process is gone before its group is looked up' do
+      before do
+        allow(::Process).to receive(:getpgid).with(42).and_raise(Errno::ESRCH)
+        described_class.append_pid_to_journal('app', 42)
+      end
+
+      it 'journals only the pid' do
+        expect(journals).to eq(pid: "42\n", pgid: false)
+      end
+
+      it 'looks up the process group once' do
+        expect(::Process).to have_received(:getpgid).once
+      end
     end
   end
 end

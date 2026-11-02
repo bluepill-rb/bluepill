@@ -19,8 +19,7 @@ describe Bluepill::ProcessConditions::FileTime do
     end
 
     it 'checks against the given limit' do
-      expect(condition.check?(59)).to be true
-      expect(condition.check?(60)).to be false
+      expect([condition.check?(59), condition.check?(60)]).to eq([true, false])
     end
 
     it 'watches the given file' do

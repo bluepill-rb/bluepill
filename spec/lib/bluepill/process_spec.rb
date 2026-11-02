@@ -35,7 +35,7 @@ describe Bluepill::Process do
   end
 
   # The events dispatched to the process, with their reasons
-  def recorded_events
+  def dispatched_events
     process.statistics.events.collect { |event, reason, _time| [event, reason] }
   end
 
@@ -49,6 +49,44 @@ describe Bluepill::Process do
       thread
     end
     threads
+  end
+
+  # Record, in order, the signals sent with their pids, the journal
+  # cleanups, the pid file deletions and the commands run. Signal 0 finds
+  # the process running until it has been sent alive times.
+  def record_calls(alive = nil)
+    calls = []
+    allow(::Process).to receive(:kill) do |signal, pid|
+      calls << [signal, pid]
+      raise Errno::ESRCH if signal == 0 && alive && (alive -= 1) < 0
+
+      1
+    end
+    allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal) { calls << :cleanup }
+    allow(Bluepill::System).to receive(:delete_if_exists) { calls << :unlink }
+    allow(Bluepill::System).to receive(:execute_blocking) { |command, _options| {exit_code: 0}.tap { calls << command } }
+    calls
+  end
+
+  # Record the threads the commands run on
+  def record_command_threads
+    threads = []
+    allow(Bluepill::System).to receive(:execute_blocking) { {exit_code: 0}.tap { threads << Thread.current } }
+    threads
+  end
+
+  # Record the names and pids added to the journal from now on
+  def record_journal
+    journaled = []
+    allow(Bluepill::ProcessJournal).to receive(:append_pid_to_journal) { |name, pid| journaled << [name, pid] }
+    journaled
+  end
+
+  # Record the messages logged at a level from now on
+  def record_log(level)
+    messages = []
+    allow(logger).to receive(level) { |message| messages << message }
+    messages
   end
 
   describe '#initialize' do
@@ -130,14 +168,20 @@ describe Bluepill::Process do
       end
     end
 
-    it 'works without options' do
-      process = described_class.new(:proc_name, [])
-      expect(process.name).to eq :proc_name
-      expect(process.children).to eq []
-      expect(process.statistics).to be_a(Bluepill::ProcessStatistics)
-      expect(process.statistics.events.size).to eq 0
-      expect(process.instance_variable_get(:@threads)).to eq []
-      expect(process.instance_variable_get(:@event_mutex)).to be_a(Monitor)
+    context 'without options' do
+      subject(:process) { described_class.new(:proc_name, []) }
+
+      it 'has its name, no children and no events' do
+        expect(process).to have_attributes(
+          name: :proc_name,
+          children: [],
+          statistics: be_a(Bluepill::ProcessStatistics).and(have_attributes(events: []))
+        )
+      end
+
+      it 'has no threads, and a monitor for its events' do
+        expect([:@threads, :@event_mutex].collect { |name| process.instance_variable_get(name) }).to match [[], be_a(Monitor)]
+      end
     end
 
     describe 'overrides' do
@@ -155,24 +199,22 @@ describe Bluepill::Process do
         described_class.new(:proc_name, {flapping: {times: 2}, mem_usage: {below: 100, every: 10}}, logger: logger)
       end
 
-      it 'adds triggers and watches' do
-        expect(process.triggers.size).to eq 1
-        expect(process.triggers.first).to be_a(Bluepill::Triggers::Flapping)
-        expect(process.triggers.first.logger).to eq logger
-        expect(process.triggers.first.times).to eq 2
-        expect(process.triggers.first.process).to be process
-        expect(process.watches.size).to eq 1
-        expect(process.watches.first.name).to eq :mem_usage
-        expect(process.watches.first.logger).to eq logger
+      it 'adds a trigger for a trigger check' do
+        expect(process.triggers).to match [be_a(Bluepill::Triggers::Flapping).and(have_attributes(logger: logger, times: 2, process: process))]
+      end
+
+      it 'adds a watch for every other check' do
+        expect(process.watches).to match [have_attributes(name: :mem_usage, logger: logger)]
+      end
+
+      it 'gives the watch its options' do
         expect(process.watches.first.instance_variable_get(:@every)).to eq 10
       end
 
       it 'propagates a new logger to watches and triggers' do
         new_logger = instance_double(Bluepill::Logger).as_null_object
         process.logger = new_logger
-        expect(process.logger).to eq new_logger
-        expect(process.watches.first.logger).to eq new_logger
-        expect(process.triggers.first.logger).to eq new_logger
+        expect([process, process.watches.first, process.triggers.first].collect(&:logger)).to all(be new_logger)
       end
     end
 
@@ -183,76 +225,132 @@ describe Bluepill::Process do
   end
 
   describe '#tick' do
-    it 'does nothing while skipping ticks' do
-      process.skip_ticks_until = now.to_i + 10
-      thread = leftover_thread
-      process.tick
-      expect(thread).not_to have_received(:kill)
-      expect(process.skip_ticks_until).to eq now.to_i + 10
+    let(:thread) { leftover_thread }
+    let(:watch) { watch_double(:w, []) }
+    let(:child) { instance_double(described_class, 'child', tick: nil) }
+
+    before { process.watches << watch }
+
+    context 'when skipping ticks' do
+      before do
+        process.skip_ticks_until = now.to_i + 10
+        thread
+        process.tick
+      end
+
+      it 'leaves threads alone' do
+        expect(thread).not_to have_received(:kill)
+      end
+
+      it 'keeps skipping them' do
+        expect(process.skip_ticks_until).to eq now.to_i + 10
+      end
     end
 
-    it 'rechecks whether the process is running on every tick' do
-      watch = watch_double(:w, [])
-      process.watches << watch
-      process.state = 'up'
-      run_process
-      process.process_running = true
-      allow(::Process).to receive(:kill).with(0, 5).and_raise(Errno::ESRCH)
-      process.tick
-      expect(watch).not_to have_received(:run)
-      expect(process).to be_down
+    context 'when the process stopped since it was last found running' do
+      before do
+        process.state = 'up'
+        run_process
+        process.process_running = true
+        allow(::Process).to receive(:kill).with(0, 5).and_raise(Errno::ESRCH)
+        process.tick
+      end
+
+      it 'runs no watches' do
+        expect(watch).not_to have_received(:run)
+      end
+
+      it 'is down' do
+        expect(process).to be_down
+      end
     end
 
-    it 'cleans threads when unmonitored and stays unmonitored' do
-      process.skip_ticks_until = now.to_i - 1
-      thread = leftover_thread
-      process.tick
-      expect(thread).to have_received(:kill)
-      expect(process.skip_ticks_until).to be_nil
-      expect(process).to be_unmonitored
+    context 'when unmonitored' do
+      before do
+        process.skip_ticks_until = now.to_i - 1
+        thread
+        process.tick
+      end
+
+      it 'cleans threads' do
+        expect(thread).to have_received(:kill)
+      end
+
+      it 'stops skipping ticks' do
+        expect(process.skip_ticks_until).to be_nil
+      end
+
+      it 'stays unmonitored' do
+        expect(process).to be_unmonitored
+      end
     end
 
     it 'leaves threads alone when the process is monitored' do
       process.state = 'up'
       run_process
-      thread = leftover_thread
+      thread
       process.tick
       expect(thread).not_to have_received(:kill)
     end
 
-    it 'transitions from down to starting when not running' do
-      watch = watch_double(:w, [])
-      process.watches << watch
-      process.state = 'down'
-      process.start_command = 'start-cmd'
-      process.tick
-      expect(Bluepill::System).to have_received(:execute_blocking).with('start-cmd', anything)
-      expect(watch).not_to have_received(:run)
-      expect(process).to be_starting
+    context 'when down and not running' do
+      before do
+        process.state = 'down'
+        process.start_command = 'start-cmd'
+        process.tick
+      end
+
+      it 'starts the process' do
+        expect(Bluepill::System).to have_received(:execute_blocking).with('start-cmd', anything)
+      end
+
+      it 'runs no watches' do
+        expect(watch).not_to have_received(:run)
+      end
+
+      it 'transitions to starting' do
+        expect(process).to be_starting
+      end
     end
 
-    it 'transitions from down to up when running, and runs watches' do
-      watch = watch_double(:w, [])
-      process.watches << watch
-      process.state = 'down'
-      run_process
-      allow(Bluepill::System).to receive(:get_children)
-      process.tick
-      expect(watch).to have_received(:run)
-      expect(Bluepill::System).not_to have_received(:get_children)
-      expect(process).to be_up
+    context 'when down and running' do
+      before do
+        process.state = 'down'
+        run_process
+        allow(Bluepill::System).to receive(:get_children)
+        process.tick
+      end
+
+      it 'runs watches' do
+        expect(watch).to have_received(:run)
+      end
+
+      it 'looks for no children' do
+        expect(Bluepill::System).not_to have_received(:get_children)
+      end
+
+      it 'transitions to up' do
+        expect(process).to be_up
+      end
     end
 
-    it 'finds and ticks children when monitoring children' do
-      child = instance_double(Bluepill::Process, 'child', tick: nil)
-      process.child_process_factory = instance_double(Bluepill::ProcessFactory, create_child_process: child)
-      process.state = 'up'
-      process.monitor_children = true
-      run_process
-      allow(Bluepill::System).to receive(:get_children).with(5).and_return([7])
-      process.tick
-      expect(child).to have_received(:tick)
-      expect(process).to be_up
+    context 'when up and monitoring children' do
+      before do
+        process.child_process_factory = instance_double(Bluepill::ProcessFactory, create_child_process: child)
+        process.state = 'up'
+        process.monitor_children = true
+        run_process
+        allow(Bluepill::System).to receive(:get_children).with(5).and_return([7])
+        process.tick
+      end
+
+      it 'finds and ticks children' do
+        expect(child).to have_received(:tick)
+      end
+
+      it 'stays up' do
+        expect(process).to be_up
+      end
     end
 
     {
@@ -277,92 +375,174 @@ describe Bluepill::Process do
   end
 
   describe 'events' do
-    it 'starts the process on start' do
-      process.start_command = 'start-cmd'
-      process.dispatch!(:start, 'reason')
-      expect(Bluepill::System).to have_received(:execute_blocking).with('start-cmd', anything)
-      expect(process).to be_starting
-      expect(process.statistics.events.first[0, 2]).to eq [:start, 'reason']
+    context 'with start' do
+      before do
+        process.start_command = 'start-cmd'
+        process.dispatch!(:start, 'reason')
+      end
+
+      it 'starts the process' do
+        expect(Bluepill::System).to have_received(:execute_blocking).with('start-cmd', anything)
+      end
+
+      it 'transitions to starting' do
+        expect(process).to be_starting
+      end
+
+      it 'records the event and its reason' do
+        expect(process.statistics.events.first[0, 2]).to eq [:start, 'reason']
+      end
     end
 
-    it 'handles one event at a time' do
-      mutex = process.instance_variable_get(:@event_mutex)
-      allow(mutex).to receive(:synchronize).and_call_original
-      process.dispatch!('start')
-      expect(mutex).to have_received(:synchronize)
-      expect(process).to be_starting
+    context 'with an event given as a string' do
+      let(:mutex) { process.instance_variable_get(:@event_mutex) }
+
+      before do
+        allow(mutex).to receive(:synchronize).and_call_original
+        process.dispatch!('start')
+      end
+
+      it 'handles one event at a time' do
+        expect(mutex).to have_received(:synchronize)
+      end
+
+      it 'fires the event' do
+        expect(process).to be_starting
+      end
     end
 
-    it 'stops the process on stop' do
-      process.state = 'up'
-      run_process
-      process.dispatch!(:stop)
-      expect(::Process).to have_received(:kill).with('TERM', 5)
-      expect(process).to be_stopping
+    context 'with stop' do
+      before do
+        process.state = 'up'
+        run_process
+        process.dispatch!(:stop)
+      end
+
+      it 'stops the process' do
+        expect(::Process).to have_received(:kill).with('TERM', 5)
+      end
+
+      it 'transitions to stopping' do
+        expect(process).to be_stopping
+      end
     end
 
-    it 'restarts the process on restart' do
-      process.state = 'down'
-      process.restart_command = 'restart-cmd'
-      process.dispatch!(:restart)
-      expect(Bluepill::System).to have_received(:execute_blocking).with('restart-cmd', anything)
-      expect(process).to be_restarting
+    context 'with restart' do
+      before do
+        process.state = 'down'
+        process.restart_command = 'restart-cmd'
+        process.dispatch!(:restart)
+      end
+
+      it 'restarts the process' do
+        expect(Bluepill::System).to have_received(:execute_blocking).with('restart-cmd', anything)
+      end
+
+      it 'transitions to restarting' do
+        expect(process).to be_restarting
+      end
     end
 
-    it 'cleans threads when leaving stopping' do
-      process.state = 'stopping'
-      thread = leftover_thread
-      process.dispatch!(:unmonitor)
-      expect(thread).to have_received(:kill)
-      expect(process).to be_unmonitored
+    context 'with unmonitor while stopping' do
+      let(:thread) { leftover_thread }
+
+      before do
+        process.state = 'stopping'
+        thread
+        process.dispatch!(:unmonitor)
+      end
+
+      it 'cleans threads' do
+        expect(thread).to have_received(:kill)
+      end
+
+      it 'transitions to unmonitored' do
+        expect(process).to be_unmonitored
+      end
     end
   end
 
   describe '#record_transition' do
-    it 'ignores loopback transitions' do
-      transition = Bluepill::Process::Transition.new(:up, :up)
-      process.record_transition(transition)
-      expect(logger).not_to have_received(:info)
-      expect(process.instance_variable_get(:@transitioned)).to be_nil
+    let(:watch) { watch_double(:w, []) }
+
+    context 'with a loopback' do
+      before { process.record_transition(described_class::Transition.new(:up, :up)) }
+
+      it 'logs nothing' do
+        expect(logger).not_to have_received(:info)
+      end
+
+      it 'records no transition' do
+        expect(process.instance_variable_get(:@transitioned)).to be_nil
+      end
     end
 
-    it 'clears watch history and logs' do
-      watch = watch_double(:w, [])
-      process.watches << watch
-      transition = Bluepill::Process::Transition.new(:up, :down)
-      process.record_transition(transition)
-      expect(watch).to have_received(:clear_history!)
-      expect(logger).to have_received(:info).with('Going from up => down')
-      expect(logger).not_to have_received(:warning)
-      expect(process.instance_variable_get(:@transitioned)).to be true
+    context 'with a change of state' do
+      before do
+        process.watches << watch
+        process.record_transition(described_class::Transition.new(:up, :down))
+      end
+
+      it 'clears watch history' do
+        expect(watch).to have_received(:clear_history!)
+      end
+
+      it 'logs the change' do
+        expect(logger).to have_received(:info).with('Going from up => down')
+      end
+
+      it 'leaves children alone when not monitoring them' do
+        expect(logger).not_to have_received(:warning)
+      end
+
+      it 'records the transition' do
+        expect(process.instance_variable_get(:@transitioned)).to be true
+      end
     end
 
-    it 'clears the child list when monitoring children' do
-      process.monitor_children = true
-      process.children << instance_double(Bluepill::Process, 'child')
-      transition = Bluepill::Process::Transition.new(:up, :down)
-      process.record_transition(transition)
-      expect(logger).to have_received(:warning).with('Clearing child list')
-      expect(process.children).to be_empty
+    context 'when monitoring children' do
+      before do
+        process.monitor_children = true
+        process.children << instance_double(described_class, 'child')
+        process.record_transition(described_class::Transition.new(:up, :down))
+      end
+
+      it 'logs that it clears the child list' do
+        expect(logger).to have_received(:warning).with('Clearing child list')
+      end
+
+      it 'clears the child list' do
+        expect(process.children).to be_empty
+      end
     end
   end
 
   describe '#notify_triggers' do
-    let(:transition) { Bluepill::Process::Transition.new(:up, :down) }
+    let(:transition) { described_class::Transition.new(:up, :down) }
     let(:trigger) { instance_double(Bluepill::Trigger, 'trigger', :logger= => nil, notify: nil) }
+    let(:error) { RuntimeError.new('boom').tap { |e| e.set_backtrace(%w[a b]) } }
 
     before { process.triggers << trigger }
+
+    def notify_and_rescue
+      process.notify_triggers(transition)
+    rescue RuntimeError
+      nil
+    end
 
     it 'notifies each trigger' do
       process.notify_triggers(transition)
       expect(trigger).to have_received(:notify).with(transition)
     end
 
-    it 'logs and re-raises errors' do
-      error = RuntimeError.new('boom')
-      error.set_backtrace(%w[a b])
+    it 're-raises errors' do
       allow(trigger).to receive(:notify).and_raise(error)
       expect { process.notify_triggers(transition) }.to raise_error(error)
+    end
+
+    it 'logs errors' do
+      allow(trigger).to receive(:notify).and_raise(error)
+      notify_and_rescue
       expect(logger).to have_received(:err).with(%w[a b])
     end
   end
@@ -370,38 +550,52 @@ describe Bluepill::Process do
   describe '#add_watch' do
     it 'adds a condition watch' do
       process.add_watch(:mem_usage, below: 10)
-      expect(process.watches.first).to be_a(Bluepill::ConditionWatch)
-      expect(process.watches.first.logger).to eq logger
+      expect(process.watches).to match [be_a(Bluepill::ConditionWatch).and(have_attributes(logger: logger))]
     end
   end
 
   describe '#run_watches' do
     before { process.actual_pid = 5 }
 
-    it 'dispatches events from watches' do
-      quiet = watch_double(:quiet, [])
-      loud = watch_double(:loud, [:restart, :stop])
-      allow(loud).to receive(:to_s).and_return('loud: [1, 2]')
-      process.watches << quiet << loud
-      process.run_watches
-      expect(logger).to have_received(:info).once.with('loud dispatched: restart,stop')
-      expect(logger).not_to have_received(:info).with('quiet dispatched: ')
-      expect(quiet).to have_received(:run).with(5, now.to_i)
-      expect(recorded_events).to eq [[:restart, 'loud: [1, 2]'], [:stop, 'loud: [1, 2]']]
+    context 'with a quiet and a loud watch' do
+      let(:quiet) { watch_double(:quiet, []) }
+      let(:loud) { watch_double(:loud, [:restart, :stop]) }
+
+      before do
+        allow(loud).to receive(:to_s).and_return('loud: [1, 2]')
+        process.watches << quiet << loud
+        process.run_watches
+      end
+
+      it 'logs the events a watch dispatches' do
+        expect(logger).to have_received(:info).once.with('loud dispatched: restart,stop')
+      end
+
+      it 'logs nothing for a watch that dispatches nothing' do
+        expect(logger).not_to have_received(:info).with('quiet dispatched: ')
+      end
+
+      it 'runs the watches with the pid and the time' do
+        expect(quiet).to have_received(:run).with(5, now.to_i)
+      end
+
+      it 'dispatches events from watches' do
+        expect(dispatched_events).to eq [[:restart, 'loud: [1, 2]'], [:stop, 'loud: [1, 2]']]
+      end
     end
 
     it 'dispatches after a transition in an earlier run' do
       process.instance_variable_set(:@transitioned, true)
       process.watches << watch_double(:loud, [:restart])
       process.run_watches
-      expect(recorded_events).to eq [[:restart, 'loud']]
+      expect(dispatched_events).to eq [[:restart, 'loud']]
     end
 
     it 'stops dispatching after a transition' do
       process.state = 'down'
       process.watches << watch_double(:loud, [:start, :stop])
       process.run_watches
-      expect(recorded_events).to eq [[:start, 'loud']]
+      expect(dispatched_events).to eq [[:start, 'loud']]
     end
   end
 
@@ -431,65 +625,108 @@ describe Bluepill::Process do
   end
 
   describe '#handle_user_command' do
-    it 'refuses to start a running process' do
-      run_process
-      process.handle_user_command('start')
-      expect(logger).to have_received(:warning).with('Refusing to re-run start command on an already running process.')
-      expect(recorded_events).to be_empty
+    context 'with start for a running process' do
+      before do
+        run_process
+        process.handle_user_command('start')
+      end
+
+      it 'refuses to start it' do
+        expect(logger).to have_received(:warning).with('Refusing to re-run start command on an already running process.')
+      end
+
+      it 'dispatches nothing' do
+        expect(dispatched_events).to be_empty
+      end
     end
 
     it 'starts a stopped process' do
       process.handle_user_command('start')
-      expect(recorded_events).to eq [[:start, 'user initiated']]
+      expect(dispatched_events).to eq [[:start, 'user initiated']]
     end
 
     it 'checks again before starting, even if the process was running earlier in the tick' do
       process.process_running = true
       process.handle_user_command('start')
-      expect(recorded_events).to eq [[:start, 'user initiated']]
+      expect(dispatched_events).to eq [[:start, 'user initiated']]
     end
 
-    it 'stops and unmonitors' do
-      process.state = 'up'
-      run_process
-      process.handle_user_command('stop')
-      expect(::Process).to have_received(:kill).with('TERM', 5)
-      expect(recorded_events).to eq [[:unmonitor, 'user initiated']]
+    context 'with stop' do
+      before do
+        process.state = 'up'
+        run_process
+        process.handle_user_command('stop')
+      end
+
+      it 'stops the process' do
+        expect(::Process).to have_received(:kill).with('TERM', 5)
+      end
+
+      it 'unmonitors it' do
+        expect(dispatched_events).to eq [[:unmonitor, 'user initiated']]
+      end
     end
 
-    it 'restarts through the state machine' do
-      process.state = 'up'
-      process.restart_command = 'restart-cmd'
-      process.handle_user_command('restart')
-      expect(recorded_events).to eq [[:restart, 'user initiated']]
-      expect(Bluepill::System).to have_received(:execute_blocking).with('restart-cmd', anything).once
+    context 'with restart for an up process' do
+      before do
+        process.state = 'up'
+        process.restart_command = 'restart-cmd'
+        process.handle_user_command('restart')
+      end
+
+      it 'restarts through the state machine' do
+        expect(dispatched_events).to eq [[:restart, 'user initiated']]
+      end
+
+      it 'restarts it once' do
+        expect(Bluepill::System).to have_received(:execute_blocking).with('restart-cmd', anything).once
+      end
+
+      it 'goes to restarting' do
+        expect(process.state).to eq('restarting')
+      end
     end
 
-    it 'restarts an up process by going to restarting' do
-      process.state = 'up'
-      process.handle_user_command('restart')
-      expect(process.state).to eq('restarting')
+    context 'with restart from a state restart cannot leave' do
+      before do
+        process.state = 'unmonitored'
+        process.restart_command = 'restart-cmd'
+        process.handle_user_command('restart')
+      end
+
+      it 'restarts directly' do
+        expect(Bluepill::System).to have_received(:execute_blocking).with('restart-cmd', anything).once
+      end
+
+      it 'stays in its state' do
+        expect(process.state).to eq('unmonitored')
+      end
     end
 
-    it 'restarts directly from a state restart cannot leave' do
-      process.state = 'unmonitored'
-      process.restart_command = 'restart-cmd'
-      process.handle_user_command('restart')
-      expect(Bluepill::System).to have_received(:execute_blocking).with('restart-cmd', anything).once
-      expect(process.state).to eq('unmonitored')
+    context 'with unmonitor' do
+      let(:trigger) { instance_double(Bluepill::Trigger, 'trigger', :logger= => nil, notify: nil, reset!: nil) }
+
+      before do
+        process.triggers << trigger
+        process.handle_user_command('unmonitor')
+      end
+
+      it 'resets triggers' do
+        expect(trigger).to have_received(:reset!)
+      end
+
+      it 'unmonitors' do
+        expect(dispatched_events).to eq [[:unmonitor, 'user initiated']]
+      end
     end
 
-    it 'resets triggers and unmonitors' do
-      trigger = instance_double(Bluepill::Trigger, 'trigger', :logger= => nil, notify: nil, reset!: nil)
-      process.triggers << trigger
-      process.handle_user_command('unmonitor')
-      expect(trigger).to have_received(:reset!)
-      expect(recorded_events).to eq [[:unmonitor, 'user initiated']]
+    it 'returns nil for an unknown command' do
+      expect(process.handle_user_command('bogus')).to be_nil
     end
 
     it 'ignores unknown commands' do
-      expect(process.handle_user_command('bogus')).to be_nil
-      expect(recorded_events).to be_empty
+      process.handle_user_command('bogus')
+      expect(dispatched_events).to be_empty
     end
   end
 
@@ -497,28 +734,31 @@ describe Bluepill::Process do
     it 'are false, not nil, for unset attributes' do
       process.cache_actual_pid = nil
       process.monitor_children = nil
-      expect(process.cache_actual_pid?).to be false
-      expect(process.monitor_children?).to be false
-      expect(process.daemonize?).to be false
+      expect([process.cache_actual_pid?, process.monitor_children?, process.daemonize?]).to eq [false, false, false]
     end
 
     it 'are true, not the attribute, for set attributes' do
       process.cache_actual_pid = 1
       process.monitor_children = 1
       process.daemonize = 1
-      expect(process.cache_actual_pid?).to be true
-      expect(process.monitor_children?).to be true
-      expect(process.daemonize?).to be true
+      expect([process.cache_actual_pid?, process.monitor_children?, process.daemonize?]).to eq [true, true, true]
     end
   end
 
   describe '#process_running?' do
     before { process.actual_pid = 5 }
 
+    it 'is true, and stays true, for a running process' do
+      expect(Array.new(2) { process.process_running? }).to eq [true, true]
+    end
+
     it 'memoizes a running result' do
-      expect(process.process_running?).to be true
-      expect(process.process_running?).to be true
+      2.times { process.process_running? }
       expect(::Process).to have_received(:kill).once.with(0, 5)
+    end
+
+    it 'keeps the pid of a running process' do
+      process.process_running?
       expect(process.actual_pid).to eq 5
     end
 
@@ -528,81 +768,119 @@ describe Bluepill::Process do
       expect(::Process).to have_received(:kill).twice.with(0, 5)
     end
 
-    it 'clears the pid when not running' do
-      allow(::Process).to receive(:kill).with(0, 5).and_raise(Errno::ESRCH)
-      expect(process.process_running?).to be false
-      expect(process.instance_variable_get(:@actual_pid)).to be_nil
+    context 'when not running' do
+      before { allow(::Process).to receive(:kill).with(0, 5).and_raise(Errno::ESRCH) }
+
+      it 'is false' do
+        expect(process.process_running?).to be false
+      end
+
+      it 'clears the pid' do
+        process.process_running?
+        expect(process.instance_variable_get(:@actual_pid)).to be_nil
+      end
     end
   end
 
   describe '#start_process' do
     before { process.start_command = '/etc/init.d/script start' }
 
-    it 'functions' do
-      allow(Timeout).to receive(:timeout).and_call_original
-      process.start_process
-      expect(logger).to have_received(:warning).with('Executing start command: /etc/init.d/script start')
-      expect(Bluepill::System).to have_received(:execute_blocking).with('/etc/init.d/script start', process.system_command_options)
-      expect(Timeout).to have_received(:timeout).with(3)
-      expect(process.skip_ticks_until).to eq now.to_i + 3
+    context 'with the start command' do
+      before do
+        allow(Timeout).to receive(:timeout).and_call_original
+        process.start_process
+      end
+
+      it 'logs the start command' do
+        expect(logger).to have_received(:warning).with('Executing start command: /etc/init.d/script start')
+      end
+
+      it 'runs the start command with the process options' do
+        expect(Bluepill::System).to have_received(:execute_blocking).with('/etc/init.d/script start', process.system_command_options)
+      end
+
+      it 'gives the start command start_grace_time' do
+        expect(Timeout).to have_received(:timeout).with(3)
+      end
+
+      it 'skips ticks for start_grace_time' do
+        expect(process.skip_ticks_until).to eq now.to_i + 3
+      end
     end
 
     it 'dispatches on_start_timeout when the start command takes too long' do
       process.on_start_timeout = 'unmonitor'
       allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
       process.start_process
-      expect(recorded_events).to eq [['unmonitor', nil]]
+      expect(dispatched_events).to eq [['unmonitor', nil]]
     end
 
     it 'runs the pre start command first' do
       process.pre_start_command = 'prepare'
+      calls = record_calls
       process.start_process
-      expect(Bluepill::System).to have_received(:execute_blocking).with('prepare', anything).ordered
-      expect(Bluepill::System).to have_received(:execute_blocking).with('/etc/init.d/script start', anything).ordered
+      expect(calls).to eq [:cleanup, 'prepare', '/etc/init.d/script start']
     end
 
     it 'warns on a non-zero exit code' do
       allow(Bluepill::System).to receive(:execute_blocking).and_return(exit_code: 1)
+      warnings = record_log(:warning)
       process.start_process
-      expect(logger).to have_received(:warning).with('Start command execution returned non-zero exit code:')
-      expect(logger).to have_received(:warning).with({exit_code: 1}.inspect)
+      expect(warnings).to include('Start command execution returned non-zero exit code:', {exit_code: 1}.inspect)
     end
 
     it 'warns when a signal killed the command' do
       allow(Bluepill::System).to receive(:execute_blocking).and_return(exit_code: nil)
+      warnings = record_log(:warning)
       process.start_process
-      expect(logger).to have_received(:warning).with('Start command execution returned non-zero exit code:')
-      expect(logger).to have_received(:warning).with({exit_code: nil}.inspect)
+      expect(warnings).to include('Start command execution returned non-zero exit code:', {exit_code: nil}.inspect)
     end
 
-    it 'kills a stop signal thread left from an earlier stop' do
-      allow(Bluepill::System).to receive(:execute_blocking).and_return(exit_code: 0)
-      stop_thread = Thread.new { sleep }
-      process.instance_variable_get(:@threads) << stop_thread
-      process.start_process
-      stop_thread.join(1)
-      expect(stop_thread).not_to be_alive
-      expect(process.instance_variable_get(:@threads)).to be_empty
+    context 'with a stop signal thread left from an earlier stop' do
+      let(:stop_thread) { Thread.new { sleep } }
+
+      before do
+        process.instance_variable_get(:@threads) << stop_thread
+        process.start_process
+      end
+
+      it 'kills the thread' do
+        stop_thread.join(1)
+        expect(stop_thread).not_to be_alive
+      end
+
+      it 'forgets the thread' do
+        expect(process.instance_variable_get(:@threads)).to be_empty
+      end
     end
 
     context 'when daemonizing' do
-      before { process.daemonize = true }
-
-      it 'journals the daemon pid' do
+      before do
+        process.daemonize = true
         allow(Bluepill::System).to receive(:daemonize).and_return(99)
+      end
+
+      it 'kills what earlier runs left' do
         process.start_process
         expect(Bluepill::ProcessJournal).to have_received(:kill_all_from_journal).with(:proc_name)
-        expect(Bluepill::ProcessJournal).to have_received(:append_pid_to_journal).with(:proc_name, 99)
+      end
+
+      it 'daemonizes the start command with the process options' do
+        process.start_process
         expect(Bluepill::System).to have_received(:daemonize).with('/etc/init.d/script start', process.system_command_options)
+      end
+
+      it 'journals the daemon pid' do
+        process.start_process
+        expect(Bluepill::ProcessJournal).to have_received(:append_pid_to_journal).with(:proc_name, 99)
       end
 
       it 'journals children pids when monitoring children' do
         process.monitor_children = true
-        process.children << instance_double(Bluepill::Process, 'child', actual_pid: 100)
-        allow(Bluepill::System).to receive(:daemonize).and_return(99)
+        process.children << instance_double(described_class, 'child', actual_pid: 100)
+        journaled = record_journal
         process.start_process
-        expect(Bluepill::ProcessJournal).to have_received(:append_pid_to_journal).with(:proc_name, 99)
-        expect(Bluepill::ProcessJournal).to have_received(:append_pid_to_journal).with(:proc_name, 100)
+        expect(journaled).to eq [[:proc_name, 99], [:proc_name, 100]]
       end
 
       it 'does not journal when daemonizing fails' do
@@ -622,10 +900,14 @@ describe Bluepill::Process do
     context 'with a pre start command' do
       before { process.pre_start_command = 'prepare' }
 
-      it 'executes it' do
+      it 'logs only that it runs it' do
+        warnings = record_log(:warning)
         process.pre_start_process
-        expect(logger).to have_received(:warning).once.with('Executing pre start command: prepare')
-        expect(logger).not_to have_received(:warning).with('Pre start command execution returned non-zero exit code:')
+        expect(warnings).to eq ['Executing pre start command: prepare']
+      end
+
+      it 'runs it with the process options' do
+        process.pre_start_process
         expect(Bluepill::System).to have_received(:execute_blocking).with('prepare', process.system_command_options)
       end
 
@@ -640,59 +922,97 @@ describe Bluepill::Process do
   describe '#stop_process' do
     before { process.actual_pid = 5 }
 
-    it 'functions' do
-      process.stop_command = '/etc/init.d/script stop'
-      allow(Timeout).to receive(:timeout).and_call_original
-      process.stop_process
-      expect(Bluepill::System).to have_received(:execute_blocking).with('/etc/init.d/script stop', process.system_command_options)
-      expect(Timeout).to have_received(:timeout).with(3)
+    context 'with a stop command' do
+      before do
+        process.stop_command = '/etc/init.d/script stop'
+        allow(Timeout).to receive(:timeout).and_call_original
+        process.stop_process
+      end
+
+      it 'runs the stop command with the process options' do
+        expect(Bluepill::System).to have_received(:execute_blocking).with('/etc/init.d/script stop', process.system_command_options)
+      end
+
+      it 'gives the stop command stop_grace_time' do
+        expect(Timeout).to have_received(:timeout).with(3)
+      end
     end
 
     it 'dispatches stop when the stop command takes too long' do
       process.stop_command = '/etc/init.d/script stop'
       allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
       process.stop_process
-      expect(recorded_events).to eq [['stop', nil]]
+      expect(dispatched_events).to eq [['stop', nil]]
     end
 
-    it 'substitutes the pid and warns on a non-zero exit code' do
-      process.stop_command = 'kill {{PID}}; wait {{PID}}'
-      process.pid_file = 'some.pid'
-      allow(Bluepill::System).to receive(:execute_blocking).and_return(exit_code: 1)
-      allow(Bluepill::System).to receive(:get_children)
-      process.stop_process
-      expect(logger).to have_received(:warning).with('Executing stop command: kill 5; wait 5').ordered
-      expect(logger).to have_received(:warning).with('Stop command execution returned non-zero exit code:').ordered
-      expect(Bluepill::System).not_to have_received(:get_children)
-      expect(Bluepill::ProcessJournal).to have_received(:kill_all_from_journal).with(:proc_name)
-      expect(Bluepill::System).to have_received(:delete_if_exists).with('some.pid')
-      expect(Bluepill::System).to have_received(:execute_blocking).with('kill 5; wait 5', anything)
+    context 'with a stop command that fails' do
+      let(:warnings) { record_log(:warning) }
+
+      before do
+        process.stop_command = 'kill {{PID}}; wait {{PID}}'
+        process.pid_file = 'some.pid'
+        allow(Bluepill::System).to receive(:execute_blocking).and_return(exit_code: 1)
+        allow(Bluepill::System).to receive(:get_children)
+        warnings
+        process.stop_process
+      end
+
+      it 'logs the command with the pid, and warns of the exit code' do
+        expect(warnings.first(2)).to eq ['Executing stop command: kill 5; wait 5', 'Stop command execution returned non-zero exit code:']
+      end
+
+      it 'looks for no children when not monitoring them' do
+        expect(Bluepill::System).not_to have_received(:get_children)
+      end
+
+      it 'cleans up the journal' do
+        expect(Bluepill::ProcessJournal).to have_received(:kill_all_from_journal).with(:proc_name)
+      end
+
+      it 'deletes the pid file' do
+        expect(Bluepill::System).to have_received(:delete_if_exists).with('some.pid')
+      end
+
+      it 'substitutes the pid' do
+        expect(Bluepill::System).to have_received(:execute_blocking).with('kill 5; wait 5', anything)
+      end
     end
 
     it 'journals children when monitoring children' do
       process.monitor_children = true
       allow(Bluepill::System).to receive(:get_children).with(5).and_return([6, 7])
+      journaled = record_journal
       process.stop_process
-      expect(Bluepill::ProcessJournal).to have_received(:append_pid_to_journal).with(:proc_name, 6)
-      expect(Bluepill::ProcessJournal).to have_received(:append_pid_to_journal).with(:proc_name, 7)
+      expect(journaled).to eq [[:proc_name, 6], [:proc_name, 7]]
     end
 
     it 'journals no children when stopped before it has a pid' do
       process.clear_pid
       process.monitor_children = true
       allow(Bluepill::System).to receive(:ps_axu).and_return(0 => %w[PID PPID %CPU RSS ELAPSED COMMAND])
-      journaled = []
-      allow(Bluepill::ProcessJournal).to receive(:append_pid_to_journal) { |_name, pid| journaled << pid }
+      journaled = record_journal
       process.stop_process
       expect(journaled).to be_empty
     end
 
-    it 'sends TERM by default' do
-      process.stop_process
-      expect(logger).to have_received(:warning).with('Executing default stop command. Sending TERM signal to 5')
-      expect(::Process).to have_received(:kill).with('TERM', 5)
-      expect(Bluepill::System).to have_received(:delete_if_exists).with(nil)
-      expect(process.skip_ticks_until).to eq now.to_i + 3
+    context 'without a stop command or stop signals' do
+      before { process.stop_process }
+
+      it 'logs that it sends TERM' do
+        expect(logger).to have_received(:warning).with('Executing default stop command. Sending TERM signal to 5')
+      end
+
+      it 'sends TERM' do
+        expect(::Process).to have_received(:kill).with('TERM', 5)
+      end
+
+      it 'deletes the pid file' do
+        expect(Bluepill::System).to have_received(:delete_if_exists).with(nil)
+      end
+
+      it 'skips ticks for stop_grace_time' do
+        expect(process.skip_ticks_until).to eq now.to_i + 3
+      end
     end
 
     context 'with stop signals' do
@@ -702,146 +1022,194 @@ describe Bluepill::Process do
 
       before { allow(process).to receive(:sleep) { |seconds| sleeps << seconds } }
 
-      def run_stop_signals
+      def run_stop_signals(signals, grace_time = 3)
+        process.stop_signals = signals
+        process.stop_grace_time = grace_time
         process.stop_process
         process.instance_variable_get(:@threads).each(&:join)
       end
 
-      # Record the signals sent, with their pids, and what cleanup does.
-      # Signal 0 finds the process running until it has been sent alive
-      # times.
-      def record_signals(alive = nil)
-        events = []
-        allow(::Process).to receive(:kill) do |signal, pid|
-          events << [signal, pid]
-          raise Errno::ESRCH if signal == 0 && alive && (alive -= 1) < 0
-
-          1
-        end
-        allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal) { events << :cleanup }
-        events
+      it 'sends a single signal, and waits for it' do
+        calls = record_calls
+        run_stop_signals([:quit])
+        expect(calls).to eq [['QUIT', 5], [0, 5], :cleanup, :unlink]
       end
 
-      it 'sends a single signal' do
-        process.stop_signals = [:quit]
-        run_stop_signals
+      it 'logs that it sends stop signals' do
+        run_stop_signals([:quit])
         expect(logger).to have_received(:warning).with('Sending stop signals to 5')
-        expect(logger).to have_received(:info).with('Sending signal quit to 5')
-        expect(::Process).to have_received(:kill).with('QUIT', 5)
+      end
+
+      it 'cleans up the journal of the process' do
+        run_stop_signals([:quit])
         expect(Bluepill::ProcessJournal).to have_received(:kill_all_from_journal).with(:proc_name)
       end
 
-      it 'sends each signal with a delay while the process is alive' do
-        process.stop_signals = [:quit, 2, :term, 3, :kill]
-        signals = record_signals
-        run_stop_signals
-        expect(signals).to eq [['QUIT', 5], [0, 5], ['TERM', 5], [0, 5], ['KILL', 5], :cleanup]
-        expect(logger).to have_received(:info).with('Sending signal quit to 5')
-        expect(logger).to have_received(:debug).with('Sleeping for 2 seconds')
-        expect(logger).to have_received(:info).with('Sending signal term to 5')
-        expect(logger).to have_received(:debug).with('Sleeping for 3 seconds')
-        expect(logger).to have_received(:info).with('Sending signal kill to 5')
+      it 'sends each signal while the process is alive' do
+        calls = record_calls
+        run_stop_signals([:quit, 2, :term, 3, :kill])
+        expect(calls).to eq [['QUIT', 5], [0, 5], ['TERM', 5], [0, 5], ['KILL', 5], :cleanup, :unlink]
+      end
+
+      it 'logs each signal' do
+        infos = record_log(:info)
+        run_stop_signals([:quit, 2, :term, 3, :kill])
+        expect(infos).to eq ['Sending signal quit to 5', 'Sending signal term to 5', 'Sending signal kill to 5']
+      end
+
+      it 'logs each delay' do
+        debugs = record_log(:debug)
+        run_stop_signals([:quit, 2, :term, 3, :kill])
+        expect(debugs).to eq ['Sleeping for 2 seconds', 'Sleeping for 3 seconds']
+      end
+
+      it 'waits for each delay' do
+        run_stop_signals([:quit, 2, :term, 3, :kill])
         expect(sleeps).to eq [2, 3]
+      end
+
+      it 'leaves the stop signals as they were' do
+        run_stop_signals([:quit, 2, :term, 3, :kill])
         expect(process.stop_signals).to eq [:quit, 2, :term, 3, :kill]
       end
 
       it 'stops once the process has terminated' do
-        process.stop_signals = [:quit, 2, :kill]
-        events = record_signals(0)
-        run_stop_signals
-        expect(events).to eq [['QUIT', 5], [0, 5], :cleanup]
+        calls = record_calls(0)
+        run_stop_signals([:quit, 2, :kill])
+        expect(calls).to eq [['QUIT', 5], [0, 5], :cleanup, :unlink]
+      end
+
+      it 'logs that the process has terminated' do
+        record_calls(0)
+        run_stop_signals([:quit, 2, :kill])
         expect(logger).to have_received(:debug).with('Process has terminated.')
       end
 
+      it 'checks a fractional wait in whole seconds, rounded up' do
+        calls = record_calls
+        run_stop_signals([:quit], 4.5)
+        expect(calls).to eq [['QUIT', 5], [0, 5], [0, 5], [0, 5], :cleanup, :unlink]
+      end
+
       it 'rounds a fractional wait up to whole seconds' do
-        process.stop_signals = [:quit]
-        process.stop_grace_time = 4.5
-        events = record_signals
-        run_stop_signals
-        expect(events).to eq [['QUIT', 5], [0, 5], [0, 5], [0, 5], :cleanup]
+        run_stop_signals([:quit], 4.5)
         expect(sleeps).to eq [1, 1, 1]
       end
 
       it 'waits for the process to exit before cleaning up' do
-        process.stop_signals = [:quit]
-        process.stop_grace_time = 5
-        events = record_signals
-        run_stop_signals
-        expect(events).to eq [['QUIT', 5], [0, 5], [0, 5], [0, 5], :cleanup]
+        calls = record_calls
+        run_stop_signals([:quit], 5)
+        expect(calls).to eq [['QUIT', 5], [0, 5], [0, 5], [0, 5], :cleanup, :unlink]
+      end
+
+      it 'waits a second between checks' do
+        run_stop_signals([:quit], 5)
         expect(sleeps).to eq [1, 1, 1]
       end
 
       it 'cleans up as soon as the process exits after the last signal' do
-        process.stop_signals = [:quit, 2, :term]
-        process.stop_grace_time = 10
-        events = record_signals(2)
-        run_stop_signals
-        expect(events).to eq [['QUIT', 5], [0, 5], ['TERM', 5], [0, 5], [0, 5], :cleanup]
+        calls = record_calls(2)
+        run_stop_signals([:quit, 2, :term], 10)
+        expect(calls).to eq [['QUIT', 5], [0, 5], ['TERM', 5], [0, 5], [0, 5], :cleanup, :unlink]
+      end
+
+      it 'stops waiting as soon as the process exits after the last signal' do
+        record_calls(2)
+        run_stop_signals([:quit, 2, :term], 10)
         expect(sleeps).to eq [2, 1]
       end
     end
   end
 
   describe '#restart_process' do
-    it 'functions' do
-      process.restart_command = '/etc/init.d/script restart'
-      allow(Timeout).to receive(:timeout).and_call_original
-      process.restart_process
-      expect(Bluepill::System).to have_received(:execute_blocking).with('/etc/init.d/script restart', process.system_command_options)
-      expect(Timeout).to have_received(:timeout).with(3)
-      expect(process.skip_ticks_until).to eq now.to_i + 3
+    context 'with a restart command' do
+      before do
+        process.restart_command = '/etc/init.d/script restart'
+        allow(Timeout).to receive(:timeout).and_call_original
+        process.restart_process
+      end
+
+      it 'runs the restart command with the process options' do
+        expect(Bluepill::System).to have_received(:execute_blocking).with('/etc/init.d/script restart', process.system_command_options)
+      end
+
+      it 'gives the restart command restart_grace_time' do
+        expect(Timeout).to have_received(:timeout).with(3)
+      end
+
+      it 'skips ticks for restart_grace_time' do
+        expect(process.skip_ticks_until).to eq now.to_i + 3
+      end
     end
 
     it 'dispatches restart when the restart command takes too long' do
       process.restart_command = '/etc/init.d/script restart'
       allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
       process.restart_process
-      expect(recorded_events).to eq [['restart', nil]]
+      expect(dispatched_events).to eq [['restart', nil]]
     end
 
-    it 'substitutes the pid and warns on a non-zero exit code' do
-      process.restart_command = 'restart {{PID}}'
-      process.actual_pid = 5
-      allow(Bluepill::System).to receive(:execute_blocking).and_return(exit_code: 1)
-      process.restart_process
-      expect(logger).to have_received(:warning).with('Executing restart command: restart 5').ordered
-      expect(logger).to have_received(:warning).with('Restart command execution returned non-zero exit code:').ordered
-      expect(Bluepill::System).to have_received(:execute_blocking).with('restart 5', anything)
+    context 'with a restart command that fails' do
+      before do
+        process.restart_command = 'restart {{PID}}'
+        run_process
+        allow(Bluepill::System).to receive(:execute_blocking).and_return(exit_code: 1)
+      end
+
+      it 'logs the command with the pid, and warns of the exit code' do
+        warnings = record_log(:warning)
+        process.restart_process
+        expect(warnings.first(2)).to eq ['Executing restart command: restart 5', 'Restart command execution returned non-zero exit code:']
+      end
+
+      it 'substitutes the pid' do
+        process.restart_process
+        expect(Bluepill::System).to have_received(:execute_blocking).with('restart 5', anything)
+      end
     end
 
-    it 'stops and starts without a restart command' do
-      run_process
-      process.start_command = 'start-cmd'
-      events = []
-      allow(::Process).to receive(:kill) { |signal, _pid| events << signal }
-      allow(Bluepill::System).to receive(:execute_blocking) { |command, _options| events << command && {exit_code: 0} }
-      process.restart_process
-      expect(logger).to have_received(:warning).with('No restart_command specified. Must stop and start to restart')
-      expect(events).to eq ['TERM', 'start-cmd']
-    end
+    context 'without a restart command' do
+      before do
+        run_process
+        process.start_command = 'start-cmd'
+      end
 
-    it 'waits for the stop signals to finish before starting' do
-      run_process
-      process.start_command = 'start-cmd'
-      # A real delay, and a grace time that leaves nothing to wait for after
-      # the last signal
-      process.stop_signals = [:quit, 0.1, :kill]
-      process.stop_grace_time = 2
-      events = []
-      allow(::Process).to receive(:kill) { |signal, _pid| events << signal }
-      allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal) { events << :cleanup }
-      allow(Bluepill::System).to receive(:execute_blocking) { |command, _options| events << command && {exit_code: 0} }
-      process.restart_process
-      expect(events).to eq ['QUIT', 0, 'KILL', :cleanup, :cleanup, 'start-cmd']
+      it 'logs that it stops and starts' do
+        process.restart_process
+        expect(logger).to have_received(:warning).with('No restart_command specified. Must stop and start to restart')
+      end
+
+      it 'stops and starts' do
+        calls = record_calls
+        process.restart_process
+        expect(calls).to eq [['TERM', 5], :cleanup, :unlink, :cleanup, 'start-cmd']
+      end
+
+      it 'waits for the stop signals to finish before starting' do
+        # A real delay, and a grace time that leaves nothing to wait for after
+        # the last signal
+        process.stop_signals = [:quit, 0.1, :kill]
+        process.stop_grace_time = 2
+        calls = record_calls
+        process.restart_process
+        expect(calls).to eq [['QUIT', 5], [0, 5], ['KILL', 5], :cleanup, :unlink, :cleanup, 'start-cmd']
+      end
     end
   end
 
   describe '#clean_threads' do
-    it 'kills and clears threads' do
-      thread = instance_double(Thread, 'thread', kill: nil)
-      process.instance_variable_get(:@threads) << thread
+    let(:thread) { leftover_thread }
+
+    before do
+      thread
       process.clean_threads
+    end
+
+    it 'kills threads' do
       expect(thread).to have_received(:kill)
+    end
+
+    it 'clears threads' do
       expect(process.instance_variable_get(:@threads)).to be_empty
     end
   end
@@ -849,53 +1217,70 @@ describe Bluepill::Process do
   describe '#signal_process' do
     before { process.actual_pid = 5 }
 
+    # Send a signal, and return whether signal_process sent it, with the
+    # signals and pids it gave ::Process.kill
+    def signal_and_kills(code)
+      kills = []
+      allow(::Process).to receive(:kill) { |*args| kills << args }
+      [process.signal_process(code), kills]
+    end
+
     it 'upcases string signals' do
-      expect(process.signal_process('hup')).to be true
-      expect(::Process).to have_received(:kill).with('HUP', 5)
+      expect(signal_and_kills('hup')).to eq [true, [['HUP', 5]]]
     end
 
     it 'upcases strings of a String subclass' do
-      expect(process.signal_process(Class.new(String).new('hup'))).to be true
-      expect(::Process).to have_received(:kill).with('HUP', 5)
+      expect(signal_and_kills(Class.new(String).new('hup'))).to eq [true, [['HUP', 5]]]
     end
 
     it 'turns symbol signals into upcased strings' do
-      expect(process.signal_process(:hup)).to be true
-      expect(::Process).to have_received(:kill).with('HUP', 5)
+      expect(signal_and_kills(:hup)).to eq [true, [['HUP', 5]]]
     end
 
     it 'signals pid 1' do
       process.actual_pid = 1
-      expect(process.signal_process(0)).to be true
-      expect(::Process).to have_received(:kill).with(0, 1)
+      expect(signal_and_kills(0)).to eq [true, [[0, 1]]]
     end
 
     it 'passes integer signals through' do
-      expect(process.signal_process(9)).to be true
-      expect(::Process).to have_received(:kill).with(9, 5)
+      expect(signal_and_kills(9)).to eq [true, [[9, 5]]]
     end
 
-    it 'logs and returns false on failure' do
-      allow(::Process).to receive(:kill).and_raise(Errno::EPERM)
-      expect(process.signal_process(0)).to be false
-      expect(logger).to have_received(:err).with(/Failed to signal process 5 with code 0/)
+    context 'when the signal fails' do
+      before { allow(::Process).to receive(:kill).and_raise(Errno::EPERM) }
+
+      it 'returns false' do
+        expect(process.signal_process(0)).to be false
+      end
+
+      it 'logs the failure' do
+        process.signal_process(0)
+        expect(logger).to have_received(:err).with(/Failed to signal process 5 with code 0/)
+      end
     end
 
     [0, -1].each do |pid|
       it "never signals pid #{pid}" do
         process.instance_variable_set(:@actual_pid, pid)
-        expect(process.signal_process(0)).to be false
+        expect(signal_and_kills(0)).to eq [false, []]
+      end
+
+      it "logs that pid #{pid} is invalid" do
+        process.instance_variable_set(:@actual_pid, pid)
+        process.signal_process(0)
         expect(logger).to have_received(:err).with("Failed to signal process #{pid} with code 0: invalid pid #{pid}")
-        expect(::Process).not_to have_received(:kill)
       end
     end
 
-    it 'returns false without an error when there is no pid' do
+    it 'returns false, without signaling, when there is no pid' do
       process.instance_variable_set(:@actual_pid, nil)
-      allow(logger).to receive(:err)
-      expect(process.signal_process(0)).to be false
+      expect(signal_and_kills(0)).to eq [false, []]
+    end
+
+    it 'logs no error when there is no pid' do
+      process.instance_variable_set(:@actual_pid, nil)
+      process.signal_process(0)
       expect(logger).not_to have_received(:err)
-      expect(::Process).not_to have_received(:kill)
     end
   end
 
@@ -936,29 +1321,36 @@ describe Bluepill::Process do
 
       after { FileUtils.remove_entry(dir) }
 
+      # Write each content to the pid file in turn, and read the pid after
+      # each
+      def read_pids(*contents)
+        contents.collect do |content|
+          File.write(process.pid_file, content)
+          process.actual_pid
+        end
+      end
+
       it 'reads the pid and caches it' do
-        File.write(process.pid_file, "77\n")
-        expect(process.actual_pid).to eq 77
-        File.write(process.pid_file, "78\n")
-        expect(process.actual_pid).to eq 77
+        expect(read_pids("77\n", "78\n")).to eq [77, 77]
+      end
+
+      it 'deletes the pid file when it cleans up after a stop' do
+        allow(Bluepill::System).to receive(:delete_if_exists).and_call_original
+        read_pids("77\n")
+        process.cleanup_process
+        expect(File.exist?(process.pid_file)).to be false
       end
 
       it 'forgets the cached pid when it cleans up after a stop' do
         allow(Bluepill::System).to receive(:delete_if_exists).and_call_original
-        File.write(process.pid_file, "77\n")
-        expect(process.actual_pid).to eq 77
+        before_cleanup = read_pids("77\n")
         process.cleanup_process
-        expect(File.exist?(process.pid_file)).to be false
-        File.write(process.pid_file, "78\n")
-        expect(process.actual_pid).to eq 78
+        expect(before_cleanup + read_pids("78\n")).to eq [77, 78]
       end
 
       it 'rereads the pid when not caching' do
         process.cache_actual_pid = false
-        File.write(process.pid_file, "77\n")
-        expect(process.actual_pid).to eq 77
-        File.write(process.pid_file, "78\n")
-        expect(process.actual_pid).to eq 78
+        expect(read_pids("77\n", "78\n")).to eq [77, 78]
       end
 
       it 'is nil for an empty pid file' do
@@ -968,10 +1360,7 @@ describe Bluepill::Process do
 
       it 'is nil for a pid file that does not hold a positive pid' do
         process.cache_actual_pid = false
-        ["0\n", "\n", 'garbage', '-5'].each do |content|
-          File.write(process.pid_file, content)
-          expect(process.actual_pid).to be_nil
-        end
+        expect(read_pids("0\n", "\n", 'garbage', '-5')).to eq [nil, nil, nil, nil]
       end
 
       it 'is not running for a pid file that holds 0' do
@@ -985,17 +1374,25 @@ describe Bluepill::Process do
         expect(process.actual_pid).to eq 1
       end
 
-      it 'warns when the pid file does not exist' do
+      it 'is nil when the pid file does not exist' do
         expect(process.actual_pid).to be_nil
+      end
+
+      it 'warns when the pid file does not exist' do
+        process.actual_pid
         expect(logger).to have_received(:warning).with("pid_file #{process.pid_file} does not exist or cannot be read")
       end
     end
   end
 
   describe '#actual_pid=' do
+    before { process.actual_pid = 12 }
+
     it 'journals the pid' do
-      process.actual_pid = 12
       expect(Bluepill::ProcessJournal).to have_received(:append_pid_to_journal).with(:proc_name, 12)
+    end
+
+    it 'sets the pid' do
       expect(process.actual_pid).to eq 12
     end
   end
@@ -1023,38 +1420,63 @@ describe Bluepill::Process do
       allow(logger).to receive(:prefix_with).and_return(child_logger)
     end
 
-    it 'prunes dead children and adds new ones' do
-      dead = instance_double(Bluepill::Process, 'dead', actual_pid: 6)
-      alive = instance_double(Bluepill::Process, 'alive', actual_pid: 7)
-      other = instance_double(Bluepill::Process, 'other', actual_pid: 9, process_running?: true)
-      new_child = instance_double(Bluepill::Process, 'new child')
-      process.children << dead << alive << other
-      allow(dead).to receive(:process_running?).with(true).and_return(false)
-      allow(alive).to receive(:process_running?).with(true).and_return(true)
-      allow(Bluepill::System).to receive(:get_children).with(5).and_return([7, 8, 9])
-      allow(factory).to receive(:create_child_process).
-        with('<child(pid:8)>', 8, child_logger).
-        and_return(new_child)
-      process.refresh_children!
-      expect(process.children).to eq [alive, other, new_child]
-      expect(logger).to have_received(:info).with('Existing children: 7,9. Got new children: [8] for 5')
-      expect(logger).to have_received(:prefix_with).with('<child(pid:8)>')
-      expect(Bluepill::ProcessJournal).not_to have_received(:append_pid_to_journal).with(:proc_name, 8)
+    context 'with dead, living and new children' do
+      let(:kids) do
+        {
+          dead: instance_double(described_class, 'dead', actual_pid: 6),
+          alive: instance_double(described_class, 'alive', actual_pid: 7),
+          other: instance_double(described_class, 'other', actual_pid: 9, process_running?: true),
+          new: instance_double(described_class, 'new child'),
+        }
+      end
+
+      before do
+        process.children.concat(kids.values_at(:dead, :alive, :other))
+        allow(kids[:dead]).to receive(:process_running?).with(true).and_return(false)
+        allow(kids[:alive]).to receive(:process_running?).with(true).and_return(true)
+        allow(Bluepill::System).to receive(:get_children).with(5).and_return([7, 8, 9])
+        allow(factory).to receive(:create_child_process).with('<child(pid:8)>', 8, child_logger).and_return(kids[:new])
+        process.refresh_children!
+      end
+
+      it 'prunes dead children and adds new ones' do
+        expect(process.children).to eq kids.values_at(:alive, :other, :new)
+      end
+
+      it 'logs the children it has and finds' do
+        expect(logger).to have_received(:info).with('Existing children: 7,9. Got new children: [8] for 5')
+      end
+
+      it "prefixes the new child's logger with its name" do
+        expect(logger).to have_received(:prefix_with).with('<child(pid:8)>')
+      end
+
+      it 'journals no children when not daemonized' do
+        expect(Bluepill::ProcessJournal).not_to have_received(:append_pid_to_journal).with(:proc_name, 8)
+      end
     end
 
     it 'journals new children when daemonized' do
       process.daemonize = true
       allow(Bluepill::System).to receive(:get_children).and_return([8])
-      allow(factory).to receive(:create_child_process).and_return(instance_double(Bluepill::Process, 'child'))
+      allow(factory).to receive(:create_child_process).and_return(instance_double(described_class, 'child'))
       process.refresh_children!
       expect(Bluepill::ProcessJournal).to have_received(:append_pid_to_journal).with(:proc_name, 8)
     end
 
-    it 'does nothing without new children' do
-      allow(Bluepill::System).to receive(:get_children).and_return([])
-      process.refresh_children!
-      expect(logger).not_to have_received(:info)
-      expect(process.children).to be_empty
+    context 'without new children' do
+      before do
+        allow(Bluepill::System).to receive(:get_children).and_return([])
+        process.refresh_children!
+      end
+
+      it 'logs nothing' do
+        expect(logger).not_to have_received(:info)
+      end
+
+      it 'adds no children' do
+        expect(process.children).to be_empty
+      end
     end
   end
 
@@ -1065,53 +1487,68 @@ describe Bluepill::Process do
       expect(process.with_timeout(3, 'state_override') { :done }).to eq :done
     end
 
-    it 'proceeds to next_state on timeout.' do
-      allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
-      process.with_timeout(3, 'unmonitor', &block)
-      expect(logger).to have_received(:err).with('Execution is taking longer than expected.').ordered
-      expect(logger).to have_received(:err).with('Did you forget to tell bluepill to daemonize this process?').ordered
-      expect(Timeout).to have_received(:timeout).with(3)
-      expect(recorded_events).to eq [['unmonitor', nil]]
+    context 'when the block times out' do
+      let(:errors) { record_log(:err) }
+
+      before do
+        allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
+        errors
+        process.with_timeout(3, 'unmonitor', &block)
+      end
+
+      it 'logs why it might' do
+        expect(errors).to eq ['Execution is taking longer than expected.', 'Did you forget to tell bluepill to daemonize this process?']
+      end
+
+      it 'gives the block its time' do
+        expect(Timeout).to have_received(:timeout).with(3)
+      end
+
+      it 'proceeds to next_state' do
+        expect(dispatched_events).to eq [['unmonitor', nil]]
+      end
     end
 
     it 'times out after a fraction of a second' do
       process.with_timeout(0.01, 'unmonitor') { Kernel.sleep 1 }
-      expect(recorded_events).to eq [['unmonitor', nil]]
+      expect(dispatched_events).to eq [['unmonitor', nil]]
     end
   end
 
   describe '#system_command_options' do
-    it 'passes the process settings to the command' do
-      process.uid = 'user'
-      process.gid = 'group'
-      process.working_dir = '/work'
-      process.environment = {'A' => 'b'}
-      process.pid_file = 'proc.pid'
-      process.stdin = 'in'
-      process.stdout = 'out'
-      process.stderr = 'err'
-      process.supplementary_groups = ['extra']
-      expect(process.system_command_options).to eq(
+    subject(:process) { described_class.new(:proc_name, [], options.merge(logger: logger)) }
+
+    let(:options) do
+      {
         uid: 'user',
         gid: 'group',
         working_dir: '/work',
         environment: {'A' => 'b'},
         pid_file: 'proc.pid',
-        logger: logger,
         stdin: 'in',
         stdout: 'out',
         stderr: 'err',
-        supplementary_groups: ['extra']
-      )
+        supplementary_groups: ['extra'],
+      }
+    end
+
+    it 'passes the process settings to the command' do
+      expect(process.system_command_options).to eq options.merge(logger: logger)
     end
   end
 
   describe '#clear_pid' do
-    it 'keeps the last pid for notify_command' do
+    before do
       process.actual_pid = 5
       process.clear_pid
       process.clear_pid
+    end
+
+    it 'forgets the pid' do
       expect(process.instance_variable_get(:@actual_pid)).to be_nil
+    end
+
+    it 'keeps the last pid for notify_command' do
       expect(process.instance_variable_get(:@last_pid)).to eq 5
     end
   end
@@ -1119,13 +1556,24 @@ describe Bluepill::Process do
   describe '#run_hook' do
     let(:options) { process.system_command_options }
 
-    it "runs the command with the pid, and the process's options and environment" do
-      process.environment = {'A' => '1'}
-      process.run_hook('renice 20 {{PID}} {{PID}}', 'Post start', 7, 'B' => '2')
-      expect(logger).to have_received(:info).with('Executing post start command: renice 20 7 7')
-      expect(logger).not_to have_received(:warning)
-      expect(Bluepill::System).to have_received(:execute_blocking).
-        with('renice 20 7 7', options.merge(environment: {'A' => '1', 'B' => '2'}, timeout: 30))
+    context 'with a pid and an environment' do
+      before do
+        process.environment = {'A' => '1'}
+        process.run_hook('renice 20 {{PID}} {{PID}}', 'Post start', 7, 'B' => '2')
+      end
+
+      it 'logs the command with the pid' do
+        expect(logger).to have_received(:info).with('Executing post start command: renice 20 7 7')
+      end
+
+      it 'warns of nothing when the command succeeds' do
+        expect(logger).not_to have_received(:warning)
+      end
+
+      it "runs the command with the pid, and the process's options and environment" do
+        expect(Bluepill::System).to have_received(:execute_blocking).
+          with('renice 20 7 7', options.merge(environment: {'A' => '1', 'B' => '2'}, timeout: 30))
+      end
     end
 
     it 'adds nothing to the environment by default' do
@@ -1152,25 +1600,35 @@ describe Bluepill::Process do
       expect(logger).to have_received(:warning).with('Pre stop command took longer than 5 seconds: drain {{PID}}')
     end
 
-    it 'logs a command that fails to run, without raising' do
-      allow(Bluepill::System).to receive(:execute_blocking).and_raise(Errno::EAGAIN, 'fork')
-      expect { process.run_hook('cleanup', 'Post stop', 7) }.not_to raise_error
-      expect(logger).to have_received(:err).with('Post stop command failed: Resource temporarily unavailable - fork')
+    context 'with a command that fails to run' do
+      before { allow(Bluepill::System).to receive(:execute_blocking).and_raise(Errno::EAGAIN, 'fork') }
+
+      it 'does not raise' do
+        expect { process.run_hook('cleanup', 'Post stop', 7) }.not_to raise_error
+      end
+
+      it 'logs the failure' do
+        process.run_hook('cleanup', 'Post stop', 7)
+        expect(logger).to have_received(:err).with('Post stop command failed: Resource temporarily unavailable - fork')
+      end
     end
   end
 
   describe '#run_hook_in_background' do
     it 'runs the hook in a thread of its own' do
-      ran_on = []
-      allow(Bluepill::System).to receive(:execute_blocking) { ran_on << Thread.current && {exit_code: 0} }
+      ran_on = record_command_threads
       thread = process.run_hook_in_background('alert', 'Notify', 5, 'A' => '1')
       thread.join
       expect(ran_on).to eq [thread]
     end
 
-    it 'runs the hook with its description, pid and environment' do
+    it 'runs the hook with its pid and environment' do
       process.run_hook_in_background('alert {{PID}}', 'Notify', 5, 'A' => '1').join
       expect(Bluepill::System).to have_received(:execute_blocking).with('alert 5', hash_including(environment: {'A' => '1'}))
+    end
+
+    it 'logs the hook with its description' do
+      process.run_hook_in_background('alert {{PID}}', 'Notify', 5, 'A' => '1').join
       expect(logger).to have_received(:info).with('Executing notify command: alert 5')
     end
 
@@ -1182,37 +1640,49 @@ describe Bluepill::Process do
   end
 
   describe '#post_start_process' do
+    before do
+      process.post_start_command = 'renice 20 {{PID}}'
+      run_process
+    end
+
     it 'does nothing without a post start command' do
+      process.post_start_command = nil
       expect(process.post_start_process).to be_nil
     end
 
     it 'runs the post start command with the pid in the background' do
-      run_process
-      process.post_start_command = 'renice 20 {{PID}}'
       process.post_start_process.join
       expect(Bluepill::System).to have_received(:execute_blocking).with('renice 20 5', anything)
+    end
+
+    it 'logs the post start command' do
+      process.post_start_process.join
       expect(logger).to have_received(:info).with('Executing post start command: renice 20 5')
     end
 
     %w[starting restarting].each do |state|
-      it "runs when the process comes up from #{state}" do
-        threads = capture_threads
-        process.post_start_command = 'renice'
-        process.state = state
-        run_process
-        process.tick
-        threads.each(&:join)
-        expect(Bluepill::System).to have_received(:execute_blocking).with('renice', anything)
-        expect(process).to be_up
+      context "when the process comes up from #{state}" do
+        before do
+          threads = capture_threads
+          process.state = state
+          process.tick
+          threads.each(&:join)
+        end
+
+        it 'runs' do
+          expect(Bluepill::System).to have_received(:execute_blocking).with('renice 20 5', anything)
+        end
+
+        it 'is up' do
+          expect(process).to be_up
+        end
       end
     end
 
     %w[down up stopping].each do |state|
       it "doesn't run when a process comes back up by itself, or stays up, from #{state}" do
         threads = capture_threads
-        process.post_start_command = 'renice'
         process.state = state
-        run_process
         process.tick
         expect(threads).to be_empty
       end
@@ -1224,11 +1694,9 @@ describe Bluepill::Process do
 
     it 'runs the pre stop command, and waits for it, before stopping' do
       process.pre_stop_command = 'drain {{PID}}'
-      events = []
-      allow(Bluepill::System).to receive(:execute_blocking) { |command, _options| events << command && {exit_code: 0} }
-      allow(::Process).to receive(:kill) { |signal, _pid| events << signal }
+      calls = record_calls
       process.stop_process
-      expect(events).to eq ['drain 5', 'TERM']
+      expect(calls).to eq ['drain 5', ['TERM', 5], :cleanup, :unlink]
     end
 
     it 'runs the pre stop command as Pre stop' do
@@ -1249,62 +1717,94 @@ describe Bluepill::Process do
   end
 
   describe '#post_stop_process' do
-    before { run_process }
-
-    it 'runs the post stop command in the background, after cleaning up' do
-      threads = capture_threads
+    before do
+      run_process
       process.post_stop_command = 'rm /tmp/{{PID}}.sock'
-      events = []
-      allow(Bluepill::System).to receive(:delete_if_exists) { events << :unlink }
-      allow(Bluepill::System).to receive(:execute_blocking) { |command, _options| events << [command, Thread.current] && {exit_code: 0} }
+    end
+
+    it 'runs the post stop command after cleaning up' do
+      threads = capture_threads
+      calls = record_calls
       process.stop_process
       threads.each(&:join)
-      expect(events).to eq [:unlink, ['rm /tmp/5.sock', threads.first]]
+      expect(calls).to eq [['TERM', 5], :cleanup, :unlink, 'rm /tmp/5.sock']
     end
 
-    it 'gives the pid of the process that stopped, after bluepill forgets it' do
-      process.stop_process
-      process.clear_pid
-      process.post_stop_command = 'rm /tmp/{{PID}}.sock'
-      process.post_stop_process.join
-      expect(Bluepill::System).to have_received(:execute_blocking).with('rm /tmp/5.sock', anything)
-      expect(logger).to have_received(:info).with('Executing post stop command: rm /tmp/5.sock')
-    end
-
-    it 'does nothing without a post stop command' do
+    it 'runs the post stop command in the background' do
       threads = capture_threads
+      ran_on = record_command_threads
       process.stop_process
-      expect(threads).to be_empty
-      expect(process.post_stop_process).to be_nil
+      threads.each(&:join)
+      expect(ran_on).to eq threads
+    end
+
+    context 'when bluepill has forgotten the pid of the process that stopped' do
+      before do
+        process.post_stop_command = nil
+        process.stop_process
+        process.clear_pid
+        process.post_stop_command = 'rm /tmp/{{PID}}.sock'
+        process.post_stop_process.join
+      end
+
+      it 'gives the post stop command that pid' do
+        expect(Bluepill::System).to have_received(:execute_blocking).with('rm /tmp/5.sock', anything)
+      end
+
+      it 'logs the post stop command' do
+        expect(logger).to have_received(:info).with('Executing post stop command: rm /tmp/5.sock')
+      end
+    end
+
+    context 'without a post stop command' do
+      before { process.post_stop_command = nil }
+
+      it 'runs nothing in the background' do
+        threads = capture_threads
+        process.stop_process
+        expect(threads).to be_empty
+      end
+
+      it 'does nothing' do
+        expect(process.post_stop_process).to be_nil
+      end
     end
   end
 
   describe '#notify_transition' do
-    let(:transition) { Bluepill::Process::Transition.new(:up, :restarting) }
+    let(:transition) { described_class::Transition.new(:up, :restarting) }
 
     before { process.notify_command = 'alert {{PID}}' }
 
-    it 'runs the notify command in the background, with the details in its environment' do
-      process.app_name = 'app'
-      process.group_name = 'web'
-      run_process
-      process.instance_variable_set(:@transition_reason, 'mem_usage: [1.2GB*]')
-      process.notify_transition(transition).join
-      expect(Bluepill::System).to have_received(:execute_blocking).with(
-        'alert 5',
-        hash_including(
-          environment: {
-            'BLUEPILL_APP' => 'app',
-            'BLUEPILL_GROUP' => 'web',
-            'BLUEPILL_PROCESS' => 'proc_name',
-            'BLUEPILL_FROM' => 'up',
-            'BLUEPILL_TO' => 'restarting',
-            'BLUEPILL_REASON' => 'mem_usage: [1.2GB*]',
-            'BLUEPILL_PID' => '5',
-          }
+    context 'with an app, a group, a pid and a reason' do
+      before do
+        process.app_name = 'app'
+        process.group_name = 'web'
+        run_process
+        process.instance_variable_set(:@transition_reason, 'mem_usage: [1.2GB*]')
+        process.notify_transition(transition).join
+      end
+
+      it 'runs the notify command in the background, with the details in its environment' do
+        expect(Bluepill::System).to have_received(:execute_blocking).with(
+          'alert 5',
+          hash_including(
+            environment: {
+              'BLUEPILL_APP' => 'app',
+              'BLUEPILL_GROUP' => 'web',
+              'BLUEPILL_PROCESS' => 'proc_name',
+              'BLUEPILL_FROM' => 'up',
+              'BLUEPILL_TO' => 'restarting',
+              'BLUEPILL_REASON' => 'mem_usage: [1.2GB*]',
+              'BLUEPILL_PID' => '5',
+            }
+          )
         )
-      )
-      expect(logger).to have_received(:info).with('Executing notify command: alert 5')
+      end
+
+      it 'logs the notify command' do
+        expect(logger).to have_received(:info).with('Executing notify command: alert 5')
+      end
     end
 
     it 'gives the last pid of a process that died, and empty values for what it lacks' do
@@ -1323,7 +1823,7 @@ describe Bluepill::Process do
     end
 
     it 'does nothing for a loopback' do
-      expect(process.notify_transition(Bluepill::Process::Transition.new(:up, :up))).to be_nil
+      expect(process.notify_transition(described_class::Transition.new(:up, :up))).to be_nil
     end
 
     it 'does nothing without a notify command' do
@@ -1331,23 +1831,44 @@ describe Bluepill::Process do
       expect(process.notify_transition(transition)).to be_nil
     end
 
-    it "runs on each change of state, with the event's reason" do
-      threads = capture_threads
-      process.state = 'up'
-      process.dispatch!(:stop, 'user initiated')
-      threads.each(&:join)
-      expect(Bluepill::System).to have_received(:execute_blocking).with(
-        'alert ',
-        hash_including(environment: hash_including('BLUEPILL_FROM' => 'up', 'BLUEPILL_TO' => 'stopping', 'BLUEPILL_REASON' => 'user initiated'))
-      )
-      expect(process.instance_variable_get(:@transition_reason)).to be_nil
+    context 'when an event changes the state' do
+      before do
+        threads = capture_threads
+        process.state = 'up'
+        process.dispatch!(:stop, 'user initiated')
+        threads.each(&:join)
+      end
+
+      it "runs, with the event's reason" do
+        expect(Bluepill::System).to have_received(:execute_blocking).with(
+          'alert ',
+          hash_including(environment: hash_including('BLUEPILL_FROM' => 'up', 'BLUEPILL_TO' => 'stopping', 'BLUEPILL_REASON' => 'user initiated'))
+        )
+      end
+
+      it 'forgets the reason after' do
+        expect(process.instance_variable_get(:@transition_reason)).to be_nil
+      end
     end
 
-    it 'forgets the reason even when the transition raises' do
-      process.state = 'up'
-      allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal).and_raise('boom')
-      expect { process.dispatch!(:stop, 'user initiated') }.to raise_error('boom')
-      expect(process.instance_variable_get(:@transition_reason)).to be_nil
+    context 'when the transition raises' do
+      before do
+        process.state = 'up'
+        allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal).and_raise('boom')
+      end
+
+      it 'raises' do
+        expect { process.dispatch!(:stop, 'user initiated') }.to raise_error('boom')
+      end
+
+      it 'forgets the reason even so' do
+        begin
+          process.dispatch!(:stop, 'user initiated')
+        rescue RuntimeError
+          nil
+        end
+        expect(process.instance_variable_get(:@transition_reason)).to be_nil
+      end
     end
   end
 end

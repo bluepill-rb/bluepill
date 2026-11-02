@@ -10,15 +10,16 @@ describe Bluepill::Units do
     gigabytes: 1_073_741_824, gigabyte: 1_073_741_824
   }.each do |method, factor|
     it "turns #{method} into a plain number" do
-      expect(units(3, method)).to eql(3 * factor)
-      expect(units(1.5, method)).to eql(1.5 * factor)
+      expect([units(3, method), units(1.5, method)]).to eql([3 * factor, 1.5 * factor])
     end
   end
 
-  it 'gives Numeric its methods' do
+  it 'is mixed into Numeric' do
     expect(Numeric.ancestors).to include(described_class)
-    expect(10.seconds).to eq(10)
-    expect(100.megabytes).to eq(104_857_600)
+  end
+
+  it 'gives Numeric its methods' do
+    expect([10.seconds, 100.megabytes]).to eq([10, 104_857_600])
   end
 
   it "never replaces a method Numeric's own class defines" do

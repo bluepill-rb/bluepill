@@ -35,16 +35,12 @@ describe Bluepill::AppProxy do
         group 'servers'
       end
 
-      expect(app).to have_received(:add_process) do |process, group|
-        expect(process).to be_a(Bluepill::Process)
-        expect(process.name).to eq('web')
-        expect(process.working_dir).to eq('/work')
-        expect(process.uid).to eq('user')
-        # The default pid file is assigned before the process block runs, so
-        # it does not include a group set inside the block.
-        expect(process.pid_file).to eq('/pids/web.pid')
-        expect(group).to eq('servers')
-      end
+      # The default pid file is assigned before the process block runs, so
+      # it does not include a group set inside the block.
+      process = be_a(Bluepill::Process).and have_attributes(
+        name: 'web', working_dir: '/work', uid: 'user', pid_file: '/pids/web.pid'
+      )
+      expect(app).to have_received(:add_process).with(process, 'servers')
     end
 
     it "gives every process the app's supplementary groups, unless it sets its own" do

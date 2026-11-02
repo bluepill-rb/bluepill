@@ -19,46 +19,103 @@ describe Bluepill::Socket do
   end
 
   describe '.client_command' do
+    let(:printed) { [] }
+
     before do
       allow(Timeout).to receive(:timeout).with(Bluepill::Socket::TIMEOUT).and_yield
-      allow(described_class).to receive(:puts)
+      allow(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
+      allow(described_class).to receive(:puts) { |line| printed << line }
       allow(described_class).to receive(:abort)
     end
 
-    it 'sends the command and returns the response' do
-      allow(socket).to receive(:read).and_return(Marshal.dump(%w[ok]))
-      allow(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
-      expect(described_class.client_command(base_dir, 'app', 'status')).to eq(%w[ok])
-      expect(UNIXSocket).to have_received(:open).once
-      expect(socket).to have_received(:puts).with('status')
-      expect(Timeout).to have_received(:timeout).with(Bluepill::Socket::TIMEOUT).once
-      expect(described_class).not_to have_received(:puts)
+    def client_command
+      described_class.client_command(base_dir, 'app', 'status')
     end
 
-    it 'retries after a timeout' do
-      calls = 0
-      allow(socket).to receive(:read) do
-        calls += 1
-        raise Timeout::Error if calls < 3
+    context 'when the daemon answers' do
+      before { allow(socket).to receive(:read).and_return(Marshal.dump(%w[ok])) }
 
-        Marshal.dump('done')
+      it 'returns the response' do
+        expect(client_command).to eq(%w[ok])
       end
-      allow(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
-      expect(described_class.client_command(base_dir, 'app', 'status')).to eq('done')
-      expect(described_class).to have_received(:puts).with('Retry 1 of 5').ordered
-      expect(described_class).to have_received(:puts).with('Retry 2 of 5').ordered
-      expect(described_class).to have_received(:puts).twice
-      expect(described_class).not_to have_received(:abort)
+
+      it 'sends the command' do
+        client_command
+        expect(socket).to have_received(:puts).with('status')
+      end
+
+      it 'waits for the answer once, for at most TIMEOUT' do
+        client_command
+        expect(Timeout).to have_received(:timeout).with(Bluepill::Socket::TIMEOUT).once
+      end
+
+      it 'connects once' do
+        client_command
+        expect(UNIXSocket).to have_received(:open).once
+      end
+
+      it 'does not retry' do
+        client_command
+        expect(printed).to eq([])
+      end
     end
 
-    it 'aborts after the maximum number of attempts' do
-      allow(socket).to receive(:read).and_raise(EOFError)
-      allow(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
-      allow(described_class).to receive(:abort).and_raise(SystemExit)
-      expect { described_class.client_command(base_dir, 'app', 'status') }.to raise_error(SystemExit)
-      expect(UNIXSocket).to have_received(:open).exactly(Bluepill::Socket::MAX_ATTEMPTS).times
-      expect(described_class).to have_received(:puts).exactly(Bluepill::Socket::MAX_ATTEMPTS - 1).times
-      expect(described_class).to have_received(:abort).with('Socket Timeout: Server may not be responding').once
+    context 'when the daemon times out twice' do
+      before do
+        calls = 0
+        allow(socket).to receive(:read) do
+          calls += 1
+          raise Timeout::Error if calls < 3
+
+          Marshal.dump('done')
+        end
+      end
+
+      it 'returns the response' do
+        expect(client_command).to eq('done')
+      end
+
+      it 'says it retries' do
+        client_command
+        expect(printed).to eq(['Retry 1 of 5', 'Retry 2 of 5'])
+      end
+
+      it 'does not abort' do
+        client_command
+        expect(described_class).not_to have_received(:abort)
+      end
+    end
+
+    context 'when the daemon never answers' do
+      before do
+        allow(socket).to receive(:read).and_raise(EOFError)
+        allow(described_class).to receive(:abort).and_raise(SystemExit)
+      end
+
+      def client_command_until_abort
+        client_command
+      rescue SystemExit
+        nil
+      end
+
+      it 'ends with the abort' do
+        expect { client_command }.to raise_error(SystemExit)
+      end
+
+      it 'tries MAX_ATTEMPTS times' do
+        client_command_until_abort
+        expect(UNIXSocket).to have_received(:open).exactly(Bluepill::Socket::MAX_ATTEMPTS).times
+      end
+
+      it 'says it retries after each attempt but the last' do
+        client_command_until_abort
+        expect(printed).to eq(['Retry 1 of 5', 'Retry 2 of 5', 'Retry 3 of 5', 'Retry 4 of 5'])
+      end
+
+      it 'aborts once' do
+        client_command_until_abort
+        expect(described_class).to have_received(:abort).with('Socket Timeout: Server may not be responding').once
+      end
     end
   end
 
@@ -79,25 +136,25 @@ describe Bluepill::Socket do
 
           server
         end
+        allow(File).to receive(:delete)
       end
 
       it 'replaces a stale socket file' do
         allow(UNIXSocket).to receive(:open).with(socket_path).and_raise(Errno::ECONNREFUSED)
-        allow(File).to receive(:delete)
         expect(described_class.server(base_dir, 'app')).to be(server)
+      end
+
+      it 'deletes a stale socket file' do
+        allow(UNIXSocket).to receive(:open).with(socket_path).and_raise(Errno::ECONNREFUSED)
+        described_class.server(base_dir, 'app')
         expect(File).to have_received(:delete).with(socket_path)
       end
 
-      context 'when another server is listening' do
-        before do
-          allow(UNIXSocket).to receive(:open).with(socket_path).and_return(socket)
-        end
-
-        it 'prints an error and exit' do
-          expect { described_class.server(base_dir, 'app') }.to raise_error(
-            an_instance_of(SystemExit).and(having_attributes(status: 7))
-          ).and output("Server is already running!\n").to_stderr
-        end
+      it 'prints an error and exits when another server is listening' do
+        allow(UNIXSocket).to receive(:open).with(socket_path).and_return(socket)
+        expect { described_class.server(base_dir, 'app') }.to raise_error(
+          an_instance_of(SystemExit).and(having_attributes(status: 7))
+        ).and output("Server is already running!\n").to_stderr
       end
     end
   end

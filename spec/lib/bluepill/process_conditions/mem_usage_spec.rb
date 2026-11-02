@@ -39,14 +39,11 @@ describe Bluepill::ProcessConditions::MemUsage do
 
   describe '#format_value' do
     it 'formats values of at least one megabyte in megabytes' do
-      expect(condition.format_value(1024.0)).to eq('1MB')
-      expect(condition.format_value(2560.0)).to eq('3MB')
-      expect(condition.format_value(10_751.0)).to eq('10MB')
+      expect([1024.0, 2560.0, 10_751.0].collect { |value| condition.format_value(value) }).to eq(%w[1MB 3MB 10MB])
     end
 
     it 'formats smaller values in kilobytes' do
-      expect(condition.format_value(1023.0)).to eq('1023KB')
-      expect(condition.format_value(1023.9)).to eq('1023KB')
+      expect([1023.0, 1023.9].collect { |value| condition.format_value(value) }).to eq(%w[1023KB 1023KB])
     end
   end
 end

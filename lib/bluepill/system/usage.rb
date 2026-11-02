@@ -18,7 +18,7 @@ module Bluepill
       #
       # @api private
       def pid_alive?(pid)
-        reap(pid)
+        reap(pid) unless Daemonize::CAN_FORK
         ::Process.kill(0, pid)
         true
       rescue Errno::EPERM # no permission, but it is definitely alive
@@ -33,7 +33,7 @@ module Bluepill
       # zombie, which kill(0) still finds, until bluepill collects its exit
       # status. A thread that waits for it instead would keep JRuby from
       # exiting while the daemon runs. A Ruby that forks has no daemons to
-      # collect, since init adopts them.
+      # collect, since init adopts them, so it isn't called there.
       #
       # @param [Integer, nil] pid the daemon's pid
       #
@@ -41,7 +41,7 @@ module Bluepill
       #
       # @api private
       def reap(pid)
-        ::Process.wait(pid, ::Process::WNOHANG) if pid && !Daemonize.can_fork?
+        ::Process.wait(pid, ::Process::WNOHANG) if pid
       rescue Errno::ECHILD
         # It isn't bluepill's child, or was collected already
       end

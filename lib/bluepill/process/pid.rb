@@ -48,7 +48,7 @@ module Bluepill
         raise "invalid pid #{pid}" unless pid > 0
 
         # A spawned daemon that exited is a zombie until it's collected
-        System.reap(pid)
+        System.reap(pid) unless Daemonize::CAN_FORK
         ::Process.kill(code, pid)
         true
       rescue => e

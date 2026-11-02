@@ -8,6 +8,8 @@ module Bluepill
 
     DAEMON_ENV: String
 
+    CAN_FORK: bool
+
     def self.can_fork?: () -> bool
 
     def self.safefork: () -> Integer?

@@ -54,15 +54,19 @@ module Bluepill
     # fork starts to be its daemon
     DAEMON_ENV = "BLUEPILL_DAEMON"
 
-    # Return whether this Ruby can fork
+    # Whether this Ruby can fork
     #
     # JRuby can't, since the JVM runs threads of its own that a fork would
-    # leave behind. Bluepill spawns its commands there instead.
+    # leave behind. Bluepill spawns its commands there instead. It's checked
+    # once, since bluepill checks it each time it signals a process.
+    CAN_FORK = ::Process.respond_to?(:fork)
+
+    # Return whether this Ruby can fork
     #
     # @return [Boolean]
     #
     # @api private
-    def self.can_fork? = ::Process.respond_to?(:fork)
+    def self.can_fork? = CAN_FORK
 
     # Fork, retrying every 5 seconds while the system is out of processes
     #
@@ -176,9 +180,7 @@ module Bluepill
     def self.daemonize_without_fork
       start_daemon_bluepill unless ENV.delete(DAEMON_ENV)
 
-      session = detach
-      Dir.chdir("/")
-      session
+      detach.tap { Dir.chdir("/") }
     end
 
     # Start a bluepill that runs the same pill file to be the daemon, and exit

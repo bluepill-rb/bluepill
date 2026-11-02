@@ -50,16 +50,28 @@ describe Bluepill::Process do
   describe "#signal_process" do
     before { process.actual_pid = 5 }
 
-    it "collects a spawned daemon's exit status before signaling it" do
-      calls = []
-      allow(Bluepill::System).to receive(:reap) { |pid| calls << [:reap, pid] }
-      allow(::Process).to receive(:kill) { |code, pid| calls << [:kill, code, pid] }
+    context "when Ruby can't fork" do
+      before { stub_const("Bluepill::Daemonize::CAN_FORK", false) }
+
+      it "collects a spawned daemon's exit status before signaling it" do
+        calls = []
+        allow(Bluepill::System).to receive(:reap) { |pid| calls << [:reap, pid] }
+        allow(::Process).to receive(:kill) { |code, pid| calls << [:kill, code, pid] }
+        process.signal_process(0)
+        expect(calls).to eq([[:reap, 5], [:kill, 0, 5]])
+      end
+    end
+
+    it "collects nothing on a Ruby that forks, whose daemons init adopts" do
+      stub_const("Bluepill::Daemonize::CAN_FORK", true)
+      allow(Bluepill::System).to receive(:reap)
+      allow(::Process).to receive(:kill)
       process.signal_process(0)
-      expect(calls).to eq([[:reap, 5], [:kill, 0, 5]])
+      expect(Bluepill::System).not_to have_received(:reap)
     end
 
     it "sees that a spawned daemon that exited isn't running, on a Ruby that can't fork" do
-      allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(false)
+      stub_const("Bluepill::Daemonize::CAN_FORK", false)
       allow(::Process).to receive(:kill).and_call_original
       pid = process.actual_pid = Process.spawn("true")
       500.times { `ps -o stat= -p #{pid}`.start_with?("Z") ? break : sleep(0.01) }

@@ -20,16 +20,20 @@ describe Bluepill::Daemonize do
     allow(Signal).to(receive(:trap)) { |*args| events << [:trap, *args] }
   end
 
-  describe ".can_fork?" do
-    before { allow(Process).to receive(:respond_to?).and_call_original }
+  describe "CAN_FORK" do
+    it "is whether Process can fork, which JRuby's can't" do
+      expect(described_class::CAN_FORK).to be(Process.respond_to?(:fork))
+    end
+  end
 
-    it "is true when Process can fork" do
-      allow(Process).to receive(:respond_to?).with(:fork).and_return(true)
+  describe ".can_fork?" do
+    it "is true when Ruby can fork" do
+      stub_const("Bluepill::Daemonize::CAN_FORK", true)
       expect(described_class.can_fork?).to be(true)
     end
 
     it "is false when it can't, as on JRuby" do
-      allow(Process).to receive(:respond_to?).with(:fork).and_return(false)
+      stub_const("Bluepill::Daemonize::CAN_FORK", false)
       expect(described_class.can_fork?).to be(false)
     end
   end

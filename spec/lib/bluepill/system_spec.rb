@@ -60,12 +60,17 @@ describe Bluepill::System do
       end
 
       it "is false, once it collects the zombie's exit status, on a Ruby that can't fork" do
-        allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(false)
+        stub_const("Bluepill::Daemonize::CAN_FORK", false)
         expect(described_class.pid_alive?(exited_child)).to be false
       end
 
-      it "is true for the zombie without collecting it" do
-        allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(true)
+      it "is true for a process that's running, on a Ruby that can't fork" do
+        stub_const("Bluepill::Daemonize::CAN_FORK", false)
+        expect(described_class.pid_alive?(Process.pid)).to be true
+      end
+
+      it "is true for the zombie without collecting it, on a Ruby that forks" do
+        stub_const("Bluepill::Daemonize::CAN_FORK", true)
         pid = exited_child
         expect(described_class.pid_alive?(pid)).to be true
       ensure
@@ -77,11 +82,8 @@ describe Bluepill::System do
   describe ".reap" do
     before { allow(Process).to receive(:wait).and_call_original }
 
-    # Reap the pid on a Ruby that can or can't fork
-    def reap(pid, can_fork: false)
-      allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(can_fork)
-      described_class.reap(pid)
-    end
+    # Reap the pid
+    def reap(pid) = described_class.reap(pid)
 
     it "collects the exit status without waiting for a process that hasn't exited" do
       allow(Process).to receive(:wait).with(555, Process::WNOHANG).and_return(nil)
@@ -95,11 +97,6 @@ describe Bluepill::System do
 
     it "ignores no pid" do
       reap(nil)
-      expect(Process).not_to have_received(:wait)
-    end
-
-    it "collects nothing on a Ruby that forks, whose daemons init adopts" do
-      reap(555, can_fork: true)
       expect(Process).not_to have_received(:wait)
     end
   end

@@ -499,6 +499,8 @@ module Bluepill
     # Not used by bluepill
     attr_accessor process_logger: untyped
 
+    NOBLOCK: Hash[Symbol, Symbol]
+
     def initialize: (String? name, ?{ ?logger: Logger } options) -> void
 
     def add_process: (Process process) -> Array[Process]
@@ -520,6 +522,16 @@ module Bluepill
     def status: (?String? process_name) -> Array[String]
 
     private
+
+    def send_user_command: (Symbol event, String? process_name) -> Array[String]
+
+    def targets: (String? process_name) -> Array[Process]
+
+    def start_user_command: (Process process, Symbol event, bool noblock) -> Thread
+
+    def noblock?: (Process process, Symbol event) -> bool
+
+    def status_line: (Process process, ?String? prefix) -> String
 
     def add_group_status: (Array[String] lines) -> void
 

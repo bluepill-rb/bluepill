@@ -37,6 +37,15 @@ module Bluepill
     # @api private
     attr_accessor :process_logger
 
+    # The setting that says whether each command runs on a process without
+    # waiting for it
+    NOBLOCK = {
+      start: :group_start_noblock,
+      unmonitor: :group_unmonitor_noblock,
+      stop: :group_stop_noblock,
+      restart: :group_restart_noblock
+    }.freeze
+
     # Create an empty group
     #
     # @param [String, nil] name the group's name, or nil for the nameless
@@ -86,84 +95,68 @@ module Bluepill
       processes.each(&:determine_initial_state)
     end
 
-    # @!method start(process_name = nil)
-    #   Start the group's processes, or one of them
+    # Start the group's processes, or one of them
     #
-    #   Each process runs the command on a thread of its own. Unless it's
-    #   set to run it without blocking (group_start_noblock), the group
-    #   waits for it before going on to the next process.
+    # Each process runs the command on a thread of its own. Unless it's set
+    # to run it without blocking (group_start_noblock), the group waits for it
+    # before going on to the next process.
     #
-    #   @param [String, nil] process_name the process to start, or nil for
-    #     every process in the group
+    # @param [String, nil] process_name the process to start, or nil for
+    #   every process in the group
     #
-    #   @return [Array<String>] the processes it started, as group:process
+    # @return [Array<String>] the processes it started, as group:process
     #
-    #   @api private
+    # @api private
+    def start(process_name = nil)
+      send_user_command(:start, process_name)
+    end
+
+    # Stop monitoring the group's processes, or one of them
     #
-    # @!method unmonitor(process_name = nil)
-    #   Stop monitoring the group's processes, or one of them
+    # Each process runs the command on a thread of its own. Unless it's set
+    # to run it without blocking (group_unmonitor_noblock), the group waits for it
+    # before going on to the next process.
     #
-    #   Each process runs the command on a thread of its own. Unless it's
-    #   set to run it without blocking (group_unmonitor_noblock), the group
-    #   waits for it before going on to the next process.
+    # @param [String, nil] process_name the process to unmonitor, or nil
+    #   for every process in the group
     #
-    #   @param [String, nil] process_name the process to unmonitor, or nil
-    #     for every process in the group
+    # @return [Array<String>] the processes it unmonitored, as group:process
     #
-    #   @return [Array<String>] the processes it unmonitored, as
-    #     group:process
+    # @api private
+    def unmonitor(process_name = nil)
+      send_user_command(:unmonitor, process_name)
+    end
+
+    # Stop the group's processes, or one of them
     #
-    #   @api private
+    # Each process runs the command on a thread of its own. Unless it's set
+    # to run it without blocking (group_stop_noblock), the group waits for it
+    # before going on to the next process.
     #
-    # @!method stop(process_name = nil)
-    #   Stop the group's processes, or one of them
+    # @param [String, nil] process_name the process to stop, or nil for
+    #   every process in the group
     #
-    #   Each process runs the command on a thread of its own. Unless it's
-    #   set to run it without blocking (group_stop_noblock), the group waits
-    #   for it before going on to the next process.
+    # @return [Array<String>] the processes it stopped, as group:process
     #
-    #   @param [String, nil] process_name the process to stop, or nil for
-    #     every process in the group
+    # @api private
+    def stop(process_name = nil)
+      send_user_command(:stop, process_name)
+    end
+
+    # Restart the group's processes, or one of them
     #
-    #   @return [Array<String>] the processes it stopped, as group:process
+    # Each process runs the command on a thread of its own. Unless it's set
+    # to run it without blocking (group_restart_noblock), the group waits for it
+    # before going on to the next process.
     #
-    #   @api private
+    # @param [String, nil] process_name the process to restart, or nil for
+    #   every process in the group
     #
-    # @!method restart(process_name = nil)
-    #   Restart the group's processes, or one of them
+    # @return [Array<String>] the processes it restarted, as group:process
     #
-    #   Each process runs the command on a thread of its own. Unless it's
-    #   set to run it without blocking (group_restart_noblock), the group
-    #   waits for it before going on to the next process.
-    #
-    #   @param [String, nil] process_name the process to restart, or nil for
-    #     every process in the group
-    #
-    #   @return [Array<String>] the processes it restarted, as group:process
-    #
-    #   @api private
-    [:start, :unmonitor, :stop, :restart].each do |event|
-      class_eval <<-RUBY, __FILE__, __LINE__ + 1
-        def #{event}(process_name = nil) # def start(process_name = nil)
-          threads = []
-          affected = []
-          self.processes.each do |process|
-            next if process_name && process_name != process.name
-            affected << [self.name, process.name].join(":")
-            noblock = process.group_#{event}_noblock # process.group_start_noblock
-            if noblock
-              self.logger.debug("Command #{event} running in non-blocking mode.") # Command start running in...
-              threads << Thread.new { process.handle_user_command(:#{event}) } # handle_user_command(:start)
-            else
-              self.logger.debug("Command #{event} running in blocking mode.") # Command start running in...
-              thread = Thread.new { process.handle_user_command(:#{event}) } # handle_user_command(:start)
-              thread.join
-            end
-          end
-          threads.each { |t| t.join } unless threads.nil?
-          affected
-        end
-      RUBY
+    # @api private
+    def restart(process_name = nil)
+      send_user_command(:restart, process_name)
     end
 
     # Return the status lines that bluepill status shows
@@ -190,6 +183,84 @@ module Bluepill
 
     private
 
+    # Run a user command on the group's processes, or one of them
+    #
+    # Each process runs it on a thread of its own. The group waits for each
+    # one that blocks before going on to the next process, and for the rest
+    # at the end.
+    #
+    # @param [Symbol] event :start, :unmonitor, :stop or :restart
+    # @param [String, nil] process_name the process to run it on, or nil for
+    #   every process in the group
+    #
+    # @return [Array<String>] the processes it ran on, as group:process
+    #
+    # @api private
+    def send_user_command(event, process_name)
+      threads = [] #: Array[Thread]
+      affected = targets(process_name).collect do |process|
+        noblock = noblock?(process, event)
+        thread = start_user_command(process, event, noblock)
+        noblock ? threads << thread : thread.join
+        [name, process.name].join(":")
+      end
+      threads.each(&:join)
+      affected
+    end
+
+    # Return the group's processes, or the one with a name
+    #
+    # @param [String, nil] process_name the process, or nil for every
+    #   process in the group
+    #
+    # @return [Array<Process>]
+    #
+    # @api private
+    def targets(process_name)
+      return processes unless process_name
+
+      processes.select { |process| process_name.eql?(process.name) }
+    end
+
+    # Log how a process runs a user command, and start it on a thread
+    #
+    # @param [Process] process the process
+    # @param [Symbol] event the command
+    # @param [Boolean] noblock whether the group goes on without waiting
+    #   for it
+    #
+    # @return [Thread] the thread that runs it
+    #
+    # @api private
+    def start_user_command(process, event, noblock)
+      logger.debug("Command #{event} running in #{noblock ? "non-blocking" : "blocking"} mode.")
+      Thread.new { process.handle_user_command(event) }
+    end
+
+    # Return whether a process runs a user command without the group waiting
+    #
+    # @param [Process] process the process
+    # @param [Symbol] event the command
+    #
+    # @return [Boolean]
+    #
+    # @api private
+    def noblock?(process, event)
+      process.public_send(NOBLOCK.fetch(event))
+    end
+
+    # Return a process's status line
+    #
+    # @param [Process] process the process
+    # @param [String, nil] prefix the indent, if any
+    #
+    # @return [String] its name, pid and state
+    #
+    # @api private
+    def status_line(process, prefix = nil)
+      "#{prefix}#{process.name}(pid:#{process.actual_pid}): #{process.state}"
+    end
+
     # Add a status line for each process, under the group's name
     #
     # A process with monitor_children has a line for each of its children
@@ -205,7 +276,7 @@ module Bluepill
       lines << "#{name}:" if name
 
       processes.each do |process|
-        lines << "#{prefix}#{process.name}(pid:#{process.actual_pid}): #{process.state}"
+        lines << status_line(process, prefix)
         add_children_status(process.children, prefix, lines) if process.monitor_children?
       end
     end
@@ -237,7 +308,7 @@ module Bluepill
       processes.each do |process|
         next unless process_name.eql?(process.name)
 
-        lines << "#{process.name}(pid:#{process.actual_pid}): #{process.state}"
+        lines << status_line(process)
         lines << process.statistics.to_s
       end
     end

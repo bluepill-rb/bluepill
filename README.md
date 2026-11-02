@@ -386,7 +386,8 @@ If `run`, `check?` or `format_value` raises, bluepill logs the error with its ba
 
 ### Commands Don't Run in a Shell
 
-Bluepill splits each command (`start_command`, `stop_command`, `restart_command`, and the hooks, such as `pre_start_command`) into words and runs it directly, without a shell. So shell syntax like `cd ... &&`, `VAR=value`, `|`, `>`, `2>&1`, and `*` globs doesn't work.
+> [!IMPORTANT]
+> Bluepill splits each command (`start_command`, `stop_command`, `restart_command`, and the hooks, such as `pre_start_command`) into words and runs it directly, without a shell. So shell syntax like `cd ... &&`, `VAR=value`, `|`, `>`, `2>&1`, and `*` globs doesn't work.
 
 Use the config options instead:
 

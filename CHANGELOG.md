@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-11-02
+
 ### Changed
 
 - Bluepill's string literals are frozen, so parsing `ps` each tick makes 10% fewer objects and takes 3% fewer instructions, and checks and `bluepill status` make a few fewer.
@@ -830,7 +832,8 @@ Initial release.
 - Added the `bluepill` CLI with the `load`, `status`, `start`, `stop`, `restart`, `unmonitor`, `quit` and `log` commands.
 - Added syslog logging.
 
-[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.2.1...HEAD
+[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/bluepill-rb/bluepill/compare/v0.2.1...v0.2.3
 [0.2.1]: https://github.com/bluepill-rb/bluepill/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/bluepill-rb/bluepill/compare/v0.1.6...v0.2.0
 [0.1.6]: https://github.com/bluepill-rb/bluepill/compare/v0.1.5...v0.1.6

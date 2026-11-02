@@ -483,7 +483,8 @@ Bluepill.application("app_name", log_file: "/path/to/bluepill.log") do |app|
 end
 ```
 
-Keep in mind that you still need to set up log rotation (described in the installation section) to keep the log file from growing huge.
+> [!TIP]
+> Set up log rotation for the log file too (described in the installation section), to keep it from growing huge.
 
 Bluepill logs everything by default, including a line for every check it runs. To log less, set the :log\_level option to the least severe priority you want to keep. Bluepill drops anything less severe, whether it logs to syslog, a log file, or stdout in foreground mode:
 

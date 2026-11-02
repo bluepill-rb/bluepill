@@ -338,7 +338,8 @@ module Bluepill
         remaining -= delay
 
         logger.debug "Sleeping for #{delay} seconds"
-        sleep delay
+        # Kernel.sleep, not sleep, so the specs can stand in for the clock
+        Kernel.sleep(delay)
         # break unless signal_process(0) #break unless the process can be reached
         unless signal_process(0)
           logger.debug 'Process has terminated.'
@@ -366,7 +367,7 @@ module Bluepill
       (seconds - 2).ceil.times do
         break unless signal_process(0)
 
-        sleep 1
+        Kernel.sleep(1)
       end
     end
   end

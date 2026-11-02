@@ -972,11 +972,11 @@ describe Bluepill::Process do
     end
 
     context 'with stop signals' do
-      # The seconds the process sleeps for. Kernel#sleep is the one method of
-      # the process stubbed, since nothing else can stand in for the clock.
+      # The seconds the process sleeps for, between stop signals and while it
+      # waits for the process to exit
       let(:sleeps) { [] }
 
-      before { allow(process).to receive(:sleep) { |seconds| sleeps << seconds } }
+      before { allow(Kernel).to receive(:sleep) { |seconds| sleeps << seconds } }
 
       def run_stop_signals(signals, grace_time = 3)
         process.stop_signals = signals

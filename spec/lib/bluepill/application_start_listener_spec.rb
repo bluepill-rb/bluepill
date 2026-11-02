@@ -42,7 +42,8 @@ describe Bluepill::Application do
 
     context 'with a command' do
       before do
-        allow(client).to receive(:close_on_exec=)
+        # JRuby 1.7's sockets have no close_on_exec=, which the listener skips
+        allow(client).to receive(:close_on_exec=) if UNIXSocket.method_defined?(:close_on_exec=)
         allow(app).to receive(:status).with('web').and_return(['web:a'])
         listen
       end
@@ -52,6 +53,7 @@ describe Bluepill::Application do
       end
 
       it 'keeps the client from leaking into processes it starts' do
+        skip "this Ruby's sockets have no close_on_exec=" unless UNIXSocket.method_defined?(:close_on_exec=)
         expect(client).to have_received(:close_on_exec=).with(true)
       end
 

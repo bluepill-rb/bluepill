@@ -245,8 +245,8 @@ describe Bluepill::ProcessFactory do
         expect(process.stop_signals).to eq([:quit, 5, :term])
       end
 
-      # Like a Fixnum before Ruby 2.4, which is an Integer but not an
-      # instance of it
+      # An Integer that isn't an instance of Integer. Every Integer is one
+      # since Ruby 2.4, so this keeps is_a? from passing as instance_of?.
       it "accepts any kind of Integer as a delay" do
         delay = instance_double(Integer, is_a?: true)
         expect_config_error(/Stop_grace_time should be greater than the sum of stop_signals delays/) do

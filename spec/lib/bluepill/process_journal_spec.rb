@@ -127,7 +127,8 @@ describe Bluepill::ProcessJournal do
         expect(ids.collect { |id| described_class.send(method, id) }).to eq [true, true, true, true, true, false]
       end
 
-      # On Ruby before 2.4 ids are Fixnums or Bignums, subclasses of Integer
+      # An Integer that isn't an instance of Integer. Every Integer is one
+      # since Ruby 2.4, so this keeps is_a? from passing as instance_of?.
       it "accepts instances of Integer subclasses" do
         id = instance_double(Integer)
         allow(id).to receive(:is_a?).with(Integer).and_return(true)

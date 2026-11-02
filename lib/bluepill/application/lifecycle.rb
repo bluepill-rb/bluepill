@@ -75,7 +75,7 @@ module Bluepill
       def run
         @running = true # set to false by signal trap
         while @running
-          mutex do
+          synchronize do
             System.reset_data
             groups.each_value(&:tick)
           end

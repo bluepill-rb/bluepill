@@ -27,7 +27,7 @@ module Bluepill
 
     def foreground?: () -> bool
 
-    def mutex: [T] () { () -> T } -> T
+    def synchronize: [T] () { () -> T } -> T
 
     def load: () -> void
 
@@ -65,7 +65,7 @@ module Bluepill
       interface _Host
         %a{pure} def socket: () -> UNIXServer?
         %a{pure} def logger: () -> Logger
-        def mutex: [T] () { () -> T } -> T
+        def synchronize: [T] () { () -> T } -> T
       end
 
       @listener_thread: Thread?
@@ -105,7 +105,7 @@ module Bluepill
         %a{pure} def kill_timeout: () -> Integer
         %a{pure} def groups: () -> Hash[String?, Group]
         def foreground?: () -> bool
-        def mutex: [T] () { () -> T } -> T
+        def synchronize: [T] () { () -> T } -> T
       end
 
       @log_level: (Symbol | String)?

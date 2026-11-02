@@ -99,8 +99,8 @@ describe Bluepill::Application do
         expect(traps.keys).to contain_exactly("TERM", "INT", "HUP")
       end
 
-      it "has a mutex" do
-        expect(app.mutex { :result }).to eq(:result)
+      it "has a lock" do
+        expect(app.synchronize { :result }).to eq(:result)
       end
 
       it "logs with the application name as prefix" do
@@ -253,9 +253,9 @@ describe Bluepill::Application do
     end
   end
 
-  describe "#mutex" do
+  describe "#synchronize" do
     it "runs the block synchronized" do
-      expect(app.mutex { :result }).to eq(:result)
+      expect(app.synchronize { :result }).to eq(:result)
     end
   end
 

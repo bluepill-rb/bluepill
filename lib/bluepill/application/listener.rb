@@ -71,7 +71,7 @@ module Bluepill
       # @api private
       def command_result(command, args)
         method = daemon_command(command)
-        mutex { public_send(method, *args) }
+        synchronize { public_send(method, *args) }
       rescue => e
         e
       end

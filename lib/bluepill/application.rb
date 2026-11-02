@@ -139,7 +139,7 @@ module Bluepill
     # @return [Object] what the block returns
     #
     # @api private
-    def mutex(&block)
+    def synchronize(&block)
       @mutex.synchronize(&block)
     end
 

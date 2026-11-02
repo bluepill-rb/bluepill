@@ -33,6 +33,8 @@ Bluepill 0.2.9 warns, once each, about what will break in 0.3.0. Each warning st
 - A `monitor_children` block that sets no `stop_command`. Bluepill 0.3.0 fails the config, where 0.2 exits the daemon when it first finds a child. To find it, and the mistakes in the children's checks, `bluepill load` runs the block once, as 0.3.0 does, for a child whose pid isn't known yet.
 - Two checks of the same name in one process, such as two `:http` checks of different URLs. Bluepill 0.2 runs only the last, and 0.3.0 runs both.
 - A custom check that subclasses `MemUsage`. Bluepill 0.3.0 gives its `run`, `check?` and `format_value` the memory usage in bytes, where 0.2 gives kilobytes.
+- Bluepill 0.3.0 also changes some things that 0.2.9 can't warn about: options kept in a Hash and passed without `**` on Ruby 2.7, where Ruby can't tell them from keywords, a 0.3.0 `bluepill` command refuses every 0.2 daemon, so run `bluepill load` again after upgrading, a mistake that already fails a 0.2 config, such as a misspelled attribute, fails with a `Bluepill::ConfigError` and exit status 6, and reading an attribute that isn't set returns nil. Read 0.3.0's "Upgrading from 0.2" before upgrading.
+- To check a `monitor_children` block, as 0.3.0 does, bluepill 0.2.9 runs it once when the pill file loads, for a child with no pid, besides once for each child it finds. A block that raises for that child gives no warning.
 
 ### Fixed
 

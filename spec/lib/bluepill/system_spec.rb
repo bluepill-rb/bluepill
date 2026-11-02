@@ -234,7 +234,6 @@ describe Bluepill::System do
 
     context 'in the child' do
       let(:pid_file) { '/var/run/test.pid' }
-      let(:file) { double('file') }
       let(:options) do
         {
           uid: 'user',
@@ -259,8 +258,7 @@ describe Bluepill::System do
         allow(ENV).to receive(:[]=)
         allow(Process).to receive(:exit!)
         allow(Bluepill::System).to receive(:exit!).and_raise('exit! must be called on Process')
-        allow(File).to receive(:open).with(pid_file, 'w').and_yield(file)
-        allow(file).to receive(:write)
+        allow(File).to receive(:write).with(pid_file, anything)
         allow(Bluepill::Daemonize).to receive(:call_as_daemon) do |block, _|
           block.call
           789
@@ -293,7 +291,7 @@ describe Bluepill::System do
         allow(Bluepill::System).to receive(:can_write_pid_file).and_return(true)
         allow(Bluepill::Daemonize).to receive(:call_as_daemon).and_return(1)
         Bluepill::System.daemonize('cmd', options)
-        expect(file).to have_received(:write).with(1)
+        expect(File).to have_received(:write).with(pid_file, '1')
         expect(wr).to have_received(:write).with(1)
       end
 
@@ -306,7 +304,7 @@ describe Bluepill::System do
         expect(Kernel).to have_received(:exec).with('echo', 'hello world')
         expect(Bluepill::System).to have_received(:exit).with(no_args)
         expect(Bluepill::Daemonize).to have_received(:call_as_daemon).with(kind_of(Proc), 'echo "hello world"')
-        expect(file).to have_received(:write).with(789)
+        expect(File).to have_received(:write).with(pid_file, '789')
         expect(wr).to have_received(:write).with(789)
         expect(wr).to have_received(:close)
         expect(Process).to have_received(:exit!).with(true)
@@ -316,7 +314,7 @@ describe Bluepill::System do
         allow(Bluepill::System).to receive(:can_write_pid_file).and_return(true)
         allow(Bluepill::Daemonize).to receive(:call_as_daemon).and_return(0)
         Bluepill::System.daemonize('cmd', options)
-        expect(File).not_to have_received(:open)
+        expect(File).not_to have_received(:write)
         expect(wr).to have_received(:write).with(0)
       end
 
@@ -347,7 +345,7 @@ describe Bluepill::System do
     it 'should delete an existing file' do
       Dir.mktmpdir do |dir|
         filename = File.join(dir, 'file')
-        File.open(filename, 'w') { |f| f.write('x') }
+        File.write(filename, 'x')
         Bluepill::System.delete_if_exists(filename)
         expect(File.exist?(filename)).to be false
       end

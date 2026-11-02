@@ -61,7 +61,7 @@ module Bluepill
         daemon_id = Daemonize.call_as_daemon(to_daemonize, cmd)
 
         # call_as_daemon returns 0 when the daemon fails to report its pid
-        File.open(pid_file, 'w') { |f| f.write(daemon_id) } if daemon_id > 0
+        File.write(pid_file, daemon_id.to_s) if daemon_id > 0
 
         wr.write daemon_id
         wr.close

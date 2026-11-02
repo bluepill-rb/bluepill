@@ -863,26 +863,26 @@ describe Bluepill::Process do
       before { subject.pid_file = File.join(@dir, 'proc.pid') }
 
       it 'reads the pid and caches it' do
-        File.open(subject.pid_file, 'w') { |f| f.write("77\n") }
+        File.write(subject.pid_file, "77\n")
         expect(subject.actual_pid).to eq 77
-        File.open(subject.pid_file, 'w') { |f| f.write("78\n") }
+        File.write(subject.pid_file, "78\n")
         expect(subject.actual_pid).to eq 77
       end
 
       it 'forgets the cached pid when it cleans up after a stop' do
-        File.open(subject.pid_file, 'w') { |f| f.write("77\n") }
+        File.write(subject.pid_file, "77\n")
         expect(subject.actual_pid).to eq 77
         subject.cleanup_process
         expect(File.exist?(subject.pid_file)).to be false
-        File.open(subject.pid_file, 'w') { |f| f.write("78\n") }
+        File.write(subject.pid_file, "78\n")
         expect(subject.actual_pid).to eq 78
       end
 
       it 'rereads the pid when not caching' do
         subject.cache_actual_pid = false
-        File.open(subject.pid_file, 'w') { |f| f.write("77\n") }
+        File.write(subject.pid_file, "77\n")
         expect(subject.actual_pid).to eq 77
-        File.open(subject.pid_file, 'w') { |f| f.write("78\n") }
+        File.write(subject.pid_file, "78\n")
         expect(subject.actual_pid).to eq 78
       end
 
@@ -894,19 +894,19 @@ describe Bluepill::Process do
       it 'is nil for a pid file that does not hold a positive pid' do
         subject.cache_actual_pid = false
         ["0\n", "\n", 'garbage', '-5'].each do |content|
-          File.open(subject.pid_file, 'w') { |f| f.write(content) }
+          File.write(subject.pid_file, content)
           expect(subject.actual_pid).to be_nil
         end
       end
 
       it 'is not running for a pid file that holds 0' do
-        File.open(subject.pid_file, 'w') { |f| f.write("0\n") }
+        File.write(subject.pid_file, "0\n")
         allow(::Process).to receive(:kill).and_call_original
         expect(subject.process_running?(true)).to be false
       end
 
       it 'reads pid 1' do
-        File.open(subject.pid_file, 'w') { |f| f.write("1\n") }
+        File.write(subject.pid_file, "1\n")
         expect(subject.actual_pid).to eq 1
       end
 

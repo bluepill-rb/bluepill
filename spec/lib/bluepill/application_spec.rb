@@ -367,8 +367,8 @@ describe Bluepill::Application do
         expect(app.socket).to eq(socket)
       end
 
-      it 'writes the pid file with File.open' do
-        expect(File).to receive(:open).with(pid_file, 'w').and_call_original
+      it 'writes the pid as a string with File.write' do
+        expect(File).to receive(:write).with(pid_file, ::Process.pid.to_s).and_call_original
         app.send(:start_server)
       end
 
@@ -574,7 +574,7 @@ describe Bluepill::Application do
 
     describe 'kill_previous_bluepill' do
       def write_pid
-        File.open(pid_file, 'w') { |f| f.write('1234') }
+        File.write(pid_file, '1234')
       end
 
       before(:each) { app }
@@ -592,14 +592,14 @@ describe Bluepill::Application do
       end
 
       it 'checks a previous bluepill with pid 1, as in a container' do
-        File.open(pid_file, 'w') { |f| f.write('1') }
+        File.write(pid_file, '1')
         expect(Bluepill::System).to receive(:pid_alive?).with(1).and_return(false)
         app.send(:kill_previous_bluepill)
       end
 
       ['', 'garbage'].each do |contents|
         it "does nothing when the pid file holds #{contents.inspect}" do
-          File.open(pid_file, 'w') { |f| f.write(contents) }
+          File.write(pid_file, contents)
           expect(Bluepill::System).not_to receive(:pid_alive?)
           expect(::Process).not_to receive(:kill)
           expect(app).not_to receive(:puts)

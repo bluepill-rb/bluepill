@@ -486,7 +486,7 @@ module Bluepill
     #
     # @api private
     def write_pid_file
-      File.open(pid_file, 'w') { |x| x.write(::Process.pid) }
+      File.write(pid_file, ::Process.pid.to_s)
     end
   end
 end

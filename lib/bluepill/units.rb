@@ -37,7 +37,7 @@ module Bluepill
     def seconds
       self
     end
-    alias second seconds
+    alias_method :second, :seconds
 
     # Return this many minutes, in seconds
     #
@@ -50,7 +50,7 @@ module Bluepill
     def minutes
       self * MINUTE
     end
-    alias minute minutes
+    alias_method :minute, :minutes
 
     # Return this many hours, in seconds
     #
@@ -63,7 +63,7 @@ module Bluepill
     def hours
       self * HOUR
     end
-    alias hour hours
+    alias_method :hour, :hours
 
     # Return this many days, in seconds
     #
@@ -76,7 +76,7 @@ module Bluepill
     def days
       self * DAY
     end
-    alias day days
+    alias_method :day, :days
 
     # Return this many kilobytes, in bytes
     #
@@ -89,7 +89,7 @@ module Bluepill
     def kilobytes
       self * KILOBYTE
     end
-    alias kilobyte kilobytes
+    alias_method :kilobyte, :kilobytes
 
     # Return this many megabytes, in bytes
     #
@@ -102,7 +102,7 @@ module Bluepill
     def megabytes
       self * MEGABYTE
     end
-    alias megabyte megabytes
+    alias_method :megabyte, :megabytes
 
     # Return this many gigabytes, in bytes
     #
@@ -115,7 +115,7 @@ module Bluepill
     def gigabytes
       self * GIGABYTE
     end
-    alias gigabyte gigabytes
+    alias_method :gigabyte, :gigabytes
   end
 end
 

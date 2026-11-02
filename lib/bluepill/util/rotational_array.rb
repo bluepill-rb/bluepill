@@ -36,7 +36,7 @@ module Bluepill
         shift if length > @capacity
         self
       end
-      alias << push
+      alias_method :<<, :push
     end
   end
 end

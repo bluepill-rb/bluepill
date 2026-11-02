@@ -223,3 +223,7 @@ Style/RescueStandardError:
 
 Layout/MultilineMethodCallIndentation:
   EnforcedStyle: indented
+
+# alias_method, as Standard wants
+Style/Alias:
+  EnforcedStyle: prefer_alias_method

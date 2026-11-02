@@ -1,4 +1,5 @@
 require "socket"
+require "bluepill/base_directory"
 
 module Bluepill
   # The socket that the CLI sends a daemon its commands over
@@ -135,7 +136,7 @@ module Bluepill
     #
     # @api private
     def self.socket_path(base_dir, name)
-      File.join(base_dir, "socks", "#{name}.sock")
+      BaseDirectory.new(base_dir).socket_file(name)
     end
   end
 end

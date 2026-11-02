@@ -1,6 +1,7 @@
 require "thread"
 require "bluepill/system"
 require "bluepill/process_journal"
+require "bluepill/base_directory"
 require "bluepill/pid_file"
 require "bluepill/application/listener"
 require "bluepill/application/lifecycle"
@@ -297,8 +298,9 @@ module Bluepill
     def setup_base_dir(dir)
       self.base_dir = dir || ENV["BLUEPILL_BASE_DIR"] || default_base_dir
       ProcessJournal.setup(base_dir, name)
-      self.pid_file = File.join(base_dir, "pids", "#{name}.pid")
-      self.pids_dir = File.join(base_dir, "pids", name)
+      paths = BaseDirectory.new(base_dir)
+      self.pid_file = paths.pid_file(name)
+      self.pids_dir = paths.process_pids_dir(name)
     end
 
     # Return the base directory without an option or BLUEPILL_BASE_DIR

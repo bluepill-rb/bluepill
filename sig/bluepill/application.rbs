@@ -166,6 +166,7 @@ module Bluepill
     attr_accessor log_file: String?
     attr_accessor sockets_dir: String
     attr_accessor pids_dir: String
+    attr_reader base_directory: BaseDirectory
 
     def initialize: (Hash[Symbol, untyped] options) -> void
 
@@ -196,10 +197,8 @@ module Bluepill
       interface _Host
         def sockets_dir: () -> String
         def pids_dir: () -> String
+        def base_directory: () -> BaseDirectory
       end
-
-      @sockets_dir: String
-      @pids_dir: String
 
       def running_applications: () -> Array[String]
 
@@ -211,6 +210,27 @@ module Bluepill
 
       def setup_dir_structure: () -> void
     end
+  end
+
+  # The paths of the sockets and pid files in bluepill's base directory
+  class BaseDirectory
+    SOCKET_EXTENSION: String
+
+    attr_reader path: String
+
+    def initialize: (String path) -> void
+
+    def sockets_dir: () -> String
+
+    def pids_dir: () -> String
+
+    def socket_file: (String app) -> String
+
+    def pid_file: (String app) -> String
+
+    def process_pids_dir: (String app) -> String
+
+    def socket_names: () -> Array[String]
   end
 
   # Reads a daemon's pid file

@@ -1,5 +1,6 @@
 require "fileutils"
 require "bluepill/system"
+require "bluepill/base_directory"
 require "bluepill/pid_file"
 require "bluepill/controller/directory"
 
@@ -14,6 +15,7 @@ module Bluepill
     include Directory
 
     attr_accessor :base_dir, :log_file, :sockets_dir, :pids_dir
+    attr_reader :base_directory
 
     # @!attribute [rw] base_dir
     #   The directory with the daemons' sockets and pid files
@@ -43,6 +45,13 @@ module Bluepill
     #
     #   @api private
 
+    # @!attribute [r] base_directory
+    #   The paths in the base directory
+    #
+    #   @return [BaseDirectory]
+    #
+    #   @api private
+
     # Create the controller, and clean up after daemons that died
     #
     # It creates the sockets and pids directories, and removes the socket
@@ -56,8 +65,9 @@ module Bluepill
     def initialize(options)
       self.log_file = options[:log_file]
       self.base_dir = options.fetch(:base_dir)
-      self.sockets_dir = File.join(base_dir, "socks")
-      self.pids_dir = File.join(base_dir, "pids")
+      @base_directory = BaseDirectory.new(base_dir)
+      self.sockets_dir = base_directory.sockets_dir
+      self.pids_dir = base_directory.pids_dir
 
       setup_dir_structure
       cleanup_bluepill_directory

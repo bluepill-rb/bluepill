@@ -12,7 +12,7 @@ module Bluepill
       #
       # @api private
       def running_applications
-        Dir[File.join(sockets_dir, "*.sock")].collect { |x| File.basename(x, ".sock") }
+        base_directory.socket_names
       end
 
       private
@@ -27,10 +27,8 @@ module Bluepill
           pid = pid_for(app)
           next if pid && System.pid_alive?(pid)
 
-          pid_file = File.join(pids_dir, "#{app}.pid")
-          sock_file = File.join(sockets_dir, "#{app}.sock")
-          System.delete_if_exists(pid_file)
-          System.delete_if_exists(sock_file)
+          System.delete_if_exists(base_directory.pid_file(app))
+          System.delete_if_exists(base_directory.socket_file(app))
         end
       end
 
@@ -43,7 +41,7 @@ module Bluepill
       # @api private
       def pid_for(app)
         # false, not nil, so quit says "bluepilld[false] not running"
-        PidFile.read(File.join(pids_dir, "#{app}.pid")) || false
+        PidFile.read(base_directory.pid_file(app)) || false
       end
 
       # Create the sockets and pids directories
@@ -52,7 +50,7 @@ module Bluepill
       #
       # @api private
       def setup_dir_structure
-        [@sockets_dir, @pids_dir].each do |dir|
+        [sockets_dir, pids_dir].each do |dir|
           FileUtils.mkdir_p(dir)
         end
       end

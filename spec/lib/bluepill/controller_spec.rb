@@ -39,6 +39,10 @@ describe Bluepill::Controller do
       )
     end
 
+    it "has the paths in the base dir" do
+      expect(controller.base_directory).to have_attributes(class: Bluepill::BaseDirectory, path: base_dir)
+    end
+
     it "creates the directories" do
       controller
       expect(%w[socks pids].collect { |dir| File.directory?(File.join(base_dir, dir)) }).to eq([true, true])

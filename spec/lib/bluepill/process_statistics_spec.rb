@@ -18,8 +18,8 @@ describe Bluepill::ProcessStatistics do
 
   it 'returns event history' do
     @stats.record_event('some event', 'some reason')
-    expect(@stats.to_s).to match(/some reason/)
-    expect(@stats.to_s).to match(/event history/)
+    expect(@stats.to_s).to include('some reason')
+    expect(@stats.to_s).to include('event history')
   end
 
   it 'lists the most recent event first' do

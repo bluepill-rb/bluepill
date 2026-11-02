@@ -39,7 +39,7 @@ describe Bluepill::Logger do
 
     it 'logs to a log file' do
       described_class.new(log_file: @log_file).err('something failed')
-      expect(File.read(@log_file)).to match(/ERROR -- : something failed/)
+      expect(File.read(@log_file)).to include('ERROR -- : something failed')
     end
 
     it 'logs to syslog when log_file is nil' do
@@ -126,8 +126,8 @@ describe Bluepill::Logger do
         logger = described_class.new(log_file: @log_file, log_level: :err)
         logger.warning('careful')
         logger.err('failed')
-        expect(File.read(@log_file)).not_to match(/careful/)
-        expect(File.read(@log_file)).to match(/ERROR -- : failed/)
+        expect(File.read(@log_file)).not_to include('careful')
+        expect(File.read(@log_file)).to include('ERROR -- : failed')
       end
 
       it 'keeps the stricter of a prefixed logger level and its parent' do
@@ -215,8 +215,8 @@ describe Bluepill::Logger do
       File.rename(@log_file, "#{@log_file}.1")
       logger.reopen
       logger.info('after')
-      expect(File.read(@log_file)).to match(/after/)
-      expect(File.read(@log_file)).not_to match(/before/)
+      expect(File.read(@log_file)).to include('after')
+      expect(File.read(@log_file)).not_to include('before')
     end
 
     it 'reopens syslog' do

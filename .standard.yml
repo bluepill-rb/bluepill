@@ -1,8 +1,8 @@
 # Standard's configuration: https://github.com/standardrb/standard
 #
-# The gem still supports Ruby 3.0, so leave out the rules that need a
+# The gem still supports Ruby 3.2, so leave out the rules that need a
 # newer Ruby
-ruby_version: 3.0
+ruby_version: 3.2
 
 ignore:
   # Writing to $stderr keeps errors visible under ruby -W0, which silences

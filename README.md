@@ -500,7 +500,8 @@ Bluepill.application("app_name", foreground: true) do |app|
 end
 ```
 
-Note that You must define only one application per config when using foreground mode.
+> [!IMPORTANT]
+> Define only one application per config when using foreground mode.
 
 ## Links
 

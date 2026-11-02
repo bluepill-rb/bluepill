@@ -58,7 +58,7 @@ module Bluepill
 
       process = ProcessProxy.new(name, attributes, @process_block)
       child_process_block = attributes.delete(:child_process_block)
-      attributes[:child_process_factory] = ProcessFactory.new(attributes, child_process_block) if attributes[:monitor_children]
+      attributes[:child_process_factory] = ProcessFactory.new(attributes, child_process_block) if child_process_block
 
       validate_process! process
       warn_unless_pid_known(process, default_pid_file)

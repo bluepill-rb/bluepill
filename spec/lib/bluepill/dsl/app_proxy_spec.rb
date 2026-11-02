@@ -28,7 +28,7 @@ describe Bluepill::AppProxy do
     end
 
     it "names the app attributes" do
-      expect(described_class.attribute_names).to eq(Bluepill::AppProxy::APP_ATTRIBUTES)
+      expect(described_class.attribute_names).to eq(Bluepill::Process::APP_ATTRIBUTES)
     end
 
     it "rejects an unknown attribute, and suggests the closest one" do

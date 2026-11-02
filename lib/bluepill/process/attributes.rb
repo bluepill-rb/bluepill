@@ -55,6 +55,39 @@ module Bluepill
         group_unmonitor_noblock
       ].freeze
 
+      # The attributes of an application that its processes get, unless a
+      # process sets its own
+      APP_ATTRIBUTES = %i[working_dir uid gid supplementary_groups environment auto_start notify_command].freeze
+
+      # The attributes that a monitored child gets from its parent
+      #
+      # They're the grace times, and the user and groups, so the child's
+      # commands run as its parent's do.
+      CHILD_ATTRIBUTES = %i[start_grace_time stop_grace_time restart_grace_time uid gid supplementary_groups].freeze
+
+      # The environment of a process that sets none
+      NO_ENVIRONMENT = {} #: Hash[String, String]
+      NO_ENVIRONMENT.freeze
+
+      # The attributes that have a default, which a config can override
+      #
+      # The grace times are 3 seconds, hooks get 30, the pid is cached,
+      # children are left alone, and a group doesn't wait for the process.
+      DEFAULTS = {
+        monitor_children: false,
+        cache_actual_pid: true,
+        start_grace_time: 3,
+        stop_grace_time: 3,
+        restart_grace_time: 3,
+        environment: NO_ENVIRONMENT,
+        on_start_timeout: "start",
+        hook_timeout: 30,
+        group_start_noblock: true,
+        group_stop_noblock: true,
+        group_restart_noblock: true,
+        group_unmonitor_noblock: true
+      }.freeze
+
       # Return the command run before every start, if any
       #
       # Bluepill waits for it to finish, and starts the process even if it exits
@@ -345,36 +378,20 @@ module Bluepill
 
       # Set the defaults, and then the options the config gives
       #
-      # @param [Hash{Symbol => Object}] options the process's options, of
-      #   which those in CONFIGURABLE_ATTRIBUTES are set
+      # @param [Hash{Symbol => Object}] options the process's options, each
+      #   one of CONFIGURABLE_ATTRIBUTES
       #
       # @return [void]
+      #
+      # @raise [ArgumentError] for an option that isn't one of
+      #   CONFIGURABLE_ATTRIBUTES
       #
       # @api private
       def configure(options)
-        apply_defaults
-        CONFIGURABLE_ATTRIBUTES.each do |attribute_name|
-          public_send("#{attribute_name}=", options.fetch(attribute_name)) if options.key?(attribute_name)
-        end
-      end
+        unknown = options.keys - CONFIGURABLE_ATTRIBUTES
+        raise ArgumentError, "unknown attributes: #{unknown.collect(&:inspect).join(", ")}" unless unknown.empty?
 
-      # Set the defaults of the options that have one
-      #
-      # The grace times are 3 seconds, hooks get 30, the pid is cached,
-      # children are left alone, and a group doesn't wait for the process.
-      #
-      # @return [void]
-      #
-      # @api private
-      def apply_defaults
-        # These defaults are overriden by configure if it's configured to be something else.
-        @monitor_children = false
-        @cache_actual_pid = true
-        @start_grace_time = @stop_grace_time = @restart_grace_time = 3
-        @environment = {}
-        @on_start_timeout = "start"
-        @hook_timeout = 30
-        @group_start_noblock = @group_stop_noblock = @group_restart_noblock = @group_unmonitor_noblock = true
+        DEFAULTS.merge(options).each { |name, value| public_send(:"#{name}=", value) }
       end
     end
   end

@@ -163,6 +163,12 @@ describe Bluepill::ProcessProxy do
       )
     end
 
+    it "leaves the group out of the process's attributes" do
+      allow(Bluepill::Process).to receive(:new)
+      described_class.new("web", {uid: "user"}, proc { self.group = "servers" }).to_process
+      expect(Bluepill::Process).to have_received(:new).with("web", [], uid: "user")
+    end
+
     it "gives the process a watch for each of two checks of a kind" do
       proxy = described_class.new("web", {}, proc do
         checks :always_true, every: 10

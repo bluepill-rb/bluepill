@@ -2,6 +2,10 @@ module Bluepill
   # The options a config can set for a Process, and their defaults
   module Process::Attributes
     CONFIGURABLE_ATTRIBUTES: Array[Symbol]
+    APP_ATTRIBUTES: Array[Symbol]
+    CHILD_ATTRIBUTES: Array[Symbol]
+    NO_ENVIRONMENT: Hash[String, String]
+    DEFAULTS: Hash[Symbol, untyped]
 
     attr_accessor pre_start_command: String?
     attr_accessor start_command: String?
@@ -39,7 +43,5 @@ module Bluepill
     attr_accessor group_unmonitor_noblock: bool
 
     def configure: (Hash[Symbol, untyped] options) -> void
-
-    def apply_defaults: () -> void
   end
 end

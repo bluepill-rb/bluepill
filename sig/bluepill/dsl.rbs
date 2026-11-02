@@ -42,8 +42,6 @@ module Bluepill
     include DSL::Attributes
     extend DSL::Attributes::ClassMethods
 
-    APP_ATTRIBUTES: Array[Symbol]
-
     def working_dir: () -> String?
     def working_dir=: (String? value) -> String?
     def uid: () -> String?

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "bluepill/dsl/attributes"
+require "bluepill/process/attributes"
 
 module Bluepill
   # The self of the block given to {Bluepill.application}
@@ -16,13 +17,10 @@ module Bluepill
   #
   # @api public
   class AppProxy
-    # The attributes that every process of the application gets, unless the
-    # process sets its own
-    APP_ATTRIBUTES = %i[working_dir uid gid supplementary_groups environment auto_start notify_command].freeze
-
     include DSL::Attributes
 
-    attribute(*APP_ATTRIBUTES)
+    # Every process of the application gets these, unless it sets its own
+    attribute(*Process::Attributes::APP_ATTRIBUTES)
 
     # @!attribute [rw] working_dir
     #   The directory that the application's processes start in

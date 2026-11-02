@@ -109,10 +109,13 @@ module Bluepill
 
     # Create the process that the block described
     #
+    # The group isn't an attribute of the process: the application adds
+    # the process to it.
+    #
     # @return [Process] the process
     #
     # @api private
-    def to_process = Process.new(@name, @checks, **attributes)
+    def to_process = Process.new(@name, @checks, **attributes.except(:group))
 
     # Name the process, for an unknown attribute's error
     #

@@ -46,12 +46,8 @@ module Bluepill
       #
       # @api private
       def inherited_attributes
-        attributes = {} #: Hash[Symbol, untyped]
         # A grace time the parent leaves unset keeps the Process default
-        %i[start_grace_time stop_grace_time restart_grace_time uid gid supplementary_groups].each do |a|
-          attributes[a] = @attributes.fetch(a) if @attributes.key?(a)
-        end
-        attributes
+        @attributes.slice(*Process::Attributes::CHILD_ATTRIBUTES)
       end
 
       # Exit unless a monitored child has a stop_command

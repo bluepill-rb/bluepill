@@ -30,6 +30,7 @@ describe Bluepill::Application do
     before do
       app.socket = instance_double(UNIXServer)
       accepting(client)
+      allow(client).to receive(:close_on_exec=)
       app.groups = {"web" => group}
       # The listener's thread is its block, which listen calls
       allow(Thread).to receive(:new) { |&block| block }
@@ -56,8 +57,6 @@ describe Bluepill::Application do
 
     context "with a command" do
       before do
-        # JRuby 1.7's sockets have no close_on_exec=, which the listener skips
-        allow(client).to receive(:close_on_exec=) if UNIXSocket.method_defined?(:close_on_exec=)
         allow(group).to receive(:status).with(nil).and_return(["web:a"])
         listen
       end
@@ -67,7 +66,6 @@ describe Bluepill::Application do
       end
 
       it "keeps the client from leaking into processes it starts" do
-        skip "this Ruby's sockets have no close_on_exec=" unless UNIXSocket.method_defined?(:close_on_exec=)
         expect(client).to have_received(:close_on_exec=).with(true)
       end
 

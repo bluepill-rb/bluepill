@@ -55,7 +55,7 @@ module Bluepill
       #
       # @api private
       def answer_command(client)
-        client.close_on_exec = true if client.respond_to?(:close_on_exec=)
+        client.close_on_exec = true
         # The target is group:process and the process name may contain ':'
         command, *args = client.readline.strip.split(":", 3).reject(&:empty?)
         client.write(Marshal.dump(command_result(command, args)))

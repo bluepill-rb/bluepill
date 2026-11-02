@@ -448,7 +448,7 @@ module Bluepill
     #
     # @api private
     def setup_logger_and_pids_dir
-      self.logger = ProcessJournal.logger = Logger.new(log_file: log_file, stdout: foreground?).prefix_with(name)
+      self.logger = ProcessJournal.logger = Deprecation.logger = Logger.new(log_file: log_file, stdout: foreground?).prefix_with(name)
       setup_pids_dir
     rescue SystemCallError => e
       $stderr.puts("Failed to start bluepill: #{e}")

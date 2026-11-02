@@ -37,6 +37,27 @@ module Bluepill
     def self.now: () -> Integer
   end
 
+  # Warns, once each, about what a later version of bluepill will change
+  module Deprecation
+    self.@warned: Hash[untyped, bool]
+    self.@mutex: Thread::Mutex
+    self.@logger: Logger?
+
+    # The logger warnings also go to, which the application sets
+    def self.logger: () -> Logger?
+
+    def self.logger=: (Logger? logger) -> Logger?
+
+    # Writes "DEPRECATION: message" to stderr and the logger, the first time
+    # for a key
+    def self.warn: (untyped key, String message) -> bool
+
+    def self.first?: (untyped key) -> bool
+
+    # Forgets the warnings given, and the logger
+    def self.reset!: () -> void
+  end
+
   module Version
     def self.major: () -> Integer
 

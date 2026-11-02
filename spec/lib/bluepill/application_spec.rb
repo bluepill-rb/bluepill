@@ -97,6 +97,7 @@ describe Bluepill::Application do
         expect(logger).to receive(:prefix_with).with('test').and_return(logger)
         expect(Bluepill::ProcessJournal).to receive(:logger=).with(logger)
         expect(subject.logger).to eq(logger)
+        expect(Bluepill::Deprecation.logger).to eq(logger)
       end
 
       context 'and other options are specified' do

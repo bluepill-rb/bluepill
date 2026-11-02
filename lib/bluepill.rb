@@ -32,6 +32,7 @@ require 'timeout'
 require 'logger'
 
 require 'bluepill/clock'
+require 'bluepill/deprecation'
 
 require 'active_support'
 require 'active_support/inflector'

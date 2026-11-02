@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Warnings about what bluepill 0.2.0 and later will change, each in a line that starts with `DEPRECATION:`, once each, on stderr, where `bluepill load` shows it, and in bluepill's log. Each says what to do now. See Deprecated for what they warn about.
+
 ### Fixed
 
 - The README's group example gave every process the same pid file, and its `stop_signals` example waited longer than its stop grace time, so bluepill refused to load either config.

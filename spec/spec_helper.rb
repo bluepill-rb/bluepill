@@ -59,3 +59,9 @@ module Process
     end
   end
 end
+
+RSpec.configure do |config|
+  # Each spec sees every deprecation warning, and none goes to a logger
+  # double from another spec
+  config.before { Bluepill::Deprecation.reset! }
+end

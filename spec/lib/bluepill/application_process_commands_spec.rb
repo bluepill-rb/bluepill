@@ -20,6 +20,10 @@ describe Bluepill::Application do
 
     described_class::PROCESS_COMMANDS.each do |command|
       describe "##{command}" do
+        it "is public, for the listener" do
+          expect(described_class.public_method_defined?(command)).to be true
+        end
+
         it "is sent to every group without arguments" do
           allow(group).to receive(command).with(no_args).and_return(["web:a"])
           allow(other_group).to receive(command).with(no_args).and_return(["db:b"])

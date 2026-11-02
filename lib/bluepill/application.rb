@@ -224,15 +224,10 @@ module Bluepill
 
     # Define a method for each of the PROCESS_COMMANDS
     PROCESS_COMMANDS.each do |command|
-      class_eval <<-RUBY, __FILE__, __LINE__ + 1
-        # def start(group_name = nil, process_name = nil)
-        #   self.send_to_process_or_group(:start, group_name, process_name)
-        # end
-
-        def #{command}(group_name = nil, process_name = nil)
-          self.send_to_process_or_group(:#{command}, group_name, process_name)
-        end
-      RUBY
+      define_method(command) do |group_name = nil, process_name = nil|
+        # @type self: Application
+        send_to_process_or_group(command, group_name, process_name)
+      end
     end
 
     # Add a process to a group, which is created if it's new

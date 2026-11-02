@@ -214,7 +214,8 @@ describe Bluepill::Logger do
     end
 
     it 'memoizes prefixed loggers' do
-      expect(logger.prefix_with('app')).to be(logger.prefix_with('app'))
+      first = logger.prefix_with('app')
+      expect(logger.prefix_with('app')).to be(first)
     end
   end
 

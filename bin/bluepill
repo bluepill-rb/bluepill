@@ -110,7 +110,7 @@ if options[:command] == "load"
   if File.exist?(file)
     # Restart the ruby interpreter for the config file so that anything loaded here
     # does not stay in memory for the daemon
-    ruby = File.join(RbConfig::CONFIG["bindir"], RbConfig::CONFIG["ruby_install_name"])
+    ruby = RbConfig.ruby
     load_path = File.expand_path("../lib", __dir__)
     file_path = File.expand_path(file)
     ENV["BLUEPILL_BASE_DIR"] = options[:base_dir]

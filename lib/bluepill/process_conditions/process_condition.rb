@@ -47,7 +47,7 @@ module Bluepill
       #
       # @api private
       def run(_pid, _include_children)
-        raise 'Implement in subclass!'
+        raise "Implement in subclass!"
       end
 
       # Return whether a value is fine
@@ -76,7 +76,7 @@ module Bluepill
       #
       # @api private
       def check(_value)
-        raise 'Implement in subclass!'
+        raise "Implement in subclass!"
       end
 
       # Format a value for the watch's history and log

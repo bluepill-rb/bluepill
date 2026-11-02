@@ -14,11 +14,11 @@ describe Bluepill::Units do
     end
   end
 
-  it 'is mixed into Numeric' do
+  it "is mixed into Numeric" do
     expect(Numeric.ancestors).to include(described_class)
   end
 
-  it 'gives Numeric its methods' do
+  it "gives Numeric its methods" do
     expect([10.seconds, 100.megabytes]).to eq([10, 104_857_600])
   end
 

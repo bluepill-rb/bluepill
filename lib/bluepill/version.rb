@@ -91,7 +91,7 @@ module Bluepill
     #
     # @api public
     def self.to_s
-      to_a.join('.')
+      to_a.join(".")
     end
   end
 end

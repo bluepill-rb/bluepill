@@ -19,17 +19,17 @@ module Bluepill
       # How a value shows in the history: a number and its unit
       #
       # @api private
-      FORMAT_STR = '%d%s'.freeze
+      FORMAT_STR = "%d%s".freeze
 
       # The unit of a value that shows in megabytes
       #
       # @api private
-      MB_LABEL   = 'MB'.freeze
+      MB_LABEL   = "MB".freeze
 
       # The unit of a value that shows in kilobytes
       #
       # @api private
-      KB_LABEL   = 'KB'.freeze
+      KB_LABEL   = "KB".freeze
 
       # Create the check
       #

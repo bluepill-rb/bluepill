@@ -1,4 +1,4 @@
-require 'socket'
+require "socket"
 
 module Bluepill
   # The socket that the CLI sends a daemon its commands over
@@ -52,7 +52,7 @@ module Bluepill
           end
           break
         rescue EOFError, Timeout::Error
-          abort('Socket Timeout: Server may not be responding') if current_attempt.eql?(MAX_ATTEMPTS - 1)
+          abort("Socket Timeout: Server may not be responding") if current_attempt.eql?(MAX_ATTEMPTS - 1)
           puts "Retry #{current_attempt + 1} of #{MAX_ATTEMPTS}"
         end
       end
@@ -82,7 +82,7 @@ module Bluepill
         File.delete(path)
         UNIXServer.open(path)
       else
-        $stderr.puts('Server is already running!')
+        $stderr.puts("Server is already running!")
         exit(7)
       end
     end
@@ -96,7 +96,7 @@ module Bluepill
     #
     # @api private
     def self.socket_path(base_dir, name)
-      File.join(base_dir, 'socks', "#{name}.sock")
+      File.join(base_dir, "socks", "#{name}.sock")
     end
   end
 end

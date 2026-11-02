@@ -13,22 +13,22 @@ def ps_listing(processes, workers: 0, grandchildren: 0)
   @ps_listings ||= {}
   @ps_listings[[processes, workers, grandchildren]] ||= begin
     random = Random.new(42)
-    rows = [[1, 0, '0.0', 11_204, '45-02:13:07', '/sbin/init']]
-    rows << [PsListing::MASTER, 1, '0.4', 98_816, '12-04:31:55', 'unicorn master -c /srv/app/config/unicorn.rb -E production -D']
+    rows = [[1, 0, "0.0", 11_204, "45-02:13:07", "/sbin/init"]]
+    rows << [PsListing::MASTER, 1, "0.4", 98_816, "12-04:31:55", "unicorn master -c /srv/app/config/unicorn.rb -E production -D"]
     worker_pids = Array.new(workers) { |i| PsListing::MASTER + 1 + i }
     worker_pids.each_with_index do |pid, i|
-      rows << [pid, PsListing::MASTER, format('%.1f', random.rand(40.0)), 180_000 + random.rand(60_000), '03:12:09', "unicorn worker[#{i}] -c /srv/app/config/unicorn.rb -E production -D"]
+      rows << [pid, PsListing::MASTER, format("%.1f", random.rand(40.0)), 180_000 + random.rand(60_000), "03:12:09", "unicorn worker[#{i}] -c /srv/app/config/unicorn.rb -E production -D"]
     end
     grandchildren.times do |i|
-      rows << [PsListing::MASTER + 1000 + i, worker_pids.fetch(i % workers), '0.0', 2_048, '00:41', "sh -c convert /tmp/upload#{i}.png"]
+      rows << [PsListing::MASTER + 1000 + i, worker_pids.fetch(i % workers), "0.0", 2_048, "00:41", "sh -c convert /tmp/upload#{i}.png"]
     end
     pid = 100
     while rows.length < processes
       program = PsListing::PROGRAMS.fetch(random.rand(PsListing::PROGRAMS.length))
-      rows << [pid, 1, format('%.1f', random.rand(5.0)), random.rand(400_000), PsListing::ELAPSED.fetch(random.rand(PsListing::ELAPSED.length)), program]
+      rows << [pid, 1, format("%.1f", random.rand(5.0)), random.rand(400_000), PsListing::ELAPSED.fetch(random.rand(PsListing::ELAPSED.length)), program]
       pid += 1 + random.rand(7)
     end
-    lines = rows.collect { |row| format('%7d %7d %5s %8d %12s %s', *row) }
+    lines = rows.collect { |row| format("%7d %7d %5s %8d %12s %s", *row) }
     "    PID    PPID  %CPU      RSS      ELAPSED COMMAND\n#{lines.join("\n")}\n"
   end
 end
@@ -36,17 +36,17 @@ end
 module PsListing
   MASTER = 50_000
   PROGRAMS = [
-    '/usr/sbin/sshd -D',
-    'sshd: deploy@pts/0',
-    '-bash',
-    '/usr/sbin/cron -f',
-    '/usr/lib/postgresql/16/bin/postgres -D /var/lib/postgresql/16/main -c config_file=/etc/postgresql/16/main/postgresql.conf',
-    'postgres: 16/main: checkpointer',
-    'nginx: worker process',
-    '/usr/bin/redis-server 127.0.0.1:6379',
-    '[kworker/3:1-events]',
-    '/lib/systemd/systemd-journald',
-    'ruby /srv/app/bin/sidekiq -e production -C config/sidekiq.yml',
+    "/usr/sbin/sshd -D",
+    "sshd: deploy@pts/0",
+    "-bash",
+    "/usr/sbin/cron -f",
+    "/usr/lib/postgresql/16/bin/postgres -D /var/lib/postgresql/16/main -c config_file=/etc/postgresql/16/main/postgresql.conf",
+    "postgres: 16/main: checkpointer",
+    "nginx: worker process",
+    "/usr/bin/redis-server 127.0.0.1:6379",
+    "[kworker/3:1-events]",
+    "/lib/systemd/systemd-journald",
+    "ruby /srv/app/bin/sidekiq -e production -C config/sidekiq.yml",
   ].freeze
   ELAPSED = %w[00:03 12:41 03:12:09 1-07:22:41 45-02:13:07].freeze
 
@@ -89,7 +89,7 @@ end
 # The logger a process gets: the app's, prefixed with the app's name and
 # then the process's
 def process_logger
-  Bluepill::Logger.new(logger: NullLog.new).prefix_with('app').prefix_with('web')
+  Bluepill::Logger.new(logger: NullLog.new).prefix_with("app").prefix_with("web")
 end
 
 # The hooks of a benchmark of a check of the app server's master, among
@@ -116,6 +116,6 @@ end
 # A process that's up, with the given pid
 def up_process(name, pid)
   process = Bluepill::Process.new(name, {}, logger: process_logger, actual_pid: pid)
-  process.state = 'up'
+  process.state = "up"
   process
 end

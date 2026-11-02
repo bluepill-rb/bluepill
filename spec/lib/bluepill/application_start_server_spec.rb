@@ -1,9 +1,9 @@
-require 'tmpdir'
+require "tmpdir"
 
 describe Bluepill::Application do
   let(:logger) { instance_double(Bluepill::Logger) }
   let(:base_dir) { Dir.mktmpdir }
-  let(:app) { described_class.new('test', base_dir: base_dir) }
+  let(:app) { described_class.new("test", base_dir: base_dir) }
   let(:group) { instance_double(Bluepill::Group) }
   let(:calls) { [] }
 
@@ -28,14 +28,14 @@ describe Bluepill::Application do
   end
 
   def pid_file
-    File.join(base_dir, 'pids', 'test.pid')
+    File.join(base_dir, "pids", "test.pid")
   end
 
   # Stub and record what starting the server calls
   def stub_startup
-    app.groups = {'web' => group}
+    app.groups = {"web" => group}
     # A previous bluepill's pid file, which kill_previous_bluepill reads
-    File.write(pid_file, '4321')
+    File.write(pid_file, "4321")
     record(Bluepill::System, :pid_alive?, false)
     [
       [Bluepill::ProcessJournal, :clear_all_atomic_fs_locks], [::Process, :setpgid], [Bluepill::Daemonize, :daemonize],
@@ -71,33 +71,33 @@ describe Bluepill::Application do
     nil
   end
 
-  describe '#load' do
+  describe "#load" do
     def load_app
       app.load
     rescue Interrupt
       nil
     end
 
-    it 'starts the server' do
+    it "starts the server" do
       stub_startup
       load_app
       expect(Bluepill::Socket).to have_received(:server)
     end
 
-    it 'exits when the server fails to start' do
-      error = RuntimeError.new('boom')
-      error.set_backtrace(['a.rb:1'])
+    it "exits when the server fails to start" do
+      error = RuntimeError.new("boom")
+      error.set_backtrace(["a.rb:1"])
       allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks).and_raise(error)
       expect { app.load }.to exit_with(5).and output("Failed to start bluepill:\nRuntimeError `boom`\na.rb:1\n").to_stderr
     end
 
-    it 'reports the message of an error from an anonymous class' do
-      allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks).and_raise(anonymous_error('boom'))
+    it "reports the message of an error from an anonymous class" do
+      allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks).and_raise(anonymous_error("boom"))
       expect { app.load }.to exit_with(5).and output(/^ `boom`$/).to_stderr
     end
   end
 
-  describe 'start_server' do
+  describe "start_server" do
     around do |example|
       program_name = $0
       begin
@@ -112,49 +112,49 @@ describe Bluepill::Application do
     def startup_calls
       [
         [:pid_alive?, 4321], [:clear_all_atomic_fs_locks], [:setpgid, 0, 0], [:daemonize],
-        [:trap, 'TERM'], [:trap, 'INT'], [:trap, 'HUP'], [:reopen], [:determine_initial_state],
-        [:server, base_dir, 'test'], [:thread], [:reset_data], [:tick], [:sleep, 1]
+        [:trap, "TERM"], [:trap, "INT"], [:trap, "HUP"], [:reopen], [:determine_initial_state],
+        [:server, base_dir, "test"], [:thread], [:reset_data], [:tick], [:sleep, 1]
       ]
     end
 
-    it 'daemonizes and runs the application' do
+    it "daemonizes and runs the application" do
       start_server
       expect(calls).to eq(startup_calls)
     end
 
-    it 'names its process after the application' do
+    it "names its process after the application" do
       start_server
-      expect($0).to eq('bluepilld: test')
+      expect($0).to eq("bluepilld: test")
     end
 
-    it 'writes its pid file' do
+    it "writes its pid file" do
       start_server
       expect(File.read(pid_file)).to eq(::Process.pid.to_s)
     end
 
-    it 'keeps the socket' do
+    it "keeps the socket" do
       socket = instance_double(UNIXServer)
       allow(Bluepill::Socket).to receive(:server).and_return(socket)
       start_server
       expect(app.socket).to eq(socket)
     end
 
-    it 'writes the pid as a string with File.write' do
+    it "writes the pid as a string with File.write" do
       allow(File).to receive(:write).and_call_original
       start_server
       expect(File).to have_received(:write).with(pid_file, ::Process.pid.to_s)
     end
 
-    context 'when in the foreground' do
-      let(:app) { described_class.new('test', base_dir: base_dir, foreground: true) }
+    context "when in the foreground" do
+      let(:app) { described_class.new("test", base_dir: base_dir, foreground: true) }
 
-      it 'does not daemonize, or trap signals again' do
+      it "does not daemonize, or trap signals again" do
         start_server
-        expect(calls).to eq(startup_calls - [[:daemonize], [:trap, 'TERM'], [:trap, 'INT'], [:trap, 'HUP']])
+        expect(calls).to eq(startup_calls - [[:daemonize], [:trap, "TERM"], [:trap, "INT"], [:trap, "HUP"]])
       end
     end
 
-    it 'ignores being unable to become a process group leader' do
+    it "ignores being unable to become a process group leader" do
       allow(::Process).to receive(:setpgid).and_raise(Errno::EPERM)
       start_server
       expect(Bluepill::System).to have_received(:reset_data)

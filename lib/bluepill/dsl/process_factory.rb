@@ -100,7 +100,7 @@ module Bluepill
       return if @attributes.key?(:pid_file)
 
       group_name = @attributes[:group]
-      default_pid_name = [group_name, process_name].compact.join('_').gsub(/[^A-Za-z0-9_-]/, '_')
+      default_pid_name = [group_name, process_name].compact.join("_").gsub(/[^A-Za-z0-9_-]/, "_")
       @attributes[:pid_file] = File.join(pids_dir, "#{default_pid_name}.pid")
     end
 
@@ -177,18 +177,18 @@ module Bluepill
       return if stop_signals.nil?
 
       stop_signals.each_with_index do |value, i|
-        expected, label = i.even? ? [Symbol, 'a symbol (signal)'] : [Integer, 'a number (delay)']
+        expected, label = i.even? ? [Symbol, "a symbol (signal)"] : [Integer, "a number (delay)"]
         next if value.is_a?(expected)
 
         config_error!("Config Error: Invalid stop_signals!  Expected #{label} at position #{i} instead of '#{value}'.")
       end
-      config_error!('Config Error: Invalid stop_signals!  Expected an odd number of elements.') unless stop_signals.size.odd?
+      config_error!("Config Error: Invalid stop_signals!  Expected an odd number of elements.") unless stop_signals.size.odd?
 
       stop_grace_time = attributes[:stop_grace_time]
       delays = stop_signals.select.with_index { |_, i| i.odd? }
       return unless stop_grace_time.nil? || stop_grace_time <= delays.inject(0, :+)
 
-      config_error!('Config Error: Stop_grace_time should be greater than the sum of stop_signals delays!')
+      config_error!("Config Error: Stop_grace_time should be greater than the sum of stop_signals delays!")
     end
 
     # Warn when bluepill can't find the process's pid
@@ -208,7 +208,7 @@ module Bluepill
 
       warning = "Config Warning: '#{process.name}' sets no daemonize, pid_file or pid_command, " \
                 "so bluepill cannot find its pid unless start_command writes it to #{default_pid_file}. " \
-                'Set daemonize = true if start_command runs in the foreground.'
+                "Set daemonize = true if start_command runs in the foreground."
       $stderr.puts warning
     end
 
@@ -235,7 +235,7 @@ module Bluepill
       return if child.attributes.key?(:stop_command)
 
       $stderr.puts "Config Error: Invalid child process monitor for #{child.name}"
-      $stderr.puts 'You must specify a stop command to monitor child processes.'
+      $stderr.puts "You must specify a stop command to monitor child processes."
       exit(6)
     end
   end

@@ -183,7 +183,7 @@ module Bluepill
     # @api private
     def label(names)
       names = names.compact
-      "[#{names.join(':')}] " unless names.empty?
+      "[#{names.join(":")}] " unless names.empty?
     end
 
     # Return the position of a log level in {LOG_METHODS}
@@ -197,7 +197,7 @@ module Bluepill
     # @api private
     def priority(level)
       index = LOG_METHODS.index { |method| method.to_s.eql?(level.to_s) }
-      raise ArgumentError, "Unknown log_level #{level.inspect}. Use one of: #{LOG_METHODS.join(', ')}" unless index
+      raise ArgumentError, "Unknown log_level #{level.inspect}. Use one of: #{LOG_METHODS.join(", ")}" unless index
 
       index
     end
@@ -213,7 +213,7 @@ module Bluepill
       else
         require_syslog
         Syslog.close if Syslog.opened? # need to explictly close it before reopening it
-        Syslog.open(@options[:identity] || 'bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6)
+        Syslog.open(@options[:identity] || "bluepilld", Syslog::LOG_PID, Syslog::LOG_LOCAL6)
       end
     end
 
@@ -230,11 +230,11 @@ module Bluepill
     def require_syslog
       # A HUP reopens the log from a signal trap, where require raises
       # ThreadError, and syslog is loaded by then
-      require 'syslog' unless defined?(::Syslog)
+      require "syslog" unless defined?(::Syslog)
     rescue LoadError
-      message = 'Bluepill logs to syslog unless log_file is set, but the syslog library ' \
+      message = "Bluepill logs to syslog unless log_file is set, but the syslog library " \
                 "could not be loaded. Since Ruby 3.4 it's a separate gem, so add gem 'syslog' " \
-                'to your Gemfile or set log_file.'
+                "to your Gemfile or set log_file."
       raise LoadError, message
     end
 

@@ -4,7 +4,7 @@ module Bluepill
   # @api private
   class ProcessStatistics
     # How status shows each event's time
-    STRFTIME = '%m/%d/%Y %H:%M:%S'.freeze
+    STRFTIME = "%m/%d/%Y %H:%M:%S".freeze
 
     # How many events are kept
     EVENTS_TO_PERSIST = 10
@@ -46,7 +46,7 @@ module Bluepill
     # @api private
     def to_s
       str = events.reverse.collect do |event, reason, time|
-        "  #{event} at #{time.strftime(STRFTIME)} - #{reason || 'unspecified'}"
+        "  #{event} at #{time.strftime(STRFTIME)} - #{reason || "unspecified"}"
       end.join("\n")
 
       "event history:\n#{str}"

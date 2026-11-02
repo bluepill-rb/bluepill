@@ -1,6 +1,6 @@
-require 'thread'
-require 'bluepill/system'
-require 'bluepill/process_journal'
+require "thread"
+require "bluepill/system"
+require "bluepill/process_journal"
 
 module Bluepill
   # The bluepill daemon for one application
@@ -104,13 +104,13 @@ module Bluepill
       self.log_file = options[:log_file]
       @log_level    = options[:log_level]
       # Only used for a non-root user, who has a home
-      home = ENV.fetch('HOME', nil) #: String
+      home = ENV.fetch("HOME", nil) #: String
       self.base_dir = options[:base_dir] ||
-                      ENV['BLUEPILL_BASE_DIR'] ||
-                      (::Process.euid.zero? ? '/var/run/bluepill' : File.join(home, '.bluepill'))
+                      ENV["BLUEPILL_BASE_DIR"] ||
+                      (::Process.euid.zero? ? "/var/run/bluepill" : File.join(home, ".bluepill"))
       ProcessJournal.setup(base_dir, name)
-      self.pid_file = File.join(base_dir, 'pids', "#{name}.pid")
-      self.pids_dir = File.join(base_dir, 'pids', name)
+      self.pid_file = File.join(base_dir, "pids", "#{name}.pid")
+      self.pids_dir = File.join(base_dir, "pids", name)
       self.kill_timeout = options[:kill_timeout] || 10
 
       self.groups = {}
@@ -155,8 +155,8 @@ module Bluepill
     def load
       start_server
     rescue StandardError => e
-      $stderr.puts('Failed to start bluepill:')
-      $stderr.puts(format('%s `%s`', e.class.name, e.message))
+      $stderr.puts("Failed to start bluepill:")
+      $stderr.puts(format("%s `%s`", e.class.name, e.message))
       $stderr.puts(e.backtrace)
       exit(5)
     end
@@ -276,7 +276,7 @@ module Bluepill
         groups.fetch(group_name).public_send(method, process_name)
       else
         # they must be targeting just by process name, which may contain ':'
-        process_name = [group_name, process_name].compact.join(':')
+        process_name = [group_name, process_name].compact.join(":")
         groups.values.collect do |group|
           group.public_send(method, process_name)
         end.flatten
@@ -303,7 +303,7 @@ module Bluepill
             client = server.accept
             client.close_on_exec = true if client.respond_to?(:close_on_exec=)
             # The target is group:process and the process name may contain ':'
-            command, *args = client.readline.strip.split(':', 3).reject(&:empty?)
+            command, *args = client.readline.strip.split(":", 3).reject(&:empty?)
             response = begin
               # An empty line leaves command nil, so public_send raises an error for the client
               mutex { public_send(command, *args) } # steep:ignore ArgumentTypeMismatch
@@ -312,7 +312,7 @@ module Bluepill
             end
             client.write(Marshal.dump(response))
           rescue StandardError => e
-            logger.err(format('Got exception in cmd listener: %s `%s`', e.class.name, e.message))
+            logger.err(format("Got exception in cmd listener: %s `%s`", e.class.name, e.message))
             Array(e.backtrace).each { |l| logger.err(l) }
           ensure
             begin
@@ -405,15 +405,15 @@ module Bluepill
     # @api private
     def setup_signal_traps
       terminator = proc do
-        puts 'Terminating...'
+        puts "Terminating..."
         cleanup
         @running = false
       end #: ^(Integer signal) -> void
 
-      Signal.trap('TERM', &terminator)
-      Signal.trap('INT', &terminator)
+      Signal.trap("TERM", &terminator)
+      Signal.trap("INT", &terminator)
 
-      Signal.trap('HUP') do
+      Signal.trap("HUP") do
         logger.reopen if logger
       end
     end
@@ -432,8 +432,8 @@ module Bluepill
       setup_pids_dir
     rescue SystemCallError => e
       $stderr.puts("Failed to start bluepill: #{e}")
-      message = 'The user running bluepill must be able to write to its log_file and base_dir. ' \
-                'The uid and gid in the config only apply to the processes it monitors.'
+      message = "The user running bluepill must be able to write to its log_file and base_dir. " \
+                "The uid and gid in the config only apply to the processes it monitors."
       $stderr.puts(message)
       exit(5)
     end
@@ -470,7 +470,7 @@ module Bluepill
       puts "Killing previous bluepilld[#{previous_pid}]"
       ::Process.kill(2, previous_pid)
     rescue StandardError => e
-      $stderr.puts 'Encountered error trying to kill previous bluepill:'
+      $stderr.puts "Encountered error trying to kill previous bluepill:"
       $stderr.puts "#{e.class}: #{e}"
       exit(4) unless e.instance_of?(Errno::ESRCH)
     else

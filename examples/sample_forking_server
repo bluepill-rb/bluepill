@@ -9,26 +9,26 @@
 #
 # Based on http://tomayko.com/writings/unicorn-is-unix
 
-require 'socket'
+require "socket"
 
 port = ARGV[0].to_i
 port = 4242 if port.zero?
 
 acceptor = Socket.new(Socket::AF_INET, Socket::SOCK_STREAM, 0)
 acceptor.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
-acceptor.bind(Socket.pack_sockaddr_in(port, '127.0.0.1'))
+acceptor.bind(Socket.pack_sockaddr_in(port, "127.0.0.1"))
 acceptor.listen(10)
 
 def start_worker(acceptor, port)
   fork do
-    trap('QUIT') do
-      $0 = 'forking_server worker: QUIT received, shutting down gracefully'
+    trap("QUIT") do
+      $0 = "forking_server worker: QUIT received, shutting down gracefully"
       sleep 5
       exit
     end
-    trap('INT') { exit }
+    trap("INT") { exit }
 
-    $0 = 'forking_server worker'
+    $0 = "forking_server worker"
     puts "worker #{Process.pid} accepting on localhost:#{port}"
     memory = []
     loop do
@@ -39,18 +39,18 @@ def start_worker(acceptor, port)
       socket.write message
       socket.close
       puts "worker #{Process.pid} echoed #{message.strip.inspect}"
-      memory << ('*' * (10 * 1024 * 1024))
+      memory << ("*" * (10 * 1024 * 1024))
     end
   end
 end
 
-$0 = 'forking_server master'
+$0 = "forking_server master"
 workers = Array.new(3) { start_worker(acceptor, port) }
 
-trap('INT') do
+trap("INT") do
   workers.each do |pid|
     begin
-      Process.kill('INT', pid)
+      Process.kill("INT", pid)
     rescue Errno::ESRCH
       nil
     end

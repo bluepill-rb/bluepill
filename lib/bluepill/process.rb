@@ -1,6 +1,6 @@
-require 'bluepill/system'
-require 'bluepill/process_journal'
-require 'bluepill/process_commands'
+require "bluepill/system"
+require "bluepill/process_journal"
+require "bluepill/process_commands"
 
 module Bluepill
   # A process that bluepill monitors
@@ -546,10 +546,10 @@ module Bluepill
       @cache_actual_pid = true
       @start_grace_time = @stop_grace_time = @restart_grace_time = 3
       @environment = {}
-      @on_start_timeout = 'start'
+      @on_start_timeout = "start"
       @hook_timeout = 30
       @group_start_noblock = @group_stop_noblock = @group_restart_noblock = @group_unmonitor_noblock = true
-      @state = 'unmonitored'
+      @state = "unmonitored"
 
       CONFIGURABLE_ATTRIBUTES.each do |attribute_name|
         public_send("#{attribute_name}=", options.fetch(attribute_name)) if options.key?(attribute_name)
@@ -593,7 +593,7 @@ module Bluepill
     #
     # @api private
     def unmonitored?
-      state.eql?('unmonitored')
+      state.eql?("unmonitored")
     end
 
     # Return whether the process is up
@@ -602,7 +602,7 @@ module Bluepill
     #
     # @api private
     def up?
-      state.eql?('up')
+      state.eql?("up")
     end
 
     # Return whether the process is down
@@ -611,7 +611,7 @@ module Bluepill
     #
     # @api private
     def down?
-      state.eql?('down')
+      state.eql?("down")
     end
 
     # Return whether the process is starting
@@ -620,7 +620,7 @@ module Bluepill
     #
     # @api private
     def starting?
-      state.eql?('starting')
+      state.eql?("starting")
     end
 
     # Return whether the process is stopping
@@ -629,7 +629,7 @@ module Bluepill
     #
     # @api private
     def stopping?
-      state.eql?('stopping')
+      state.eql?("stopping")
     end
 
     # Return whether the process is restarting
@@ -638,7 +638,7 @@ module Bluepill
     #
     # @api private
     def restarting?
-      state.eql?('restarting')
+      state.eql?("restarting")
     end
 
     # Start the process, if it's unmonitored or down
@@ -808,7 +808,7 @@ module Bluepill
 
       # Also, when a process changes state, we should re-populate its child list
       if monitor_children?
-        logger.warning 'Clearing child list'
+        logger.warning "Clearing child list"
         children.clear
       end
       logger.info "Going from #{transition.from_name} => #{transition.to_name}"
@@ -883,7 +883,7 @@ module Bluepill
         watch_events = thread.value #: Array[Symbol]
         next if watch_events.empty?
 
-        logger.info "#{watch.name} dispatched: #{watch_events.join(',')}"
+        logger.info "#{watch.name} dispatched: #{watch_events.join(",")}"
         watch_events.each do |event|
           events << [event, watch.to_s]
         end
@@ -904,10 +904,10 @@ module Bluepill
     # @api private
     def determine_initial_state
       if process_running?(true)
-        self.state = 'up'
+        self.state = "up"
         return
       end
-      self.state = auto_start.equal?(false) ? 'unmonitored' : 'down' # we need to check for false value
+      self.state = auto_start.equal?(false) ? "unmonitored" : "down" # we need to check for false value
     end
 
     # Carry out a command from the command line
@@ -919,25 +919,25 @@ module Bluepill
     # @api private
     def handle_user_command(cmd)
       case cmd
-      when 'start'
+      when "start"
         if process_running?(true)
-          logger.warning('Refusing to re-run start command on an already running process.')
+          logger.warning("Refusing to re-run start command on an already running process.")
         else
-          dispatch!(:start, 'user initiated')
+          dispatch!(:start, "user initiated")
         end
-      when 'stop'
+      when "stop"
         stop_process
-        dispatch!(:unmonitor, 'user initiated')
-      when 'restart'
+        dispatch!(:unmonitor, "user initiated")
+      when "restart"
         # Through the state machine, like a check's restart, so the process
         # shows as restarting and post_start_command runs once it's up. A
         # state restart can't leave, such as unmonitored, restarts it directly.
-        restart_process unless dispatch!(:restart, 'user initiated')
-      when 'unmonitor'
+        restart_process unless dispatch!(:restart, "user initiated")
+      when "unmonitor"
         # When the user issues an unmonitor cmd, reset any triggers so that
         # scheduled events gets cleared
         triggers.each(&:reset!)
-        dispatch!(:unmonitor, 'user initiated')
+        dispatch!(:unmonitor, "user initiated")
       end
     end
 
@@ -1151,7 +1151,7 @@ module Bluepill
       # Add new found children to the list
       new_children_pids = System.get_children(actual_pid) - @children.collect(&:actual_pid)
 
-      logger.info "Existing children: #{@children.collect(&:actual_pid).join(',')}. Got new children: #{new_children_pids} for #{actual_pid}" unless new_children_pids.empty?
+      logger.info "Existing children: #{@children.collect(&:actual_pid).join(",")}. Got new children: #{new_children_pids} for #{actual_pid}" unless new_children_pids.empty?
 
       # Construct a new process wrapper for each new found children
       # monitor_children sets the factory

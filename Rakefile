@@ -1,32 +1,32 @@
-$LOAD_PATH << File.expand_path('./lib', File.dirname(__FILE__))
-require 'bluepill/version'
+$LOAD_PATH << File.expand_path("./lib", File.dirname(__FILE__))
+require "bluepill/version"
 
-require 'bundler'
+require "bundler"
 Bundler::GemHelper.install_tasks
 
 # Only tag and push to GitHub. The push workflow (.github/workflows/push.yml)
 # signs the gem and pushes it to RubyGems.
-Rake::Task['release'].clear
+Rake::Task["release"].clear
 desc "Create tag v#{Bluepill::Version} and push it to GitHub"
-task 'release', [:remote] => ['build', 'release:guard_clean'] do |_, args|
-  Rake::Task['release:source_control_push'].invoke(args[:remote])
+task "release", [:remote] => ["build", "release:guard_clean"] do |_, args|
+  Rake::Task["release:source_control_push"].invoke(args[:remote])
 end
 
-require 'rspec/core/rake_task'
+require "rspec/core/rake_task"
 RSpec::Core::RakeTask.new
 
 begin
-  require 'rubocop/rake_task'
+  require "rubocop/rake_task"
   RuboCop::RakeTask.new
 rescue LoadError
   task :rubocop do
-    $stderr.puts 'RuboCop is disabled'
+    $stderr.puts "RuboCop is disabled"
   end
 end
 
 # Steep needs Ruby 3.3 or newer, so the Gemfile only installs it there
 begin
-  require 'steep/version'
+  require "steep/version"
   steep = true
 rescue LoadError
   steep = false
@@ -34,48 +34,48 @@ end
 
 if steep
   namespace :rbs do
-    desc 'Install the signatures of the dependencies from rbs_collection.lock.yaml'
+    desc "Install the signatures of the dependencies from rbs_collection.lock.yaml"
     task :collection do
-      sh 'rbs collection install --frozen'
+      sh "rbs collection install --frozen"
     end
 
-    desc 'Validate the RBS signatures'
+    desc "Validate the RBS signatures"
     task validate: :collection do
-      sh 'rbs -I sig -I sig-vendor validate'
+      sh "rbs -I sig -I sig-vendor validate"
     end
   end
 
-  desc 'Type check lib against sig with Steep'
-  task steep: 'rbs:validate' do
-    sh 'steep check'
+  desc "Type check lib against sig with Steep"
+  task steep: "rbs:validate" do
+    sh "steep check"
   end
 end
 
 # Mutant needs Ruby 3.3 or newer, so the Gemfile only installs it there
 begin
-  require 'mutant/version'
+  require "mutant/version"
   mutant = true
 rescue LoadError
   mutant = false
 end
 
 if mutant
-  desc 'Run mutation tests with mutant (CI splits it into shards)'
+  desc "Run mutation tests with mutant (CI splits it into shards)"
   task :mutant do
-    sh 'mutant run'
+    sh "mutant run"
   end
 
   namespace :mutant do
-    desc 'List the subjects touched since REF (every one, without a REF), one per line'
+    desc "List the subjects touched since REF (every one, without a REF), one per line"
     task :subjects, [:ref] do |_task, args|
-      require_relative 'tasks/mutant_shard'
+      require_relative "tasks/mutant_shard"
       puts MutantShard.subjects(args[:ref])
     end
 
-    desc 'Run mutant on shard INDEX of TOTAL of the subjects touched since REF (every one, without a REF)'
+    desc "Run mutant on shard INDEX of TOTAL of the subjects touched since REF (every one, without a REF)"
     task :shard, [:ref, :index, :total] do |_task, args|
-      require 'shellwords'
-      require_relative 'tasks/mutant_shard'
+      require "shellwords"
+      require_relative "tasks/mutant_shard"
       index = Integer(args.fetch(:index))
       total = Integer(args.fetch(:total))
       subjects = MutantShard.subjects(args[:ref])
@@ -85,25 +85,25 @@ if mutant
         puts "Shard #{index} of #{total}: no subjects"
       else
         puts "Shard #{index} of #{total}: #{mine.size} of #{subjects.size} subjects"
-        sh "mutant run #{mine.collect { |subject| Shellwords.escape(subject) }.join(' ')}"
+        sh "mutant run #{mine.collect { |subject| Shellwords.escape(subject) }.join(" ")}"
       end
     end
   end
 end
 
 begin
-  require 'yard'
+  require "yard"
   YARD::Rake::YardocTask.new do |yard|
     yard.options << "--title='bluepill #{Bluepill::Version}'"
   end
 rescue LoadError
-  $stderr.puts 'Please install YARD with: gem install yard'
+  $stderr.puts "Please install YARD with: gem install yard"
 end
 
 # Yardstick needs Ruby 2.7 or newer, so the Gemfile only installs it there
 begin
-  require 'yardstick/rake/measurement'
-  require 'yardstick/rake/verify'
+  require "yardstick/rake/measurement"
+  require "yardstick/rake/verify"
   yardstick = true
 rescue LoadError
   yardstick = false
@@ -118,7 +118,7 @@ if yardstick
   end
 end
 
-desc 'Run the specs, like rake spec'
+desc "Run the specs, like rake spec"
 task test: :spec
 default_tasks = [:spec, :rubocop]
 default_tasks << :yardstick if yardstick
@@ -128,7 +128,7 @@ task default: default_tasks
 
 # Duel needs Ruby 3.4 or newer, so the Gemfile only installs it there
 begin
-  require 'duel/rake_task'
+  require "duel/rake_task"
   Duel::RakeTask.new
 rescue LoadError
   nil

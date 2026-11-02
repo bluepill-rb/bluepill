@@ -1,4 +1,4 @@
-require 'bluepill/system'
+require "bluepill/system"
 
 module Bluepill
   # Remember the pids and process groups of the processes bluepill starts
@@ -71,7 +71,7 @@ module Bluepill
       #
       # @api private
       def setup(base_dir, app_name)
-        @legacy_journal_dir ||= File.join(base_dir, 'journals')
+        @legacy_journal_dir ||= File.join(base_dir, "journals")
         @journal_base_dir ||= File.join(@legacy_journal_dir, app_name.to_s)
         [@legacy_journal_dir, @journal_base_dir].each do |dir|
           FileUtils.mkdir_p(dir)
@@ -152,7 +152,7 @@ module Bluepill
     #
     # @api private
     def self.clear_all_atomic_fs_locks
-      Dir[File.join(journal_base_dir, '.*.lock')].each do |lock|
+      Dir[File.join(journal_base_dir, ".*.lock")].each do |lock|
         clear_atomic_fs_lock(lock)
       end
     end
@@ -208,7 +208,7 @@ module Bluepill
     #
     # @api private
     def self.journal_line(id)
-      [id, System.started_at(id)].compact.join(' ')
+      [id, System.started_at(id)].compact.join(" ")
     end
 
     # Return the valid pids in a pid journal
@@ -221,7 +221,7 @@ module Bluepill
     def self.pid_journal(filename)
       logger.debug("pid journal file: #{filename}")
       result = journal_entries(filename).collect(&:first).reject { |pid| skip_pid?(pid) }
-      logger.debug("pid journal = #{result.join(' ')}")
+      logger.debug("pid journal = #{result.join(" ")}")
       result
     rescue Errno::ENOENT
       []
@@ -238,7 +238,7 @@ module Bluepill
     def self.pgid_journal(filename)
       logger.debug("pgid journal file: #{filename}")
       result = journal_entries(filename).collect(&:first).reject { |pgid| skip_pgid?(pgid) }
-      logger.debug("pgid journal = #{result.join(' ')}")
+      logger.debug("pgid journal = #{result.join(" ")}")
       result
     rescue Errno::ENOENT
       []
@@ -283,7 +283,7 @@ module Bluepill
     def self.kill_all_pgids_from_journal(journal_name)
       journal_dirs.each do |dir|
         filename = pgid_journal_filename(journal_name, dir)
-        kill_all_from_journal_file(filename, pgid_journal(filename), 'process group', -1)
+        kill_all_from_journal_file(filename, pgid_journal(filename), "process group", -1)
       end
     end
 
@@ -300,7 +300,7 @@ module Bluepill
     def self.kill_all_pids_from_journal(journal_name)
       journal_dirs.each do |dir|
         filename = pid_journal_filename(journal_name, dir)
-        kill_all_from_journal_file(filename, pid_journal(filename), 'process', 1)
+        kill_all_from_journal_file(filename, pid_journal(filename), "process", 1)
       end
     end
 
@@ -330,21 +330,21 @@ module Bluepill
     # @api private
     def self.kill_all_from_journal_file(filename, ids, label, sign)
       if ids.empty?
-        logger.debug('No previous process journal - Skipping cleanup')
+        logger.debug("No previous process journal - Skipping cleanup")
         return
       end
 
       acquire_atomic_fs_lock(filename) do
         ids = journaled_ids(filename, ids, label)
-        signal_journaled('TERM', ids, label, sign)
+        signal_journaled("TERM", ids, label, sign)
         survivors = ids.select { |id| System.pid_alive?(sign * id) }
         unless survivors.empty?
           sleep(1)
           survivors = survivors.select { |id| System.pid_alive?(sign * id) }
-          signal_journaled('KILL', survivors, label, sign)
+          signal_journaled("KILL", survivors, label, sign)
         end
         System.delete_if_exists(filename) # reset journal
-        logger.debug('Journal cleanup completed')
+        logger.debug("Journal cleanup completed")
       end
     end
 
@@ -395,7 +395,7 @@ module Bluepill
     #
     # @api private
     def self.signal_journaled(signal, ids, label, sign)
-      past, verb = signal.eql?('TERM') ? %w[Termed term] : %w[Killed kill]
+      past, verb = signal.eql?("TERM") ? %w[Termed term] : %w[Killed kill]
       ids.each do |id|
         begin
           ::Process.kill(signal, sign * id)
@@ -428,7 +428,7 @@ module Bluepill
           logger.debug("Skipping duplicate pgid #{pgid} already in journal #{journal_name}")
         else
           logger.debug("Saving pgid #{pgid} to process journal #{journal_name}")
-          File.open(filename, 'a+', 0o600) { |f| f.puts(journal_line(valid_pgid)) }
+          File.open(filename, "a+", 0o600) { |f| f.puts(journal_line(valid_pgid)) }
           logger.info("Saved pgid #{pgid} to journal #{journal_name}")
           logger.debug("Journal now = #{File.read(filename)}")
         end
@@ -461,7 +461,7 @@ module Bluepill
           logger.debug("Skipping duplicate pid #{pid} already in journal #{journal_name}")
         else
           logger.debug("Saving pid #{pid} to process journal #{journal_name}")
-          File.open(filename, 'a+', 0o600) { |f| f.puts(journal_line(valid_pid)) }
+          File.open(filename, "a+", 0o600) { |f| f.puts(journal_line(valid_pid)) }
           logger.info("Saved pid #{pid} to journal #{journal_name}")
           logger.debug("Journal now = #{File.read(filename)}")
         end

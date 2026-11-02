@@ -181,15 +181,15 @@ module Bluepill
     def status(process_name = nil)
       lines = [] #: Array[String]
       if process_name.nil?
-        prefix = ('  ' if name)
+        prefix = ("  " if name)
         lines << "#{name}:" if name
 
         processes.each do |process|
-          lines << format('%s%s(pid:%s): %s', prefix, process.name, process.actual_pid, process.state)
+          lines << format("%s%s(pid:%s): %s", prefix, process.name, process.actual_pid, process.state)
           next unless process.monitor_children?
 
           process.children.each do |child|
-            lines << format('  %s%s: %s', prefix, child.name, child.state)
+            lines << format("  %s%s: %s", prefix, child.name, child.state)
           end
         end
 
@@ -197,11 +197,11 @@ module Bluepill
         processes.each do |process|
           next unless process_name.eql?(process.name)
 
-          lines << format('%s(pid:%s): %s', process.name, process.actual_pid, process.state)
+          lines << format("%s(pid:%s): %s", process.name, process.actual_pid, process.state)
           lines << process.statistics.to_s
         end
       end
-      lines << ''
+      lines << ""
     end
   end
 end

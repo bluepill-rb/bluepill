@@ -1,48 +1,48 @@
 describe Bluepill::ProcessConditions::MemUsage do
   subject(:condition) { described_class.new(below: 100.megabytes) }
 
-  it 'can be created without options' do
+  it "can be created without options" do
     expect(described_class.new).to be_a(described_class)
   end
 
-  it 'stores its options' do
+  it "stores its options" do
     expect(condition.instance_variable_get(:@options)).to eq(below: 100.megabytes)
   end
 
-  it 'returns the memory usage of the process in kilobytes as a float' do
+  it "returns the memory usage of the process in kilobytes as a float" do
     allow(Bluepill::System).to receive(:memory_usage).with(123, false).and_return(2048.5)
     expect(condition.run(123, false)).to be_a(Float).and eq(2048.5)
   end
 
-  it 'returns 0.0 for a process that ps does not list' do
+  it "returns 0.0 for a process that ps does not list" do
     allow(Bluepill::System).to receive(:memory_usage).with(123, false).and_return(nil)
     expect(condition.run(123, false)).to be_a(Float).and eq(0.0)
   end
 
-  describe '#check?' do
-    it 'passes when the usage is below the limit' do
+  describe "#check?" do
+    it "passes when the usage is below the limit" do
       expect(condition.check?(99 * 1024)).to be true
     end
 
-    it 'reads the usage in kilobytes of 1024 bytes' do
+    it "reads the usage in kilobytes of 1024 bytes" do
       expect(condition.check?(102_399)).to be true
     end
 
-    it 'fails when the usage is not below the limit' do
+    it "fails when the usage is not below the limit" do
       expect(condition.check?(100 * 1024)).to be false
     end
 
-    it 'passes when the usage cannot be compared' do
+    it "passes when the usage cannot be compared" do
       expect(condition.check?(nil)).to be true
     end
   end
 
-  describe '#format_value' do
-    it 'formats values of at least one megabyte in megabytes' do
+  describe "#format_value" do
+    it "formats values of at least one megabyte in megabytes" do
       expect([1024.0, 2560.0, 10_751.0].collect { |value| condition.format_value(value) }).to eq(%w[1MB 3MB 10MB])
     end
 
-    it 'formats smaller values in kilobytes' do
+    it "formats smaller values in kilobytes" do
       expect([1023.0, 1023.9].collect { |value| condition.format_value(value) }).to eq(%w[1023KB 1023KB])
     end
   end

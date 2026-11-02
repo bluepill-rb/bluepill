@@ -1,4 +1,4 @@
-require 'rubygems'
+require "rubygems"
 
 # A process monitor that keeps daemons running
 #
@@ -19,40 +19,40 @@ module Bluepill
   #   when there's no Gemfile
   #
   # @api private
-  def self.setup_bundler(gemfile = ENV.fetch('BUNDLE_GEMFILE', nil))
-    require 'bundler/setup' if gemfile && File.exist?(gemfile)
+  def self.setup_bundler(gemfile = ENV.fetch("BUNDLE_GEMFILE", nil))
+    require "bundler/setup" if gemfile && File.exist?(gemfile)
   end
 end
 
 Bluepill.setup_bundler
 
-require 'thread'
-require 'monitor'
-require 'timeout'
-require 'logger'
+require "thread"
+require "monitor"
+require "timeout"
+require "logger"
 
-require 'bluepill/units'
-require 'bluepill/util/inflections'
+require "bluepill/units"
+require "bluepill/util/inflections"
 
-require 'bluepill/dsl/process_proxy'
-require 'bluepill/dsl/process_factory'
-require 'bluepill/dsl/app_proxy'
+require "bluepill/dsl/process_proxy"
+require "bluepill/dsl/process_factory"
+require "bluepill/dsl/app_proxy"
 
-require 'bluepill/application'
-require 'bluepill/controller'
-require 'bluepill/socket'
-require 'bluepill/process'
-require 'bluepill/process_statistics'
-require 'bluepill/group'
-require 'bluepill/logger'
-require 'bluepill/condition_watch'
-require 'bluepill/trigger'
-require 'bluepill/triggers/flapping'
-require 'bluepill/dsl'
-require 'bluepill/system'
+require "bluepill/application"
+require "bluepill/controller"
+require "bluepill/socket"
+require "bluepill/process"
+require "bluepill/process_statistics"
+require "bluepill/group"
+require "bluepill/logger"
+require "bluepill/condition_watch"
+require "bluepill/trigger"
+require "bluepill/triggers/flapping"
+require "bluepill/dsl"
+require "bluepill/system"
 
-require 'bluepill/process_conditions'
+require "bluepill/process_conditions"
 
-require 'bluepill/util/rotational_array'
+require "bluepill/util/rotational_array"
 
-require 'bluepill/version'
+require "bluepill/version"

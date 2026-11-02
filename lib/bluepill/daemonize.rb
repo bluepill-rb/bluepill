@@ -123,12 +123,12 @@ module Bluepill
     # @api private
     def self.detach
       session = ::Process.setsid
-      raise Error, 'cannot detach from controlling terminal' unless session
+      raise Error, "cannot detach from controlling terminal" unless session
 
       # The session leader exits after the next fork, so the daemon can
       # never get a controlling terminal, and it ignores the hangup that
       # its exit sends
-      Signal.trap('SIGHUP', 'IGNORE')
+      Signal.trap("SIGHUP", "IGNORE")
       session
     end
 
@@ -140,7 +140,7 @@ module Bluepill
     # @api private
     def self.become_daemon(name = nil)
       $0 = name if name
-      Dir.chdir('/') # don't keep the directory it started in in use
+      Dir.chdir("/") # don't keep the directory it started in in use
       close_io
       redirect_io
       srand # so the daemon and its parent don't share random numbers

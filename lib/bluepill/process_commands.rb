@@ -34,7 +34,7 @@ module Bluepill
       else
         # This is a self-daemonizing process
         with_timeout(start_grace_time, on_start_timeout) do
-          run_command(command, 'Start')
+          run_command(command, "Start")
         end
       end
 
@@ -50,7 +50,7 @@ module Bluepill
       return unless pre_start_command
 
       logger.warning "Executing pre start command: #{pre_start_command}"
-      run_command(pre_start_command, 'Pre start')
+      run_command(pre_start_command, "Pre start")
     end
 
     # Stop the process with its stop command, stop signals, or TERM
@@ -77,8 +77,8 @@ module Bluepill
         cmd = prepare_command(stop_command)
         logger.warning "Executing stop command: #{cmd}"
 
-        with_timeout(stop_grace_time, 'stop') do
-          run_command(cmd, 'Stop')
+        with_timeout(stop_grace_time, "stop") do
+          run_command(cmd, "Stop")
         end
         cleanup_process
       elsif stop_signals
@@ -87,7 +87,7 @@ module Bluepill
         @threads << Thread.new(stop_signals.clone) { |signals| send_stop_signals(signals) }
       else
         logger.warning "Executing default stop command. Sending TERM signal to #{actual_pid}"
-        signal_process('TERM')
+        signal_process("TERM")
         cleanup_process
       end
 
@@ -105,13 +105,13 @@ module Bluepill
 
         logger.warning "Executing restart command: #{cmd}"
 
-        with_timeout(restart_grace_time, 'restart') do
-          run_command(cmd, 'Restart')
+        with_timeout(restart_grace_time, "restart") do
+          run_command(cmd, "Restart")
         end
 
         skip_ticks_for(restart_grace_time)
       else
-        logger.warning 'No restart_command specified. Must stop and start to restart'
+        logger.warning "No restart_command specified. Must stop and start to restart"
         stop_process
         # Stop signals run in a thread. Wait for them, or start_process would
         # kill the stopping process from the journal before its delays are up.
@@ -146,7 +146,7 @@ module Bluepill
     # @api private
     def pre_stop_process
       command = pre_stop_command
-      run_hook(command, 'Pre stop', @stopping_pid) if command
+      run_hook(command, "Pre stop", @stopping_pid) if command
     end
 
     # Run the post_stop_command in the background, if there is one
@@ -156,7 +156,7 @@ module Bluepill
     # @api private
     def post_stop_process
       command = post_stop_command
-      run_hook_in_background(command, 'Post stop', @stopping_pid) if command
+      run_hook_in_background(command, "Post stop", @stopping_pid) if command
     end
 
     # Run the post_start_command in the background, if there is one
@@ -166,7 +166,7 @@ module Bluepill
     # @api private
     def post_start_process
       command = post_start_command
-      run_hook_in_background(command, 'Post start', actual_pid) if command
+      run_hook_in_background(command, "Post start", actual_pid) if command
     end
 
     # Run the notify_command in the background, after a change of state
@@ -185,15 +185,15 @@ module Bluepill
 
       pid = @actual_pid || @last_pid
       env = {
-        'BLUEPILL_APP' => app_name.to_s,
-        'BLUEPILL_GROUP' => group_name.to_s,
-        'BLUEPILL_PROCESS' => name.to_s,
-        'BLUEPILL_FROM' => transition.from_name.to_s,
-        'BLUEPILL_TO' => transition.to_name.to_s,
-        'BLUEPILL_REASON' => @transition_reason.to_s,
-        'BLUEPILL_PID' => pid.to_s,
+        "BLUEPILL_APP" => app_name.to_s,
+        "BLUEPILL_GROUP" => group_name.to_s,
+        "BLUEPILL_PROCESS" => name.to_s,
+        "BLUEPILL_FROM" => transition.from_name.to_s,
+        "BLUEPILL_TO" => transition.to_name.to_s,
+        "BLUEPILL_REASON" => @transition_reason.to_s,
+        "BLUEPILL_PID" => pid.to_s,
       }
-      run_hook_in_background(command, 'Notify', pid, env)
+      run_hook_in_background(command, "Notify", pid, env)
     end
 
     # Run a hook command in a thread of its own
@@ -227,7 +227,7 @@ module Bluepill
     #
     # @api private
     def run_hook(command, description, pid, env = {})
-      cmd = command.gsub('{{PID}}', pid.to_s)
+      cmd = command.gsub("{{PID}}", pid.to_s)
       logger.info "Executing #{description.downcase} command: #{cmd}"
       options = system_command_options
       options[:environment] = (environment || {}).merge(env)
@@ -247,7 +247,7 @@ module Bluepill
     #
     # @api private
     def prepare_command(command)
-      command.gsub('{{PID}}', actual_pid.to_s)
+      command.gsub("{{PID}}", actual_pid.to_s)
     end
 
     # Return the options the process's commands run with
@@ -286,8 +286,8 @@ module Bluepill
     def with_timeout(secs, next_state, &blk)
       Timeout.timeout(secs, &blk)
     rescue Timeout::Error
-      logger.err 'Execution is taking longer than expected.'
-      logger.err 'Did you forget to tell bluepill to daemonize this process?'
+      logger.err "Execution is taking longer than expected."
+      logger.err "Did you forget to tell bluepill to daemonize this process?"
       dispatch!(next_state)
     end
 
@@ -342,7 +342,7 @@ module Bluepill
         Kernel.sleep(delay)
         # break unless signal_process(0) #break unless the process can be reached
         unless signal_process(0)
-          logger.debug 'Process has terminated.'
+          logger.debug "Process has terminated."
           return cleanup_process
         end
         logger.info "Sending signal #{signal} to #{actual_pid}"

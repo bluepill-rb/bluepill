@@ -78,8 +78,8 @@ module Bluepill
     # @api public
     def method_missing(name, *args)
       attribute = name.to_s
-      key = attribute.sub(/[=!]\z/, '').to_sym
-      bang = attribute.end_with?('!')
+      key = attribute.sub(/[=!]\z/, "").to_sym
+      bang = attribute.end_with?("!")
       reader = args.empty? && key.to_s.eql?(attribute)
       value, = args
 
@@ -111,7 +111,7 @@ module Bluepill
     # @api private
     def respond_to_missing?(name, _include_private)
       attribute = name.to_s
-      key = attribute.sub(/[=!]\z/, '')
+      key = attribute.sub(/[=!]\z/, "")
       return @attributes.key?(name) if key.eql?(attribute)
 
       self.class.attribute?(key.to_sym)

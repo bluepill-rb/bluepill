@@ -1,6 +1,6 @@
 describe Bluepill::Application do
   let(:logger) { instance_double(Bluepill::Logger) }
-  let(:app) { described_class.new('test', base_dir: '/var/bluepill') }
+  let(:app) { described_class.new("test", base_dir: "/var/bluepill") }
 
   before do
     allow(logger).to receive(:prefix_with).and_return(logger)
@@ -22,7 +22,7 @@ describe Bluepill::Application do
     app.instance_variable_get(:@mutex).locked?
   end
 
-  describe 'start_listener' do
+  describe "start_listener" do
     let(:client) { instance_double(UNIXSocket, readline: "status:web\n", write: nil, close: nil) }
     let(:group) { instance_double(Bluepill::Group, status: []) }
     let(:logged) { [] }
@@ -30,7 +30,7 @@ describe Bluepill::Application do
     before do
       app.socket = instance_double(UNIXServer)
       accepting(client)
-      app.groups = {'web' => group}
+      app.groups = {"web" => group}
       # The listener's thread is its block, which listen calls
       allow(Thread).to receive(:new) { |&block| block }
       allow(logger).to receive(:err) { |line| logged << line }
@@ -54,118 +54,118 @@ describe Bluepill::Application do
       nil
     end
 
-    context 'with a command' do
+    context "with a command" do
       before do
         # JRuby 1.7's sockets have no close_on_exec=, which the listener skips
         allow(client).to receive(:close_on_exec=) if UNIXSocket.method_defined?(:close_on_exec=)
-        allow(group).to receive(:status).with(nil).and_return(['web:a'])
+        allow(group).to receive(:status).with(nil).and_return(["web:a"])
         listen
       end
 
-      it 'listens in a loop' do
+      it "listens in a loop" do
         expect(app.socket).to have_received(:accept).twice
       end
 
-      it 'keeps the client from leaking into processes it starts' do
+      it "keeps the client from leaking into processes it starts" do
         skip "this Ruby's sockets have no close_on_exec=" unless UNIXSocket.method_defined?(:close_on_exec=)
         expect(client).to have_received(:close_on_exec=).with(true)
       end
 
-      it 'answers with the marshaled response' do
-        expect(client).to have_received(:write).with(Marshal.dump(['web:a']))
+      it "answers with the marshaled response" do
+        expect(client).to have_received(:write).with(Marshal.dump(["web:a"]))
       end
 
-      it 'closes the client' do
+      it "closes the client" do
         expect(client).to have_received(:close)
       end
     end
 
-    it 'ignores whitespace around the command' do
+    it "ignores whitespace around the command" do
       allow(client).to receive(:readline).and_return(" status:web\n")
       listen
       expect(group).to have_received(:status).with(nil)
     end
 
-    it 'runs the command while holding the mutex' do
+    it "runs the command while holding the mutex" do
       allow(group).to receive(:status) { mutex_locked? }
       listen
       expect(client).to have_received(:write).with(Marshal.dump(true))
     end
 
-    it 'sends a command without a target' do
+    it "sends a command without a target" do
       allow(client).to receive(:readline).and_return("status:\n")
       listen
       expect(group).to have_received(:status).with(no_args)
     end
 
-    it 'keeps the colons in a process name' do
-      app.groups = {'jobs' => group}
+    it "keeps the colons in a process name" do
+      app.groups = {"jobs" => group}
       allow(client).to receive(:readline).and_return("status:jobs:job_1:IMPORT\n")
       listen
-      expect(group).to have_received(:status).with('job_1:IMPORT')
+      expect(group).to have_received(:status).with("job_1:IMPORT")
     end
 
-    it 'answers with the error raised by a command' do
-      error = RuntimeError.new('boom')
+    it "answers with the error raised by a command" do
+      error = RuntimeError.new("boom")
       allow(group).to receive(:status).and_raise(error)
       listen
       expect(client).to have_received(:write).with(Marshal.dump(error))
     end
 
-    context 'when handling a client fails' do
+    context "when handling a client fails" do
       before do
-        error = RuntimeError.new('broken pipe')
-        error.set_backtrace(['a.rb:1'])
+        error = RuntimeError.new("broken pipe")
+        error.set_backtrace(["a.rb:1"])
         allow(client).to receive(:write).and_raise(error)
         listen
       end
 
-      it 'logs the error and its backtrace' do
-        expect(logged).to eq(['Got exception in cmd listener: RuntimeError `broken pipe`', 'a.rb:1'])
+      it "logs the error and its backtrace" do
+        expect(logged).to eq(["Got exception in cmd listener: RuntimeError `broken pipe`", "a.rb:1"])
       end
 
-      it 'closes the client' do
+      it "closes the client" do
         expect(client).to have_received(:close)
       end
     end
 
-    it 'logs the message of an error from an anonymous class' do
-      allow(client).to receive(:write).and_raise(anonymous_error('broken pipe'))
+    it "logs the message of an error from an anonymous class" do
+      allow(client).to receive(:write).and_raise(anonymous_error("broken pipe"))
       listen
-      expect(logged.first).to eq('Got exception in cmd listener:  `broken pipe`')
+      expect(logged.first).to eq("Got exception in cmd listener:  `broken pipe`")
     end
 
-    it 'logs an error without a backtrace' do
-      error = RuntimeError.new('broken pipe')
+    it "logs an error without a backtrace" do
+      error = RuntimeError.new("broken pipe")
       allow(error).to receive(:backtrace).and_return(nil)
       allow(client).to receive(:write).and_raise(error)
       listen
-      expect(logged).to eq(['Got exception in cmd listener: RuntimeError `broken pipe`'])
+      expect(logged).to eq(["Got exception in cmd listener: RuntimeError `broken pipe`"])
     end
 
-    context 'when accepting a client fails' do
+    context "when accepting a client fails" do
       before do
         error = Errno::EMFILE.new
-        error.set_backtrace(['a.rb:1'])
+        error.set_backtrace(["a.rb:1"])
         accepting(error)
         listen
       end
 
-      it 'keeps listening' do
+      it "keeps listening" do
         expect(app.socket).to have_received(:accept).twice
       end
 
-      it 'logs the error and its backtrace' do
-        expect(logged).to eq(["Got exception in cmd listener: Errno::EMFILE `#{Errno::EMFILE.new.message}`", 'a.rb:1'])
+      it "logs the error and its backtrace" do
+        expect(logged).to eq(["Got exception in cmd listener: Errno::EMFILE `#{Errno::EMFILE.new.message}`", "a.rb:1"])
       end
     end
 
-    it 'ignores an already closed client' do
+    it "ignores an already closed client" do
       allow(client).to receive(:close).and_raise(IOError)
       expect { listen }.not_to raise_error
     end
 
-    it 'kills the previous listener' do
+    it "kills the previous listener" do
       thread = instance_double(Thread, kill: nil)
       allow(Thread).to receive(:new).and_return(thread)
       app.send(:start_listener)

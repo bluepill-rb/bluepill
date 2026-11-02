@@ -10,7 +10,7 @@ module Bluepill
     # The mode that a daemon's stdout and stderr files are opened in
     #
     # @api private
-    APPEND_MODE = 'a'.freeze
+    APPEND_MODE = "a".freeze
 
     # Raised when ps could not be run, so there is no data for this tick
     #
@@ -59,7 +59,7 @@ module Bluepill
     # @api private
     def self.started_at(pid)
       # ps says why on stderr when there's no such process
-      elapsed = IO.popen(['ps', '-o', 'etime=', '-p', Integer(pid).to_s], err: File::NULL, &:read).rstrip
+      elapsed = IO.popen(["ps", "-o", "etime=", "-p", Integer(pid).to_s], err: File::NULL, &:read).rstrip
       Integer(Time.now) - parse_elapsed_time(elapsed) unless elapsed.empty?
     rescue SystemCallError
       nil
@@ -273,8 +273,8 @@ module Bluepill
           lines.each do |line|
             # Split off the fields before the command, and keep the command
             # whole, as ps printed it
-            chunks = line.split(' ', command + 1)
-            chunks[command] ||= ''
+            chunks = line.split(" ", command + 1)
+            chunks[command] ||= ""
             table[chunks.fetch(IDX_MAP.fetch(:pid)).to_i] = chunks
           end
           table
@@ -310,4 +310,4 @@ module Bluepill
   end
 end
 
-require 'bluepill/system/commands'
+require "bluepill/system/commands"

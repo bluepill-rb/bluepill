@@ -1,5 +1,5 @@
-require 'net/http'
-require 'uri'
+require "net/http"
+require "uri"
 
 module Bluepill
   module ProcessConditions
@@ -59,8 +59,8 @@ module Bluepill
       def run(_pid, _include_children)
         host = @uri.host #: String
         session = Net::HTTP.new(host, @uri.port)
-        if @uri.scheme.eql?('https')
-          require 'net/https'
+        if @uri.scheme.eql?("https")
+          require "net/https"
           session.use_ssl = true
           session.verify_mode = OpenSSL::SSL::VERIFY_NONE
         end

@@ -1,29 +1,29 @@
 describe Bluepill::ProcessConditions::CpuUsage do
   subject(:condition) { described_class.new(below: 50) }
 
-  it 'can be created without options' do
+  it "can be created without options" do
     expect(described_class.new).to be_a(described_class)
   end
 
-  it 'stores its options' do
+  it "stores its options" do
     expect(condition.instance_variable_get(:@options)).to eq(below: 50)
   end
 
-  it 'returns the cpu usage of the process as a float' do
+  it "returns the cpu usage of the process as a float" do
     allow(Bluepill::System).to receive(:cpu_usage).with(123, true).and_return(12.5)
     expect(condition.run(123, true)).to be_a(Float).and eq(12.5)
   end
 
-  it 'returns 0.0 for a process that ps does not list' do
+  it "returns 0.0 for a process that ps does not list" do
     allow(Bluepill::System).to receive(:cpu_usage).with(123, false).and_return(nil)
     expect(condition.run(123, false)).to be_a(Float).and eq(0.0)
   end
 
-  it 'passes when the usage is below the limit' do
+  it "passes when the usage is below the limit" do
     expect(condition.check?(49.9)).to be true
   end
 
-  it 'fails when the usage is not below the limit' do
+  it "fails when the usage is not below the limit" do
     expect(condition.check?(50.0)).to be false
   end
 end

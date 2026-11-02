@@ -206,3 +206,11 @@ RSpec/DescribeClass:
   IgnoredMetadata:
     type:
       - integration
+
+# Double quotes, as Standard wants
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+  ConsistentQuotesInMultiline: false
+
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: double_quotes

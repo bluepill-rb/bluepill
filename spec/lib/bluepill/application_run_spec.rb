@@ -1,5 +1,5 @@
 describe Bluepill::Application do
-  let(:app) { described_class.new('test', base_dir: '/var/bluepill') }
+  let(:app) { described_class.new("test", base_dir: "/var/bluepill") }
   let(:traps) { {} }
 
   before do
@@ -18,16 +18,16 @@ describe Bluepill::Application do
   end
 
   def pid_file
-    '/var/bluepill/pids/test.pid'
+    "/var/bluepill/pids/test.pid"
   end
 
-  describe 'run' do
+  describe "run" do
     let(:group) { instance_double(Bluepill::Group) }
     let(:other_group) { instance_double(Bluepill::Group) }
     let(:calls) { [] }
 
     before do
-      app.groups = {'web' => group, 'db' => other_group}
+      app.groups = {"web" => group, "db" => other_group}
       allow($stdout).to receive(:puts)
       # The TERM trap cleans up
       allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks)
@@ -37,50 +37,50 @@ describe Bluepill::Application do
       allow(other_group).to receive(:tick) { calls << [:db, mutex_locked?] }
       allow(Kernel).to receive(:sleep).with(1) do
         calls << [:sleep, mutex_locked?]
-        traps['TERM'].call(15) if calls.collect(&:first).count(:sleep) == 2
+        traps["TERM"].call(15) if calls.collect(&:first).count(:sleep) == 2
       end
       app.send(:run)
     end
 
-    it 'ticks every group each second until terminated' do
+    it "ticks every group each second until terminated" do
       expect(calls.collect(&:first)).to eq([:reset_data, :web, :db, :sleep, :reset_data, :web, :db, :sleep])
     end
 
-    it 'ticks while holding the mutex, and sleeps without it' do
+    it "ticks while holding the mutex, and sleeps without it" do
       expect(calls.first(4)).to eq([[:reset_data, true], [:web, true], [:db, true], [:sleep, false]])
     end
   end
 
-  describe 'cleanup' do
-    let(:socket) { instance_double(UNIXServer, path: '/var/bluepill/test.sock') }
+  describe "cleanup" do
+    let(:socket) { instance_double(UNIXServer, path: "/var/bluepill/test.sock") }
 
     before do
       allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks)
       allow(Bluepill::System).to receive(:delete_if_exists)
     end
 
-    it 'clears the journal locks' do
+    it "clears the journal locks" do
       app.send(:cleanup)
       expect(Bluepill::ProcessJournal).to have_received(:clear_all_atomic_fs_locks)
     end
 
-    it 'deletes the pid file' do
+    it "deletes the pid file" do
       app.send(:cleanup)
       expect(Bluepill::System).to have_received(:delete_if_exists).with(pid_file)
     end
 
-    it 'deletes the socket' do
+    it "deletes the socket" do
       app.socket = socket
       app.send(:cleanup)
       expect(Bluepill::System).to have_received(:delete_if_exists).with(socket.path)
     end
 
-    it 'deletes only the pid file without a socket' do
+    it "deletes only the pid file without a socket" do
       app.send(:cleanup)
       expect(Bluepill::System).to have_received(:delete_if_exists).once
     end
 
-    it 'ignores a closed socket' do
+    it "ignores a closed socket" do
       allow(socket).to receive(:path).and_raise(IOError)
       app.socket = socket
       app.send(:cleanup)

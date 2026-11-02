@@ -1,8 +1,8 @@
 #!/usr/bin/env ruby
 # Runs bin/bluepill with the code in this checkout instead of an installed gem
 
-require 'rubygems'
-require 'bundler/setup'
-$LOAD_PATH.unshift(File.expand_path('lib', File.dirname(__FILE__)))
+require "rubygems"
+require "bundler/setup"
+$LOAD_PATH.unshift(File.expand_path("lib", File.dirname(__FILE__)))
 
-load File.expand_path('bin/bluepill', File.dirname(__FILE__))
+load File.expand_path("bin/bluepill", File.dirname(__FILE__))

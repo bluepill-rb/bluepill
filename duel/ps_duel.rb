@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative 'duel_helper'
+require_relative "duel_helper"
 
 # Bluepill runs ps once a tick, and parses the whole listing into the table
 # that every watch reads (Bluepill::System.ps_axu). The application's run
@@ -17,5 +17,5 @@ require_relative 'duel_helper'
 end
 
 # The running_time check reads a process's elapsed time from ps
-duel('elapsed: minutes and seconds') { Bluepill::System.parse_elapsed_time('12:41') }
-duel('elapsed: days, hours, minutes and seconds') { Bluepill::System.parse_elapsed_time('45-02:13:07') }
+duel("elapsed: minutes and seconds") { Bluepill::System.parse_elapsed_time("12:41") }
+duel("elapsed: days, hours, minutes and seconds") { Bluepill::System.parse_elapsed_time("45-02:13:07") }

@@ -177,7 +177,7 @@ module Bluepill
     #
     # @api private
     def to_s
-      data = @history.collect { |v| "#{v.value}#{'*' unless v.critical}" }.join(', ')
+      data = @history.collect { |v| "#{v.value}#{"*" unless v.critical}" }.join(", ")
       "#{@name}: [#{data}]\n"
     end
   end

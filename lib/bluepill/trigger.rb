@@ -18,7 +18,7 @@ module Bluepill
     # @api private
     def self.inherited(klass)
       super
-      @implementations[Util.underscore(klass.name.split('::').last).to_sym] = klass
+      @implementations[Util.underscore(klass.name.split("::").last).to_sym] = klass
     end
 
     # Return the trigger class a config names
@@ -97,7 +97,7 @@ module Bluepill
     #
     # @api private
     def notify(_transition)
-      raise 'Implement in subclass'
+      raise "Implement in subclass"
     end
 
     # Send an event to the process, with the trigger's name as the reason
@@ -108,7 +108,7 @@ module Bluepill
     #
     # @api private
     def dispatch!(event)
-      process.dispatch!(event, self.class.name.split('::').last)
+      process.dispatch!(event, self.class.name.split("::").last)
     end
 
     # Dispatch an event after a delay, in a thread of its own
@@ -146,7 +146,7 @@ module Bluepill
     #
     # @api private
     def cancel_all_events
-      logger.info 'Canceling all scheduled events'
+      logger.info "Canceling all scheduled events"
       mutex.synchronize do
         scheduled_events.collect(&:last).each(&:kill)
         scheduled_events.clear

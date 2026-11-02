@@ -14,7 +14,7 @@ module Bluepill
     #
     # @api private
     def self.camelize(name)
-      name.to_s.sub(/\A[a-z]/, &:upcase).gsub(/_[a-z\d]*/i) { |part| part.delete('_').capitalize }
+      name.to_s.sub(/\A[a-z]/, &:upcase).gsub(/_[a-z\d]*/i) { |part| part.delete("_").capitalize }
     end
 
     # Turn a CamelCase name into snake_case, as ActiveSupport's underscore does

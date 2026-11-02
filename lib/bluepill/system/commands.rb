@@ -1,6 +1,6 @@
-require 'etc'
-require 'shellwords'
-require 'bluepill/daemonize'
+require "etc"
+require "shellwords"
+require "bluepill/daemonize"
 
 module Bluepill
   module System
@@ -109,7 +109,7 @@ module Bluepill
         end
         waiter.join
 
-        cmd_status.empty? ? {exit_code: 0, stdout: '', stderr: ''} : Marshal.load(cmd_status)
+        cmd_status.empty? ? {exit_code: 0, stdout: "", stderr: ""} : Marshal.load(cmd_status)
       else
         rd.close
         # The command and what it starts can all be killed at once on a timeout
@@ -132,7 +132,7 @@ module Bluepill
     # @api private
     def self.kill_group_after(child, timeout, cmd)
       begin
-        ::Process.kill('KILL', -child)
+        ::Process.kill("KILL", -child)
       rescue Errno::ESRCH
         nil # it finished just now
       end
@@ -241,7 +241,7 @@ module Bluepill
     def self.setup_command_environment(options)
       # Setting end PWD env emulates bash behavior when dealing with symlinks
       working_dir = options[:working_dir]
-      Dir.chdir(ENV['PWD'] = working_dir.to_s) if working_dir
+      Dir.chdir(ENV["PWD"] = working_dir.to_s) if working_dir
       environment = options[:environment]
       environment.each { |key, value| ENV[key.to_s] = value.to_s } if environment
     end
@@ -279,7 +279,7 @@ module Bluepill
       return unless user
 
       ::Process::Sys.setuid(user.uid)
-      ENV['HOME'] = user.dir if user.dir
+      ENV["HOME"] = user.dir if user.dir
     end
 
     # Return whether the pid file can be written, logging why if it can't
@@ -295,7 +295,7 @@ module Bluepill
       File.unlink(pid_file)
       true
     rescue StandardError => e
-      logger.warning(format('%s - %s', e.class, e))
+      logger.warning(format("%s - %s", e.class, e))
       # A rescued exception was raised, so it has a backtrace
       backtrace = e.backtrace #: Array[String]
       backtrace.each { |l| logger.warning l }

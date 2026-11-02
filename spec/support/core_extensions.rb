@@ -1,7 +1,7 @@
 # Prints what loading bluepill adds to Ruby's own classes and modules, one
 # line each: the bluepill modules it mixes into them, and the methods it
 # defines on them in its own files. Run by spec/core_extensions_spec.rb.
-lib = File.expand_path('../../lib', File.dirname(__FILE__))
+lib = File.expand_path("../../lib", File.dirname(__FILE__))
 
 # Ruby's own classes and modules, in every Ruby and JRuby bluepill supports.
 # (Walking every constant instead trips over JRuby's Java packages.)
@@ -21,8 +21,8 @@ core.each do |mod|
 end
 
 $LOAD_PATH.unshift(lib)
-require 'bluepill'
-Dir[File.join(lib, 'bluepill', '**', '*.rb')].sort.each { |file| require file }
+require "bluepill"
+Dir[File.join(lib, "bluepill", "**", "*.rb")].sort.each { |file| require file }
 
 def bluepill_method?(mod, name, lib)
   location = mod.instance_method(name).source_location
@@ -32,7 +32,7 @@ end
 added = []
 ancestors.each do |mod, before|
   (mod.ancestors - before).each do |included|
-    next unless included.name.to_s.start_with?('Bluepill')
+    next unless included.name.to_s.start_with?("Bluepill")
     # Integer and Float get Numeric's modules too, but not from bluepill
     next if mod.is_a?(Class) && mod.superclass && mod.superclass.ancestors.include?(included)
 

@@ -1,5 +1,5 @@
-require 'fileutils'
-require 'bluepill/system'
+require "fileutils"
+require "bluepill/system"
 
 module Bluepill
   # Run the bluepill CLI's commands, and send them to the daemon
@@ -52,8 +52,8 @@ module Bluepill
     def initialize(options)
       self.log_file = options[:log_file]
       self.base_dir = options.fetch(:base_dir)
-      self.sockets_dir = File.join(base_dir, 'socks')
-      self.pids_dir = File.join(base_dir, 'pids')
+      self.sockets_dir = File.join(base_dir, "socks")
+      self.pids_dir = File.join(base_dir, "pids")
 
       setup_dir_structure
       cleanup_bluepill_directory
@@ -65,7 +65,7 @@ module Bluepill
     #
     # @api private
     def running_applications
-      Dir[File.join(sockets_dir, '*.sock')].collect { |x| File.basename(x, '.sock') }
+      Dir[File.join(sockets_dir, "*.sock")].collect { |x| File.basename(x, ".sock") }
     end
 
     # Run a CLI command and print what it did
@@ -88,7 +88,7 @@ module Bluepill
       when :quit
         pid = pid_for(application)
         if pid && System.pid_alive?(pid)
-          ::Process.kill('TERM', pid)
+          ::Process.kill("TERM", pid)
           puts "Killing bluepilld[#{pid}]"
         else
           puts "bluepilld[#{pid}] not running"
@@ -107,7 +107,7 @@ module Bluepill
         # these need to be sent to the daemon and the results printed out
         affected = send_to_daemon(application, command, *args)
         if affected.empty?
-          puts 'No processes effected'
+          puts "No processes effected"
         else
           puts "Sent #{command} to:"
           affected.each do |process|
@@ -115,7 +115,7 @@ module Bluepill
           end
         end
       else
-        $stderr.puts(format('Unknown command `%s` (or application `%s` has not been loaded yet)', command, command))
+        $stderr.puts(format("Unknown command `%s` (or application `%s` has not been loaded yet)", command, command))
         exit(1)
       end
     end
@@ -136,10 +136,10 @@ module Bluepill
     def send_to_daemon(application, command, *args)
       verify_version!(application)
 
-      command = [command, *args].join(':')
+      command = [command, *args].join(":")
       response = Socket.client_command(base_dir, application, command)
       if response.is_a?(Exception)
-        $stderr.puts 'Received error from server:'
+        $stderr.puts "Received error from server:"
         $stderr.puts response.inspect
         # join flattens the backtrace and makes a missing one empty
         $stderr.puts [response.backtrace].join("\n")
@@ -148,7 +148,7 @@ module Bluepill
         response
       end
     rescue Errno::ECONNREFUSED
-      abort('Connection Refused: Server is not running')
+      abort("Connection Refused: Server is not running")
     end
 
     # Return the pattern that finds a process or group's lines in the log
@@ -160,8 +160,8 @@ module Bluepill
     #
     # @api private
     def grep_pattern(application, query = nil)
-      pattern = [application, query].compact.join(':')
-      ['\[.*', Regexp.escape(pattern), '.*'].join
+      pattern = [application, query].compact.join(":")
+      ['\[.*', Regexp.escape(pattern), ".*"].join
     end
 
   private
@@ -219,10 +219,10 @@ module Bluepill
     #
     # @api private
     def verify_version!(application)
-      version = Socket.client_command(base_dir, application, 'version')
+      version = Socket.client_command(base_dir, application, "version")
       abort("The running version of your daemon seems to be out of date.\nDaemon Version: #{version}, CLI Version: #{Version}") unless version.equal?(Version)
     rescue ArgumentError
-      abort('The running version of your daemon seems to be out of date.')
+      abort("The running version of your daemon seems to be out of date.")
     end
   end
 end

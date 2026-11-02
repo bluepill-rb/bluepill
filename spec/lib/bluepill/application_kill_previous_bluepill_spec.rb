@@ -1,8 +1,8 @@
-require 'tmpdir'
+require "tmpdir"
 
 describe Bluepill::Application do
   let(:base_dir) { Dir.mktmpdir }
-  let(:app) { described_class.new('test', base_dir: base_dir) }
+  let(:app) { described_class.new("test", base_dir: base_dir) }
 
   before do
     logger = instance_double(Bluepill::Logger)
@@ -21,13 +21,13 @@ describe Bluepill::Application do
   end
 
   def pid_file
-    File.join(base_dir, 'pids', 'test.pid')
+    File.join(base_dir, "pids", "test.pid")
   end
 
-  describe 'kill_previous_bluepill' do
+  describe "kill_previous_bluepill" do
     let(:calls) { [] }
 
-    def write_pid(pid = '1234')
+    def write_pid(pid = "1234")
       File.write(pid_file, pid)
     end
 
@@ -62,7 +62,7 @@ describe Bluepill::Application do
     # The signals and sleeps of a previous bluepill that's killed, and then
     # waited for that many times
     def killed_and_waited_for(times)
-      [[:kill, 0, 1234, ''], [:kill, 2, 1234, killing]] + ([[:sleep, 0.5, killing]] * times)
+      [[:kill, 0, 1234, ""], [:kill, 2, 1234, killing]] + ([[:sleep, 0.5, killing]] * times)
     end
 
     before do
@@ -71,67 +71,67 @@ describe Bluepill::Application do
       allow(::Process).to receive(:kill)
     end
 
-    it 'does nothing without a pid file' do
+    it "does nothing without a pid file" do
       kill_previous_bluepill
       expect(Bluepill::System).not_to have_received(:pid_alive?)
     end
 
-    it 'checks whether the previous bluepill is running' do
+    it "checks whether the previous bluepill is running" do
       write_pid
       kill_previous_bluepill
       expect(Bluepill::System).to have_received(:pid_alive?).with(1234)
     end
 
-    it 'does nothing when the previous bluepill is not running' do
+    it "does nothing when the previous bluepill is not running" do
       write_pid
       kill_previous_bluepill
       expect(::Process).not_to have_received(:kill)
     end
 
-    it 'checks a previous bluepill with pid 1, as in a container' do
-      write_pid('1')
+    it "checks a previous bluepill with pid 1, as in a container" do
+      write_pid("1")
       kill_previous_bluepill
       expect(Bluepill::System).to have_received(:pid_alive?).with(1)
     end
 
-    ['', 'garbage'].each do |contents|
+    ["", "garbage"].each do |contents|
       context "when the pid file holds #{contents.inspect}" do
         before { write_pid(contents) }
 
-        it 'prints nothing, and does not exit' do
+        it "prints nothing, and does not exit" do
           expect { kill_previous_bluepill }.not_to output.to_stdout
         end
 
-        it 'does not check a pid' do
+        it "does not check a pid" do
           kill_previous_bluepill
           expect(Bluepill::System).not_to have_received(:pid_alive?)
         end
 
-        it 'does not signal anything' do
+        it "does not signal anything" do
           kill_previous_bluepill
           expect(::Process).not_to have_received(:kill)
         end
       end
     end
 
-    context 'when the previous bluepill is running' do
+    context "when the previous bluepill is running" do
       before { previous_bluepill_running }
 
-      it 'interrupts it and waits for it to die' do
+      it "interrupts it and waits for it to die" do
         allow(Bluepill::System).to receive(:pid_alive?).with(1234).and_return(true, true, false)
         expect { kill_previous_bluepill }.to output(killing).to_stdout.and change(calls, :dup).to(killed_and_waited_for(2))
       end
 
-      it 'exits when it does not die' do
+      it "exits when it does not die" do
         expect { kill_previous_bluepill }.to exit_with(4).and output("Previous bluepilld[1234] didn't die\n").to_stderr.and output(killing).to_stdout
       end
 
-      it 'waits kill_timeout half seconds for it to die' do
+      it "waits kill_timeout half seconds for it to die" do
         allow($stderr).to receive(:puts)
         expect { kill_previous_bluepill_until_exit }.to output(killing).to_stdout.and change(calls, :dup).to(killed_and_waited_for(10))
       end
 
-      it 'exits when it cannot be killed' do
+      it "exits when it cannot be killed" do
         allow(::Process).to receive(:kill).and_raise(Errno::EPERM)
         expect { kill_previous_bluepill }.to exit_with(4).and output(
           "Encountered error trying to kill previous bluepill:\nErrno::EPERM: #{Errno::EPERM.new.message}\n"
@@ -139,7 +139,7 @@ describe Bluepill::Application do
       end
     end
 
-    context 'when the previous bluepill has just died' do
+    context "when the previous bluepill has just died" do
       before do
         previous_bluepill_running
         allow(::Process).to receive(:kill) do |signal, pid|
@@ -148,13 +148,13 @@ describe Bluepill::Application do
         end
       end
 
-      it 'says so, and does not exit' do
+      it "says so, and does not exit" do
         expect { kill_previous_bluepill }.to output(
           "Encountered error trying to kill previous bluepill:\nErrno::ESRCH: #{Errno::ESRCH.new.message}\n"
         ).to_stderr
       end
 
-      it 'carries on without waiting' do
+      it "carries on without waiting" do
         allow($stderr).to receive(:puts)
         kill_previous_bluepill
         expect(calls).to eq([[:kill, 0, 1234]])

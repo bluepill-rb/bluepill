@@ -7,6 +7,7 @@ module Bluepill
     include PreviousDaemon
 
     PROCESS_COMMANDS: Array[Symbol]
+    DAEMON_COMMANDS: Array[Symbol]
 
     attr_accessor name: String
     attr_accessor logger: Logger
@@ -82,6 +83,8 @@ module Bluepill
       def answer_command: (UNIXSocket client) -> void
 
       def run_command: (String? command, Array[String] args) -> untyped
+
+      def daemon_command: (String? command) -> Symbol
 
       def log_listener_error: (StandardError error) -> void
 

@@ -70,10 +70,27 @@ module Bluepill
       #
       # @api private
       def run_command(command, args)
-        # An empty line leaves command nil, so public_send raises an error for the client
-        mutex { public_send(command, *args) } # steep:ignore ArgumentTypeMismatch
+        method = daemon_command(command)
+        mutex { public_send(method, *args) }
       rescue => e
         e
+      end
+
+      # Return the one of the DAEMON_COMMANDS that a client's command names
+      #
+      # Anyone who can write to the socket can send any line, so only these
+      # commands may run, and not any other of the daemon's public methods.
+      #
+      # @param [String, nil] command the command, or nil for an empty line
+      #
+      # @raise [NoMethodError] if it names none of them
+      #
+      # @return [Symbol]
+      #
+      # @api private
+      def daemon_command(command)
+        DAEMON_COMMANDS.detect { |name| name.to_s.eql?(command) } ||
+          raise(NoMethodError, "Unknown command `#{command}`")
       end
 
       # Log an error that answering a client raised, with its backtrace

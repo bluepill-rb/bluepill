@@ -243,6 +243,16 @@ describe Bluepill::Application do
     end
   end
 
+  describe "DAEMON_COMMANDS" do
+    it "is the commands that the CLI sends" do
+      expect(described_class::DAEMON_COMMANDS).to eq([:start, :stop, :restart, :unmonitor, :status, :version, :log_file])
+    end
+
+    it "is frozen" do
+      expect(described_class::DAEMON_COMMANDS).to be_frozen
+    end
+  end
+
   describe "#mutex" do
     it "runs the block synchronized" do
       expect(app.mutex { :result }).to eq(:result)

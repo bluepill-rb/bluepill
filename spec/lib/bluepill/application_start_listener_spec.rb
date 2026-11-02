@@ -105,6 +105,50 @@ describe Bluepill::Application do
       expect(group).to have_received(:status).with("job_1:IMPORT")
     end
 
+    # The object the listener marshaled for the client
+    def answer
+      answered = []
+      allow(Marshal).to receive(:dump) do |object|
+        answered << object
+        "answer"
+      end
+      listen
+      expect(client).to have_received(:write).with("answer")
+      answered.fetch(0)
+    end
+
+    it "answers the version command" do
+      allow(client).to receive(:readline).and_return("version\n")
+      expect(answer).to eq(Bluepill::Version)
+    end
+
+    it "answers the log_file command" do
+      app.log_file = "/var/log/app.log"
+      allow(client).to receive(:readline).and_return("log_file\n")
+      expect(answer).to eq("/var/log/app.log")
+    end
+
+    it "answers a method that isn't a command with a NoMethodError" do
+      allow(client).to receive(:readline).and_return("add_process:web\n")
+      expect(answer).to have_attributes(class: NoMethodError, message: "Unknown command `add_process`")
+    end
+
+    it "doesn't run a method that isn't a command" do
+      allow(client).to receive(:readline).and_return("instance_eval:groups.clear\n")
+      listen
+      expect(app.groups).to eq("web" => group)
+    end
+
+    it "doesn't run a command's setter" do
+      allow(client).to receive(:readline).and_return("log_file=:/tmp/log\n")
+      expect([answer.message, app.log_file]).to eq(["Unknown command `log_file=`", nil])
+    end
+
+    it "answers an empty line with a NoMethodError" do
+      allow(client).to receive(:readline).and_return("\n")
+      expect(answer).to have_attributes(class: NoMethodError, message: "Unknown command ``")
+    end
+
     it "answers with the error raised by a command" do
       error = RuntimeError.new("boom")
       allow(group).to receive(:status).and_raise(error)

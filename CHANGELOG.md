@@ -45,6 +45,10 @@ To upgrade, install 0.2.0 and run `bluepill load` with the same pill file. It re
 
 - The README's group example gave every process the same pid file, and its `stop_signals` example waited longer than its stop grace time, so bluepill refused to load either config.
 
+### Security
+
+- The daemon now runs only the commands that the CLI sends over its socket: `start`, `stop`, `restart`, `unmonitor`, `status`, `version` and `log_file`. Before, it called whatever method a line on the socket named, so anyone who could write to the socket could call any of the daemon's public methods, such as `instance_eval` with code of their own. Any other command now gets a `NoMethodError` back.
+
 ## [0.1.5] - 2026-11-01
 
 ### Removed

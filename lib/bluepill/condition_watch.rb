@@ -54,35 +54,35 @@ module Bluepill
     # @api private
     EMPTY_ARRAY = no_events.freeze
 
-    # The options the watch takes for itself, which the check doesn't get
-    #
-    # @api private
-    WATCH_KEYS = %i[logger fires every times include_children].freeze
-
     # Create a watch of a check
     #
     # @param [Symbol] name the check's name, such as :mem_usage
-    # @param [Hash{Symbol => Object}] options the check's options. The
-    #   watch takes :logger, :fires (the events to fire, [:restart] by
-    #   default), :every (seconds between runs), :times (how many of the
-    #   last values must fail, as a count or [count, of]), and
-    #   :include_children. The check gets the rest.
+    # @param [Logger, nil] logger the logger to write to
+    # @param [Symbol, Array<Symbol>, nil] fires the events to fire when the
+    #   check fails
+    # @param [Integer, nil] every the seconds between runs
+    # @param [Integer, Array<Integer>] times how many of the last values must
+    #   fail, as a count or as [count, of]
+    # @param [Boolean] include_children whether to count the process's
+    #   children too
+    # @param [Hash{Symbol => Object}] condition_options the check's own
+    #   options, such as below: 100.megabytes
     #
     # @return [void]
     #
     # @api private
-    def initialize(name, options = {})
+    def initialize(name, logger: nil, fires: :restart, every: nil, times: 1, include_children: false, **condition_options)
       @name = name
-      @logger = options[:logger]
-      @fires = Array(options.fetch(:fires, :restart))
-      @every = options[:every]
+      @logger = logger
+      @fires = Array(fires)
+      @every = every
       # times: 5 means 5 of the last 5, and times: [3, 5] 3 of the last 5
-      times = Array(options[:times] || 1) #: Array[Integer]
+      times = Array(times) #: Array[Integer]
       @required = times.first #: Integer
       @window = times.last #: Integer
-      @include_children = options[:include_children] || false
+      @include_children = include_children
       clear_history!
-      create_condition(options)
+      create_condition(condition_options)
     end
 
     # Create the check, with the options the watch doesn't take for itself
@@ -91,16 +91,13 @@ module Bluepill
     # initialize can log, and again after, in case that initialize doesn't
     # call super.
     #
-    # @param [Hash{Symbol => Object}] options the options the watch was
-    #   created with, which stay as they are
+    # @param [Hash{Symbol => Object}] options the check's own options
     #
     # @return [void]
     #
     # @api private
     def create_condition(options)
-      condition_options = options.reject { |key, _| WATCH_KEYS.include?(key) }
-      condition_options[:logger] = @logger
-      @process_condition = ProcessConditions[@name].new(condition_options)
+      @process_condition = ProcessConditions[@name].new(**options, logger: @logger)
       self.logger = @logger
     end
 

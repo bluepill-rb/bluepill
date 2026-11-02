@@ -12,15 +12,15 @@ module Bluepill
     class BelowThreshold < ProcessCondition
       # Create the check
       #
-      # @param [Hash{Symbol => Object}] options the check's options, with
-      #   :below, the limit
+      # @param [Numeric] below the limit
+      # @param [Hash{Symbol => Object}] options the check's other options
       #
       # @return [void]
       #
       # @api private
-      def initialize(options = {})
-        super
-        @below = options[:below]
+      def initialize(below:, **options)
+        super(**options)
+        @below = below
       end
 
       # Return whether a value is below the limit

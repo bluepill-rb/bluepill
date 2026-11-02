@@ -11,8 +11,8 @@ describe Bluepill::ConditionWatch do
     logger
   end
 
-  def watch(options = {})
-    Bluepill::ConditionWatch.new(:cpu_usage, {logger: logger, every: 10, below: 50}.merge(options))
+  def watch(**options)
+    Bluepill::ConditionWatch.new(:cpu_usage, logger: logger, every: 10, below: 50, **options)
   end
 
   def cpu_usage(*values)
@@ -28,19 +28,18 @@ describe Bluepill::ConditionWatch do
   # called super
   def logging_condition(seen)
     stub_const("Bluepill::ProcessConditions::LoggingCheck", Class.new(Bluepill::ProcessConditions::ProcessCondition) do
-      define_method(:initialize) do |options = {}|
-        super(options)
-        seen << logger << options
+      define_method(:initialize) do |below:, **options|
+        super(**options)
+        seen << logger << below
       end
     end)
   end
 
-  # Record a copy of the options each CpuUsage is made with, since the
-  # condition takes its logger out of them
+  # Record the options each CpuUsage is made with
   def record_cpu_usage_options(received)
-    allow(Bluepill::ProcessConditions::CpuUsage).to receive(:new).and_wrap_original do |new, options|
-      received << options.dup
-      new.call(options)
+    allow(Bluepill::ProcessConditions::CpuUsage).to receive(:new).and_wrap_original do |new, **options|
+      received << options
+      new.call(**options)
     end
   end
 
@@ -49,12 +48,12 @@ describe Bluepill::ConditionWatch do
       seen = []
       logging_condition(seen)
       w = described_class.new(:logging_check, logger: logger, every: 10, below: 5)
-      expect([seen, w.instance_variable_get(:@process_condition).logger]).to eq([[logger, {below: 5}], logger])
+      expect([seen, w.instance_variable_get(:@process_condition).logger]).to eq([[logger, 5], logger])
     end
 
     it "gives its logger to a condition whose initialize doesn't call super" do
       stub_const("Bluepill::ProcessConditions::NoSuperCheck", Class.new(Bluepill::ProcessConditions::ProcessCondition) do
-        define_method(:initialize) { |_options = {}| nil }
+        define_method(:initialize) { |**| nil }
       end)
       w = described_class.new(:no_super_check, logger: logger, every: 10)
       expect(w.instance_variable_get(:@process_condition).logger).to equal(logger)
@@ -74,7 +73,7 @@ describe Bluepill::ConditionWatch do
     it "leaves the options it was given as they were" do
       options = {logger: logger, fires: :stop, every: 10, times: [2, 3], include_children: true, below: 50}
       copy = options.dup
-      described_class.new(:cpu_usage, options)
+      described_class.new(:cpu_usage, **options)
       expect(options).to eq(copy)
     end
 

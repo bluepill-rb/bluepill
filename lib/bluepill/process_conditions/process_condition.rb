@@ -27,14 +27,14 @@ module Bluepill
 
       # Create a condition with the options a config gave its check
       #
-      # @param [Hash{Symbol => Object}] options the check's options, such as
-      #   below: 100.megabytes, and the watch's logger as logger:
+      # @param [Logger, nil] logger the watch's logger
+      # @param [Hash{Symbol => Object}] options the check's other options
       #
       # @return [void]
       #
       # @api private
-      def initialize(options = {})
-        @logger = options.delete(:logger)
+      def initialize(logger: nil, **options)
+        @logger = logger
         @options = options
       end
 

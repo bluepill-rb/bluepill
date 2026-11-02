@@ -69,15 +69,16 @@ module Bluepill
     # Create a trigger for a process
     #
     # @param [Process] process the process to watch
-    # @param [Hash{Symbol => Object}] options the trigger's options, with
-    #   :logger
+    # @param [Logger, nil] logger the process's logger
+    # @param [Hash{Symbol => Object}] _options the check's other options,
+    #   which the trigger ignores
     #
     # @return [void]
     #
     # @api private
-    def initialize(process, options = {})
+    def initialize(process, logger: nil, **_options)
       self.process = process
-      self.logger = options[:logger]
+      self.logger = logger
       @mutex = Mutex.new
       @scheduled_events = []
       # The reason the trigger gives the process for what it dispatches,

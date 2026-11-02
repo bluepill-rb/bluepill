@@ -55,17 +55,21 @@ module Bluepill
       # Create the trigger for a process
       #
       # @param [Process] process the process to watch
-      # @param [Hash{Symbol => Object}] options the trigger's options, with
-      #   :times, :within, :retry_in and :logger
+      # @param [Integer] times how many starts and restarts are flapping
+      # @param [Numeric] within the seconds they must happen within
+      # @param [Numeric] retry_in the seconds to wait before starting the
+      #   process again, or 0 to leave it unmonitored
+      # @param [Hash{Symbol => Object}] options the other options, with
+      #   :logger
       #
       # @return [void]
       #
       # @api private
-      def initialize(process, options = {})
-        @times = options.fetch(:times, 5)
-        @within = options.fetch(:within, 1)
-        @retry_in = options.fetch(:retry_in, 5)
-        @timeline = Util::RotationalArray.new(@times)
+      def initialize(process, times: 5, within: 1, retry_in: 5, **options)
+        @times = times
+        @within = within
+        @retry_in = retry_in
+        @timeline = Util::RotationalArray.new(times)
         super
       end
 

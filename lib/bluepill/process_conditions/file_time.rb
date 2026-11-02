@@ -15,16 +15,17 @@ module Bluepill
     class FileTime < BelowThreshold
       # Create the check
       #
-      # @param [Hash{Symbol => Object}] options the check's options, with
-      #   :filename, the file, and :below, the longest it may go without
-      #   changing, in seconds
+      # @param [String] filename the file
+      # @param [Numeric] below the longest the file may go without changing,
+      #   in seconds
+      # @param [Hash{Symbol => Object}] options the check's other options
       #
       # @return [void]
       #
       # @api private
-      def initialize(options = {})
-        super
-        @filename = options[:filename]
+      def initialize(filename:, below:, **options)
+        super(below: below, **options)
+        @filename = filename
       end
 
       # Read the seconds since the file changed

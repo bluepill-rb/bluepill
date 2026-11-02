@@ -20,8 +20,16 @@ module Bluepill
     class Http < ProcessCondition
       # Create the check
       #
-      # @param [Hash{Symbol => Object}] options the check's options, with
-      #   :url, :kind, :pattern, :timeout, :open_timeout and :read_timeout
+      # @param [String] url the URL to get
+      # @param [Integer, String, Symbol, nil] kind the response it expects,
+      #   as a status code, such as 200, or a Net::HTTP class name, such as
+      #   :success, the default
+      # @param [Regexp, nil] pattern what the body must match, if anything
+      # @param [Numeric, String] timeout the seconds to wait to connect and
+      #   to read, unless open_timeout or read_timeout is given
+      # @param [Numeric, String] open_timeout the seconds to wait to connect
+      # @param [Numeric, String] read_timeout the seconds to wait to read
+      # @param [Hash{Symbol => Object}] options the check's other options
       #
       # @return [void]
       #
@@ -30,13 +38,13 @@ module Bluepill
       # @raise [NameError] for a kind that names no Net::HTTP response
       #
       # @api private
-      def initialize(options = {})
-        super
-        @uri = URI.parse(options[:url]) #: URI::HTTP
-        @kind = response_class(options[:kind])
-        @pattern = options[:pattern]
-        @open_timeout = (options[:open_timeout] || options[:timeout] || 5).to_i
-        @read_timeout = (options[:read_timeout] || options[:timeout] || 5).to_i
+      def initialize(url:, kind: nil, pattern: nil, timeout: 5, open_timeout: timeout, read_timeout: timeout, **options)
+        super(**options)
+        @uri = URI.parse(url) #: URI::HTTP
+        @kind = response_class(kind)
+        @pattern = pattern
+        @open_timeout = open_timeout.to_i
+        @read_timeout = read_timeout.to_i
       end
 
       # Get the URL

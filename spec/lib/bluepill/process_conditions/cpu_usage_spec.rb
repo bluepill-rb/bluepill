@@ -3,12 +3,13 @@
 describe Bluepill::ProcessConditions::CpuUsage do
   subject(:condition) { described_class.new(below: 50) }
 
-  it "can be created without options" do
-    expect(described_class.new).to be_a(described_class)
+  it "needs its below option" do
+    expect { described_class.new }.to raise_error(ArgumentError, /missing keyword: :below/)
   end
 
-  it "stores its options" do
-    expect(condition.instance_variable_get(:@options)).to eq(below: 50)
+  it "keeps the options it doesn't take" do
+    extra = described_class.new(below: 50, note: "x")
+    expect(extra.instance_variable_get(:@options)).to eq(note: "x")
   end
 
   it "returns the cpu usage of the process as a float" do

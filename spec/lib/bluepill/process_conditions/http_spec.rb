@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 describe Bluepill::ProcessConditions::Http do
-  def http(options = {})
-    Bluepill::ProcessConditions::Http.new({url: "http://example.com:8080/status?full=1"}.merge(options))
+  def http(**options)
+    Bluepill::ProcessConditions::Http.new(url: "http://example.com:8080/status?full=1", **options)
   end
 
   def timeouts(condition)
@@ -17,11 +17,11 @@ describe Bluepill::ProcessConditions::Http do
 
   describe "#initialize" do
     it "requires a url" do
-      expect { described_class.new }.to raise_error(URI::InvalidURIError)
+      expect { described_class.new }.to raise_error(ArgumentError, /missing keyword: :url/)
     end
 
-    it "stores its options" do
-      expect(http.instance_variable_get(:@options)).to eq(url: "http://example.com:8080/status?full=1")
+    it "keeps the options it doesn't take" do
+      expect(http(note: "x").instance_variable_get(:@options)).to eq(note: "x")
     end
 
     it "parses the url" do

@@ -108,7 +108,7 @@ module Bluepill
 
     def self.attribute_names: () -> Array[Symbol]
 
-    def checks: (Symbol name, ?Hash[Symbol, untyped] options) -> Hash[Symbol, untyped]
+    def checks: (Symbol name, **untyped options) -> Hash[Symbol, untyped]
 
     # The block configures the children like a process block
     def monitor_children: () ?{ (ProcessProxy child) [self: ProcessProxy] -> void } -> process_block?

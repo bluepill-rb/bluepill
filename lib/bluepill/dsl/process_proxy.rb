@@ -147,7 +147,7 @@ module Bluepill
     # @return [Hash{Symbol => Object}] the options
     #
     # @api public
-    def checks(name, options = {})
+    def checks(name, **options)
       @watches[name] = options
     end
 

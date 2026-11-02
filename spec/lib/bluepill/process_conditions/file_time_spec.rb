@@ -12,12 +12,13 @@ describe Bluepill::ProcessConditions::FileTime do
   after { FileUtils.remove_entry(dir) }
 
   describe "#initialize" do
-    it "can be created without options" do
-      expect(described_class.new).to be_a(described_class)
+    it "needs its filename and below options" do
+      expect { described_class.new }.to raise_error(ArgumentError, /missing keywords: :filename, :below/)
     end
 
-    it "stores its options" do
-      expect(condition.instance_variable_get(:@options)).to eq(below: 60, filename: filename)
+    it "keeps the options it doesn't take" do
+      extra = described_class.new(below: 60, filename: filename, note: "x")
+      expect(extra.instance_variable_get(:@options)).to eq(note: "x")
     end
 
     it "checks against the given limit" do

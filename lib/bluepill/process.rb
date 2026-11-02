@@ -216,9 +216,9 @@ module Bluepill
       self.logger = logger
       checks.each do |name, opts|
         if Trigger[name]
-          add_trigger(name, opts)
+          add_trigger(name, **opts)
         else
-          watches.add(name, opts)
+          watches.add(name, **opts)
         end
       end
     end
@@ -231,8 +231,8 @@ module Bluepill
     # @return [Array<Trigger>] the process's triggers
     #
     # @api private
-    def add_trigger(name, options)
-      triggers << Trigger[name].new(self, options.merge(logger: logger))
+    def add_trigger(name, **options)
+      triggers << Trigger[name].new(self, **options, logger: logger)
     end
 
     # Run every watch that's due, and dispatch the events they fire

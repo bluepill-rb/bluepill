@@ -29,8 +29,8 @@ describe Bluepill::Triggers::Flapping do
     end
   end
 
-  def flapping(options = {})
-    described_class.new(process, {logger: logger}.merge(options))
+  def flapping(**options)
+    described_class.new(process, logger: logger, **options)
   end
 
   # Wait for the events the trigger has scheduled to dispatch, so its

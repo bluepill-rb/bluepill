@@ -42,8 +42,8 @@ module Bluepill
       # @return [Watches] the watches
       #
       # @api private
-      def add(name, options)
-        self << ConditionWatch.new(name, options.merge(logger: logger))
+      def add(name, **options)
+        self << ConditionWatch.new(name, **options, logger: logger)
       end
 
       # Add a watch

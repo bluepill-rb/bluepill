@@ -224,7 +224,7 @@ module Bluepill
 
     def add_checks: (Hash[Symbol, Hash[Symbol, untyped]] checks, Logger logger) -> void
 
-    def add_trigger: (Symbol name, Hash[Symbol, untyped] options) -> Array[Trigger]
+    def add_trigger: (Symbol name, **untyped options) -> Array[Trigger]
 
     # Runs the watches that are due, and dispatches their events
     def run_watches: () -> void
@@ -433,7 +433,7 @@ module Bluepill
 
     def initialize: () -> void
 
-    def add: (Symbol name, Hash[Symbol, untyped] options) -> Process::Watches
+    def add: (Symbol name, **untyped options) -> Process::Watches
 
     def <<: (ConditionWatch watch) -> Process::Watches
 

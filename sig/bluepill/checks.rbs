@@ -11,7 +11,6 @@ module Bluepill
     end
 
     EMPTY_ARRAY: Array[Symbol]
-    WATCH_KEYS: Array[Symbol]
 
     attr_reader logger: Logger
     attr_accessor name: Symbol
@@ -27,7 +26,7 @@ module Bluepill
     @process_condition: ProcessConditions::ProcessCondition[untyped]
     @last_ran_at: Integer?
 
-    def initialize: (Symbol name, ?Hash[Symbol, untyped] options) -> void
+    def initialize: (Symbol name, ?logger: untyped, ?fires: untyped, ?every: untyped, ?times: untyped, ?include_children: bool, **untyped condition_options) -> void
 
     def create_condition: (Hash[Symbol, untyped] options) -> void
 
@@ -64,7 +63,7 @@ module Bluepill
 
     @reason: String
 
-    def initialize: (Process process, ?Hash[Symbol, untyped] options) -> void
+    def initialize: (Process process, ?logger: untyped, **untyped) -> void
 
     def reset!: () -> void
 
@@ -94,7 +93,7 @@ module Bluepill
       attr_accessor retry_in: Integer
       attr_reader timeline: Util::RotationalArray[Integer]
 
-      def initialize: (Process process, ?Hash[Symbol, untyped] options) -> void
+      def initialize: (Process process, ?times: Integer, ?within: Integer, ?retry_in: Integer, **untyped options) -> void
 
       def notify: (_Transition transition) -> void
 
@@ -115,7 +114,7 @@ module Bluepill
       # The watch's logger
       attr_accessor logger: Logger?
 
-      def initialize: (?Hash[Symbol, untyped] options) -> void
+      def initialize: (?logger: Logger?, **untyped options) -> void
 
       def run: (Integer? pid, boolish include_children) -> V
 
@@ -137,6 +136,8 @@ module Bluepill
     class BelowThreshold[V < Numeric] < ProcessCondition[V]
       @below: Numeric
 
+      def initialize: (below: Numeric, **untyped options) -> void
+
       def check?: (V value) -> bool
     end
 
@@ -149,6 +150,8 @@ module Bluepill
     class FileTime < BelowThreshold[Float]
       @filename: String
 
+      def initialize: (filename: String, below: Numeric, **untyped options) -> void
+
       def run: (Integer? pid, boolish include_children) -> (Float | StandardError | nil)
 
       def check?: (Float | StandardError | nil value) -> bool
@@ -160,6 +163,8 @@ module Bluepill
       @pattern: Regexp?
       @open_timeout: Integer
       @read_timeout: Integer
+
+      def initialize: (url: String, ?kind: Integer | String | Symbol | nil, ?pattern: Regexp?, ?timeout: untyped, ?open_timeout: untyped, ?read_timeout: untyped, **untyped options) -> void
 
       def run: (Integer? pid, boolish include_children) -> (Net::HTTPResponse | StandardError)
 

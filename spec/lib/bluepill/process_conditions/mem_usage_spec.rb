@@ -3,12 +3,13 @@
 describe Bluepill::ProcessConditions::MemUsage do
   subject(:condition) { described_class.new(below: 100.megabytes) }
 
-  it "can be created without options" do
-    expect(described_class.new).to be_a(described_class)
+  it "needs its below option" do
+    expect { described_class.new }.to raise_error(ArgumentError, /missing keyword: :below/)
   end
 
-  it "stores its options" do
-    expect(condition.instance_variable_get(:@options)).to eq(below: 100.megabytes)
+  it "keeps the options it doesn't take" do
+    extra = described_class.new(below: 100.megabytes, note: "x")
+    expect(extra.instance_variable_get(:@options)).to eq(note: "x")
   end
 
   it "returns the memory usage of the process in kilobytes as a float" do

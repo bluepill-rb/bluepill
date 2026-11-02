@@ -45,9 +45,11 @@ Security/MarshalLoad:
     - lib/bluepill/socket.rb
     - lib/bluepill/system/commands.rb
 
+# Keyword arguments name themselves at every call, so only positional ones
+# count toward the limit
 Metrics/ParameterLists:
   Max: 4
-  CountKeywordArgs: true
+  CountKeywordArgs: false
 
 # Bluepill never runs under a fiber scheduler, and IO#wait_readable isn't
 # on every Ruby it supports

@@ -41,7 +41,7 @@ module Bluepill
 
       # The transition from each state to itself, made once, so a tick that
       # leaves the state alone makes no new object
-      LOOPBACKS = STATES.collect { |state| [state, Transition.new(state, state).freeze] }.to_h.freeze
+      LOOPBACKS = STATES.to_h { |state| [state, Transition.new(state, state).freeze] }.freeze
 
       # Return the process's state, such as :up
       #

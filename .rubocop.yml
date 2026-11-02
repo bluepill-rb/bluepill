@@ -153,3 +153,8 @@ Style/TrailingCommaInHashLiteral:
 # Bluepill::Process in this codebase, even where it's redundant
 Style/RedundantConstantBase:
   Enabled: false
+
+# On Ruby 1.9.3, Dir.home raises when HOME isn't set, as it often isn't
+# for root under init, and bluepill reads HOME before it knows it's root
+Style/EnvHome:
+  Enabled: false

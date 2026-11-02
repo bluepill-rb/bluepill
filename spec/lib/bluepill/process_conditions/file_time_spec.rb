@@ -1,16 +1,13 @@
+require 'fileutils'
 require 'tmpdir'
 
 describe Bluepill::ProcessConditions::FileTime do
   subject(:condition) { described_class.new(below: 60, filename: filename) }
 
-  around do |example|
-    Dir.mktmpdir do |dir|
-      @dir = dir
-      example.run
-    end
-  end
+  let(:dir) { Dir.mktmpdir }
+  let(:filename) { File.join(dir, 'heartbeat') }
 
-  let(:filename) { File.join(@dir, 'heartbeat') }
+  after { FileUtils.remove_entry(dir) }
 
   describe '#initialize' do
     it 'can be created without options' do

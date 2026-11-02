@@ -864,14 +864,11 @@ describe Bluepill::Process do
     end
 
     context 'with a pid file' do
-      around do |example|
-        Dir.mktmpdir do |dir|
-          @dir = dir
-          example.run
-        end
-      end
+      let(:dir) { Dir.mktmpdir }
 
-      before { process.pid_file = File.join(@dir, 'proc.pid') }
+      before { process.pid_file = File.join(dir, 'proc.pid') }
+
+      after { FileUtils.remove_entry(dir) }
 
       it 'reads the pid and caches it' do
         File.write(process.pid_file, "77\n")

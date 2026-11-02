@@ -11,12 +11,10 @@ describe Bluepill::Logger do
     logger
   end
 
-  around do |example|
-    Dir.mktmpdir do |dir|
-      @log_file = File.join(dir, 'bluepill.log')
-      example.run
-    end
-  end
+  let(:dir) { Dir.mktmpdir }
+  let(:log_file) { File.join(dir, 'bluepill.log') }
+
+  after { FileUtils.remove_entry(dir) }
 
   describe '#initialize' do
     it 'logs to syslog without a log file' do
@@ -43,13 +41,13 @@ describe Bluepill::Logger do
     end
 
     it 'does not load syslog when logging to a log file' do
-      logger = logger_with(log_file: @log_file) { |l| allow(l).to receive(:require) }
+      logger = logger_with(log_file: log_file) { |l| allow(l).to receive(:require) }
       expect(logger).not_to have_received(:require)
     end
 
     it 'logs to a log file' do
-      described_class.new(log_file: @log_file).err('something failed')
-      expect(File.read(@log_file)).to include('ERROR -- : something failed')
+      described_class.new(log_file: log_file).err('something failed')
+      expect(File.read(log_file)).to include('ERROR -- : something failed')
     end
 
     it 'logs to syslog when log_file is nil' do
@@ -133,11 +131,11 @@ describe Bluepill::Logger do
       end
 
       it 'drops messages below the level in a log file' do
-        logger = described_class.new(log_file: @log_file, log_level: :err)
+        logger = described_class.new(log_file: log_file, log_level: :err)
         logger.warning('careful')
         logger.err('failed')
-        expect(File.read(@log_file)).not_to include('careful')
-        expect(File.read(@log_file)).to include('ERROR -- : failed')
+        expect(File.read(log_file)).not_to include('careful')
+        expect(File.read(log_file)).to include('ERROR -- : failed')
       end
 
       it 'keeps the stricter of a prefixed logger level and its parent' do
@@ -221,13 +219,13 @@ describe Bluepill::Logger do
 
   describe '#reopen' do
     it 'recreates the underlying logger' do
-      logger = described_class.new(log_file: @log_file)
+      logger = described_class.new(log_file: log_file)
       logger.info('before')
-      File.rename(@log_file, "#{@log_file}.1")
+      File.rename(log_file, "#{log_file}.1")
       logger.reopen
       logger.info('after')
-      expect(File.read(@log_file)).to include('after')
-      expect(File.read(@log_file)).not_to include('before')
+      expect(File.read(log_file)).to include('after')
+      expect(File.read(log_file)).not_to include('before')
     end
 
     it 'reopens syslog' do
@@ -245,7 +243,7 @@ describe Bluepill::Logger do
     end
 
     it 'reopens the parent logger of a prefixed logger' do
-      logger = described_class.new(log_file: @log_file)
+      logger = described_class.new(log_file: log_file)
       expect(logger).to receive(:reopen)
       logger.prefix_with('app').reopen
     end

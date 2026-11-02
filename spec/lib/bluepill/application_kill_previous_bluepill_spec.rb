@@ -47,7 +47,7 @@ describe Bluepill::Application do
       allow(Bluepill::System).to receive(:pid_alive?).with(1234).and_return(true)
       allow(::Process).to receive(:kill) { |signal, pid| calls << [:kill, signal, pid] }
       allow(app).to receive(:puts) { |line| calls << [:puts, line] }
-      allow(app).to receive(:sleep) { |seconds| calls << [:sleep, seconds] }
+      allow(Kernel).to receive(:sleep) { |seconds| calls << [:sleep, seconds] }
     end
 
     before do

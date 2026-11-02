@@ -377,7 +377,8 @@ module Bluepill
           System.reset_data
           groups.each_value(&:tick)
         end
-        sleep 1
+        # Kernel.sleep, not sleep, so the specs can stand in for the clock
+        Kernel.sleep(1)
       end
     end
 
@@ -474,7 +475,8 @@ module Bluepill
       exit(4) unless e.instance_of?(Errno::ESRCH)
     else
       kill_timeout.times do |_i|
-        sleep 0.5
+        # Kernel.sleep, not sleep, so the specs can stand in for the clock
+        Kernel.sleep(0.5)
         break unless System.pid_alive?(previous_pid)
       end
 

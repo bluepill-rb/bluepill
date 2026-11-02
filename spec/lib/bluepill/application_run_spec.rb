@@ -33,7 +33,7 @@ describe Bluepill::Application do
       allow(Bluepill::System).to receive(:reset_data) { calls << [:reset_data, mutex_locked?] }
       allow(group).to receive(:tick) { calls << [:web, mutex_locked?] }
       allow(other_group).to receive(:tick) { calls << [:db, mutex_locked?] }
-      allow(app).to receive(:sleep).with(1) do
+      allow(Kernel).to receive(:sleep).with(1) do
         calls << [:sleep, mutex_locked?]
         traps['TERM'].call(15) if calls.collect(&:first).count(:sleep) == 2
       end

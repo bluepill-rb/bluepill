@@ -49,6 +49,10 @@ Most pill files work with 0.3.0 unchanged. Check these before you upgrade:
 - A mistake in a `monitor_children` block, such as a missing `stop_command`, fails the config when it loads. Before, the daemon exited the first time it found a child. `monitor_children` without a block fails the config.
 - The daemon traps signals and creates its pids directory when it starts, not while the pill file loads.
 - The `mem_usage` check takes 1.4% fewer instructions.
+- **Breaking:** the commands a process runs take a `System::CommandOptions`, and `System.execute_blocking` returns a `System::CommandResult`, instead of Hashes. `System.daemonize` takes the pid file and the logger as keywords.
+- **Breaking:** each process reaches its pid and process group journals through `ProcessJournal.for(name)`, and a journal lock held too long raises `ProcessJournal::LockTimeoutError`.
+- **Breaking:** the ps table is kept in `System`'s own state, and `System.store` is gone.
+- Checking a process's CPU takes 8% fewer instructions.
 
 ### Removed
 

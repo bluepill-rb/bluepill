@@ -33,6 +33,10 @@ module Bluepill
     def self.to_s: () -> String
   end
 
+  # A mistake in a pill file
+  class ConfigError < StandardError
+  end
+
   # The monotonic clock that times ticks, checks and grace times
   module Clock
     def self.now: () -> Integer

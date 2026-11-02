@@ -72,6 +72,12 @@ describe Bluepill do
       expect(app).to have_received(:load)
     end
 
+    it "prints a config error and exits with status 6" do
+      expect { described_class.application(:app_name, **options) { raise Bluepill::ConfigError, "Config Error: bad" } }
+        .to raise_error(an_instance_of(SystemExit).and(having_attributes(status: 6)))
+        .and output("Config Error: bad\n").to_stderr
+    end
+
     it "defaults to no options" do
       allow(Bluepill::Application).to receive(:new).with("app_name").and_return(app)
       described_class.application(:app_name) { |_app| } # an app with no processes

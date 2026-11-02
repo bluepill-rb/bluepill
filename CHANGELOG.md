@@ -18,8 +18,13 @@ Most pill files work with 0.3.0 unchanged. Check these before you upgrade:
 - **A check or trigger option that bluepill doesn't know fails the config.** A misspelled option, such as `evry: 10`, or one meant for another check, such as `within:` on an `http` check, now stops the pill file from loading, with Ruby's unknown keyword error. Before, bluepill ignored it.
 - **Pass options kept in a hash with `**`.** A pill file that keeps a check's or the application's options in a variable passes them as `process.checks :mem_usage, **options`, since a hash passed without `**` no longer counts as options.
 
+### Added
+
+- `Bluepill::ConfigError`, which bluepill raises for a mistake in a pill file, such as a misspelled process attribute or two processes with the same pid file.
+
 ### Changed
 
+- **Breaking:** a misspelled process attribute raises `Bluepill::ConfigError` instead of `NoMethodError`. Like the other mistakes that a config check finds, such as a missing `start_command`, `bluepill load` prints its message and exits with status 6, where it showed a backtrace and exited with status 1.
 - **Breaking:** the options of `Bluepill.application` and `checks` are keyword arguments, all the way to the application, the checks and the triggers, so a misspelled, unknown or missing option fails when the pill file loads. A custom check or trigger takes its options as keyword arguments too (see "Upgrading from 0.2").
 
 ### Removed

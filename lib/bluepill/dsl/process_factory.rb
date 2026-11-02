@@ -217,16 +217,17 @@ module Bluepill
       $stderr.puts warning
     end
 
-    # Print a config error and exit with status 6
+    # Fail with a config error
+    #
+    # Bluepill.application prints its message and exits with status 6.
     #
     # @param [String] message the error
     #
     # @return [void] it never returns
     #
+    # @raise [ConfigError] always
+    #
     # @api private
-    def config_error!(message)
-      $stderr.puts message
-      exit(6)
-    end
+    def config_error!(message) = raise(ConfigError, message)
   end
 end

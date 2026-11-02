@@ -12,10 +12,9 @@ describe Bluepill::ProcessFactory do
     process
   end
 
+  # Expect the block to fail with a config error with the message
   def expect_config_error(message, &block)
-    expect do
-      expect(&block).to raise_error(SystemExit) { |e| expect(e.status).to eq(6) }
-    end.to output(message).to_stderr
+    expect(&block).to raise_error(Bluepill::ConfigError, message.is_a?(String) ? message.chomp : message)
   end
 
   describe "#create_process" do
@@ -320,11 +319,13 @@ describe Bluepill::ProcessFactory do
       expect([child.start_grace_time, child.stop_grace_time, child.restart_grace_time]).to eq([3, 3, 3])
     end
 
+    # The daemon finds its children as it runs, long after the config
+    # loaded, so this exits rather than raising a ConfigError
     it "requires a stop command" do
       message = "Config Error: Invalid child process monitor for child\nYou must specify a stop command to monitor child processes.\n"
-      expect_config_error(message) do
-        create_child(attributes, proc {})
-      end
+      expect { create_child(attributes, proc {}) }
+        .to raise_error(an_instance_of(SystemExit).and(having_attributes(status: 6)))
+        .and output(message).to_stderr
     end
   end
 end

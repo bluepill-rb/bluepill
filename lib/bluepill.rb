@@ -36,6 +36,7 @@ require "bluepill/clock"
 require "bluepill/units"
 require "bluepill/util/inflections"
 
+require "bluepill/config_error"
 require "bluepill/dsl/process_proxy"
 require "bluepill/dsl/process_factory"
 require "bluepill/dsl/app_proxy"

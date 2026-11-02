@@ -5,7 +5,8 @@ module Bluepill
   #
   # The block describes the application's processes. It runs with self set
   # to an {AppProxy}, and also gets the proxy as an argument. Bluepill then
-  # loads the application, which starts its daemon.
+  # loads the application, which starts its daemon. A mistake in the
+  # config, a {ConfigError}, prints its message and exits with status 6.
   #
   # @example
   #   Bluepill.application(:my_app, log_file: '/var/log/bluepill.log') do |app|
@@ -31,5 +32,8 @@ module Bluepill
     # instance_eval also passes the proxy to a block that takes an argument
     app_proxy.instance_eval(&block)
     app_proxy.app.load
+  rescue ConfigError => e
+    $stderr.puts e
+    exit(6)
   end
 end

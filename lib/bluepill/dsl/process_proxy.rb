@@ -76,8 +76,10 @@ module Bluepill
     #
     # @return [Object] the value that was set or read
     #
-    # @raise [NoMethodError] for an attribute a process doesn't have, one
-    #   that isn't set yet, or more than one value
+    # @raise [ConfigError] for an attribute a process doesn't have
+    #
+    # @raise [NoMethodError] for an attribute that isn't set yet, or more
+    #   than one value
     #
     # @api public
     def method_missing(name, *args)
@@ -210,14 +212,14 @@ module Bluepill
     #
     # @return [void] it never returns
     #
-    # @raise [NoMethodError] always
+    # @raise [ConfigError] always
     #
     # @api private
     def unknown_attribute!(key)
       message = "Unknown attribute '#{key}' for process '#{@name}'"
       suggestion = suggest(key)
       message += ". Did you mean '#{suggestion}'?" if suggestion
-      raise NoMethodError.new(message, key) # steep:ignore ArgumentTypeMismatch
+      raise ConfigError, message
     end
 
     # Return the attribute a process has that's closest to a misspelled one

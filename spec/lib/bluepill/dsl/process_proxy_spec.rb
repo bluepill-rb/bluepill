@@ -82,37 +82,31 @@ describe Bluepill::ProcessProxy do
 
     it "rejects an unknown attribute set with a setter, and suggests the closest one" do
       expect { described_class.new("web", {}, proc { |p| p.start_comand = "run" }) }.to raise_error(
-        NoMethodError, "Unknown attribute 'start_comand' for process 'web'. Did you mean 'start_command'?"
-      )
-    end
-
-    it "names the unknown attribute in the error" do
-      expect { described_class.new("web", {}, proc { |p| p.start_comand = "run" }) }.to raise_error(
-        a_kind_of(NoMethodError).and(having_attributes(name: :start_comand))
+        Bluepill::ConfigError, "Unknown attribute 'start_comand' for process 'web'. Did you mean 'start_command'?"
       )
     end
 
     it "rejects an unknown attribute set with an argument" do
       expect { described_class.new("web", {}, proc { stop_comand "halt" }) }.to raise_error(
-        NoMethodError, "Unknown attribute 'stop_comand' for process 'web'. Did you mean 'stop_command'?"
+        Bluepill::ConfigError, "Unknown attribute 'stop_comand' for process 'web'. Did you mean 'stop_command'?"
       )
     end
 
     it "rejects an unknown attribute set with a bang method" do
       expect { described_class.new("web", {}, proc { daemonise! }) }.to raise_error(
-        NoMethodError, "Unknown attribute 'daemonise' for process 'web'. Did you mean 'daemonize'?"
+        Bluepill::ConfigError, "Unknown attribute 'daemonise' for process 'web'. Did you mean 'daemonize'?"
       )
     end
 
     it "rejects an unknown attribute that is read" do
       expect { described_class.new("web", {}, proc { pidfile }) }.to raise_error(
-        NoMethodError, "Unknown attribute 'pidfile' for process 'web'. Did you mean 'pid_file'?"
+        Bluepill::ConfigError, "Unknown attribute 'pidfile' for process 'web'. Did you mean 'pid_file'?"
       )
     end
 
     it "suggests nothing for an attribute unlike any other" do
       expect { described_class.new("worker", {}, proc { |p| p.frobnicate = 1 }) }.to raise_error(
-        NoMethodError, "Unknown attribute 'frobnicate' for process 'worker'"
+        Bluepill::ConfigError, "Unknown attribute 'frobnicate' for process 'worker'"
       )
     end
 

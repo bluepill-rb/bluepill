@@ -68,7 +68,7 @@ describe Bluepill::AppProxy do
     it "rejects a second process with the same name" do
       proxy.process("web") { start_command "run" }
       expect { proxy.process("web") { start_command "run" } }
-        .to raise_error(SystemExit).and output("Config Error: You have two entries for the process name 'web'\n").to_stderr
+        .to raise_error(Bluepill::ConfigError, "Config Error: You have two entries for the process name 'web'")
     end
 
     it "checks its processes apart from another application's" do

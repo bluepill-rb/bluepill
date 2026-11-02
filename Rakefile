@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
-$LOAD_PATH << File.expand_path("lib", __dir__)
-require "bluepill/version"
+require_relative "lib/bluepill/version"
 
 require "bundler"
 Bundler::GemHelper.install_tasks

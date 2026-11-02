@@ -272,12 +272,11 @@ module Bluepill
 
   # Runs commands for a Process, which is the only class that includes it
   module ProcessCommands : _Host
-    # What ProcessCommands uses from Process
+    # What ProcessCommands and the Hooks it includes use from Process
     interface _Host
-      %a{pure} def name: () -> String
-      %a{pure} def logger: () -> Logger
+      include Hooks::_Host
+
       %a{pure} def children: () -> Array[Process]
-      %a{pure} def pre_start_command: () -> String?
       %a{pure} def start_command: () -> String?
       %a{pure} def stop_command: () -> String?
       %a{pure} def restart_command: () -> String?
@@ -290,22 +289,13 @@ module Bluepill
       %a{pure} def uid: () -> String?
       %a{pure} def gid: () -> String?
       %a{pure} def working_dir: () -> String?
-      %a{pure} def environment: () -> Hash[_ToS, _ToS]?
       %a{pure} def pid_file: () -> String?
       %a{pure} def stdin: () -> String?
       %a{pure} def stdout: () -> String?
       %a{pure} def stderr: () -> String?
       %a{pure} def supplementary_groups: () -> Array[String]?
-      %a{pure} def post_start_command: () -> String?
-      %a{pure} def pre_stop_command: () -> String?
-      %a{pure} def post_stop_command: () -> String?
-      %a{pure} def notify_command: () -> String?
-      %a{pure} def hook_timeout: () -> seconds
-      %a{pure} def app_name: () -> String?
-      %a{pure} def group_name: () -> String?
       def daemonize?: () -> bool
       def monitor_children?: () -> bool
-      def actual_pid: () -> Integer?
       def clean_threads: () -> void
       def signal_process: (Integer | String | Symbol code) -> bool
       def unlink_pid: () -> void
@@ -314,33 +304,18 @@ module Bluepill
       def dispatch!: (Symbol | String event, ?String? reason) -> bool
     end
 
+    include Hooks
+
     @threads: Array[Thread]
     @stopping_pid: Integer?
-    @actual_pid: Integer?
-    @last_pid: Integer?
-    @transition_reason: String?
 
     def start_process: () -> Integer
-
-    def pre_start_process: () -> void
 
     def stop_process: () -> Integer
 
     def restart_process: () -> Integer
 
     def cleanup_process: () -> void
-
-    def pre_stop_process: () -> void
-
-    def post_stop_process: () -> Thread?
-
-    def post_start_process: () -> Thread?
-
-    def notify_transition: (_Transition transition) -> Thread?
-
-    def run_hook_in_background: (String command, String description, Integer? pid, ?Hash[String, String] env) -> Thread
-
-    def run_hook: (String command, String description, Integer? pid, ?Hash[String, String] env) -> void
 
     def prepare_command: (String command) -> String
 
@@ -354,6 +329,51 @@ module Bluepill
     def send_stop_signals: (Array[Symbol | Integer] signals) -> void
 
     def wait_for_stop: (seconds seconds) -> void
+  end
+
+  # Runs the commands a Process has around its starts and stops, and on each
+  # change of state
+  module ProcessCommands::Hooks : ProcessCommands::Hooks::_Host
+    # What Hooks uses from Process
+    interface _Host
+      %a{pure} def name: () -> String
+      %a{pure} def logger: () -> Logger
+      %a{pure} def pre_start_command: () -> String?
+      %a{pure} def post_start_command: () -> String?
+      %a{pure} def pre_stop_command: () -> String?
+      %a{pure} def post_stop_command: () -> String?
+      %a{pure} def notify_command: () -> String?
+      %a{pure} def hook_timeout: () -> seconds
+      %a{pure} def app_name: () -> String?
+      %a{pure} def group_name: () -> String?
+      %a{pure} def environment: () -> Hash[_ToS, _ToS]?
+      def actual_pid: () -> Integer?
+      def system_command_options: () -> System::command_options
+      def run_command: (String cmd, String description, ?System::command_options options) -> void
+    end
+
+    @stopping_pid: Integer?
+    @actual_pid: Integer?
+    @last_pid: Integer?
+    @transition_reason: String?
+
+    def pre_start_process: () -> void
+
+    def pre_stop_process: () -> void
+
+    def post_stop_process: () -> Thread?
+
+    def post_start_process: () -> Thread?
+
+    def notify_transition: (_Transition transition) -> Thread?
+
+    def notify_environment: (_Transition transition, Integer? pid) -> Hash[String, String]
+
+    def run_hook_in_background: (String command, String description, Integer? pid, ?Hash[String, String] env) -> Thread
+
+    def run_hook: (String command, String description, Integer? pid, ?Hash[String, String] env) -> void
+
+    def hook_options: (Hash[String, String] env) -> System::command_options
   end
 
   # What a process passes to its transition callbacks and triggers

@@ -20,8 +20,8 @@ describe Bluepill::ProcessConditions::Http do
       expect { described_class.new }.to raise_error(ArgumentError, /missing keyword: :url/)
     end
 
-    it "keeps the options it doesn't take" do
-      expect(http(note: "x").instance_variable_get(:@options)).to eq(note: "x")
+    it "rejects an option it doesn't take" do
+      expect { http(note: "x") }.to raise_error(ArgumentError, /unknown keyword: :note/)
     end
 
     it "parses the url" do

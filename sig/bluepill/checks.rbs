@@ -63,7 +63,7 @@ module Bluepill
 
     @reason: String
 
-    def initialize: (Process process, ?logger: untyped, **untyped) -> void
+    def initialize: (Process process, ?logger: untyped) -> void
 
     def reset!: () -> void
 
@@ -109,12 +109,11 @@ module Bluepill
     # Checks something about a process. V is the type of value that run
     # returns and check tests.
     class ProcessCondition[V]
-      @options: Hash[Symbol, untyped]
 
       # The watch's logger
       attr_accessor logger: Logger?
 
-      def initialize: (?logger: Logger?, **untyped options) -> void
+      def initialize: (?logger: Logger?) -> void
 
       def run: (Integer? pid, boolish include_children) -> V
 

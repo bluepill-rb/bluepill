@@ -70,7 +70,7 @@ module Bluepill
         @within = within
         @retry_in = retry_in
         @timeline = Util::RotationalArray.new(times)
-        super
+        super(process, **options)
       end
 
       # Record a start or a restart, and check whether the process flaps

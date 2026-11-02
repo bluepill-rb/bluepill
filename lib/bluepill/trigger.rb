@@ -68,13 +68,13 @@ module Bluepill
     #
     # @param [Process] process the process to watch
     # @param [Logger, nil] logger the process's logger
-    # @param [Hash{Symbol => Object}] _options the check's other options,
-    #   which the trigger ignores
     #
     # @return [void]
     #
+    # @raise [ArgumentError] for an option that no trigger takes
+    #
     # @api private
-    def initialize(process, logger: nil, **_options)
+    def initialize(process, logger: nil)
       self.process = process
       self.logger = logger
       @mutex = Mutex.new

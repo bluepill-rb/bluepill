@@ -56,7 +56,7 @@ describe Bluepill::Triggers::Flapping do
 
   describe "#initialize" do
     it "uses default parameters" do
-      expect(flapping).to have_attributes(times: 5, within: 1, retry_in: 5, logger: logger, timeline: [])
+      expect(flapping).to have_attributes(process: process, times: 5, within: 1, retry_in: 5, logger: logger, timeline: [])
     end
 
     it "accepts parameters" do
@@ -67,9 +67,8 @@ describe Bluepill::Triggers::Flapping do
       expect(described_class.new(process)).to have_attributes(times: 5, within: 1, retry_in: 5, logger: nil)
     end
 
-    it "ignores options it does not know" do
-      trigger = flapping(every: 10)
-      expect(trigger.instance_variable_defined?(:@every)).to be false
+    it "rejects an option it doesn't take" do
+      expect { flapping(every: 10) }.to raise_error(ArgumentError, /unknown keyword: :every/)
     end
 
     it "keeps as many incidents as times" do

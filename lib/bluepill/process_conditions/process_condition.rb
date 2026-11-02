@@ -28,14 +28,14 @@ module Bluepill
       # Create a condition with the options a config gave its check
       #
       # @param [Logger, nil] logger the watch's logger
-      # @param [Hash{Symbol => Object}] options the check's other options
       #
       # @return [void]
       #
+      # @raise [ArgumentError] for an option that no condition takes
+      #
       # @api private
-      def initialize(logger: nil, **options)
+      def initialize(logger: nil)
         @logger = logger
-        @options = options
       end
 
       # Read the value to check from the process

@@ -1,32 +1,19 @@
 # frozen_string_literal: true
 
 describe Bluepill::ProcessConditions::ProcessCondition do
-  subject(:condition) { described_class.new(below: 5) }
+  subject(:condition) { described_class.new }
 
-  it "stores its options" do
-    expect(condition.instance_variable_get(:@options)).to eq(below: 5)
-  end
-
-  context "with a logger" do
-    subject(:condition) { described_class.new(below: 5, logger: logger) }
-
-    let(:logger) { instance_double(Bluepill::Logger) }
-
-    it "takes its logger out of its options" do
-      expect(condition.logger).to equal(logger)
-    end
-
-    it "leaves the logger out of the options it stores" do
-      expect(condition.instance_variable_get(:@options)).to eq(below: 5)
-    end
+  it "keeps its logger" do
+    logger = instance_double(Bluepill::Logger)
+    expect(described_class.new(logger: logger).logger).to equal(logger)
   end
 
   it "has no logger without one" do
     expect(condition.logger).to be_nil
   end
 
-  it "can be created without options" do
-    expect(described_class.new.instance_variable_get(:@options)).to eq({})
+  it "rejects an option it doesn't take" do
+    expect { described_class.new(below: 5) }.to raise_error(ArgumentError, /unknown keyword: :below/)
   end
 
   it "requires subclasses to implement #run" do

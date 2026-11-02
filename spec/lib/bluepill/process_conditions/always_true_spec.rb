@@ -1,14 +1,10 @@
 # frozen_string_literal: true
 
 describe Bluepill::ProcessConditions::AlwaysTrue do
-  subject(:condition) { described_class.new(below: 5) }
+  subject(:condition) { described_class.new }
 
-  it "can be created without options" do
-    expect(described_class.new).to be_a(described_class)
-  end
-
-  it "stores its options" do
-    expect(condition.instance_variable_get(:@options)).to eq(below: 5)
+  it "rejects an option it doesn't take" do
+    expect { described_class.new(below: 5) }.to raise_error(ArgumentError, /unknown keyword: :below/)
   end
 
   it "always returns 1" do

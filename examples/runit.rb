@@ -17,7 +17,7 @@ Bluepill.application(:runit_man, foreground: true) do |app|
     process.restart_grace_time = 7.seconds
     process.stop_grace_time = 7.seconds
 
-    process.checks :http, within: 30.seconds, retry_in: 7.seconds, every: 30.seconds,
+    process.checks :http, every: 30.seconds,
       url: "http://localhost:4567/", kind: :success, pattern: /html/, timeout: 3.seconds
   end
 end

@@ -7,9 +7,8 @@ describe Bluepill::ProcessConditions::MemUsage do
     expect { described_class.new }.to raise_error(ArgumentError, /missing keyword: :below/)
   end
 
-  it "keeps the options it doesn't take" do
-    extra = described_class.new(below: 100.megabytes, note: "x")
-    expect(extra.instance_variable_get(:@options)).to eq(note: "x")
+  it "rejects an option it doesn't take" do
+    expect { described_class.new(below: 100.megabytes, note: "x") }.to raise_error(ArgumentError, /unknown keyword: :note/)
   end
 
   it "returns the memory usage of the process in kilobytes as a float" do

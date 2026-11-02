@@ -337,7 +337,7 @@ If a pill file loads ActiveSupport, for example by loading a Rails app, ActiveSu
 
 ### Custom checks
 
-A check is a class in `Bluepill::ProcessConditions`, named after the check in camel case, so `checks :log_size` uses `LogSize`. Define it in the config file, before the application. It gets the check's options as keyword arguments, except `every`, `times`, `fires`, and `include_children`, which bluepill handles. Name the ones it needs, and pass the rest to `super`. `run` reads a value, and `check?` returns whether the value is fine:
+A check is a class in `Bluepill::ProcessConditions`, named after the check in camel case, so `checks :log_size` uses `LogSize`. Define it in the config file, before the application. It gets the check's options as keyword arguments, except `every`, `times`, `fires`, and `include_children`, which bluepill handles. Name the ones it needs, and pass the rest to `super`, which rejects any that no check takes. `run` reads a value, and `check?` returns whether the value is fine:
 
 ```ruby
 module Bluepill

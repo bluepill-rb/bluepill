@@ -7,9 +7,8 @@ describe Bluepill::ProcessConditions::BelowThreshold do
     expect { described_class.new }.to raise_error(ArgumentError, /missing keyword: :below/)
   end
 
-  it "keeps the options it doesn't take" do
-    extra = described_class.new(below: 50, note: "x")
-    expect(extra.instance_variable_get(:@options)).to eq(note: "x")
+  it "rejects an option it doesn't take" do
+    expect { described_class.new(below: 50, note: "x") }.to raise_error(ArgumentError, /unknown keyword: :note/)
   end
 
   it "passes when the value is below the limit" do

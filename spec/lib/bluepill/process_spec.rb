@@ -10,6 +10,7 @@ describe Bluepill::Process do
 
   before do
     allow(Time).to receive(:now).and_return(now)
+    allow(Bluepill::Clock).to receive(:now).and_return(now.to_i)
     allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal)
     allow(Bluepill::ProcessJournal).to receive(:append_pid_to_journal)
     allow(::Process).to receive(:kill).and_return(1)

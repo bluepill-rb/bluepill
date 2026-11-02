@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - The README's group example gave every process the same pid file, and its `stop_signals` example waited longer than its stop grace time, so bluepill refused to load either config.
+- Bluepill timed its ticks, checks, grace times and flapping detection with the system clock, so a change to the clock, such as an NTP correction after a VM resumes, could put off ticks and checks for as long as the clock went back, or end grace times early when it went forward. It now times them with the monotonic clock, which only counts up, where Ruby has one (Ruby 2.1 and newer, and JRuby 9.0 and newer). On Ruby 1.9.3 and 2.0, and on JRuby 1.7, it still reads the system clock.
 
 ## [0.1.6] - 2026-11-02
 

@@ -20,6 +20,23 @@ module Bluepill
   # the AppProxy, and also gets it as an argument.
   def self.application: (_ToS app_name, ?Hash[Symbol, untyped] options) { (AppProxy app) [self: AppProxy] -> void } -> void
 
+  # Times ticks, checks, grace times and flapping with the monotonic clock,
+  # or the system clock on a Ruby without Process.clock_gettime
+  module Clock
+    # The module that reader reads the clock with: Process, or a stand-in
+    interface _ClockSource
+      def respond_to?: (Symbol name) -> bool
+
+      def clock_gettime: (Integer clock_id) -> Float
+    end
+
+    def self.reader: (?_ClockSource process) -> ^() -> Integer
+
+    READER: ^() -> Integer
+
+    def self.now: () -> Integer
+  end
+
   module Version
     def self.major: () -> Integer
 

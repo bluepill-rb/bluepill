@@ -31,6 +31,8 @@ require 'monitor'
 require 'timeout'
 require 'logger'
 
+require 'bluepill/clock'
+
 require 'active_support'
 require 'active_support/inflector'
 require 'active_support/core_ext/hash'

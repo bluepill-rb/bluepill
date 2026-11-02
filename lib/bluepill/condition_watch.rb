@@ -84,7 +84,7 @@ module Bluepill
     # run adds the value to the history and logs the history.
     #
     # @param [Integer, nil] pid the process's pid
-    # @param [Integer] tick_number the current time, in seconds
+    # @param [Integer] tick_number the time, from Clock.now
     #
     # @return [Array<Symbol>] the events to fire, empty unless the check
     #   ran and failed often enough
@@ -93,7 +93,7 @@ module Bluepill
     #   System::PsError, after logging it
     #
     # @api private
-    def run(pid, tick_number = Integer(Time.now))
+    def run(pid, tick_number = Clock.now)
       last_ran_at = @last_ran_at
       if last_ran_at.nil? || (last_ran_at + @every) <= tick_number
         @last_ran_at = tick_number

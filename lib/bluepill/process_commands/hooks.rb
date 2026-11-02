@@ -11,6 +11,9 @@ module Bluepill
     module Hooks
       # Run the pre_start_command, if there is one
       #
+      # It runs like the start command, not as a hook, so it has no
+      # hook_timeout, and an error it raises stops the start.
+      #
       # @return [void]
       #
       # @api private
@@ -30,7 +33,7 @@ module Bluepill
       # @api private
       def pre_stop_process
         command = pre_stop_command
-        run_hook(command, "Pre stop", @stopping_pid) if command
+        run_hook(command, "Pre stop", stopping_pid) if command
       end
 
       # Run the post_stop_command in the background, if there is one
@@ -40,7 +43,7 @@ module Bluepill
       # @api private
       def post_stop_process
         command = post_stop_command
-        run_hook_in_background(command, "Post stop", @stopping_pid) if command
+        run_hook_in_background(command, "Post stop", stopping_pid) if command
       end
 
       # Run the post_start_command in the background, if there is one
@@ -67,7 +70,7 @@ module Bluepill
         command = notify_command
         return if command.nil? || transition.loopback?
 
-        pid = @actual_pid || @last_pid
+        pid = cached_pid
         run_hook_in_background(command, "Notify", pid, notify_environment(transition, pid))
       end
 
@@ -88,7 +91,7 @@ module Bluepill
           "BLUEPILL_PROCESS" => name.to_s,
           "BLUEPILL_FROM" => transition.from_name.to_s,
           "BLUEPILL_TO" => transition.to_name.to_s,
-          "BLUEPILL_REASON" => @transition_reason.to_s,
+          "BLUEPILL_REASON" => transition_reason.to_s,
           "BLUEPILL_PID" => pid.to_s
         }
       end
@@ -124,7 +127,7 @@ module Bluepill
       #
       # @api private
       def run_hook(command, description, pid, env = {})
-        cmd = command.gsub("{{PID}}", pid.to_s)
+        cmd = substitute_pid(command, pid)
         logger.info "Executing #{description.downcase} command: #{cmd}"
         run_command(cmd, description, hook_options(env))
       rescue Timeout::Error
@@ -149,6 +152,37 @@ module Bluepill
         options[:environment] = (environment || {}).merge(env)
         options[:timeout] = hook_timeout
         options
+      end
+
+      private
+
+      # Return the pid of the process being stopped
+      #
+      # stop_process reads it before cleanup forgets it, for the stop hooks.
+      #
+      # @return [Integer, nil]
+      #
+      # @api private
+      attr_reader :stopping_pid
+
+      # Return why the process is changing state, while dispatch! runs
+      #
+      # @return [String, nil] the reason, such as "user initiated", or nil
+      #   when none was given
+      #
+      # @api private
+      attr_reader :transition_reason
+
+      # Return the process's pid, or the last one it had if it has died
+      #
+      # A process that has died has no pid by the time its state changes,
+      # but notify_command still gets the one it had.
+      #
+      # @return [Integer, nil]
+      #
+      # @api private
+      def cached_pid
+        @actual_pid || @last_pid
       end
     end
   end

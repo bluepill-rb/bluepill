@@ -108,6 +108,8 @@ module Bluepill
 
     def prepare_command: (String command) -> String
 
+    def substitute_pid: (String command, Integer? pid) -> String
+
     def system_command_options: () -> System::command_options
 
     # Runs the block, and dispatches next_state if it takes longer than secs
@@ -134,6 +136,7 @@ module Bluepill
       %a{pure} def environment: () -> Hash[_ToS, _ToS]?
       def actual_pid: () -> Integer?
       def system_command_options: () -> System::command_options
+      def substitute_pid: (String command, Integer? pid) -> String
       def run_command: (String cmd, String description, ?System::command_options options) -> void
     end
 
@@ -159,6 +162,14 @@ module Bluepill
     def run_hook: (String command, String description, Integer? pid, ?Hash[String, String] env) -> void
 
     def hook_options: (Hash[String, String] env) -> System::command_options
+
+    private
+
+    attr_reader stopping_pid: Integer?
+
+    attr_reader transition_reason: String?
+
+    def cached_pid: () -> Integer?
   end
 
   # A monitored process

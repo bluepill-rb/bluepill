@@ -190,7 +190,7 @@ module Bluepill
     # @api private
     def validate_stop_grace_time!(stop_signals, stop_grace_time)
       delays = stop_signals.select.with_index { |_, i| i.odd? }
-      return unless stop_grace_time.nil? || stop_grace_time <= delays.inject(0, :+)
+      return unless stop_grace_time.nil? || stop_grace_time <= delays.sum
 
       config_error!("Config Error: Stop_grace_time should be greater than the sum of stop_signals delays!")
     end

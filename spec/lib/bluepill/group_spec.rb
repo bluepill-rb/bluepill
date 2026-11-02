@@ -11,11 +11,11 @@ describe Bluepill::Group do
     allow(logger).to receive(:debug) { |message| calls << [:debug, message] }
     logger
   end
-  let(:group) { described_class.new("web", logger: logger) }
+  let(:group) { described_class.new("web", logger:) }
 
   # A process that records what it's told to do as [method, name, *args]
   def process_double(name)
-    process = instance_double(Bluepill::Process, name, name: name)
+    process = instance_double(Bluepill::Process, name, name:)
     %i[tick determine_initial_state handle_user_command].each do |method|
       allow(process).to receive(method) { |*args| calls << [method, name, *args] }
     end
@@ -24,7 +24,7 @@ describe Bluepill::Group do
 
   describe "#initialize" do
     it "sets the name, logger and an empty process list" do
-      expect(group).to have_attributes(name: "web", logger: logger, processes: [])
+      expect(group).to have_attributes(name: "web", logger:, processes: [])
     end
 
     it "has no logger without options" do

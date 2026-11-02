@@ -67,7 +67,7 @@ module Bluepill
       # @return [Hash{Symbol => Object}] the :exit_code, :stdout and :stderr
       #
       # @api private
-      def to_h = {exit_code: exit_code, stdout: stdout, stderr: stderr}
+      def to_h = {exit_code:, stdout:, stderr:}
     end
   end
 end

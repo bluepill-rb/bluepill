@@ -4,7 +4,7 @@ require "tmpdir"
 
 describe Bluepill::Controller do
   let(:base_dir) { Dir.mktmpdir }
-  let(:controller) { described_class.new(base_dir: base_dir, log_file: "/var/log/bluepill.log") }
+  let(:controller) { described_class.new(base_dir:, log_file: "/var/log/bluepill.log") }
 
   after { FileUtils.remove_entry(base_dir) }
 
@@ -19,7 +19,7 @@ describe Bluepill::Controller do
   def files_left = Dir[File.join(base_dir, "*", "*")]
 
   def raise_bluepill_error(error_class, message, exit_status = 1)
-    raise_error(an_instance_of(error_class).and(having_attributes(message: message, exit_status: exit_status)))
+    raise_error(an_instance_of(error_class).and(having_attributes(message:, exit_status:)))
   end
 
   def stub_daemon(command, response)
@@ -31,7 +31,7 @@ describe Bluepill::Controller do
 
   describe "#initialize" do
     it "keeps its options" do
-      expect(controller).to have_attributes(log_file: "/var/log/bluepill.log", base_dir: base_dir)
+      expect(controller).to have_attributes(log_file: "/var/log/bluepill.log", base_dir:)
     end
 
     it "has the paths in the base dir" do
@@ -49,7 +49,7 @@ describe Bluepill::Controller do
       it "keeps the files of a running application" do
         touch_app("app", "123")
         allow(Bluepill::System).to receive(:pid_alive?).with(123).and_return(true)
-        described_class.new(base_dir: base_dir)
+        described_class.new(base_dir:)
         expect(files_left).to contain_exactly(File.join(base_dir, "socks", "app.sock"), File.join(base_dir, "pids", "app.pid"))
       end
 
@@ -57,26 +57,26 @@ describe Bluepill::Controller do
         touch_app("a", "123")
         touch_app("b")
         allow(Bluepill::System).to receive(:pid_alive?).with(123).and_return(true)
-        described_class.new(base_dir: base_dir)
+        described_class.new(base_dir:)
         expect(controller.running_applications).to eq(["a"])
       end
 
       it "removes the files of an application that is not running" do
         touch_app("dead", "456")
         allow(Bluepill::System).to receive(:pid_alive?).with(456).and_return(false)
-        described_class.new(base_dir: base_dir)
+        described_class.new(base_dir:)
         expect(files_left).to eq([])
       end
 
       it "removes the socket of an application without a pid file" do
         touch_app("nopid")
-        described_class.new(base_dir: base_dir)
+        described_class.new(base_dir:)
         expect(files_left).to eq([])
       end
 
       it "removes the files of an application with an empty pid file" do
         touch_app("empty", "")
-        described_class.new(base_dir: base_dir)
+        described_class.new(base_dir:)
         expect(files_left).to eq([])
       end
     end

@@ -46,7 +46,7 @@ module Bluepill
       # @return [Watches] the watches
       #
       # @api private
-      def add(name, **options) = self << ConditionWatch.new(name, **options, logger: logger)
+      def add(name, **options) = self << ConditionWatch.new(name, **options, logger:)
 
       # Add a watch
       #

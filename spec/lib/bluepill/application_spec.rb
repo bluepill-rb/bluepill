@@ -5,7 +5,7 @@ require "tmpdir"
 describe Bluepill::Application do
   let(:logger) { instance_double(Bluepill::Logger, reopen: nil) }
   let(:base_dir) { Dir.mktmpdir }
-  let(:app) { described_class.new("test", base_dir: base_dir) }
+  let(:app) { described_class.new("test", base_dir:) }
 
   before do
     allow(logger).to receive(:prefix_with).and_return(logger)
@@ -315,7 +315,7 @@ describe Bluepill::Application do
 
     context "without a group name" do
       before do
-        allow(Bluepill::Group).to receive(:new).with(nil, logger: logger).and_return(group)
+        allow(Bluepill::Group).to receive(:new).with(nil, logger:).and_return(group)
         app.add_process(process)
         app.add_process(process)
       end

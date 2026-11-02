@@ -505,7 +505,7 @@ describe Bluepill::System do
 
       # Make the user exist, with a home directory
       def user(dir = "/home/user")
-        allow(Etc).to receive(:getpwnam).with("user").and_return(instance_double(Etc::Passwd, name: "user", uid: 501, gid: 10, dir: dir))
+        allow(Etc).to receive(:getpwnam).with("user").and_return(instance_double(Etc::Passwd, name: "user", uid: 501, gid: 10, dir:))
       end
 
       it "does nothing without a uid, gid or supplementary groups" do

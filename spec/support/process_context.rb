@@ -7,7 +7,7 @@ require "tmpdir"
 # it does
 RSpec.shared_context "with a process" do
   subject(:process) do
-    described_class.new(:proc_name, [], logger: logger)
+    described_class.new(:proc_name, [], logger:)
   end
 
   let(:logger) { instance_double(Bluepill::Logger).as_null_object }
@@ -27,7 +27,7 @@ RSpec.shared_context "with a process" do
   def succeeded = Bluepill::System::CommandResult.new(exit_code: 0)
 
   def watch_double(name, events)
-    instance_double(Bluepill::ConditionWatch, name.to_s, name: name, due?: true, run: events, to_s: name.to_s, clear_history!: nil)
+    instance_double(Bluepill::ConditionWatch, name.to_s, name:, due?: true, run: events, to_s: name.to_s, clear_history!: nil)
   end
 
   # Give the process pid 5, which signal 0 finds running, since

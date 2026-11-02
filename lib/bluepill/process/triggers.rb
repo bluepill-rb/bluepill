@@ -37,7 +37,7 @@ module Bluepill
       # @return [Triggers] the triggers
       #
       # @api private
-      def add(klass, process, **options) = self << klass.new(process, **options, logger: logger)
+      def add(klass, process, **options) = self << klass.new(process, **options, logger:)
 
       # Add a trigger
       #

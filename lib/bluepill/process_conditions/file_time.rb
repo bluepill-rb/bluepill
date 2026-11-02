@@ -24,7 +24,7 @@ module Bluepill
       #
       # @api private
       def initialize(filename:, below:, **options)
-        super(below: below, **options)
+        super(below:, **options)
         @filename = filename
       end
 

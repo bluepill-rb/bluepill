@@ -49,7 +49,7 @@ module Bluepill
           rd.close
 
           drop_privileges(options.uid, options.gid, options.supplementary_groups)
-          start_daemon(cmd, options, wr, pid_file: pid_file, logger: logger)
+          start_daemon(cmd, options, wr, pid_file:, logger:)
         end
       end
 

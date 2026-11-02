@@ -106,7 +106,7 @@ describe Bluepill::CheckRegistry do
   describe ".check_name" do
     {"Flapping" => "flapping", "Bluepill::ProcessConditions::MemUsage" => "mem_usage", "A::B::HTTPCheck" => "http_check"}.each do |name, check_name|
       it "names #{name} #{check_name}" do
-        expect(described_class.check_name(instance_double(Class, name: name))).to eq(check_name)
+        expect(described_class.check_name(instance_double(Class, name:))).to eq(check_name)
       end
     end
 

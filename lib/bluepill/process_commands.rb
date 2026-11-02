@@ -70,7 +70,7 @@ module Bluepill
     def daemonize_process(command)
       # ProcessFactory gives every process that bluepill daemonizes a pid file
       file = pid_file #: String
-      daemon_id = System.daemonize(command, command_options, pid_file: file, logger: logger)
+      daemon_id = System.daemonize(command, command_options, pid_file: file, logger:)
       return unless daemon_id
 
       journal.append(daemon_id)

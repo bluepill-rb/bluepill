@@ -228,8 +228,8 @@ module Bluepill
     # @api private
     def add_checks(checks, logger)
       @logger = logger
-      @watches = Watches.new(logger: logger)
-      @triggers = Triggers.new(logger: logger)
+      @watches = Watches.new(logger:)
+      @triggers = Triggers.new(logger:)
       checks.each { |name, options| add_check(name, options) }
     end
 

@@ -5,7 +5,7 @@ describe Bluepill::ProcessConditions::ProcessCondition do
 
   it "keeps its logger" do
     logger = instance_double(Bluepill::Logger)
-    expect(described_class.new(logger: logger).logger).to equal(logger)
+    expect(described_class.new(logger:).logger).to equal(logger)
   end
 
   it "has no logger without one" do

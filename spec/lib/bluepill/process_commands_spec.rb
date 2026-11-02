@@ -92,7 +92,7 @@ describe Bluepill::Process do
         process.pid_file = "/var/run/proc.pid"
         process.start_process
         expect(Bluepill::System).to have_received(:daemonize)
-          .with("/etc/init.d/script start", having_attributes(**process.command_options.to_h), pid_file: "/var/run/proc.pid", logger: logger)
+          .with("/etc/init.d/script start", having_attributes(**process.command_options.to_h), pid_file: "/var/run/proc.pid", logger:)
       end
 
       it "journals the daemon pid" do
@@ -565,7 +565,7 @@ describe Bluepill::Process do
   end
 
   describe "#command_options" do
-    subject(:process) { described_class.new(:proc_name, [], **options, logger: logger) }
+    subject(:process) { described_class.new(:proc_name, [], **options, logger:) }
 
     let(:options) do
       {

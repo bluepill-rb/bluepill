@@ -40,7 +40,7 @@ describe Bluepill::ProcessFactory::ChildFactory do
   describe "#create_child_process" do
     it "creates a child process with the grace times, user and groups of its parent" do
       expect(create_child(attributes, proc { self.stop_command = "halt" })).to be_a(Bluepill::Process).and have_attributes(
-        state: :up, name: "child", actual_pid: 123, logger: logger, stop_command: "halt",
+        state: :up, name: "child", actual_pid: 123, logger:, stop_command: "halt",
         start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 5,
         uid: "user", gid: "staff", supplementary_groups: ["rvm"], working_dir: nil
       )

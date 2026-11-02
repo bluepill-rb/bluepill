@@ -5,7 +5,7 @@ require "tmpdir"
 describe Bluepill::Application do
   let(:logger) { instance_double(Bluepill::Logger, crit: nil) }
   let(:base_dir) { Dir.mktmpdir }
-  let(:app) { described_class.new("test", base_dir: base_dir) }
+  let(:app) { described_class.new("test", base_dir:) }
   let(:group) { instance_double(Bluepill::Group) }
   let(:calls) { [] }
 
@@ -207,7 +207,7 @@ describe Bluepill::Application do
     end
 
     context "when in the foreground" do
-      let(:app) { described_class.new("test", base_dir: base_dir, foreground: true) }
+      let(:app) { described_class.new("test", base_dir:, foreground: true) }
 
       it "does not daemonize" do
         start_server

@@ -49,7 +49,7 @@ module Bluepill
       # @api private
       def create_child_process(name, pid, logger)
         child = ProcessProxy.new(name, @attributes, @child_process_block, actual_pid: pid)
-        process = child.to_process(logger: logger)
+        process = child.to_process(logger:)
         process.determine_initial_state
         process
       end

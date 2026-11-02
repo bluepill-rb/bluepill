@@ -118,12 +118,12 @@ describe Bluepill::Logger do
     it "does not load syslog when logging to a log file" do
       hide_const("Syslog")
       with_fake_syslog("raise 'bluepill loaded syslog'\n") do
-        expect { described_class.new(log_file: log_file) }.not_to raise_error
+        expect { described_class.new(log_file:) }.not_to raise_error
       end
     end
 
     it "logs to a log file" do
-      described_class.new(log_file: log_file).err("something failed")
+      described_class.new(log_file:).err("something failed")
       expect(File.read(log_file)).to include("ERROR -- : something failed")
     end
 
@@ -201,7 +201,7 @@ describe Bluepill::Logger do
       end
 
       it "drops messages below the level in a log file" do
-        logger = described_class.new(log_file: log_file, log_level: :err)
+        logger = described_class.new(log_file:, log_level: :err)
         logger.warning("careful")
         logger.err("failed")
         expect(log_file_messages).to eq(["failed"])
@@ -280,7 +280,7 @@ describe Bluepill::Logger do
 
   describe "#reopen" do
     it "recreates the underlying logger" do
-      logger = described_class.new(log_file: log_file)
+      logger = described_class.new(log_file:)
       logger.info("before")
       rotate(logger)
       logger.info("after")
@@ -302,7 +302,7 @@ describe Bluepill::Logger do
     end
 
     it "reopens the log file of a prefixed logger's parent" do
-      logger = described_class.new(log_file: log_file)
+      logger = described_class.new(log_file:)
       FileUtils.mv(log_file, "#{log_file}.1")
       logger.prefix_with("app").reopen
       logger.info("after")

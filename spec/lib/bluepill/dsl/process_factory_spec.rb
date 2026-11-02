@@ -11,7 +11,7 @@ describe Bluepill::ProcessFactory do
   before { allow($stderr).to receive(:puts) }
 
   def create(name, block, attributes = {})
-    process, = Bluepill::ProcessFactory.new(attributes, block, registry).create_process(name, "/pids", logger: logger)
+    process, = Bluepill::ProcessFactory.new(attributes, block, registry).create_process(name, "/pids", logger:)
     process
   end
 
@@ -51,12 +51,12 @@ describe Bluepill::ProcessFactory do
         self.start_command = "run"
         self.group = "servers"
       end, registry)
-      expect(factory.create_process("web", "/pids", logger: logger)).to match([be_a(Bluepill::Process), "servers"])
+      expect(factory.create_process("web", "/pids", logger:)).to match([be_a(Bluepill::Process), "servers"])
     end
 
     it "returns no group when the process has none" do
       factory = described_class.new({}, proc { self.start_command = "run" }, registry)
-      expect(factory.create_process("web", "/pids", logger: logger)).to match([be_a(Bluepill::Process), nil])
+      expect(factory.create_process("web", "/pids", logger:)).to match([be_a(Bluepill::Process), nil])
     end
 
     it "gives the process the app's logger, prefixed with its group's name and its own" do
@@ -75,13 +75,13 @@ describe Bluepill::ProcessFactory do
     it "leaves the factory's attributes as they were" do
       attributes = {uid: "user"}
       block = proc { |p| p.monitor_children { self.stop_command = "halt" } && p.start_command = "run" }
-      described_class.new(attributes, block, registry).create_process("web", "/pids", logger: logger)
+      described_class.new(attributes, block, registry).create_process("web", "/pids", logger:)
       expect(attributes).to eq(uid: "user")
     end
 
     it "checks each process against a registry of its own by default" do
-      described_class.new({}, proc { self.start_command = "run" }).create_process("web", "/pids", logger: logger)
-      expect { described_class.new({}, proc { self.start_command = "run" }).create_process("web", "/pids", logger: logger) }.not_to raise_error
+      described_class.new({}, proc { self.start_command = "run" }).create_process("web", "/pids", logger:)
+      expect { described_class.new({}, proc { self.start_command = "run" }).create_process("web", "/pids", logger:) }.not_to raise_error
     end
 
     context "when monitoring children" do

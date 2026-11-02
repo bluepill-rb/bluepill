@@ -20,6 +20,14 @@ AllCops:
 Style:
   Enabled: false
 
+# A keyword argument or Hash key whose value is a variable or method of
+# its name is written as the shorthand, as in logger:, and the keys stay
+# as Standard has them
+Style/HashSyntax:
+  Enabled: true
+  EnforcedStyle: ruby19_no_mixed_keys
+  EnforcedShorthandSyntax: always
+
 # An endless method stays on one line, and one whose body ends in a
 # modifier, such as `def m = x if y`, would apply the modifier to the def
 Style/EndlessMethod:

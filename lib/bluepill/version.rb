@@ -60,10 +60,10 @@ module Bluepill
     # @api public
     def self.to_h
       {
-        major: major,
-        minor: minor,
-        patch: patch,
-        pre: pre
+        major:,
+        minor:,
+        patch:,
+        pre:
       }
     end
 

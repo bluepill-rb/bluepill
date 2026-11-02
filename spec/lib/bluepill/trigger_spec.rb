@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 describe Bluepill::Trigger do
-  subject(:trigger) { described_class.new(process, logger: logger) }
+  subject(:trigger) { described_class.new(process, logger:) }
 
   # What the process is told to dispatch and what the logger logs, in order
   let(:calls) { [] }
@@ -46,7 +46,7 @@ describe Bluepill::Trigger do
 
   describe "#initialize" do
     it "sets up the trigger" do
-      expect([trigger, trigger.send(:mutex)]).to match([have_attributes(process: process, logger: logger, scheduled_events: []), be_a(Mutex)])
+      expect([trigger, trigger.send(:mutex)]).to match([have_attributes(process:, logger:, scheduled_events: []), be_a(Mutex)])
     end
 
     it "can be created without options" do
@@ -54,7 +54,7 @@ describe Bluepill::Trigger do
     end
 
     it "takes its class's name, without its modules, as its dispatch reason" do
-      Bluepill::Triggers::Flapping.new(process, logger: logger).dispatch!(:start)
+      Bluepill::Triggers::Flapping.new(process, logger:).dispatch!(:start)
       expect(calls).to eq([[:dispatch!, :start, "Flapping"]])
     end
   end

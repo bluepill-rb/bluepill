@@ -53,7 +53,7 @@ describe Bluepill do
     it "evaluates a block without arguments in the context of the app proxy" do
       context = nil
       described_class.application(:app_name, **options) { context = self }
-      expect(context).to be_a(Bluepill::AppProxy).and have_attributes(app: app)
+      expect(context).to be_a(Bluepill::AppProxy).and have_attributes(app:)
     end
 
     it "loads the app after a block without arguments" do
@@ -64,7 +64,7 @@ describe Bluepill do
     it "yields the app proxy to a block with one argument" do
       yielded = nil
       described_class.application(:app_name, **options) { |a| yielded = a }
-      expect(yielded).to be_a(Bluepill::AppProxy).and have_attributes(app: app)
+      expect(yielded).to be_a(Bluepill::AppProxy).and have_attributes(app:)
     end
 
     it "loads the app after a block with one argument" do

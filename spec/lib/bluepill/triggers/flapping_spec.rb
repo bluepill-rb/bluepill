@@ -29,7 +29,7 @@ describe Bluepill::Triggers::Flapping do
     end
   end
 
-  def flapping(**options) = described_class.new(process, logger: logger, **options)
+  def flapping(**options) = described_class.new(process, logger:, **options)
 
   # Wait for the events the trigger has scheduled to dispatch, so its
   # threads don't outlast the example and its doubles
@@ -56,7 +56,7 @@ describe Bluepill::Triggers::Flapping do
 
   describe "#initialize" do
     it "uses default parameters" do
-      expect(flapping).to have_attributes(process: process, times: 5, within: 1, retry_in: 5, logger: logger, timeline: [])
+      expect(flapping).to have_attributes(process:, times: 5, within: 1, retry_in: 5, logger:, timeline: [])
     end
 
     it "accepts parameters" do

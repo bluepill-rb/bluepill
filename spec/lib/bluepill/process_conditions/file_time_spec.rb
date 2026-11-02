@@ -4,7 +4,7 @@ require "fileutils"
 require "tmpdir"
 
 describe Bluepill::ProcessConditions::FileTime do
-  subject(:condition) { described_class.new(below: 60, filename: filename) }
+  subject(:condition) { described_class.new(below: 60, filename:) }
 
   let(:dir) { Dir.mktmpdir }
   let(:filename) { File.join(dir, "heartbeat") }
@@ -17,7 +17,7 @@ describe Bluepill::ProcessConditions::FileTime do
     end
 
     it "rejects an option it doesn't take" do
-      expect { described_class.new(below: 60, filename: filename, note: "x") }.to raise_error(ArgumentError, /unknown keyword: :note/)
+      expect { described_class.new(below: 60, filename:, note: "x") }.to raise_error(ArgumentError, /unknown keyword: :note/)
     end
 
     it "checks against the given limit" do

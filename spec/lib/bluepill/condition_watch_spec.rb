@@ -12,7 +12,7 @@ describe Bluepill::ConditionWatch do
   end
 
   def watch(**options)
-    Bluepill::ConditionWatch.new(:cpu_usage, logger: logger, every: 10, below: 50, **options)
+    Bluepill::ConditionWatch.new(:cpu_usage, logger:, every: 10, below: 50, **options)
   end
 
   def cpu_usage(*values)
@@ -52,7 +52,7 @@ describe Bluepill::ConditionWatch do
     it "gives the condition its logger while the condition's initialize runs" do
       seen = []
       logging_condition(seen)
-      w = described_class.new(:logging_check, logger: logger, every: 10, below: 5)
+      w = described_class.new(:logging_check, logger:, every: 10, below: 5)
       expect([seen, w.instance_variable_get(:@process_condition).logger]).to eq([[logger, 5], logger])
     end
 
@@ -60,23 +60,23 @@ describe Bluepill::ConditionWatch do
       stub_const("Bluepill::ProcessConditions::NoSuperCheck", Class.new(Bluepill::ProcessConditions::AlwaysTrue) do
         define_method(:initialize) { |**| nil }
       end)
-      w = described_class.new(:no_super_check, logger: logger, every: 10)
+      w = described_class.new(:no_super_check, logger:, every: 10)
       expect(w.instance_variable_get(:@process_condition).logger).to be_nil
     end
 
     it "exposes its name and logger" do
-      expect(watch).to have_attributes(name: :cpu_usage, logger: logger)
+      expect(watch).to have_attributes(name: :cpu_usage, logger:)
     end
 
     it "passes the remaining options and its logger to the process condition" do
       received = []
       record_cpu_usage_options(received)
       watch
-      expect(received).to eq([{below: 50, logger: logger}])
+      expect(received).to eq([{below: 50, logger:}])
     end
 
     it "leaves the options it was given as they were" do
-      options = {logger: logger, fires: :stop, every: 10, times: [2, 3], include_children: true, below: 50}
+      options = {logger:, fires: :stop, every: 10, times: [2, 3], include_children: true, below: 50}
       copy = options.dup
       described_class.new(:cpu_usage, **options)
       expect(options).to eq(copy)
@@ -86,7 +86,7 @@ describe Bluepill::ConditionWatch do
       received = []
       record_cpu_usage_options(received)
       watch(fires: :stop, times: [2, 3], include_children: true)
-      expect(received).to eq([{below: 50, logger: logger}])
+      expect(received).to eq([{below: 50, logger:}])
     end
 
     it "passes a nil logger to the process condition when it has none" do
@@ -226,7 +226,7 @@ describe Bluepill::ConditionWatch do
 
     it "logs the formatted values" do
       allow(Bluepill::System).to receive(:memory_usage).with(123, false).and_return(2048)
-      described_class.new(:mem_usage, logger: logger, every: 10, below: 1.megabyte).run(123, 0)
+      described_class.new(:mem_usage, logger:, every: 10, below: 1.megabyte).run(123, 0)
       expect(calls).to eq([[:info, "mem_usage: [2MB*]\n"]])
     end
 

@@ -116,7 +116,7 @@ module Bluepill
       #
       # @api private
       def for_hook(env, timeout)
-        self.class.new(**to_h, environment: environment.merge(env), timeout: timeout)
+        self.class.new(**to_h, environment: environment.merge(env), timeout:)
       end
 
       # Return the options as a Hash
@@ -126,8 +126,8 @@ module Bluepill
       # @api private
       def to_h
         {
-          uid: uid, gid: gid, supplementary_groups: supplementary_groups, working_dir: working_dir,
-          environment: environment, stdin: stdin, stdout: stdout, stderr: stderr, timeout: timeout
+          uid:, gid:, supplementary_groups:, working_dir:,
+          environment:, stdin:, stdout:, stderr:, timeout:
         }
       end
     end

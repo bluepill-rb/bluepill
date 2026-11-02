@@ -4,7 +4,7 @@ require "tmpdir"
 
 describe Bluepill::Application do
   let(:base_dir) { Dir.mktmpdir }
-  let(:app) { described_class.new("test", base_dir: base_dir) }
+  let(:app) { described_class.new("test", base_dir:) }
 
   before do
     logger = instance_double(Bluepill::Logger)
@@ -19,7 +19,7 @@ describe Bluepill::Application do
   after { FileUtils.remove_entry(base_dir) }
 
   def previous_daemon_error(message)
-    raise_error(an_instance_of(Bluepill::PreviousDaemonError).and(having_attributes(message: message, exit_status: 4)))
+    raise_error(an_instance_of(Bluepill::PreviousDaemonError).and(having_attributes(message:, exit_status: 4)))
   end
 
   def pid_file = File.join(base_dir, "pids", "test.pid")

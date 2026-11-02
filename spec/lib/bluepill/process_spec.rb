@@ -66,15 +66,15 @@ describe Bluepill::Process do
 
     context "with checks" do
       subject(:process) do
-        described_class.new(:proc_name, {flapping: {times: 2}, mem_usage: {below: 100, every: 10}}, logger: logger)
+        described_class.new(:proc_name, {flapping: {times: 2}, mem_usage: {below: 100, every: 10}}, logger:)
       end
 
       it "adds a trigger for a trigger check" do
-        expect(process.triggers).to match [be_a(Bluepill::Triggers::Flapping).and(have_attributes(logger: logger, times: 2, process: process))]
+        expect(process.triggers).to match [be_a(Bluepill::Triggers::Flapping).and(have_attributes(logger:, times: 2, process:))]
       end
 
       it "adds a watch for every other check" do
-        expect(process.watches).to match [have_attributes(name: :mem_usage, logger: logger)]
+        expect(process.watches).to match [have_attributes(name: :mem_usage, logger:)]
       end
 
       it "gives the watch its options" do
@@ -88,7 +88,7 @@ describe Bluepill::Process do
 
     context "with checks as a list of names and options" do
       subject(:process) do
-        described_class.new(:proc_name, [[:http, {url: "http://a/"}], [:http, {url: "http://b/"}], [:flapping, {}]], logger: logger)
+        described_class.new(:proc_name, [[:http, {url: "http://a/"}], [:http, {url: "http://b/"}], [:flapping, {}]], logger:)
       end
 
       it "keeps two checks of the same name" do
@@ -102,11 +102,11 @@ describe Bluepill::Process do
     end
 
     it "refuses a check no class has the name of" do
-      expect { described_class.new(:proc_name, {mem_usag: {below: 100}}, logger: logger) }.to raise_error(Bluepill::ConfigError, /Unknown check 'mem_usag'/)
+      expect { described_class.new(:proc_name, {mem_usag: {below: 100}}, logger:) }.to raise_error(Bluepill::ConfigError, /Unknown check 'mem_usag'/)
     end
 
     it "accepts an actual pid" do
-      process = described_class.new(:proc_name, [], logger: logger, actual_pid: 42)
+      process = described_class.new(:proc_name, [], logger:, actual_pid: 42)
       expect(process.actual_pid).to eq 42
     end
   end

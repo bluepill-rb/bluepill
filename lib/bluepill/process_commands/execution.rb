@@ -34,8 +34,8 @@ module Bluepill
       # @api private
       def command_options
         System::CommandOptions.new(
-          uid: uid, gid: gid, supplementary_groups: supplementary_groups, working_dir: working_dir,
-          environment: environment, stdin: stdin, stdout: stdout, stderr: stderr
+          uid:, gid:, supplementary_groups:, working_dir:,
+          environment:, stdin:, stdout:, stderr:
         )
       end
 

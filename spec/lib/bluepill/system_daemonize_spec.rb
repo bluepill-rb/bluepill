@@ -27,7 +27,7 @@ describe Bluepill::System, ".daemonize" do
 
   # Daemonize a command with its pid file and logger
   def daemonize(cmd = "cmd", with = command_options)
-    described_class.daemonize(cmd, with, pid_file: pid_file, logger: logger)
+    described_class.daemonize(cmd, with, pid_file:, logger:)
   end
 
   # Daemonize, and carry on past the child's exit
@@ -90,12 +90,12 @@ describe Bluepill::System, ".daemonize" do
     end
 
     it "does not redirect io that is not configured" do
-      described_class.daemonize("cmd", pid_file: pid_file, logger: logger)
+      described_class.daemonize("cmd", pid_file:, logger:)
       expect(described_class).to have_received(:redirect_io).with(nil, nil, nil)
     end
 
     it "drops no privileges without command options" do
-      described_class.daemonize("cmd", pid_file: pid_file, logger: logger)
+      described_class.daemonize("cmd", pid_file:, logger:)
       expect(described_class).to have_received(:drop_privileges).with(nil, nil, nil)
     end
 

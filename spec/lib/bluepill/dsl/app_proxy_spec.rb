@@ -4,7 +4,7 @@ describe Bluepill::AppProxy do
   subject(:proxy) { described_class.new(:app_name) }
 
   let(:logger) { Bluepill::Logger.new(logger: instance_double(Bluepill::Logger::LoggerAdapter)) }
-  let(:app) { instance_double(Bluepill::Application, pids_dir: "/pids", logger: logger, add_process: nil) }
+  let(:app) { instance_double(Bluepill::Application, pids_dir: "/pids", logger:, add_process: nil) }
 
   before do
     allow(Bluepill::Application).to receive(:new).with("app_name").and_return(app)

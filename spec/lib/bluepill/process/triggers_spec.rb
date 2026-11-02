@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 describe Bluepill::Process::Triggers do
-  subject(:triggers) { described_class.new(logger: logger) }
+  subject(:triggers) { described_class.new(logger:) }
 
   let(:logger) { instance_double(Bluepill::Logger) }
   let(:process) { instance_double(Bluepill::Process) }
@@ -21,7 +21,7 @@ describe Bluepill::Process::Triggers do
   describe "#add" do
     it "adds a trigger of the class, for the process, with its options and the logger, and returns the triggers" do
       expect([triggers.add(Bluepill::Triggers::Flapping, process, times: 2), triggers.to_a]).to match(
-        [be(triggers), [be_a(Bluepill::Triggers::Flapping).and(have_attributes(process: process, logger: logger, times: 2))]]
+        [be(triggers), [be_a(Bluepill::Triggers::Flapping).and(have_attributes(process:, logger:, times: 2))]]
       )
     end
   end
@@ -62,7 +62,7 @@ describe Bluepill::Process::Triggers do
     end
 
     it "goes through its triggers without each, which would cost a call on every tick" do
-      others = described_class.new(logger: logger) << trigger_double("other")
+      others = described_class.new(logger:) << trigger_double("other")
       allow(others).to receive(:each).and_raise("each called")
       expect(others.notify(transition).size).to eq(1)
     end

@@ -130,7 +130,7 @@ module Bluepill
       #
       # @api private
       def setup_logger
-        self.logger = ProcessJournal.logger = Logger.new(log_file: log_file, log_level: @log_level, stdout: foreground?).prefix_with(name)
+        self.logger = ProcessJournal.logger = Logger.new(log_file:, log_level: @log_level, stdout: foreground?).prefix_with(name)
       rescue SystemCallError => e
         raise unwritable(e)
       end

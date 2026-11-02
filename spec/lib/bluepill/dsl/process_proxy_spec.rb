@@ -199,8 +199,8 @@ describe Bluepill::ProcessProxy do
     it "gives the process a child's pid, and more options" do
       allow(Bluepill::Process).to receive(:new)
       logger = instance_double(Bluepill::Logger)
-      described_class.new("child", {uid: "user"}, proc {}, actual_pid: 5).to_process(logger: logger)
-      expect(Bluepill::Process).to have_received(:new).with("child", [], actual_pid: 5, uid: "user", logger: logger)
+      described_class.new("child", {uid: "user"}, proc {}, actual_pid: 5).to_process(logger:)
+      expect(Bluepill::Process).to have_received(:new).with("child", [], actual_pid: 5, uid: "user", logger:)
     end
 
     it "gives the process a watch for each of two checks of a kind" do

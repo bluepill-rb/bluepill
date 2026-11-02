@@ -30,7 +30,7 @@ In order to take advantage of logging with syslog, you also need to setup your s
 
 You'll also want to add `/var/log/bluepill.log` to `/etc/logrotate.d/syslog` so that it gets rotated.
 
-Lastly, create the `/var/run/bluepill` directory for bluepill to store its pid and sock files.
+Bluepill keeps its pid and socket files in `/var/run/bluepill` when it runs as root, and in `~/.bluepill` otherwise. It creates the directory itself.
 
 ## Usage
 ### Config

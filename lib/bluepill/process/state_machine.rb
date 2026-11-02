@@ -16,11 +16,11 @@ module Bluepill
       # care. A process that's stopping and still running failed to stop, so
       # a tick shows it as up.
       TICKS = {
-        starting: [:up, :down],
-        up: [:up, :down],
-        stopping: [:up, :down],
-        down: [:up, :starting],
-        restarting: [:up, :down]
+        starting: %i[up down],
+        up: %i[up down],
+        stopping: %i[up down],
+        down: %i[up starting],
+        restarting: %i[up down]
       }.freeze
 
       # Where every other event moves a process from each state it can leave

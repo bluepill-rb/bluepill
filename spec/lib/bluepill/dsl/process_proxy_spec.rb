@@ -132,7 +132,7 @@ describe Bluepill::ProcessProxy do
 
     it "suggests an attribute at most a third of the name away" do
       proxy = described_class.new("web", {}, proc {})
-      suggestions = [:auto_srt, :uidx, :gids, :ui].collect { |name| proxy.send(:suggest, name) }
+      suggestions = %i[auto_srt uidx gids ui].collect { |name| proxy.send(:suggest, name) }
       expect(suggestions).to eq(["auto_start", "uid", "gid", nil])
     end
 

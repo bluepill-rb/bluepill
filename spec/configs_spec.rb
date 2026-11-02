@@ -94,7 +94,7 @@ describe "The README and example configs", type: :integration do
   it "accepts the durations and sizes of a config that loads ActiveSupport" do
     script = File.join(BLUEPILL_ROOT, "spec", "support", "active_support_config.rb")
     ruby = File.join(RbConfig::CONFIG["bindir"], RbConfig::CONFIG["ruby_install_name"])
-    output = IO.popen([ruby, "-I", File.join(BLUEPILL_ROOT, "lib"), script, {err: [:child, :out]}], &:read)
+    output = IO.popen([ruby, "-I", File.join(BLUEPILL_ROOT, "lib"), script, {err: %i[child out]}], &:read)
     expect([output, $?.success?]).to match([end_with("ok\n"), true])
   end
 end

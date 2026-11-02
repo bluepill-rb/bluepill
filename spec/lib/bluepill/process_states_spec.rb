@@ -1,7 +1,7 @@
 # What a process's state machine does, for every state and event: where
 # each event moves it, which callbacks run and in what order, and what
 # halting or raising in a callback does
-PROCESS_STATES = [:unmonitored, :up, :down, :starting, :stopping, :restarting].freeze
+PROCESS_STATES = %i[unmonitored up down starting stopping restarting].freeze
 
 describe Bluepill::Process do
   # Where each event goes from each state. A tick goes to the first state
@@ -13,11 +13,11 @@ describe Bluepill::Process do
     restart: {up: :restarting, down: :restarting}
   }
   ticks = {
-    up: [:up, :down],
-    down: [:up, :starting],
-    starting: [:up, :down],
-    stopping: [:up, :down],
-    restarting: [:up, :down]
+    up: %i[up down],
+    down: %i[up starting],
+    starting: %i[up down],
+    stopping: %i[up down],
+    restarting: %i[up down]
   }
 
   # The process daemonizes, so starting it doesn't wait on a timeout, and it
@@ -118,13 +118,13 @@ describe Bluepill::Process do
   # notify_command runs
   def after_callbacks(from, to)
     expected = [[:record_transition, to]]
-    expected << [:post_start_process, to] if to == :up && [:starting, :restarting].include?(from)
+    expected << [:post_start_process, to] if to == :up && %i[starting restarting].include?(from)
     expected << [:notify_transition, from.to_s, to.to_s, to]
   end
 
   # The callbacks a tick runs, in order. It runs the watches once it's up.
   def tick_callbacks(from, to)
-    (to == :up) ? callbacks(from, to) << [:run_watches, :up] : callbacks(from, to)
+    (to == :up) ? callbacks(from, to) << %i[run_watches up] : callbacks(from, to)
   end
 
   # The message of what the block raises, or nil if it raises nothing
@@ -180,7 +180,7 @@ describe Bluepill::Process do
 
     it "stays unmonitored, running no transition callbacks" do
       process.tick
-      expect([process.state, calls]).to eq([:unmonitored, [[:clean_threads, :unmonitored]]])
+      expect([process.state, calls]).to eq([:unmonitored, [%i[clean_threads unmonitored]]])
     end
   end
 
@@ -210,7 +210,7 @@ describe Bluepill::Process do
 
     it "keeps the new state when it raises after the transition, without recording it" do
       allow(Bluepill::System).to receive(:daemonize).and_raise("start failed")
-      expected = [[:notify_triggers, :unmonitored, :starting, false, :unmonitored], [:clean_threads, :starting]]
+      expected = [[:notify_triggers, :unmonitored, :starting, false, :unmonitored], %i[clean_threads starting]]
       expect([error_from { process.start }, process.state, calls]).to eq(["start failed", :starting, expected])
     end
   end

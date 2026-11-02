@@ -175,7 +175,7 @@ describe Bluepill::Logger do
         message = record(instance_double(Object), :to_s)
         record_stdout
         logger = described_class.new(logger: sink, log_level: :warning, stdout: true)
-        [:notice, :info, :debug].each { |method| logger.public_send(method, message) }
+        %i[notice info debug].each { |method| logger.public_send(method, message) }
         expect(lines).to eq([])
       end
 

@@ -98,12 +98,12 @@ describe Bluepill::Process do
 
   describe "#initialize" do
     describe "defaults" do
-      [
-        :start_command, :stop_command, :restart_command, :stdout, :stderr, :stdin,
-        :daemonize, :pid_file, :working_dir, :uid, :gid, :child_process_factory,
-        :pid_command, :auto_start, :supplementary_groups, :stop_signals,
-        :post_start_command, :pre_stop_command, :post_stop_command, :notify_command,
-        :app_name, :group_name
+      %i[
+        start_command stop_command restart_command stdout stderr stdin
+        daemonize pid_file working_dir uid gid child_process_factory
+        pid_command auto_start supplementary_groups stop_signals
+        post_start_command pre_stop_command post_stop_command notify_command
+        app_name group_name
       ].each do |attr|
         it "leaves ##{attr} unset" do
           expect(process.public_send(attr)).to be_nil
@@ -143,7 +143,7 @@ describe Bluepill::Process do
       end
 
       it "has no threads, and a monitor for its events" do
-        expect([:@threads, :@event_mutex].collect { |name| process.instance_variable_get(name) }).to match [[], be_a(Monitor)]
+        expect(%i[@threads @event_mutex].collect { |name| process.instance_variable_get(name) }).to match [[], be_a(Monitor)]
       end
     end
 
@@ -315,10 +315,10 @@ describe Bluepill::Process do
     end
 
     {
-      starting: [:up, :down],
-      up: [:up, :down],
-      stopping: [:up, :down],
-      restarting: [:up, :down]
+      starting: %i[up down],
+      up: %i[up down],
+      stopping: %i[up down],
+      restarting: %i[up down]
     }.each do |from, (running_to, stopped_to)|
       it "transitions from #{from} to #{running_to} when running" do
         process.state = from
@@ -513,7 +513,7 @@ describe Bluepill::Process do
 
     context "with a quiet and a loud watch" do
       let(:quiet) { watch_double(:quiet, []) }
-      let(:loud) { watch_double(:loud, [:restart, :stop]) }
+      let(:loud) { watch_double(:loud, %i[restart stop]) }
 
       before do
         allow(loud).to receive(:to_s).and_return("loud: [1, 2]")
@@ -575,7 +575,7 @@ describe Bluepill::Process do
 
     it "stops dispatching after a transition" do
       process.state = :down
-      process.watches << watch_double(:loud, [:start, :stop])
+      process.watches << watch_double(:loud, %i[start stop])
       process.run_watches
       expect(dispatched_events).to eq [[:start, "loud"]]
     end
@@ -1661,7 +1661,7 @@ describe Bluepill::Process do
       expect(logger).to have_received(:info).with("Executing post start command: renice 20 5")
     end
 
-    [:starting, :restarting].each do |state|
+    %i[starting restarting].each do |state|
       context "when the process comes up from #{state}" do
         before do
           threads = capture_threads
@@ -1680,7 +1680,7 @@ describe Bluepill::Process do
       end
     end
 
-    [:down, :up, :stopping].each do |state|
+    %i[down up stopping].each do |state|
       it "doesn't run when a process comes back up by itself, or stays up, from #{state}" do
         threads = capture_threads
         process.state = state

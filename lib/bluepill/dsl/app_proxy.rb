@@ -14,7 +14,7 @@ module Bluepill
   class AppProxy
     # The attributes that every process of the application gets, unless the
     # process sets its own
-    APP_ATTRIBUTES = [:working_dir, :uid, :gid, :supplementary_groups, :environment, :auto_start, :notify_command].freeze
+    APP_ATTRIBUTES = %i[working_dir uid gid supplementary_groups environment auto_start notify_command].freeze
 
     # The directory that the application's processes start in
     #

@@ -20,13 +20,13 @@ module Bluepill
     include PreviousDaemon
 
     # The commands that act on a process or group, and that the CLI sends
-    PROCESS_COMMANDS = [:start, :stop, :restart, :unmonitor, :status].freeze
+    PROCESS_COMMANDS = %i[start stop restart unmonitor status].freeze
 
     # The commands that the daemon answers on its socket, and no others
     #
     # The CLI sends the PROCESS_COMMANDS, version to check the daemon's
     # version, and log_file to find the log that it tails.
-    DAEMON_COMMANDS = (PROCESS_COMMANDS + [:version, :log_file]).freeze
+    DAEMON_COMMANDS = (PROCESS_COMMANDS + %i[version log_file]).freeze
 
     attr_accessor :name, :logger, :base_dir, :socket, :pid_file, :kill_timeout, :groups, :pids_dir, :log_file
 

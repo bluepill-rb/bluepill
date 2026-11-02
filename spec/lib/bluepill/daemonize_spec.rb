@@ -59,8 +59,8 @@ describe Bluepill::Daemonize do
 
     before do
       allow(IO).to receive(:pipe).and_return([rd, wr])
-      allow(rd).to(receive(:close)) { events << [:close, :rd] }
-      allow(wr).to(receive(:close)) { events << [:close, :wr] }
+      allow(rd).to(receive(:close)) { events << %i[close rd] }
+      allow(wr).to(receive(:close)) { events << %i[close wr] }
       allow(wr).to(receive(:write)) { |data| events << [:write, data] }
       allow(block).to(receive(:call)) { events << [:call] }
     end
@@ -77,7 +77,7 @@ describe Bluepill::Daemonize do
 
       it "closes the pipe and waits for the process between, without running the block" do
         described_class.call_as_daemon(block, "name")
-        expect(events).to eq([[:close, :wr], [:close, :rd], [:waitpid, 42]])
+        expect(events).to eq([%i[close wr], %i[close rd], [:waitpid, 42]])
       end
 
       it "returns 0 when the daemon never reports its pid" do
@@ -104,13 +104,13 @@ describe Bluepill::Daemonize do
       it "exits the process between with exit!, after starting a session" do
         allow(described_class).to receive(:safefork).and_return(nil, 77)
         call_as_daemon("name")
-        expect(events).to eq([[:close, :rd], [:setsid], [:trap, "SIGHUP", "IGNORE"], [:close, :wr], [:exit!, true]])
+        expect(events).to eq([%i[close rd], [:setsid], [:trap, "SIGHUP", "IGNORE"], %i[close wr], [:exit!, true]])
       end
 
       it "reports its pid, runs the block as a daemon, and exits with exit!" do
         allow(described_class).to receive(:safefork).and_return(nil, nil)
         call_as_daemon("name")
-        expect(events).to eq([[:close, :rd], [:setsid], [:trap, "SIGHUP", "IGNORE"], [:write, Process.pid], [:close, :wr],
+        expect(events).to eq([%i[close rd], [:setsid], [:trap, "SIGHUP", "IGNORE"], [:write, Process.pid], %i[close wr],
           [:become_daemon, "name"], [:call], [:exit!, true]])
       end
 
@@ -207,7 +207,7 @@ describe Bluepill::Daemonize do
 
     before do
       allow(Dir).to(receive(:chdir)) { |dir| events << [:chdir, dir] }
-      [:close_io, :redirect_io, :srand].each do |method|
+      %i[close_io redirect_io srand].each do |method|
         allow(described_class).to(receive(method)) { |*args| events << [method, *args] }
       end
     end
@@ -257,7 +257,7 @@ describe Bluepill::Daemonize do
 
     it "closes every open IO but the standard streams, and then each file descriptor" do
       described_class.close_io
-      expect(events).to eq([[:close, :open], [:close, :failing], [:close, 3], [:close, Bluepill::Daemonize::MAX_FD]])
+      expect(events).to eq([%i[close open], %i[close failing], [:close, 3], [:close, Bluepill::Daemonize::MAX_FD]])
     end
 
     it "tries every file descriptor from 3 up" do

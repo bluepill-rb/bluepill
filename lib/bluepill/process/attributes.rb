@@ -5,53 +5,52 @@ module Bluepill
     # @api private
     module Attributes
       # The options a config can set for a process
-      CONFIGURABLE_ATTRIBUTES = [
-        :pre_start_command,
-        :start_command,
-        :stop_command,
-        :restart_command,
+      CONFIGURABLE_ATTRIBUTES = %i[
+        pre_start_command
+        start_command
+        stop_command
+        restart_command
 
-        :post_start_command,
-        :pre_stop_command,
-        :post_stop_command,
-        :notify_command,
-        :hook_timeout,
+        post_start_command
+        pre_stop_command
+        post_stop_command
+        notify_command
+        hook_timeout
 
-        :stdout,
-        :stderr,
-        :stdin,
+        stdout
+        stderr
+        stdin
 
-        :daemonize,
-        :pid_file,
-        :working_dir,
-        :environment,
+        daemonize
+        pid_file
+        working_dir
+        environment
 
-        :start_grace_time,
-        :stop_grace_time,
-        :restart_grace_time,
+        start_grace_time
+        stop_grace_time
+        restart_grace_time
 
-        :uid,
-        :gid,
+        uid
+        gid
 
-        :cache_actual_pid,
+        cache_actual_pid
 
-        :monitor_children,
-        :child_process_factory,
+        monitor_children
+        child_process_factory
 
-        :pid_command,
-        :auto_start,
+        pid_command
+        auto_start
 
-        :supplementary_groups,
+        supplementary_groups
 
-        :stop_signals,
+        stop_signals
 
-        :on_start_timeout,
+        on_start_timeout
 
-        :group_start_noblock,
-        :group_restart_noblock,
-        :group_stop_noblock,
-        :group_unmonitor_noblock
-
+        group_start_noblock
+        group_restart_noblock
+        group_stop_noblock
+        group_unmonitor_noblock
       ].freeze
 
       # Return the command run before every start, if any

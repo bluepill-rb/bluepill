@@ -118,7 +118,7 @@ describe Bluepill::ProcessJournal do
     end
   end
 
-  [:skip_pid?, :skip_pgid?].each do |method|
+  %i[skip_pid? skip_pgid?].each do |method|
     describe ".#{method}" do
       it "skips non-integers and ids <= 1" do
         ids = [nil, "5", -5, 0, 1, 2]

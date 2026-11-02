@@ -245,7 +245,7 @@ describe Bluepill::Application do
 
   describe "DAEMON_COMMANDS" do
     it "is the commands that the CLI sends" do
-      expect(described_class::DAEMON_COMMANDS).to eq([:start, :stop, :restart, :unmonitor, :status, :version, :log_file])
+      expect(described_class::DAEMON_COMMANDS).to eq(%i[start stop restart unmonitor status version log_file])
     end
 
     it "is frozen" do

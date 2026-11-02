@@ -3,7 +3,7 @@ describe Bluepill::ConditionWatch do
   let(:calls) { [] }
   let(:logger) do
     logger = instance_double(Bluepill::Logger)
-    [:info, :warning, :err].each do |method|
+    %i[info warning err].each do |method|
       allow(logger).to receive(method) { |message| calls << [method, message] }
     end
     logger
@@ -130,7 +130,7 @@ describe Bluepill::ConditionWatch do
 
     it "fires a list of events" do
       cpu_usage(90)
-      expect(watch(fires: [:stop, :start]).run(123, 0)).to eq([:stop, :start])
+      expect(watch(fires: %i[stop start]).run(123, 0)).to eq(%i[stop start])
     end
 
     it "fires the same number of times as it remembers when times is a number" do

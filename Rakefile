@@ -129,7 +129,7 @@ rescue LoadError
   standard = false
 end
 
-default_tasks = [:spec, :rubocop]
+default_tasks = %i[spec rubocop]
 default_tasks << :standard if standard
 default_tasks << :yardstick if yardstick
 default_tasks << :steep if steep

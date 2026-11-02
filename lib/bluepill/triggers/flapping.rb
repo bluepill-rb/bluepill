@@ -20,7 +20,7 @@ module Bluepill
       # The states that a start or a restart moves the process to
       #
       # @api private
-      TRIGGER_STATES = [:starting, :restarting].freeze
+      TRIGGER_STATES = %i[starting restarting].freeze
 
       # Return how many starts or restarts count as flapping
       #

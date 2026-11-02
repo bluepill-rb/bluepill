@@ -14,7 +14,7 @@ describe Bluepill::Group do
   # A process that records what it's told to do as [method, name, *args]
   def process_double(name)
     process = instance_double(Bluepill::Process, name, name: name)
-    [:logger=, :tick, :determine_initial_state, :handle_user_command].each do |method|
+    %i[logger= tick determine_initial_state handle_user_command].each do |method|
       allow(process).to receive(method) { |*args| calls << [method, name, *args] }
     end
     process
@@ -60,7 +60,7 @@ describe Bluepill::Group do
       end
     end
 
-    [:start, :unmonitor, :stop, :restart].each do |event|
+    %i[start unmonitor stop restart].each do |event|
       describe "##{event}" do
         let(:thread) do
           thread = instance_double(Thread)

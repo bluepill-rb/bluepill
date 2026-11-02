@@ -10,7 +10,7 @@ module Bluepill
     module TransitionCallbacks
       # The states that a start or restart moves a process through on its
       # way up, after which post_start_command runs
-      STARTS = [:starting, :restarting].freeze
+      STARTS = %i[starting restarting].freeze
 
       # Run the callbacks before a transition
       #

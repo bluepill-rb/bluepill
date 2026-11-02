@@ -69,7 +69,7 @@ describe Bluepill::Process::Watches do
 
   describe "#run" do
     it "returns the events each due watch fires, with the watch as the reason, in order" do
-      watches << watch_double(:loud, [:restart, :stop]) << watch_double(:quiet, []) << watch_double(:other, [:start])
+      watches << watch_double(:loud, %i[restart stop]) << watch_double(:quiet, []) << watch_double(:other, [:start])
       expect(watches.run(100) { 5 }).to eq [[:restart, "loud: [1, 2]"], [:stop, "loud: [1, 2]"], [:start, "other: [1, 2]"]]
     end
 
@@ -89,7 +89,7 @@ describe Bluepill::Process::Watches do
 
     context "with a watch that fires events and one that fires none" do
       before do
-        watches << watch_double(:loud, [:restart, :stop]) << watch_double(:quiet, [])
+        watches << watch_double(:loud, %i[restart stop]) << watch_double(:quiet, [])
         watches.run(100) { 5 }
       end
 

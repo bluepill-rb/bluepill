@@ -43,7 +43,7 @@ describe Bluepill::Application do
     end
 
     it "ticks every group each second until terminated" do
-      expect(calls.collect(&:first)).to eq([:reset_data, :web, :db, :sleep, :reset_data, :web, :db, :sleep])
+      expect(calls.collect(&:first)).to eq(%i[reset_data web db sleep reset_data web db sleep])
     end
 
     it "ticks while holding the mutex, and sleeps without it" do

@@ -55,7 +55,7 @@ module Bluepill
     # The options the watch takes for itself, which the check doesn't get
     #
     # @api private
-    WATCH_KEYS = [:logger, :fires, :every, :times, :include_children].freeze
+    WATCH_KEYS = %i[logger fires every times include_children].freeze
 
     # Create a watch of a check
     #

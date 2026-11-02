@@ -509,12 +509,6 @@ end
 > [!IMPORTANT]
 > Define only one application per config when using foreground mode.
 
-## Links
-
-* Code: [http://github.com/bluepill-rb/bluepill](http://github.com/bluepill-rb/bluepill)
-* Bugs/Features: [http://github.com/bluepill-rb/bluepill/issues](http://github.com/bluepill-rb/bluepill/issues)
-* Mailing List: [http://groups.google.com/group/bluepill-rb](http://groups.google.com/group/bluepill-rb)
-
 [rubygems]: http://rubygems.org/gems/bluepill
 
 ## Supported Ruby Versions

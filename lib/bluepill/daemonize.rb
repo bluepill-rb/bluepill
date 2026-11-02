@@ -157,7 +157,7 @@ module Bluepill
 
         begin
           io.close unless io.closed?
-        rescue StandardError
+        rescue
           nil
         end
       end
@@ -166,7 +166,7 @@ module Bluepill
       (3..MAX_FD).each do |fd|
         begin
           IO.for_fd(fd).close
-        rescue StandardError
+        rescue
           nil
         end
       end
@@ -181,14 +181,14 @@ module Bluepill
       [STDIN, STDOUT].each do |io|
         begin
           io.reopen(File::NULL)
-        rescue StandardError
+        rescue
           nil
         end
       end
 
       begin
         STDERR.reopen(STDOUT)
-      rescue StandardError
+      rescue
         nil
       end
       STDERR.sync = true

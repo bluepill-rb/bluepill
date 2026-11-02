@@ -215,3 +215,7 @@ Style/StringLiterals:
 
 Style/StringLiteralsInInterpolation:
   EnforcedStyle: double_quotes
+
+# A bare rescue, which rescues StandardError, as Standard wants
+Style/RescueStandardError:
+  EnforcedStyle: implicit

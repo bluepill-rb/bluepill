@@ -71,7 +71,7 @@ module Bluepill
             http.get(@uri.request_uri)
           end
         end
-      rescue StandardError => e
+      rescue => e
         e
       end
 

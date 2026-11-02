@@ -235,7 +235,7 @@ module Bluepill
       run_command(cmd, description, options)
     rescue Timeout::Error
       logger.warning "#{description} command took longer than #{hook_timeout} seconds: #{command}"
-    rescue StandardError => e
+    rescue => e
       logger.err "#{description} command failed: #{e}"
     end
 

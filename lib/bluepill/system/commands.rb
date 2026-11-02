@@ -224,7 +224,7 @@ module Bluepill
       cmd_err_write.close
 
       Kernel.exec(*Shellwords.shellwords(cmd))
-    rescue StandardError => e
+    rescue => e
       err = cmd_err_write.closed? ? STDERR : cmd_err_write
       err.puts "Exception in grandchild: #{e}."
       err.puts e.backtrace
@@ -294,7 +294,7 @@ module Bluepill
       FileUtils.touch(pid_file)
       File.unlink(pid_file)
       true
-    rescue StandardError => e
+    rescue => e
       logger.warning(format("%s - %s", e.class, e))
       # A rescued exception was raised, so it has a backtrace
       backtrace = e.backtrace #: Array[String]

@@ -37,7 +37,7 @@ module Bluepill
       # @api private
       def run(_pid, _include_children)
         Time.now - File.mtime(@filename) if File.exist?(@filename)
-      rescue StandardError => e
+      rescue => e
         e
       end
 

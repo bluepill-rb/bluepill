@@ -69,7 +69,7 @@ module Bluepill
       # @api private
       def check?(value)
         value * 1024 < @below
-      rescue StandardError
+      rescue
         true
       end
 

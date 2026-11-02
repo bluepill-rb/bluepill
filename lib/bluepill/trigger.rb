@@ -130,7 +130,7 @@ module Bluepill
             mutex.synchronize do
               scheduled_events.delete_if { |_, t| t.equal?(Thread.current) }
             end
-          rescue StandardError => e
+          rescue => e
             logger.err(e)
             logger.err(e.backtrace.to_a.join("\n"))
           end

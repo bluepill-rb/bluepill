@@ -111,7 +111,7 @@ describe Bluepill::Process do
   def error_from
     yield
     nil
-  rescue StandardError => e
+  rescue => e
     e.message
   end
 

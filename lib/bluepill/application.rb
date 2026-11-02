@@ -154,7 +154,7 @@ module Bluepill
     # @api private
     def load
       start_server
-    rescue StandardError => e
+    rescue => e
       $stderr.puts("Failed to start bluepill:")
       $stderr.puts(format("%s `%s`", e.class.name, e.message))
       $stderr.puts(e.backtrace)
@@ -307,11 +307,11 @@ module Bluepill
             response = begin
               # An empty line leaves command nil, so public_send raises an error for the client
               mutex { public_send(command, *args) } # steep:ignore ArgumentTypeMismatch
-            rescue StandardError => e
+            rescue => e
               e
             end
             client.write(Marshal.dump(response))
-          rescue StandardError => e
+          rescue => e
             logger.err(format("Got exception in cmd listener: %s `%s`", e.class.name, e.message))
             Array(e.backtrace).each { |l| logger.err(l) }
           ensure
@@ -469,7 +469,7 @@ module Bluepill
       ::Process.kill(0, previous_pid)
       puts "Killing previous bluepilld[#{previous_pid}]"
       ::Process.kill(2, previous_pid)
-    rescue StandardError => e
+    rescue => e
       $stderr.puts "Encountered error trying to kill previous bluepill:"
       $stderr.puts "#{e.class}: #{e}"
       exit(4) unless e.instance_of?(Errno::ESRCH)

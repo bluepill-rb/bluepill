@@ -42,7 +42,7 @@ module Bluepill
       true
     rescue Errno::EPERM # no permission, but it is definitely alive
       true
-    rescue StandardError
+    rescue
       false # no such process (ESRCH), or no pid
     end
 

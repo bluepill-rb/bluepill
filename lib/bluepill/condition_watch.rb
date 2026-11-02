@@ -138,7 +138,7 @@ module Bluepill
           # No data this time, so leave the history alone and check again next interval
           logger.warning("#{@name}: #{e}")
           return EMPTY_ARRAY
-        rescue StandardError => e
+        rescue => e
           logger.err(e.backtrace)
           raise
         end

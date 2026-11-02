@@ -827,7 +827,7 @@ module Bluepill
       triggers.each do |trigger|
         begin
           trigger.notify(transition)
-        rescue StandardError => e
+        rescue => e
           logger.err e.backtrace
           raise
         end
@@ -1010,7 +1010,7 @@ module Bluepill
 
       ::Process.kill(code, pid)
       true
-    rescue StandardError => e
+    rescue => e
       logger.err "Failed to signal process #{pid} with code #{code}: #{e}"
       false
     end

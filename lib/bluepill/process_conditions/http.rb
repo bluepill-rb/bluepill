@@ -59,12 +59,7 @@ module Bluepill
       #
       # @api private
       def run(_pid, _include_children)
-        session = new_session
-        hide_net_http_bug do
-          session.start do |http|
-            http.get(@uri.request_uri)
-          end
-        end
+        new_session.start { |http| http.get(@uri.request_uri) }
       rescue => e
         e
       end
@@ -131,29 +126,6 @@ module Bluepill
         session.open_timeout = @open_timeout
         session.read_timeout = @read_timeout
         session
-      end
-
-      # Run the block, raising a refused connection as one
-      #
-      # Net::HTTP raises NoMethodError (closed? for nil) when it can't
-      # connect, so this raises Errno::ECONNREFUSED instead.
-      #
-      # @yield the request
-      # @yieldreturn [Object] the response
-      #
-      # @return [Object] what the block returns
-      #
-      # @raise [Errno::ECONNREFUSED] when the connection was refused
-      #
-      # @api private
-      def hide_net_http_bug
-        yield
-      rescue NoMethodError => e
-        # Ruby 3.4 changed the wording of this error
-        message = e.to_s
-        raise(Errno::ECONNREFUSED, "Connection refused attempting to contact #{@uri.scheme}://#{@uri.host}:#{@uri.port}") if message.include?("undefined method `closed?' for nil:NilClass") || message.include?("undefined method 'closed?' for nil")
-
-        raise
       end
     end
   end

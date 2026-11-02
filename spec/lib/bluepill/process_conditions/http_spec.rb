@@ -134,8 +134,6 @@ describe Bluepill::ProcessConditions::Http do
     end
 
     context "when the request fails" do
-      let(:refused) { "Connection refused - Connection refused attempting to contact http://example.com:8080" }
-
       before do
         allow(Net::HTTP).to receive(:new).and_return(session)
       end
@@ -145,40 +143,18 @@ describe Bluepill::ProcessConditions::Http do
         allow(session).to receive(:start).and_raise(error)
         expect(http.run(123, false)).to eq(error)
       end
+    end
+  end
 
-      it "turns the Net::HTTP closed? bug into a connection refused error before Ruby 3.4" do
-        allow(session).to receive(:start).and_raise(NoMethodError.new("undefined method `closed?' for nil:NilClass"))
-        expect(http.run(123, false)).to be_a(Errno::ECONNREFUSED).and have_attributes(message: refused)
-      end
+  describe "#run without a server" do
+    # A port nothing listens on, from a server that's closed again
+    let(:port) do
+      server = TCPServer.new("127.0.0.1", 0)
+      server.addr[1].tap { server.close }
+    end
 
-      it "turns the Net::HTTP closed? bug into a connection refused error on Ruby 3.4 and newer" do
-        allow(session).to receive(:start).and_raise(NoMethodError.new("undefined method 'closed?' for nil"))
-        expect(http.run(123, false)).to be_a(Errno::ECONNREFUSED).and have_attributes(message: refused)
-      end
-
-      it "finds the Net::HTTP closed? bug anywhere in the message" do
-        message = "private method: undefined method `closed?' for nil:NilClass (NoMethodError)"
-        allow(session).to receive(:start).and_raise(NoMethodError.new(message))
-        expect(http.run(123, false)).to be_a(Errno::ECONNREFUSED)
-      end
-
-      it "finds the Ruby 3.4 wording of the Net::HTTP closed? bug anywhere in the message" do
-        message = "private method: undefined method 'closed?' for nil (NoMethodError)"
-        allow(session).to receive(:start).and_raise(NoMethodError.new(message))
-        expect(http.run(123, false)).to be_a(Errno::ECONNREFUSED)
-      end
-
-      it "returns other NoMethodErrors" do
-        error = NoMethodError.new("undefined method `foo' for nil:NilClass")
-        allow(session).to receive(:start).and_raise(error)
-        expect(http.run(123, false)).to eq(error)
-      end
-
-      it "returns other NoMethodErrors in the Ruby 3.4 wording" do
-        error = NoMethodError.new("undefined method 'foo' for nil")
-        allow(session).to receive(:start).and_raise(error)
-        expect(http.run(123, false)).to eq(error)
-      end
+    it "returns a refused connection as the error Net::HTTP raises" do
+      expect(http(url: "http://127.0.0.1:#{port}/").run(123, false)).to be_a(Errno::ECONNREFUSED)
     end
   end
 

@@ -25,9 +25,9 @@ module Bluepill
     # A value the watch got, and whether it passed the check
     class HistoryValue < Struct[_ToS]
       attr_accessor value: _ToS
-      attr_accessor critical: bool
+      attr_accessor passed: bool
 
-      def self.new: (_ToS value, bool critical) -> HistoryValue
+      def self.new: (_ToS value, bool passed) -> HistoryValue
     end
 
     EMPTY_ARRAY: Array[Symbol]
@@ -194,20 +194,11 @@ module Bluepill
       def response_class: (untyped kind) -> Class
 
       def new_session: () -> Net::HTTP
-
-      def hide_net_http_bug: [T] () { () -> T } -> T
     end
 
-    # Memory usage in kilobytes
+    # Memory usage in bytes
     class MemUsage < BelowThreshold[Float]
-      MB: Integer
-      FORMAT_STR: String
-      MB_LABEL: String
-      KB_LABEL: String
-
       def run: (Integer? pid, boolish include_children) -> Float
-
-      def check?: (Float value) -> bool
 
       def format_value: (Float value) -> String
     end

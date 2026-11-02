@@ -13,64 +13,29 @@ module Bluepill
     #
     # @api private
     class MemUsage < BelowThreshold
-      # The bytes in a megabyte, from which a value shows in megabytes
-      #
-      # @api private
-      MB = (1024**2) #: Integer
-
-      # How a value shows in the history: a number and its unit
-      #
-      # @api private
-      FORMAT_STR = "%d%s"
-
-      # The unit of a value that shows in megabytes
-      #
-      # @api private
-      MB_LABEL = "MB"
-
-      # The unit of a value that shows in kilobytes
-      #
-      # @api private
-      KB_LABEL = "KB"
-
       # Read the process's memory usage from the tick's ps table
       #
       # @param [Integer, nil] pid the process's pid
       # @param [Boolean] include_children whether to add its children's usage
       #
-      # @return [Float] the usage in kilobytes, or 0.0 for a process ps
-      #   doesn't list
+      # @return [Float] the usage in bytes, or 0.0 for a process ps doesn't
+      #   list
       #
       # @api private
-      def run(pid, include_children) = System.memory_usage(pid, include_children).to_f
-
-      # Return whether the usage is below the limit
-      #
-      # A limit that can't be compared counts as fine.
-      #
-      # @param [Float] value the kilobytes run read
-      #
-      # @return [Boolean] true when it's below the limit
-      #
-      # @api private
-      def check?(value)
-        value * 1024 < @below
-      rescue
-        true
-      end
+      def run(pid, include_children) = System.memory_usage(pid, include_children).to_f * Units::KILOBYTE
 
       # Format the usage in kilobytes, or in megabytes from a megabyte up
       #
-      # @param [Float] value the kilobytes run read
+      # @param [Float] value the bytes run read
       #
       # @return [String] the usage and its unit, such as "312KB" or "250MB"
       #
       # @api private
       def format_value(value)
-        if value * 1024 >= MB
-          format(FORMAT_STR, (value / 1024).round, MB_LABEL)
+        if value >= Units::MEGABYTE
+          format("%dMB", (value / Units::MEGABYTE).round)
         else
-          format(FORMAT_STR, value, KB_LABEL)
+          format("%dKB", value / Units::KILOBYTE)
         end
       end
     end

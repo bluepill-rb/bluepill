@@ -23,18 +23,17 @@ module Bluepill
     #
     #   @api private
     #
-    # @!attribute critical
-    #   Return whether the value was fine
+    # @!attribute passed
+    #   Return whether the value passed the check
     #
-    #   It's true for a value that passed the check, and false for one that
-    #   counts toward the watch firing.
+    #   It's false for a value that counts toward the watch firing.
     #
     #   @return [Boolean] whether the value passed the check
     #
     #   @api private
     #
     # @api private
-    HistoryValue = Struct.new(:value, :critical)
+    HistoryValue = Struct.new(:value, :passed)
 
     # Return the logger the watch writes its history to
     #
@@ -194,7 +193,7 @@ module Bluepill
       @history << HistoryValue.new(@process_condition.format_value(value), @process_condition.check?(value))
       logger.info(to_s)
       # Fire when enough of the values in the window failed
-      return @fires if @history.count { |v| !v.critical } >= @required
+      return @fires if @history.count { |v| !v.passed } >= @required
 
       EMPTY_ARRAY
     rescue => e
@@ -235,7 +234,7 @@ module Bluepill
     #
     # @api private
     def to_s
-      data = @history.collect { |v| "#{v.value}#{"*" unless v.critical}" }.join(", ")
+      data = @history.collect { |v| "#{v.value}#{"*" unless v.passed}" }.join(", ")
       "#{@name}: [#{data}]\n"
     end
   end

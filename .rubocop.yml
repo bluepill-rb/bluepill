@@ -235,3 +235,8 @@ Style/Alias:
 Layout/ExtraSpacing:
   AllowForAlignment: false
   AllowBeforeTrailingComments: true
+
+# A hash uses one style of keys, as Standard wants
+Style/HashSyntax:
+  EnforcedStyle: ruby19_no_mixed_keys
+  EnforcedShorthandSyntax: either

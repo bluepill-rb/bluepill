@@ -18,7 +18,7 @@ describe Bluepill::Process do
   end
 
   def watch_double(name, events)
-    instance_double(Bluepill::ConditionWatch, name.to_s, name: name, due?: true, run: events, to_s: name.to_s, clear_history!: nil, :logger= => nil)
+    instance_double(Bluepill::ConditionWatch, name.to_s, :name => name, :due? => true, :run => events, :to_s => name.to_s, :clear_history! => nil, :logger= => nil)
   end
 
   # Give the process pid 5, which signal 0 finds running, since
@@ -473,7 +473,7 @@ describe Bluepill::Process do
 
   describe "#notify_triggers" do
     let(:transition) { described_class::Transition.new(:up, :down) }
-    let(:trigger) { instance_double(Bluepill::Trigger, "trigger", :logger= => nil, notify: nil) }
+    let(:trigger) { instance_double(Bluepill::Trigger, "trigger", :logger= => nil, :notify => nil) }
     let(:error) { RuntimeError.new("boom").tap { |e| e.set_backtrace(%w[a b]) } }
 
     before { process.triggers << trigger }
@@ -677,7 +677,7 @@ describe Bluepill::Process do
     end
 
     context "with unmonitor" do
-      let(:trigger) { instance_double(Bluepill::Trigger, "trigger", :logger= => nil, notify: nil, reset!: nil) }
+      let(:trigger) { instance_double(Bluepill::Trigger, "trigger", :logger= => nil, :notify => nil, :reset! => nil) }
 
       before do
         process.triggers << trigger

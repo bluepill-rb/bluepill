@@ -1,0 +1,17 @@
+module Bluepill
+  module Version
+    def self.major: () -> Integer
+
+    def self.minor: () -> Integer
+
+    def self.patch: () -> Integer
+
+    def self.pre: () -> Integer?
+
+    def self.to_h: () -> { major: Integer, minor: Integer, patch: Integer, pre: Integer? }
+
+    def self.to_a: () -> Array[Integer]
+
+    def self.to_s: () -> String
+  end
+end

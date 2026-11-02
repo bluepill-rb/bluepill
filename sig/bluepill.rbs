@@ -17,26 +17,6 @@ module Bluepill
   # the AppProxy, and also gets it as an argument.
   def self.application: (_ToS app_name, **untyped options) { (AppProxy app) [self: AppProxy] -> void } -> void
 
-  module Version
-    def self.major: () -> Integer
-
-    def self.minor: () -> Integer
-
-    def self.patch: () -> Integer
-
-    def self.pre: () -> Integer?
-
-    def self.to_h: () -> { major: Integer, minor: Integer, patch: Integer, pre: Integer? }
-
-    def self.to_a: () -> Array[Integer]
-
-    def self.to_s: () -> String
-  end
-
-  # A mistake in a pill file
-  class ConfigError < StandardError
-  end
-
   # The monotonic clock that times ticks, checks and grace times
   module Clock
     def self.now: () -> Integer

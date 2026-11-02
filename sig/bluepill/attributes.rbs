@@ -1,0 +1,45 @@
+module Bluepill
+  # The options a config can set for a Process, and their defaults
+  module Process::Attributes
+    CONFIGURABLE_ATTRIBUTES: Array[Symbol]
+
+    attr_accessor pre_start_command: String?
+    attr_accessor start_command: String?
+    attr_accessor stop_command: String?
+    attr_accessor restart_command: String?
+    attr_accessor stdout: String?
+    attr_accessor stderr: String?
+    attr_accessor stdin: String?
+    attr_accessor daemonize: bool?
+    attr_accessor pid_file: String?
+    attr_accessor working_dir: String?
+    attr_accessor environment: Hash[_ToS, _ToS]?
+    attr_accessor start_grace_time: seconds
+    attr_accessor stop_grace_time: seconds
+    attr_accessor restart_grace_time: seconds
+    attr_accessor uid: String?
+    attr_accessor gid: String?
+    attr_accessor cache_actual_pid: bool
+    attr_accessor monitor_children: bool
+    attr_accessor child_process_factory: ProcessFactory?
+    attr_accessor pid_command: String?
+    attr_accessor auto_start: bool?
+    attr_accessor supplementary_groups: Array[String]?
+    # Signal names alternating with delays in seconds
+    attr_accessor stop_signals: Array[Symbol | Integer]?
+    attr_accessor on_start_timeout: String | Symbol
+    attr_accessor post_start_command: String?
+    attr_accessor pre_stop_command: String?
+    attr_accessor post_stop_command: String?
+    attr_accessor notify_command: String?
+    attr_accessor hook_timeout: seconds
+    attr_accessor group_start_noblock: bool
+    attr_accessor group_restart_noblock: bool
+    attr_accessor group_stop_noblock: bool
+    attr_accessor group_unmonitor_noblock: bool
+
+    def configure: (Hash[Symbol, untyped] options) -> void
+
+    def apply_defaults: () -> void
+  end
+end

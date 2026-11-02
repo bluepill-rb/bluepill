@@ -551,7 +551,7 @@ describe Bluepill::System do
 
   describe '.store' do
     it 'is Hash' do
-      expect(described_class.store).to be_kind_of(Hash)
+      expect(described_class.store).to be_a(Hash)
     end
 
     it 'returns the same Hash on every call' do

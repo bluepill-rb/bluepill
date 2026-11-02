@@ -120,7 +120,6 @@ module Bluepill
 
       # Whether the value is fine
       def check?: (V value) -> bool
-      def check: (V value) -> bool
 
       def format_value: (V value) -> V
     end

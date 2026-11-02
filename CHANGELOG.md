@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Most pill files work with 0.3.0 unchanged. Check these before you upgrade:
 
 - **Bluepill needs Ruby 3.0 or newer.** On Ruby 2.7, stay on 0.2.7.
-- **A custom check or trigger takes its options as keyword arguments.** One written as `def initialize(options = {})` that calls `super` now fails with an `ArgumentError`, since `super` passes the hash on as one positional argument. Name the options it needs and pass the rest on, as the README's example does: `def initialize(path:, below:, **options)`, then `super(**options)`.
+- **A custom check or trigger takes its options as keyword arguments.** One written as `def initialize(options = {})` that calls `super` now fails with an `ArgumentError`, since `super` passes the hash on as one positional argument. Name the options it needs and pass the rest on, as the README's example does: `def initialize(path:, below:, **options)`, then `super(**options)`. One written for bluepill 0.1, which defines `check`, also needs it renamed `check?`.
 - **An application option that bluepill doesn't know fails the config.** `Bluepill.application("app", log_flie: "/var/log/app.log")` now stops with Ruby's unknown keyword error. Before, bluepill ignored the option.
 - **A check without an option it needs fails the config.** `checks :mem_usage`, `:cpu_usage` or `:running_time` without `below:`, and `:file_time` without `filename:` or `below:`, now stop the pill file from loading, with Ruby's missing keyword error. Before, `mem_usage` without `below:` always passed, and the others raised an error each time they ran. `:http` without `url:` fails with the same error, where it failed with a `URI::InvalidURIError`.
 - **Pass options kept in a hash with `**`.** A pill file that keeps a check's or the application's options in a variable passes them as `process.checks :mem_usage, **options`, since a hash passed without `**` no longer counts as options.
@@ -23,6 +23,7 @@ Most pill files work with 0.3.0 unchanged. Check these before you upgrade:
 
 ### Removed
 
+- **Breaking:** a custom check that defines `check`, as in bluepill 0.1, no longer works. Name the method `check?`, as bluepill 0.2 does.
 - **Breaking:** support for Ruby 2.7. Bluepill 0.3.0 needs Ruby 3.0 or newer, or JRuby 9.4 or newer. Bluepill 0.2.7 still runs on Ruby 2.7.
 
 ## [0.2.7] - 2026-11-02

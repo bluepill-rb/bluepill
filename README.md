@@ -370,7 +370,7 @@ Bluepill.application("app_name") do |app|
 end
 ```
 
-`logger` writes to bluepill's log, with the app's and the process's names, like the built-in checks. It's set once `super` returns, so call `super` first in `initialize`. A check written for bluepill 0.1, which defines `check` instead of `check?`, still works.
+`logger` writes to bluepill's log, with the app's and the process's names, like the built-in checks. It's set once `super` returns, so call `super` first in `initialize`.
 
 ### Commands Don't Run in a Shell
 

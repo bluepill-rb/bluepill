@@ -135,7 +135,7 @@ module Bluepill
     # @return [Boolean]
     #
     # @api private
-    def foreground? = !!@foreground
+    def foreground? = @foreground
 
     # Run a block while holding the daemon's lock
     #

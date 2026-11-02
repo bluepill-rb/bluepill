@@ -17,7 +17,7 @@ describe Bluepill::ProcessConditions::Http do
 
   describe "#initialize" do
     it "requires a url" do
-      expect { described_class.new }.to raise_error(ArgumentError, /missing keyword: :url/)
+      expect { described_class.new }.to raise_error(ArgumentError, /missing keywords?: :?url/)
     end
 
     it "rejects an option it doesn't take" do

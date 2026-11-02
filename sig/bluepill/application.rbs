@@ -19,7 +19,7 @@ module Bluepill
     attr_accessor pids_dir: String
     attr_accessor log_file: String?
 
-    @foreground: bool?
+    @foreground: bool
     @log_level: Symbol | String
     @mutex: Thread::Mutex
 

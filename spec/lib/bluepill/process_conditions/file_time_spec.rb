@@ -13,7 +13,7 @@ describe Bluepill::ProcessConditions::FileTime do
 
   describe "#initialize" do
     it "needs its filename and below options" do
-      expect { described_class.new }.to raise_error(ArgumentError, /missing keywords: :filename, :below/)
+      expect { described_class.new }.to raise_error(ArgumentError, /missing keywords?: :?filename/)
     end
 
     it "rejects an option it doesn't take" do

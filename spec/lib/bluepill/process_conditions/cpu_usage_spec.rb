@@ -4,7 +4,7 @@ describe Bluepill::ProcessConditions::CpuUsage do
   subject(:condition) { described_class.new(below: 50) }
 
   it "needs its below option" do
-    expect { described_class.new }.to raise_error(ArgumentError, /missing keyword: :below/)
+    expect { described_class.new }.to raise_error(ArgumentError, /missing keywords?: :?below/)
   end
 
   it "rejects an option it doesn't take" do

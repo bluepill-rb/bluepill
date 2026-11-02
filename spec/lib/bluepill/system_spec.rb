@@ -555,12 +555,12 @@ describe Bluepill::System do
     end
 
     it 'returns same Hash or every call' do
-      expect(described_class.store).to be_equal(described_class.store)
+      expect(described_class.store).to equal(described_class.store)
     end
 
     it 'stores assigned pairs' do
       described_class.store[:somekey] = 10
-      expect(described_class.store[:somekey]).to be_eql(10)
+      expect(described_class.store[:somekey]).to eql(10)
     end
   end
 
@@ -619,14 +619,14 @@ describe Bluepill::System do
 
   describe '.parse_etime' do
     it 'parses etime format' do
-      expect(described_class.parse_elapsed_time('400-00:04:01')).to be_equal(34_560_241)
-      expect(described_class.parse_elapsed_time('02:04:02')).to be_equal(7442)
-      expect(described_class.parse_elapsed_time('20:03')).to be_equal(1203)
-      expect(described_class.parse_elapsed_time('invalid')).to be_equal(0)
+      expect(described_class.parse_elapsed_time('400-00:04:01')).to equal(34_560_241)
+      expect(described_class.parse_elapsed_time('02:04:02')).to equal(7442)
+      expect(described_class.parse_elapsed_time('20:03')).to equal(1203)
+      expect(described_class.parse_elapsed_time('invalid')).to equal(0)
     end
 
     it 'parses fields with a leading zero as decimal' do
-      expect(described_class.parse_elapsed_time('08-09:08:09')).to be_equal(724_089)
+      expect(described_class.parse_elapsed_time('08-09:08:09')).to equal(724_089)
     end
   end
 

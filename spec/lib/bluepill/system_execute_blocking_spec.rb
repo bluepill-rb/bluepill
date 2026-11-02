@@ -68,7 +68,8 @@ describe Bluepill::System, ".execute_blocking" do
       end
 
       it "returns its result" do
-        expect(described_class.execute_blocking("cmd", opts(timeout: 2.5)).to_h).to eq(exit_code: 0, stdout: "", stderr: "")
+        result = described_class.execute_blocking("cmd", opts(timeout: 2.5))
+        expect(result.to_h).to eq(exit_code: 0, stdout: "", stderr: "")
       end
 
       it "waits for its result for that long, once" do
@@ -182,7 +183,9 @@ describe Bluepill::System, ".execute_blocking" do
   context "when in the child" do
     # The read and write ends of the command's stdout and stderr pipes
     let(:out) { [instance_double(IO, close: nil, read: "out"), instance_double(IO, close: nil)] }
-    let(:err) { [instance_double(IO, close: nil, read: "err"), instance_double(IO, close: nil, puts: nil, closed?: false)] }
+    let(:err) do
+      [instance_double(IO, close: nil, read: "err"), instance_double(IO, close: nil, puts: nil, closed?: false)]
+    end
     let(:options) { {uid: "user", gid: "group", supplementary_groups: ["extra"]} }
 
     before do
@@ -303,7 +306,8 @@ describe Bluepill::System, ".execute_blocking" do
 
     context "with a working directory and an environment" do
       before do
-        described_class.execute_blocking("cmd", opts(**options, working_dir: Pathname.new("/tmp/work"), environment: {FOO: 1}))
+        in_work_dir = opts(**options, working_dir: Pathname.new("/tmp/work"), environment: {FOO: 1})
+        described_class.execute_blocking("cmd", in_work_dir)
       end
 
       it "sets PWD to the working directory" do

@@ -218,8 +218,16 @@ module Bluepill
       # The ::Logger method for each syslog priority
       #
       # @api private
-      LOGGER_EQUIVALENTS =
-        {debug: :debug, err: :error, warning: :warn, info: :info, emerg: :fatal, alert: :warn, crit: :fatal, notice: :info}.freeze
+      LOGGER_EQUIVALENTS = {
+        debug: :debug,
+        err: :error,
+        warning: :warn,
+        info: :info,
+        emerg: :fatal,
+        alert: :warn,
+        crit: :fatal,
+        notice: :info
+      }.freeze
 
       LOG_METHODS.each do |method|
         next if method == LOGGER_EQUIVALENTS[method]

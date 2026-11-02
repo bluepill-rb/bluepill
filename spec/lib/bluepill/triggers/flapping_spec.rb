@@ -140,7 +140,8 @@ describe Bluepill::Triggers::Flapping do
     it "does not retry when retry_in is zero" do
       record_dispatches
       notify_and_dispatch(flapping(times: 1, retry_in: 0), 0)
-      expect([calls, dispatched]).to eq([[[:info, "Flapping detected: retrying in 0 seconds"]], [[:unmonitor, "Flapping", 0.0]]])
+      expected = [[[:info, "Flapping detected: retrying in 0 seconds"]], [[:unmonitor, "Flapping", 0.0]]]
+      expect([calls, dispatched]).to eq(expected)
     end
   end
 

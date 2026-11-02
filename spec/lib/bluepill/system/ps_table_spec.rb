@@ -48,7 +48,8 @@ describe Bluepill::System::PsTable do
       end
 
       it "still splits on whitespace" do
-        expect(described_class.parse(output).row(321)).to eq(["321", "1", "12.5", "56789", "01:02", 'ruby -e "sleep 1"'])
+        row = described_class.parse(output).row(321)
+        expect(row).to eq(["321", "1", "12.5", "56789", "01:02", 'ruby -e "sleep 1"'])
       end
     end
 

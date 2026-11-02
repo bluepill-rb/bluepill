@@ -14,7 +14,8 @@ describe Bluepill::System::CommandResult do
 
   describe "#to_h" do
     it "has the exit code and the output" do
-      expect(described_class.new(exit_code: 1, stdout: "out", stderr: "err").to_h).to eq(exit_code: 1, stdout: "out", stderr: "err")
+      result = described_class.new(exit_code: 1, stdout: "out", stderr: "err")
+      expect(result.to_h).to eq(exit_code: 1, stdout: "out", stderr: "err")
     end
 
     it "has empty output by default" do

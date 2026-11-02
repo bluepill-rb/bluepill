@@ -208,7 +208,8 @@ module Bluepill
       event = process.on_start_timeout
       return if events.include?(event)
 
-      config_error!("Config Error: on_start_timeout for '#{process.name}' must be one of #{events.collect(&:inspect).join(", ")}, not #{event.inspect}")
+      config_error!("Config Error: on_start_timeout for '#{process.name}' must be one of " \
+                    "#{events.collect(&:inspect).join(", ")}, not #{event.inspect}")
     end
 
     # Warn when bluepill can't find the process's pid

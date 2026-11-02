@@ -75,7 +75,8 @@ module Bluepill
     # @raise [ConfigError] for an event a check can't fire
     #
     # @api private
-    def initialize(name, logger: nil, fires: :restart, every: nil, times: 1, include_children: false, **condition_options)
+    def initialize(name, logger: nil, fires: :restart, every: nil, times: 1, include_children: false,
+      **condition_options)
       @name = name
       @logger = logger
       @fires = events_to_fire(Array(fires))
@@ -105,7 +106,7 @@ module Bluepill
       return events if unknown.empty?
 
       raise ConfigError, "#{@name} can't fire #{unknown.collect(&:inspect).join(", ")}: " \
-        "a check fires #{known.collect(&:inspect).join(", ")}"
+                         "a check fires #{known.collect(&:inspect).join(", ")}"
     end
 
     # Create the check, with the options the watch doesn't take for itself

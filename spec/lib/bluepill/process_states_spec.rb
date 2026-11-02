@@ -70,7 +70,8 @@ describe Bluepill::Process do
       calls << [:stop_process, process.state] if signal == "TERM"
       1
     end
-    allow(Bluepill::ProcessJournal).to receive(:for).and_return(instance_double(Bluepill::ProcessJournal::Journal, append: nil, kill_all: nil))
+    journal = instance_double(Bluepill::ProcessJournal::Journal, append: nil, kill_all: nil)
+    allow(Bluepill::ProcessJournal).to receive(:for).and_return(journal)
     allow(Bluepill::System).to receive(:delete_if_exists)
     allow(Bluepill::System).to receive(:daemonize) do
       calls << [:start_process, process.state]
@@ -218,7 +219,8 @@ describe Bluepill::Process do
     it "keeps the new state when it raises after the transition, without recording it" do
       allow(Bluepill::System).to receive(:daemonize).and_raise("start failed")
       expected = [[:notify_triggers, :unmonitored, :starting, false, :unmonitored], %i[clean_threads starting]]
-      expect([error_from { process.fire_event(:start) }, process.state, calls]).to eq(["start failed", :starting, expected])
+      error = error_from { process.fire_event(:start) }
+      expect([error, process.state, calls]).to eq(["start failed", :starting, expected])
     end
   end
 
@@ -236,7 +238,7 @@ describe Bluepill::Process do
       allow(process.triggers.first).to receive(:notify) { |transition| transitions << transition }
       process.state = :up
       2.times { process.tick }
-      expect([transitions.uniq.size, transitions.first]).to match([1, have_attributes(from_name: :up, to_name: :up, frozen?: true)])
+      expect(transitions.uniq).to match([have_attributes(from_name: :up, to_name: :up, frozen?: true)])
     end
   end
 end

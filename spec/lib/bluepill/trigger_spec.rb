@@ -30,7 +30,8 @@ describe Bluepill::Trigger do
 
     it "requires a subclass to define notify" do
       stub_const("SpecApp::SpecExample", Class.new(described_class))
-      expect { Bluepill::CheckRegistry.fetch(:spec_example) }.to raise_error(Bluepill::ConfigError, "SpecApp::SpecExample, the class of check 'spec_example', must define notify")
+      message = "SpecApp::SpecExample, the class of check 'spec_example', must define notify"
+      expect { Bluepill::CheckRegistry.fetch(:spec_example) }.to raise_error(Bluepill::ConfigError, message)
     end
 
     it "calls the inherited hook of its superclass" do
@@ -46,7 +47,8 @@ describe Bluepill::Trigger do
 
   describe "#initialize" do
     it "sets up the trigger" do
-      expect([trigger, trigger.send(:mutex)]).to match([have_attributes(process:, logger:, scheduled_events: []), be_a(Mutex)])
+      set_up = have_attributes(process:, logger:, scheduled_events: [])
+      expect([trigger, trigger.send(:mutex)]).to match([set_up, be_a(Mutex)])
     end
 
     it "can be created without options" do
@@ -160,7 +162,8 @@ describe Bluepill::Trigger do
     it "logs errors raised while dispatching, a line for each backtrace line" do
       dispatch_error(["line 1", "line 2"])
       trigger.schedule_event(:start, 0).join
-      expect(calls).to eq([[:err, "Trigger failed to dispatch start: RuntimeError: boom"], [:err, "line 1"], [:err, "line 2"]])
+      expected = [[:err, "Trigger failed to dispatch start: RuntimeError: boom"], [:err, "line 1"], [:err, "line 2"]]
+      expect(calls).to eq(expected)
     end
   end
 

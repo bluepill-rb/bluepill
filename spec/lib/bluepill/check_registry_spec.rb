@@ -18,9 +18,9 @@ describe Bluepill::CheckRegistry do
 
   describe ".fetch" do
     it "finds the built-in checks and triggers by their underscored names" do
-      expect(%i[cpu_usage mem_usage http flapping].collect { |name| described_class.fetch(name) }).to eq(
-        [Bluepill::ProcessConditions::CpuUsage, Bluepill::ProcessConditions::MemUsage, Bluepill::ProcessConditions::Http, Bluepill::Triggers::Flapping]
-      )
+      checks = %i[cpu_usage mem_usage http flapping].collect { |name| described_class.fetch(name) }
+      conditions = Bluepill::ProcessConditions
+      expect(checks).to eq([conditions::CpuUsage, conditions::MemUsage, conditions::Http, Bluepill::Triggers::Flapping])
     end
 
     it "takes a name as a String" do
@@ -54,12 +54,14 @@ describe Bluepill::CheckRegistry do
     end
 
     it "suggests a check for a misspelled name" do
-      expect { described_class.fetch(:mem_usag) }.to raise_error(Bluepill::ConfigError, "Unknown check 'mem_usag'. Did you mean 'mem_usage'?")
+      expect { described_class.fetch(:mem_usag) }
+        .to raise_error(Bluepill::ConfigError, "Unknown check 'mem_usag'. Did you mean 'mem_usage'?")
     end
 
     it "suggests the closest check when several are close" do
       custom_check("MyApp::MemUsages")
-      expect { described_class.fetch(:mem_usage_) }.to raise_error(Bluepill::ConfigError, "Unknown check 'mem_usage_'. Did you mean 'mem_usage'?")
+      expect { described_class.fetch(:mem_usage_) }
+        .to raise_error(Bluepill::ConfigError, "Unknown check 'mem_usage_'. Did you mean 'mem_usage'?")
     end
 
     it "suggests nothing for a name like no check's" do
@@ -72,16 +74,19 @@ describe Bluepill::CheckRegistry do
 
     it "requires a check to define run and check?" do
       stub_const("MyApp::Empty", Class.new(Bluepill::ProcessConditions::ProcessCondition))
-      expect { described_class.fetch(:empty) }.to raise_error(Bluepill::ConfigError, "MyApp::Empty, the class of check 'empty', must define run and check?")
+      expect { described_class.fetch(:empty) }
+        .to raise_error(Bluepill::ConfigError, "MyApp::Empty, the class of check 'empty', must define run and check?")
     end
 
     it "requires a check to define what its base doesn't" do
       stub_const("MyApp::Limit", Class.new(Bluepill::ProcessConditions::BelowThreshold))
-      expect { described_class.fetch(:limit) }.to raise_error(Bluepill::ConfigError, "MyApp::Limit, the class of check 'limit', must define run")
+      expect { described_class.fetch(:limit) }
+        .to raise_error(Bluepill::ConfigError, "MyApp::Limit, the class of check 'limit', must define run")
     end
 
     it "takes a check? from the class a check builds on" do
-      klass = stub_const("MyApp::Limit", Class.new(Bluepill::ProcessConditions::BelowThreshold) { define_method(:run) { |_pid, _children| 1 } })
+      check = Class.new(Bluepill::ProcessConditions::BelowThreshold) { define_method(:run) { |_pid, _children| 1 } }
+      klass = stub_const("MyApp::Limit", check)
       expect(described_class.fetch(:limit)).to equal(klass)
     end
   end
@@ -104,7 +109,11 @@ describe Bluepill::CheckRegistry do
   end
 
   describe ".check_name" do
-    {"Flapping" => "flapping", "Bluepill::ProcessConditions::MemUsage" => "mem_usage", "A::B::HTTPCheck" => "http_check"}.each do |name, check_name|
+    {
+      "Flapping" => "flapping",
+      "Bluepill::ProcessConditions::MemUsage" => "mem_usage",
+      "A::B::HTTPCheck" => "http_check"
+    }.each do |name, check_name|
       it "names #{name} #{check_name}" do
         expect(described_class.check_name(instance_double(Class, name:))).to eq(check_name)
       end

@@ -46,7 +46,8 @@ describe Bluepill::Error do
     end
 
     it "leaves out a backtrace the daemon's error doesn't have" do
-      expect(described_class.new(RuntimeError.new("boom")).message).to eq("Received error from server:\n#<RuntimeError: boom>")
+      error = described_class.new(RuntimeError.new("boom"))
+      expect(error.message).to eq("Received error from server:\n#<RuntimeError: boom>")
     end
   end
 
@@ -78,13 +79,23 @@ describe Bluepill::Error do
 
       def raise_config_error = "raise Bluepill::ConfigError, 'bad'\n"
 
+      # Raise a ConfigError with the backtrace of a NameError on line 2
+      def reraise_name_error
+        <<~RUBY
+          begin
+            undefined_method_here
+          rescue NameError => e
+            raise Bluepill::ConfigError, 'bad', e.backtrace
+          end
+        RUBY
+      end
+
       it "is the line of the pill file that raised it" do
         expect(location_of("x = 1\n#{raise_config_error}")).to eq("#{dir}/app.pill.rb:2")
       end
 
       it "is the line of the error it replaced, when it was raised with that error's backtrace" do
-        code = "begin\n  undefined_method_here\nrescue NameError => e\n  raise Bluepill::ConfigError, 'bad', e.backtrace\nend\n"
-        expect(location_of(code)).to eq("#{dir}/app.pill.rb:2")
+        expect(location_of(reraise_name_error)).to eq("#{dir}/app.pill.rb:2")
       end
 
       it "skips eval'd code, which isn't in a file" do

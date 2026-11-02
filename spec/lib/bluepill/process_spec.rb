@@ -52,7 +52,8 @@ describe Bluepill::Process do
       end
 
       it "has no threads, and a monitor for its events" do
-        expect(%i[@threads @event_mutex].collect { |name| process.instance_variable_get(name) }).to match [[], be_a(Monitor)]
+        ivars = %i[@threads @event_mutex].collect { |name| process.instance_variable_get(name) }
+        expect(ivars).to match [[], be_a(Monitor)]
       end
     end
 
@@ -70,7 +71,8 @@ describe Bluepill::Process do
       end
 
       it "adds a trigger for a trigger check" do
-        expect(process.triggers).to match [be_a(Bluepill::Triggers::Flapping).and(have_attributes(logger:, times: 2, process:))]
+        flapping = be_a(Bluepill::Triggers::Flapping).and(have_attributes(logger:, times: 2, process:))
+        expect(process.triggers).to match [flapping]
       end
 
       it "adds a watch for every other check" do
@@ -88,11 +90,13 @@ describe Bluepill::Process do
 
     context "with checks as a list of names and options" do
       subject(:process) do
-        described_class.new(:proc_name, [[:http, {url: "http://a/"}], [:http, {url: "http://b/"}], [:flapping, {}]], logger:)
+        checks = [[:http, {url: "http://a/"}], [:http, {url: "http://b/"}], [:flapping, {}]]
+        described_class.new(:proc_name, checks, logger:)
       end
 
       it "keeps two checks of the same name" do
-        uris = process.watches.collect { |watch| watch.instance_variable_get(:@process_condition).instance_variable_get(:@uri).to_s }
+        conditions = process.watches.collect { |watch| watch.instance_variable_get(:@process_condition) }
+        uris = conditions.collect { |condition| condition.instance_variable_get(:@uri).to_s }
         expect(uris).to eq(%w[http://a/ http://b/])
       end
 
@@ -102,7 +106,8 @@ describe Bluepill::Process do
     end
 
     it "refuses a check no class has the name of" do
-      expect { described_class.new(:proc_name, {mem_usag: {below: 100}}, logger:) }.to raise_error(Bluepill::ConfigError, /Unknown check 'mem_usag'/)
+      expect { described_class.new(:proc_name, {mem_usag: {below: 100}}, logger:) }
+        .to raise_error(Bluepill::ConfigError, /Unknown check 'mem_usag'/)
     end
 
     it "accepts an actual pid" do
@@ -227,7 +232,8 @@ describe Bluepill::Process do
 
     context "when up and monitoring children" do
       before do
-        process.child_process_factory = instance_double(Bluepill::ProcessFactory::ChildFactory, create_child_process: child)
+        factory = instance_double(Bluepill::ProcessFactory::ChildFactory, create_child_process: child)
+        process.child_process_factory = factory
         process.state = :up
         process.monitor_children = true
         run_process
@@ -553,7 +559,8 @@ describe Bluepill::Process do
       end
 
       it "refuses to start it" do
-        expect(logger).to have_received(:warning).with("Refusing to re-run start command on an already running process.")
+        message = "Refusing to re-run start command on an already running process."
+        expect(logger).to have_received(:warning).with(message)
       end
 
       it "dispatches nothing" do

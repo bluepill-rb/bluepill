@@ -92,9 +92,8 @@ describe Bluepill::Socket do
       end
 
       it "gives up with a ConnectionError" do
-        expect { client_command }.to raise_error(
-          an_instance_of(Bluepill::ConnectionError).and(having_attributes(message: "Socket Timeout: Server may not be responding", exit_status: 1))
-        )
+        timed_out = having_attributes(message: "Socket Timeout: Server may not be responding", exit_status: 1)
+        expect { client_command }.to raise_error(an_instance_of(Bluepill::ConnectionError).and(timed_out))
       end
 
       it "tries MAX_ATTEMPTS times" do
@@ -142,8 +141,9 @@ describe Bluepill::Socket do
 
       it "raises when another server is listening" do
         allow(UNIXSocket).to receive(:open).with(socket_path).and_return(socket)
+        running = having_attributes(message: "Server is already running!", exit_status: 7)
         expect { described_class.server(base_dir, "app") }.to raise_error(
-          an_instance_of(Bluepill::AlreadyRunningError).and(having_attributes(message: "Server is already running!", exit_status: 7))
+          an_instance_of(Bluepill::AlreadyRunningError).and(running)
         )
       end
     end

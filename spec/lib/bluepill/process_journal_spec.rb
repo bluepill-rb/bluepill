@@ -82,7 +82,8 @@ describe Bluepill::ProcessJournal do
       end
 
       it "creates them, writable by everyone" do
-        expect(journal_dirs.collect { |journal_dir| File.directory?(journal_dir) && modes(journal_dir) }).to eq [[0o777], [0o777]]
+        made = journal_dirs.collect { |journal_dir| File.directory?(journal_dir) && modes(journal_dir) }
+        expect(made).to eq [[0o777], [0o777]]
       end
 
       it "keeps them when set up again" do
@@ -219,7 +220,8 @@ describe Bluepill::ProcessJournal do
 
       it "logs each wait, and the timeout" do
         acquire
-        expect(log).to eq ([[:debug, "Waiting for lock #{name}.lock"]] * 9) + [[:info, "Timeout waiting for lock #{name}.lock"]]
+        waits = [[:debug, "Waiting for lock #{name}.lock"]] * 9
+        expect(log).to eq waits + [[:info, "Timeout waiting for lock #{name}.lock"]]
       end
     end
 
@@ -302,7 +304,8 @@ describe Bluepill::ProcessJournal do
     end
 
     it "leaves files, other apps' locks, and locks before 0.2" do
-      expect(others.collect { |path| [File.file?(path), File.directory?(path)] }).to eq [[true, false], [false, true], [false, true]]
+      kinds = others.collect { |path| [File.file?(path), File.directory?(path)] }
+      expect(kinds).to eq [[true, false], [false, true], [false, true]]
     end
 
     it "logs the locks it removes" do
@@ -323,15 +326,18 @@ describe Bluepill::ProcessJournal do
 
     it "keeps what it's made with" do
       kind = described_class.new("id", "thing", "ids", 2)
-      expect([kind.name, kind.label, kind.sign, kind.filename("/old", "app")]).to eq ["id", "thing", 2, "/old/.bluepill_ids_journal.app"]
+      made = [kind.name, kind.label, kind.sign, kind.filename("/old", "app")]
+      expect(made).to eq ["id", "thing", 2, "/old/.bluepill_ids_journal.app"]
     end
 
     it "describes pids" do
-      expect(%i[name label sign].collect { |attr| Bluepill::ProcessJournal::PID.public_send(attr) }).to eq ["pid", "process", 1]
+      pid = Bluepill::ProcessJournal::PID
+      expect([pid.name, pid.label, pid.sign]).to eq ["pid", "process", 1]
     end
 
     it "describes process groups" do
-      expect(%i[name label sign].collect { |attr| Bluepill::ProcessJournal::PGID.public_send(attr) }).to eq ["pgid", "process group", -1]
+      pgid = Bluepill::ProcessJournal::PGID
+      expect([pgid.name, pgid.label, pgid.sign]).to eq ["pgid", "process group", -1]
     end
   end
 
@@ -403,7 +409,10 @@ describe Bluepill::ProcessJournal do
 
       # Reading the journal that bluepill 0.1 and earlier shared, after the app's
       define_method(:no_legacy_journal_log) do
-        [[:debug, "#{kind} journal file: #{legacy_filename}"], [:debug, "No previous process journal - Skipping cleanup"]]
+        [
+          [:debug, "#{kind} journal file: #{legacy_filename}"],
+          [:debug, "No previous process journal - Skipping cleanup"]
+        ]
       end
 
       # The log of a cleanup of the app's journal that found ids, and signaled them
@@ -519,7 +528,11 @@ describe Bluepill::ProcessJournal do
         end
 
         it "logs each, under the lock" do
-          expect(log).to eq cleanup_log([42, 43], [:info, "Termed old #{label} 42"], [:debug, "Unable to term missing #{label} 43"])
+          expect(log).to eq cleanup_log(
+            [42, 43],
+            [:info, "Termed old #{label} 42"],
+            [:debug, "Unable to term missing #{label} 43"]
+          )
         end
       end
 
@@ -557,7 +570,8 @@ describe Bluepill::ProcessJournal do
         end
 
         it "only kills the ids still alive after the wait" do
-          expect(calls).to eq [["TERM", sign * 42], ["TERM", sign * 43], ["TERM", sign * 44], [:sleep, 1], ["KILL", sign * 42]]
+          terms = [["TERM", sign * 42], ["TERM", sign * 43], ["TERM", sign * 44]]
+          expect(calls).to eq [*terms, [:sleep, 1], ["KILL", sign * 42]]
         end
 
         it "resets the journal" do
@@ -582,7 +596,12 @@ describe Bluepill::ProcessJournal do
 
       # The log of an append, which reads the journal under its lock
       define_method(:append_log) do |*lines|
-        [[:debug, "Acquired lock #{filename}.lock"], [:debug, "#{kind} journal file: #{filename}"], *lines, [:debug, "Cleared lock #{filename}.lock"]]
+        [
+          [:debug, "Acquired lock #{filename}.lock"],
+          [:debug, "#{kind} journal file: #{filename}"],
+          *lines,
+          [:debug, "Cleared lock #{filename}.lock"]
+        ]
       end
 
       context "when a new #{kind} is appended" do
@@ -627,7 +646,10 @@ describe Bluepill::ProcessJournal do
         end
 
         it "logs that it skipped the duplicate, under the journal lock" do
-          expect(log).to eq append_log([:debug, "#{kind} journal = 42"], [:debug, "Skipping duplicate #{kind} 42 already in journal app"])
+          expect(log).to eq append_log(
+            [:debug, "#{kind} journal = 42"],
+            [:debug, "Skipping duplicate #{kind} 42 already in journal app"]
+          )
         end
       end
 

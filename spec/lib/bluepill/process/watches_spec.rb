@@ -48,7 +48,7 @@ describe Bluepill::Process::Watches do
 
   describe "#clear_history!" do
     it "clears every watch's history" do
-      both = [instance_double(Bluepill::ConditionWatch, clear_history!: nil), instance_double(Bluepill::ConditionWatch, clear_history!: nil)]
+      both = Array.new(2) { instance_double(Bluepill::ConditionWatch, clear_history!: nil) }
       both.each { |watch| watches << watch }
       watches.clear_history!
       expect(both).to all(have_received(:clear_history!))
@@ -58,7 +58,8 @@ describe Bluepill::Process::Watches do
   describe "#run" do
     it "returns the events each due watch fires, with the watch as the reason, in order" do
       watches << watch_double(:loud, %i[restart stop]) << watch_double(:quiet, []) << watch_double(:other, [:start])
-      expect(watches.run(100) { 5 }).to eq [[:restart, "loud: [1, 2]"], [:stop, "loud: [1, 2]"], [:start, "other: [1, 2]"]]
+      events = watches.run(100) { 5 }
+      expect(events).to eq [[:restart, "loud: [1, 2]"], [:stop, "loud: [1, 2]"], [:start, "other: [1, 2]"]]
     end
 
     it "runs each due watch with the pid the block reads and the time" do

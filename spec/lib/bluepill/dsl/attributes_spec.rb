@@ -72,27 +72,29 @@ describe Bluepill::DSL::Attributes do
     end
 
     it "rejects an unknown attribute that is read" do
-      expect { evaluate { gidd } }.to raise_error(Bluepill::ConfigError, "Unknown attribute 'gidd' for thing 'it'. Did you mean 'gid'?")
+      expect { evaluate { gidd } }
+        .to raise_error(Bluepill::ConfigError, "Unknown attribute 'gidd' for thing 'it'. Did you mean 'gid'?")
     end
 
     it "rejects an unknown attribute with any arguments, or a block" do
-      expect { evaluate { auto_strt(1, 2) { nil } } }
-        .to raise_error(Bluepill::ConfigError, "Unknown attribute 'auto_strt' for thing 'it'. Did you mean 'auto_start'?")
+      message = "Unknown attribute 'auto_strt' for thing 'it'. Did you mean 'auto_start'?"
+      expect { evaluate { auto_strt(1, 2) { nil } } }.to raise_error(Bluepill::ConfigError, message)
     end
 
     it "suggests nothing for an attribute unlike any other" do
-      expect { evaluate { |p| p.frobnicate = 1 } }.to raise_error(Bluepill::ConfigError, "Unknown attribute 'frobnicate' for thing 'it'")
+      expect { evaluate { |p| p.frobnicate = 1 } }
+        .to raise_error(Bluepill::ConfigError, "Unknown attribute 'frobnicate' for thing 'it'")
     end
 
     it "only removes a trailing equals sign from the attribute" do
-      expect { evaluate { public_send(:"u=id=", 1) } }.to raise_error(Bluepill::ConfigError, /Unknown attribute 'u=id' /)
+      expect { evaluate { public_send(:"u=id=", 1) } }
+        .to raise_error(Bluepill::ConfigError, /Unknown attribute 'u=id' /)
     end
 
     it "keeps the backtrace of the call, which points at the pill file's line" do
-      line = __LINE__ + 1
-      expect { evaluate { uidd } }.to raise_error(
-        an_instance_of(Bluepill::ConfigError).and(having_attributes(backtrace: start_with(start_with("#{__FILE__}:#{line}:"))))
-      )
+      line = __LINE__ + 2
+      backtrace = start_with(start_with("#{__FILE__}:#{line}:"))
+      expect { evaluate { uidd } }.to raise_error(an_instance_of(Bluepill::ConfigError).and(having_attributes(backtrace:)))
     end
 
     it "passes a missing method of another object through" do

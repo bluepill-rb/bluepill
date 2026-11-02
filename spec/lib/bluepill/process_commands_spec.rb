@@ -5,6 +5,12 @@ require_relative "../../support/process_context"
 describe Bluepill::Process do
   include_context "with a process"
 
+  # Make the commands that run until they finish exit with exit_code
+  def stub_exit_code(exit_code)
+    result = Bluepill::System::CommandResult.new(exit_code:)
+    allow(Bluepill::System).to receive(:execute_blocking).and_return(result)
+  end
+
   describe "#start_process" do
     before { process.start_command = "/etc/init.d/script start" }
 
@@ -19,7 +25,8 @@ describe Bluepill::Process do
       end
 
       it "runs the start command with the process options" do
-        expect(Bluepill::System).to have_received(:execute_blocking).with("/etc/init.d/script start", having_attributes(**process.command_options.to_h))
+        options = having_attributes(**process.command_options.to_h)
+        expect(Bluepill::System).to have_received(:execute_blocking).with("/etc/init.d/script start", options)
       end
 
       it "gives the start command start_grace_time" do
@@ -46,17 +53,19 @@ describe Bluepill::Process do
     end
 
     it "warns on a non-zero exit code" do
-      allow(Bluepill::System).to receive(:execute_blocking).and_return(Bluepill::System::CommandResult.new(exit_code: 1))
+      stub_exit_code(1)
       warnings = record_log(:warning)
       process.start_process
-      expect(warnings).to include("Start command execution returned non-zero exit code:", {exit_code: 1, stdout: "", stderr: ""}.inspect)
+      result = {exit_code: 1, stdout: "", stderr: ""}.inspect
+      expect(warnings).to include("Start command execution returned non-zero exit code:", result)
     end
 
     it "warns when a signal killed the command" do
-      allow(Bluepill::System).to receive(:execute_blocking).and_return(Bluepill::System::CommandResult.new(exit_code: nil))
+      stub_exit_code(nil)
       warnings = record_log(:warning)
       process.start_process
-      expect(warnings).to include("Start command execution returned non-zero exit code:", {exit_code: nil, stdout: "", stderr: ""}.inspect)
+      result = {exit_code: nil, stdout: "", stderr: ""}.inspect
+      expect(warnings).to include("Start command execution returned non-zero exit code:", result)
     end
 
     context "with a stop signal thread left from an earlier stop" do
@@ -91,8 +100,9 @@ describe Bluepill::Process do
       it "daemonizes the start command with the process options, pid file and logger" do
         process.pid_file = "/var/run/proc.pid"
         process.start_process
+        options = having_attributes(**process.command_options.to_h)
         expect(Bluepill::System).to have_received(:daemonize)
-          .with("/etc/init.d/script start", having_attributes(**process.command_options.to_h), pid_file: "/var/run/proc.pid", logger:)
+          .with("/etc/init.d/script start", options, pid_file: "/var/run/proc.pid", logger:)
       end
 
       it "journals the daemon pid" do
@@ -154,7 +164,7 @@ describe Bluepill::Process do
       end
 
       it "warns on a non-zero exit code" do
-        allow(Bluepill::System).to receive(:execute_blocking).and_return(Bluepill::System::CommandResult.new(exit_code: 2))
+        stub_exit_code(2)
         process.pre_start_process
         expect(logger).to have_received(:warning).with("Pre start command execution returned non-zero exit code:")
       end
@@ -172,7 +182,8 @@ describe Bluepill::Process do
       end
 
       it "runs the stop command with the process options" do
-        expect(Bluepill::System).to have_received(:execute_blocking).with("/etc/init.d/script stop", having_attributes(**process.command_options.to_h))
+        options = having_attributes(**process.command_options.to_h)
+        expect(Bluepill::System).to have_received(:execute_blocking).with("/etc/init.d/script stop", options)
       end
 
       it "gives the stop command stop_grace_time" do
@@ -193,14 +204,15 @@ describe Bluepill::Process do
       before do
         process.stop_command = "kill {{PID}}; wait {{PID}}"
         process.pid_file = "some.pid"
-        allow(Bluepill::System).to receive(:execute_blocking).and_return(Bluepill::System::CommandResult.new(exit_code: 1))
+        stub_exit_code(1)
         allow(Bluepill::System).to receive(:get_children)
         warnings
         process.stop_process
       end
 
       it "logs the command with the pid, and warns of the exit code" do
-        expect(warnings.first(2)).to eq ["Executing stop command: kill 5; wait 5", "Stop command execution returned non-zero exit code:"]
+        expected = ["Executing stop command: kill 5; wait 5", "Stop command execution returned non-zero exit code:"]
+        expect(warnings.first(2)).to eq expected
       end
 
       it "looks for no children when not monitoring them" do
@@ -374,7 +386,8 @@ describe Bluepill::Process do
       end
 
       it "runs the restart command with the process options" do
-        expect(Bluepill::System).to have_received(:execute_blocking).with("/etc/init.d/script restart", having_attributes(**process.command_options.to_h))
+        options = having_attributes(**process.command_options.to_h)
+        expect(Bluepill::System).to have_received(:execute_blocking).with("/etc/init.d/script restart", options)
       end
 
       it "gives the restart command restart_grace_time" do
@@ -397,13 +410,14 @@ describe Bluepill::Process do
       before do
         process.restart_command = "restart {{PID}}"
         run_process
-        allow(Bluepill::System).to receive(:execute_blocking).and_return(Bluepill::System::CommandResult.new(exit_code: 1))
+        stub_exit_code(1)
       end
 
       it "logs the command with the pid, and warns of the exit code" do
         warnings = record_log(:warning)
         process.restart_process
-        expect(warnings.first(2)).to eq ["Executing restart command: restart 5", "Restart command execution returned non-zero exit code:"]
+        expected = ["Executing restart command: restart 5", "Restart command execution returned non-zero exit code:"]
+        expect(warnings.first(2)).to eq expected
       end
 
       it "substitutes the pid" do
@@ -546,7 +560,10 @@ describe Bluepill::Process do
       end
 
       it "logs why it might" do
-        expect(errors).to eq ["Execution is taking longer than expected.", "Did you forget to tell bluepill to daemonize this process?"]
+        expect(errors).to eq [
+          "Execution is taking longer than expected.",
+          "Did you forget to tell bluepill to daemonize this process?"
+        ]
       end
 
       it "gives the block its time" do
@@ -611,17 +628,19 @@ describe Bluepill::Process do
 
     it "adds nothing to the environment by default" do
       process.run_hook("drain", "Pre stop", 7)
-      expect(Bluepill::System).to have_received(:execute_blocking).with("drain", having_attributes(**options, timeout: 30))
+      expect(Bluepill::System).to have_received(:execute_blocking)
+        .with("drain", having_attributes(**options, timeout: 30))
     end
 
     it "runs without an environment of its own" do
       process.environment = nil
       process.run_hook("alert", "Notify", nil, "B" => "2")
-      expect(Bluepill::System).to have_received(:execute_blocking).with("alert", having_attributes(environment: {"B" => "2"}))
+      expect(Bluepill::System).to have_received(:execute_blocking)
+        .with("alert", having_attributes(environment: {"B" => "2"}))
     end
 
     it "logs a non-zero exit code" do
-      allow(Bluepill::System).to receive(:execute_blocking).and_return(Bluepill::System::CommandResult.new(exit_code: 1))
+      stub_exit_code(1)
       process.run_hook("alert", "Notify", 7)
       expect(logger).to have_received(:warning).with("Notify command execution returned non-zero exit code:")
     end
@@ -657,7 +676,8 @@ describe Bluepill::Process do
 
     it "runs the hook with its pid and environment" do
       process.run_hook_in_background("alert {{PID}}", "Notify", 5, "A" => "1").join
-      expect(Bluepill::System).to have_received(:execute_blocking).with("alert 5", having_attributes(environment: {"A" => "1"}))
+      expect(Bluepill::System).to have_received(:execute_blocking)
+        .with("alert 5", having_attributes(environment: {"A" => "1"}))
     end
 
     it "logs the hook with its description" do
@@ -668,7 +688,8 @@ describe Bluepill::Process do
     it "adds nothing to the environment by default" do
       process.environment = {"A" => "1"}
       process.run_hook_in_background("renice", "Post start", 5).join
-      expect(Bluepill::System).to have_received(:execute_blocking).with("renice", having_attributes(environment: {"A" => "1"}))
+      expect(Bluepill::System).to have_received(:execute_blocking)
+        .with("renice", having_attributes(environment: {"A" => "1"}))
     end
   end
 
@@ -831,7 +852,8 @@ describe Bluepill::Process do
       end
 
       it "runs the notify command in the background, with the details in its environment" do
-        expect(Bluepill::System).to have_received(:execute_blocking).with("alert 5", having_attributes(environment: details))
+        expect(Bluepill::System).to have_received(:execute_blocking)
+          .with("alert 5", having_attributes(environment: details))
       end
 
       it "logs the notify command" do
@@ -843,13 +865,14 @@ describe Bluepill::Process do
       run_process
       process.clear_pid
       process.notify_transition(transition).join
-      expect(Bluepill::System).to have_received(:execute_blocking)
-        .with("alert 5", having_attributes(environment: hash_including("BLUEPILL_APP" => "", "BLUEPILL_GROUP" => "", "BLUEPILL_REASON" => "", "BLUEPILL_PID" => "5")))
+      env = hash_including("BLUEPILL_APP" => "", "BLUEPILL_GROUP" => "", "BLUEPILL_REASON" => "", "BLUEPILL_PID" => "5")
+      expect(Bluepill::System).to have_received(:execute_blocking).with("alert 5", having_attributes(environment: env))
     end
 
     it "gives no pid before the process has one" do
       process.notify_transition(transition).join
-      expect(Bluepill::System).to have_received(:execute_blocking).with("alert ", having_attributes(environment: hash_including("BLUEPILL_PID" => "")))
+      expect(Bluepill::System).to have_received(:execute_blocking)
+        .with("alert ", having_attributes(environment: hash_including("BLUEPILL_PID" => "")))
     end
 
     it "does nothing for a loopback" do
@@ -870,10 +893,9 @@ describe Bluepill::Process do
       end
 
       it "runs, with the event's reason" do
-        expect(Bluepill::System).to have_received(:execute_blocking).with(
-          "alert ",
-          having_attributes(environment: hash_including("BLUEPILL_FROM" => "up", "BLUEPILL_TO" => "stopping", "BLUEPILL_REASON" => "user initiated"))
-        )
+        environment = {"BLUEPILL_FROM" => "up", "BLUEPILL_TO" => "stopping", "BLUEPILL_REASON" => "user initiated"}
+        expect(Bluepill::System).to have_received(:execute_blocking)
+          .with("alert ", having_attributes(environment: hash_including(environment)))
       end
 
       it "forgets the reason after" do

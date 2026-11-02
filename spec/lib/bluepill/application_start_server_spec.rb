@@ -115,7 +115,10 @@ describe Bluepill::Application do
 
     it "raises a StartupError when the server fails to start" do
       fail_startup(boom)
-      expect(load_error).to have_attributes(class: Bluepill::StartupError, message: "Failed to start bluepill:\nRuntimeError `boom`\na.rb:1\nb.rb:2")
+      expect(load_error).to have_attributes(
+        class: Bluepill::StartupError,
+        message: "Failed to start bluepill:\nRuntimeError `boom`\na.rb:1\nb.rb:2"
+      )
     end
 
     it "logs the error and its backtrace at crit, since the daemon's stderr is /dev/null" do
@@ -137,7 +140,8 @@ describe Bluepill::Application do
 
       it "logs it at crit" do
         load_error
-        expect(logger).to have_received(:crit).with("Bluepill stopped: Bluepill::AlreadyRunningError `Server is already running!`")
+        message = "Bluepill stopped: Bluepill::AlreadyRunningError `Server is already running!`"
+        expect(logger).to have_received(:crit).with(message)
       end
     end
 

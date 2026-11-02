@@ -50,7 +50,8 @@ describe Bluepill::Controller do
         touch_app("app", "123")
         allow(Bluepill::System).to receive(:pid_alive?).with(123).and_return(true)
         described_class.new(base_dir:)
-        expect(files_left).to contain_exactly(File.join(base_dir, "socks", "app.sock"), File.join(base_dir, "pids", "app.pid"))
+        paths = [%w[socks app.sock], %w[pids app.pid]].collect { |path| File.join(base_dir, *path) }
+        expect(files_left).to match_array(paths)
       end
 
       it "keeps checking applications after a running one" do
@@ -302,9 +303,8 @@ describe Bluepill::Controller do
 
       it "raises a DaemonError with the error and its backtrace" do
         error.set_backtrace(["a.rb:1", "b.rb:2"])
-        expect(send_error).to have_attributes(
-          class: Bluepill::DaemonError, message: "Received error from server:\n#{error.inspect}\na.rb:1\nb.rb:2", exit_status: 8
-        )
+        message = "Received error from server:\n#{error.inspect}\na.rb:1\nb.rb:2"
+        expect(send_error).to have_attributes(class: Bluepill::DaemonError, message:, exit_status: 8)
       end
 
       it "keeps the daemon's error" do
@@ -318,7 +318,10 @@ describe Bluepill::Controller do
 
     it "raises when the daemon refuses the connection" do
       allow(Bluepill::Socket).to receive(:client_command).and_raise(Errno::ECONNREFUSED)
-      expect(send_error).to have_attributes(class: Bluepill::ConnectionError, message: "Connection Refused: Server is not running")
+      expect(send_error).to have_attributes(
+        class: Bluepill::ConnectionError,
+        message: "Connection Refused: Server is not running"
+      )
     end
 
     context "when the daemon runs a version" do
@@ -331,9 +334,8 @@ describe Bluepill::Controller do
 
       it "raises when the version differs" do
         answer_version("0.0.1")
-        expect(send_error).to have_attributes(
-          class: Bluepill::VersionMismatchError, message: "#{out_of_date}\nDaemon Version: 0.0.1, CLI Version: #{Bluepill::Version}", exit_status: 1
-        )
+        message = "#{out_of_date}\nDaemon Version: 0.0.1, CLI Version: #{Bluepill::Version}"
+        expect(send_error).to have_attributes(class: Bluepill::VersionMismatchError, message:, exit_status: 1)
       end
 
       it "raises when a daemon older than 0.3.0 answers with its Version module" do

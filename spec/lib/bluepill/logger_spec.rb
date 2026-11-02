@@ -233,7 +233,8 @@ describe Bluepill::Logger do
   describe "log methods" do
     it "also writes to stdout if requested" do
       record_stdout
-      described_class.new(logger: sink, stdout: true).prefix_with("a").prefix_with(nil).prefix_with("b").debug("message")
+      described_class.new(logger: sink, stdout: true)
+        .prefix_with("a").prefix_with(nil).prefix_with("b").debug("message")
       expect(lines).to eq([[:puts, "[debug]: [a:b] message"], [:flush], [:debug, "[a:b] message"]])
     end
   end

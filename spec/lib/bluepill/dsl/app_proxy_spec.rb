@@ -18,7 +18,9 @@ describe Bluepill::AppProxy do
 
   it "gives the application its options" do
     configured = instance_double(Bluepill::Application)
-    allow(Bluepill::Application).to receive(:new).with("app_name", foreground: true, log_level: :info).and_return(configured)
+    allow(Bluepill::Application).to receive(:new)
+      .with("app_name", foreground: true, log_level: :info)
+      .and_return(configured)
     expect(described_class.new(:app_name, foreground: true, log_level: :info).app).to be(configured)
   end
 
@@ -33,8 +35,8 @@ describe Bluepill::AppProxy do
     end
 
     it "rejects an unknown attribute, and suggests the closest one" do
-      expect { proxy.evaluate { |app| app.uidd = "user" } }
-        .to raise_error(Bluepill::ConfigError, "Unknown attribute 'uidd' for application 'app_name'. Did you mean 'uid'?")
+      message = "Unknown attribute 'uidd' for application 'app_name'. Did you mean 'uid'?"
+      expect { proxy.evaluate { |app| app.uidd = "user" } }.to raise_error(Bluepill::ConfigError, message)
     end
   end
 
@@ -110,11 +112,9 @@ describe Bluepill::AppProxy do
     end
 
     it "gives a process the app's logger, prefixed with its group's name and its own" do
-      proxy.process("web") do
-        self.start_command = "run"
-        self.group = "servers"
-      end
-      expect(app).to have_received(:add_process).with(have_attributes(logger: logger.prefix_with("servers").prefix_with("web")), "servers")
+      proxy.process("web") { (self.start_command = "run") && self.group = "servers" }
+      process_logger = logger.prefix_with("servers").prefix_with("web")
+      expect(app).to have_received(:add_process).with(have_attributes(logger: process_logger), "servers")
     end
 
     it "adds a process without a group" do

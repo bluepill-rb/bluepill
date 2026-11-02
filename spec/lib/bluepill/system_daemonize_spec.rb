@@ -202,7 +202,12 @@ describe Bluepill::System, ".daemonize" do
 
     context "with a working directory and an environment" do
       before do
-        daemonize("cmd", Bluepill::System::CommandOptions.new(**options, working_dir: Pathname.new("/tmp/work"), environment: {FOO: 1}))
+        in_work_dir = Bluepill::System::CommandOptions.new(
+          **options,
+          working_dir: Pathname.new("/tmp/work"),
+          environment: {FOO: 1}
+        )
+        daemonize("cmd", in_work_dir)
       end
 
       it "sets PWD to the working directory" do

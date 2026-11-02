@@ -29,7 +29,8 @@ module Bluepill
         new_children_pids = System.get_children(actual_pid) - @children.collect(&:actual_pid)
         return if new_children_pids.empty?
 
-        logger.info "Existing children: #{@children.collect(&:actual_pid).join(",")}. Got new children: #{new_children_pids} for #{actual_pid}"
+        logger.info "Existing children: #{@children.collect(&:actual_pid).join(",")}. " \
+                    "Got new children: #{new_children_pids} for #{actual_pid}"
         add_children(new_children_pids)
       end
 

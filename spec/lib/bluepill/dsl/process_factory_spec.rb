@@ -81,7 +81,8 @@ describe Bluepill::ProcessFactory do
 
     it "checks each process against a registry of its own by default" do
       described_class.new({}, proc { self.start_command = "run" }).create_process("web", "/pids", logger:)
-      expect { described_class.new({}, proc { self.start_command = "run" }).create_process("web", "/pids", logger:) }.not_to raise_error
+      factory = described_class.new({}, proc { self.start_command = "run" })
+      expect { factory.create_process("web", "/pids", logger:) }.not_to raise_error
     end
 
     context "when monitoring children" do
@@ -102,8 +103,10 @@ describe Bluepill::ProcessFactory do
 
       it "gives the children the process's attributes" do
         allow(Bluepill::ProcessFactory::ChildFactory).to receive(:new)
-        create("web", proc { (self.uid = "deploy") && monitor_children { self.stop_command = "halt" } }, start_command: "run")
-        expect(Bluepill::ProcessFactory::ChildFactory).to have_received(:new).with("web", hash_including(uid: "deploy"), Proc)
+        config = proc { (self.uid = "deploy") && monitor_children { self.stop_command = "halt" } }
+        create("web", config, start_command: "run")
+        expect(Bluepill::ProcessFactory::ChildFactory).to have_received(:new)
+          .with("web", hash_including(uid: "deploy"), Proc)
       end
 
       it "checks the children's config when the process's loads" do
@@ -125,7 +128,8 @@ describe Bluepill::ProcessFactory do
     end
 
     it "lets the app give each process a pid file" do
-      expect(create("web", proc { self.start_command = "run" }, pid_file: "/var/web.pid").pid_file).to eq("/var/web.pid")
+      expect(create("web", proc { self.start_command = "run" }, pid_file: "/var/web.pid"))
+        .to have_attributes(pid_file: "/var/web.pid")
     end
 
     it "gives a block that reads the pid file the default one" do
@@ -164,7 +168,8 @@ describe Bluepill::ProcessFactory do
 
       it "accepts process names that only match when joined with a colon" do
         create("b:c", proc { self.start_command = "run" }, group: "a")
-        expect { create("c", proc { self.start_command = "run" }, group: "a:b", pid_file: "/pids/c.pid") }.not_to raise_error
+        expect { create("c", proc { self.start_command = "run" }, group: "a:b", pid_file: "/pids/c.pid") }
+          .not_to raise_error
       end
 
       it "treats Symbol and String group and process names alike" do
@@ -176,7 +181,8 @@ describe Bluepill::ProcessFactory do
 
       it "tells a group without a name from no group" do
         create("web", proc { self.start_command = "run" })
-        expect { create("web", proc { self.start_command = "run" }, group: "", pid_file: "/other.pid") }.not_to raise_error
+        expect { create("web", proc { self.start_command = "run" }, group: "", pid_file: "/other.pid") }
+          .not_to raise_error
       end
 
       it "requires a start command" do
@@ -242,7 +248,9 @@ describe Bluepill::ProcessFactory do
     end
 
     describe "on_start_timeout" do
-      def create_with(event, name = "web") = create(name, proc { (self.start_command = "run") && self.on_start_timeout = event })
+      def create_with(event, name = "web")
+        create(name, proc { (self.start_command = "run") && self.on_start_timeout = event })
+      end
 
       it "accepts each event of the state machine" do
         events = %i[start stop unmonitor restart]
@@ -254,7 +262,8 @@ describe Bluepill::ProcessFactory do
       end
 
       it "rejects an event the state machine doesn't have" do
-        expect_config_error("Config Error: on_start_timeout for 'web' must be one of :start, :stop, :unmonitor, :restart, not :tick") do
+        expect_config_error("Config Error: on_start_timeout for 'web' must be one of " \
+                            ":start, :stop, :unmonitor, :restart, not :tick") do
           create_with(:tick)
         end
       end

@@ -111,9 +111,12 @@ module Bluepill
           expected, label = i.even? ? [Symbol, "a symbol (signal)"] : [Integer, "a number (delay)"]
           next if value.is_a?(expected)
 
-          raise(ConfigError, "Config Error: Invalid stop_signals!  Expected #{label} at position #{i} instead of '#{value}'.")
+          raise(ConfigError,
+            "Config Error: Invalid stop_signals!  Expected #{label} at position #{i} instead of '#{value}'.")
         end
-        raise(ConfigError, "Config Error: Invalid stop_signals!  Expected an odd number of elements.") unless signals.size.odd?
+        return if signals.size.odd?
+
+        raise(ConfigError, "Config Error: Invalid stop_signals!  Expected an odd number of elements.")
       end
     end
   end

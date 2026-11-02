@@ -25,6 +25,7 @@ describe Bluepill::ProcessStatistics do
     allow(Time).to receive(:now).and_return(Time.local(2016, 1, 2, 3, 4, 5))
     stats.record_event(:start, "some reason")
     stats.record_event(:restart, nil)
-    expect(stats.to_s).to eq("event history:\n  restart at 01/02/2016 03:04:05 - unspecified\n  start at 01/02/2016 03:04:05 - some reason")
+    at = "at 01/02/2016 03:04:05"
+    expect(stats.to_s).to eq("event history:\n  restart #{at} - unspecified\n  start #{at} - some reason")
   end
 end

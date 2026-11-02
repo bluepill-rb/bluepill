@@ -44,7 +44,8 @@ module Bluepill
       # @raise [NameError] for a kind that names no Net::HTTP response
       #
       # @api private
-      def initialize(url:, kind: nil, pattern: nil, timeout: 5, open_timeout: timeout, read_timeout: timeout, verify_ssl: true, **options)
+      def initialize(url:, kind: nil, pattern: nil, timeout: 5, open_timeout: timeout, read_timeout: timeout,
+        verify_ssl: true, **options)
         super(**options)
         @verify_ssl = verify_ssl
         @uri = URI.parse(url) #: URI::HTTP

@@ -3,7 +3,8 @@
 describe Bluepill::ProcessConditions do
   it "has a check for each of its classes but the abstract ones" do
     names = Bluepill::CheckRegistry.names
-    expect(%w[always_true cpu_usage file_time http mem_usage running_time zombie_process].map { |name| names.include?(name) }).to all(be true)
+    built_in = %w[always_true cpu_usage file_time http mem_usage running_time zombie_process]
+    expect(built_in.map { |name| names.include?(name) }).to all(be true)
   end
 
   it "has no check for the abstract classes" do

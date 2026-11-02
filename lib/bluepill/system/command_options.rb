@@ -92,7 +92,8 @@ module Bluepill
       # @return [void]
       #
       # @api private
-      def initialize(uid: nil, gid: nil, supplementary_groups: nil, working_dir: nil, environment: nil, stdin: nil, stdout: nil, stderr: nil, timeout: nil)
+      def initialize(uid: nil, gid: nil, supplementary_groups: nil, working_dir: nil, environment: nil, stdin: nil,
+        stdout: nil, stderr: nil, timeout: nil)
         @uid = uid
         @gid = gid
         @supplementary_groups = supplementary_groups

@@ -6,7 +6,8 @@ describe Bluepill::Process::Attributes do
   describe "#configure" do
     it "sets the defaults" do
       attributes.configure({})
-      expect(described_class::DEFAULTS.keys.to_h { |name| [name, attributes.public_send(name)] }).to eq(described_class::DEFAULTS)
+      values = described_class::DEFAULTS.keys.to_h { |name| [name, attributes.public_send(name)] }
+      expect(values).to eq(described_class::DEFAULTS)
     end
 
     it "sets the options it's given, over the defaults" do
@@ -43,7 +44,10 @@ describe Bluepill::Process::Attributes do
   describe "#stop_signals=" do
     it "parses an Array" do
       attributes.stop_signals = [:quit, 30, :kill]
-      expect(attributes.stop_signals).to have_attributes(class: Bluepill::Process::StopSignals, to_a: [:quit, 30, :kill])
+      expect(attributes.stop_signals).to have_attributes(
+        class: Bluepill::Process::StopSignals,
+        to_a: [:quit, 30, :kill]
+      )
     end
 
     it "keeps stop signals as they are" do
@@ -63,6 +67,7 @@ describe Bluepill::Process::Attributes do
   end
 
   it "lets a process inherit only attributes a config can set from its app and its parent" do
-    expect(described_class::APP_ATTRIBUTES + described_class::CHILD_ATTRIBUTES - described_class::CONFIGURABLE_ATTRIBUTES).to be_empty
+    inherited = described_class::APP_ATTRIBUTES + described_class::CHILD_ATTRIBUTES
+    expect(inherited - described_class::CONFIGURABLE_ATTRIBUTES).to be_empty
   end
 end

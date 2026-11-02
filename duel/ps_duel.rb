@@ -10,7 +10,8 @@ require_relative "duel_helper"
   ["ps: parse a server's 300 processes", 300],
   ["ps: parse a large host's 3,000 processes", 3_000]
 ].each do |name, processes|
-  duel name, setup: -> { @listing = ps_listing(processes, workers: 4) }, before_sample: -> { PsListing.output = @listing } do
+  setup = -> { @listing = ps_listing(processes, workers: 4) }
+  duel name, setup:, before_sample: -> { PsListing.output = @listing } do
     Bluepill::System.reset_data
     Bluepill::System.ps_axu
   end

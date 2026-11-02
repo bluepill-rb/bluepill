@@ -17,7 +17,8 @@ describe Bluepill::ProcessConditions::FileTime do
     end
 
     it "rejects an option it doesn't take" do
-      expect { described_class.new(below: 60, filename:, note: "x") }.to raise_error(ArgumentError, /unknown keyword: :note/)
+      expect { described_class.new(below: 60, filename:, note: "x") }
+        .to raise_error(ArgumentError, /unknown keyword: :note/)
     end
 
     it "checks against the given limit" do

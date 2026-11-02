@@ -8,7 +8,8 @@ describe Bluepill::ProcessConditions::MemUsage do
   end
 
   it "rejects an option it doesn't take" do
-    expect { described_class.new(below: 100.megabytes, note: "x") }.to raise_error(ArgumentError, /unknown keyword: :note/)
+    options = {below: 100.megabytes, note: "x"}
+    expect { described_class.new(**options) }.to raise_error(ArgumentError, /unknown keyword: :note/)
   end
 
   it "returns the memory usage of the process in bytes as a float, from ps's kilobytes" do
@@ -38,11 +39,13 @@ describe Bluepill::ProcessConditions::MemUsage do
 
   describe "#format_value" do
     it "formats values of at least one megabyte in megabytes" do
-      expect([1024.0, 2560.0, 10_751.0].collect { |kilobytes| condition.format_value(kilobytes * 1024) }).to eq(%w[1MB 3MB 10MB])
+      formatted = [1024.0, 2560.0, 10_751.0].collect { |kilobytes| condition.format_value(kilobytes * 1024) }
+      expect(formatted).to eq(%w[1MB 3MB 10MB])
     end
 
     it "formats smaller values in kilobytes" do
-      expect([1023.0, 1023.9, 0.5].collect { |kilobytes| condition.format_value(kilobytes * 1024) }).to eq(%w[1023KB 1023KB 0KB])
+      formatted = [1023.0, 1023.9, 0.5].collect { |kilobytes| condition.format_value(kilobytes * 1024) }
+      expect(formatted).to eq(%w[1023KB 1023KB 0KB])
     end
   end
 end

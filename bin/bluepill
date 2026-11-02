@@ -8,7 +8,8 @@ require "bluepill"
 # Default options
 options = {
   log_file: "/var/log/bluepill.log",
-  base_dir: ENV["BLUEPILL_BASE_DIR"] || (::Process.euid.zero? ? "/var/run/bluepill" : File.join(ENV.fetch("HOME", nil), ".bluepill")),
+  base_dir: ENV["BLUEPILL_BASE_DIR"] ||
+    (::Process.euid.zero? ? "/var/run/bluepill" : File.join(ENV.fetch("HOME", nil), ".bluepill")),
   privileged: true,
   timeout: 10,
   attempts: 1
@@ -20,7 +21,8 @@ OptionParser.new do |opts|
     options[:log_file] = file
   end
 
-  opts.on("-c", "--base-dir DIR", "Directory to store bluepill socket and pid files, defaults to #{options[:base_dir]}") do |base_dir|
+  opts.on("-c", "--base-dir DIR",
+    "Directory to store bluepill socket and pid files, defaults to #{options[:base_dir]}") do |base_dir|
     options[:base_dir] = base_dir
   end
 
@@ -29,15 +31,18 @@ OptionParser.new do |opts|
     exit
   end
 
-  opts.on("--[no-]privileged", "Allow/disallow to run #{$PROGRAM_NAME} as non-privileged process. disallowed by default") do |v|
+  opts.on("--[no-]privileged",
+    "Allow/disallow to run #{$PROGRAM_NAME} as non-privileged process. disallowed by default") do |v|
     options[:privileged] = v
   end
 
-  opts.on("-t", "--timeout Seconds", Integer, "Timeout for commands sent to the daemon, in seconds. Defaults to 10.") do |timeout|
+  opts.on("-t", "--timeout Seconds", Integer,
+    "Timeout for commands sent to the daemon, in seconds. Defaults to 10.") do |timeout|
     options[:timeout] = timeout
   end
 
-  opts.on("--attempts Count", Integer, "Attempts for commands sent to the daemon, in seconds. Defaults to 1.") do |attempts|
+  opts.on("--attempts Count", Integer,
+    "Attempts for commands sent to the daemon, in seconds. Defaults to 1.") do |attempts|
     options[:attempts] = attempts
   end
 
@@ -92,7 +97,8 @@ elsif APPLICATION_COMMANDS.include?(ARGV.first)
     exit(1)
   else
     # There are none running AND they aren't trying to start one
-    $stderr.puts "Error: There are no running bluepill daemons.\nTo start a bluepill daemon, use: bluepill load <config file>"
+    $stderr.puts "Error: There are no running bluepill daemons.\n" \
+                 "To start a bluepill daemon, use: bluepill load <config file>"
     exit(2)
   end
 end

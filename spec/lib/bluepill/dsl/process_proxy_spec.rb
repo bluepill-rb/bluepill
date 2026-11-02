@@ -16,7 +16,9 @@ describe Bluepill::ProcessProxy do
 
     it "exposes its name and attributes" do
       proxy = described_class.new("web", {uid: "user"}, proc {})
-      expect(proxy).to have_attributes(name: "web", attributes: {uid: "user"}, actual_pid: nil, child_process_block: nil)
+      expect(proxy).to have_attributes(
+        name: "web", attributes: {uid: "user"}, actual_pid: nil, child_process_block: nil
+      )
     end
 
     it "exposes the pid of a child" do
@@ -132,12 +134,17 @@ describe Bluepill::ProcessProxy do
   describe "#checks" do
     before { allow(Bluepill::Process).to receive(:new) }
 
+    # Expect the process to have been made with these checks
+    def expect_checks(checks)
+      expect(Bluepill::Process).to have_received(:new).with("web", checks, actual_pid: nil)
+    end
+
     it "gives the process each check with its options, in order" do
       described_class.new("web", {}, proc do
         checks :cpu_usage, every: 10, below: 5
         checks :always_true
       end).to_process
-      expect(Bluepill::Process).to have_received(:new).with("web", [[:cpu_usage, {every: 10, below: 5}], [:always_true, {}]], actual_pid: nil)
+      expect_checks([[:cpu_usage, {every: 10, below: 5}], [:always_true, {}]])
     end
 
     it "keeps two checks of a kind" do
@@ -145,7 +152,7 @@ describe Bluepill::ProcessProxy do
         checks :http, url: "http://localhost/a"
         checks :http, url: "http://localhost/b"
       end).to_process
-      expect(Bluepill::Process).to have_received(:new).with("web", [[:http, {url: "http://localhost/a"}], [:http, {url: "http://localhost/b"}]], actual_pid: nil)
+      expect_checks([[:http, {url: "http://localhost/a"}], [:http, {url: "http://localhost/b"}]])
     end
 
     it "returns nothing" do

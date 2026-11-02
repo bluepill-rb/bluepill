@@ -168,7 +168,8 @@ module Bluepill
       log_crash(e)
       raise if e.is_a?(Error)
 
-      raise StartupError, ["Failed to start bluepill:", format("%s `%s`", e.class.name, e.message), e.backtrace].join("\n")
+      raise StartupError,
+        ["Failed to start bluepill:", format("%s `%s`", e.class.name, e.message), e.backtrace].join("\n")
     end
 
     # @!method start(group_name = nil, process_name = nil)
@@ -271,7 +272,8 @@ module Bluepill
     #
     # @api private
     def log_crash(error)
-      [format("Bluepill stopped: %s `%s`", error.class, error.message), *error.backtrace].each { |line| logger.crit(line) }
+      lines = [format("Bluepill stopped: %s `%s`", error.class, error.message), *error.backtrace]
+      lines.each { |line| logger.crit(line) }
     end
 
     # Send a command to a process, a group, or every process

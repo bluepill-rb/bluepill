@@ -71,7 +71,9 @@ module Bluepill
       # @api private
       def validate!(parent_name)
         child = ProcessProxy.new("<child of #{parent_name}>", @attributes, @child_process_block)
-        raise ConfigError, "Config Error: You must specify a stop_command for the children of '#{parent_name}'" unless child.stop_command
+        unless child.stop_command
+          raise ConfigError, "Config Error: You must specify a stop_command for the children of '#{parent_name}'"
+        end
 
         child.to_process
       end

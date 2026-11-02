@@ -31,13 +31,15 @@ describe Bluepill::Process::StopSignals do
 
     it "rejects a signal that isn't a Symbol, saying where" do
       expect { described_class.new([:quit, 5, "term"]) }.to raise_error(
-        Bluepill::ConfigError, "Config Error: Invalid stop_signals!  Expected a symbol (signal) at position 2 instead of 'term'."
+        Bluepill::ConfigError,
+        "Config Error: Invalid stop_signals!  Expected a symbol (signal) at position 2 instead of 'term'."
       )
     end
 
     it "rejects a delay that isn't an Integer, saying where" do
       expect { described_class.new([:quit, "five", :term]) }.to raise_error(
-        Bluepill::ConfigError, "Config Error: Invalid stop_signals!  Expected a number (delay) at position 1 instead of 'five'."
+        Bluepill::ConfigError,
+        "Config Error: Invalid stop_signals!  Expected a number (delay) at position 1 instead of 'five'."
       )
     end
 
@@ -53,7 +55,8 @@ describe Bluepill::Process::StopSignals do
     end
 
     it "rejects a mistake before the 'odd number' one" do
-      expect { described_class.new([:quit, :term]) }.to raise_error(Bluepill::ConfigError, /at position 1 instead of 'term'/)
+      expect { described_class.new([:quit, :term]) }
+        .to raise_error(Bluepill::ConfigError, /at position 1 instead of 'term'/)
     end
 
     it "rejects an even number of elements" do

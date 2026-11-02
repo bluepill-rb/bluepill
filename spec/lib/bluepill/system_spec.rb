@@ -330,10 +330,10 @@ describe Bluepill::System do
     end
 
     it "forgets the table get_children read" do
-      allow(described_class).to receive(:`).and_return("    1     0  0.0   100    01:00 init\n    2     1  0.0   100    01:00 child")
+      init = "    1     0  0.0   100    01:00 init"
+      allow(described_class).to receive(:`).and_return("#{init}\n    2     1  0.0   100    01:00 child", init)
       described_class.get_children(1)
       described_class.reset_data
-      allow(described_class).to receive(:`).and_return("    1     0  0.0   100    01:00 init")
       expect(described_class.get_children(1)).to eq([])
     end
   end
@@ -380,7 +380,9 @@ describe Bluepill::System do
 
     # A pill file could set $;, which split uses when it's given no pattern
     context "when $; is set" do
-      let(:table) { {0 => %w[PID PPID %CPU RSS ELAPSED ARGS], 1 => ["1", "0", "0.0", "1234", "10-01:02:03", "/sbin/init"]} }
+      let(:table) do
+        {0 => %w[PID PPID %CPU RSS ELAPSED ARGS], 1 => ["1", "0", "0.0", "1234", "10-01:02:03", "/sbin/init"]}
+      end
 
       around do |example|
         separator = $;
@@ -505,7 +507,8 @@ describe Bluepill::System do
 
       # Make the user exist, with a home directory
       def user(dir = "/home/user")
-        allow(Etc).to receive(:getpwnam).with("user").and_return(instance_double(Etc::Passwd, name: "user", uid: 501, gid: 10, dir:))
+        passwd = instance_double(Etc::Passwd, name: "user", uid: 501, gid: 10, dir:)
+        allow(Etc).to receive(:getpwnam).with("user").and_return(passwd)
       end
 
       it "does nothing without a uid, gid or supplementary groups" do
@@ -517,7 +520,8 @@ describe Bluepill::System do
         user
         allow(Process).to receive(:groups).and_return([10, 20])
         described_class.drop_privileges("user", "group", ["extra"])
-        expect(calls).to eq [[:initgroups, "user", 20], [:groups=, [10, 20, 30]], [:setgid, 20], [:setuid, 501], [:[]=, "HOME", "/home/user"]]
+        groups = [[:initgroups, "user", 20], [:groups=, [10, 20, 30]], [:setgid, 20]]
+        expect(calls).to eq [*groups, [:setuid, 501], [:[]=, "HOME", "/home/user"]]
       end
 
       it "gives a user without a gid the user's primary group" do

@@ -128,7 +128,9 @@ describe Bluepill::Application do
     end
 
     context "with other options" do
-      let(:options) { {base_dir: "/var/bluepill", foreground: true, log_file: "log", log_level: :info, kill_timeout: 3} }
+      let(:options) do
+        {base_dir: "/var/bluepill", foreground: true, log_file: "log", log_level: :info, kill_timeout: 3}
+      end
 
       it "uses them" do
         expect(app).to have_attributes(kill_timeout: 3, log_file: "log", foreground?: true)

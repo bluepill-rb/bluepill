@@ -146,7 +146,8 @@ describe Bluepill::ConditionWatch do
 
     it "refuses an event a process doesn't take" do
       expect { watch(fires: %i[stop clean_threads tick]) }.to raise_error(
-        Bluepill::ConfigError, "cpu_usage can't fire :clean_threads, :tick: a check fires :start, :stop, :unmonitor, :restart"
+        Bluepill::ConfigError,
+        "cpu_usage can't fire :clean_threads, :tick: a check fires :start, :stop, :unmonitor, :restart"
       )
     end
 
@@ -269,7 +270,9 @@ describe Bluepill::ConditionWatch do
         end
 
         it "logs the error and its backtrace, and skips the check" do
-          expect([cpu_watch.run(123, 10), calls]).to eq([[], [[:err, "cpu_usage check failed: RuntimeError: boom"], [:err, "line 1"], [:err, "line 2"]]])
+          events = cpu_watch.run(123, 10)
+          logged = [[:err, "cpu_usage check failed: RuntimeError: boom"], [:err, "line 1"], [:err, "line 2"]]
+          expect([events, calls]).to eq([[], logged])
         end
 
         it "records no value" do
@@ -325,7 +328,8 @@ describe Bluepill::ConditionWatch do
       end
 
       it "treats a kind of ps failure the same" do
-        allow(Bluepill::System).to receive(:cpu_usage).and_raise(Class.new(Bluepill::System::PsError), "Could not run ps")
+        ps_error = Class.new(Bluepill::System::PsError)
+        allow(Bluepill::System).to receive(:cpu_usage).and_raise(ps_error, "Could not run ps")
         expect([cpu_watch.run(123, 10), calls.last]).to eq([[], [:warning, "cpu_usage: Could not run ps"]])
       end
     end

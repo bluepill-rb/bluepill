@@ -15,8 +15,8 @@ AllCops:
   NewCops: enable
   SuggestExtensions: true
 
-# Standard checks style and layout (see .standard.yml), so RuboCop leaves
-# them to it, and checks for bugs, complexity and the specs
+# Standard checks style (see .standard.yml), so RuboCop leaves it to it,
+# and checks for bugs, complexity, layout and the specs
 Style:
   Enabled: false
 
@@ -43,8 +43,47 @@ Style/FrozenStringLiteralComment:
   Enabled: true
   EnforcedStyle: always_true
 
-Layout:
-  Enabled: false
+# Layout keeps RuboCop's defaults, except where Standard asks for another
+# style, which would fail one or the other
+
+# Continued lines are indented a level, not lined up with the first
+Layout/ArgumentAlignment:
+  EnforcedStyle: with_fixed_indentation
+
+Layout/ArrayAlignment:
+  EnforcedStyle: with_fixed_indentation
+
+Layout/ParameterAlignment:
+  EnforcedStyle: with_fixed_indentation
+
+Layout/FirstArgumentIndentation:
+  EnforcedStyle: consistent
+
+Layout/FirstArrayElementIndentation:
+  EnforcedStyle: consistent
+
+Layout/FirstHashElementIndentation:
+  EnforcedStyle: consistent
+
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: indented
+
+Layout/MultilineOperationIndentation:
+  EnforcedStyle: indented
+
+# when and end line up with case, and end with the variable assigned
+Layout/CaseIndentation:
+  EnforcedStyle: end
+
+Layout/EndAlignment:
+  EnforcedStyleAlignWith: variable
+
+Layout/SpaceInsideHashLiteralBraces:
+  EnforcedStyle: no_space
+
+# Steep's type annotations start with #:
+Layout/LeadingCommentSpace:
+  AllowSteepAnnotation: true
 
 Naming/FileName:
   Exclude:

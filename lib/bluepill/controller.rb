@@ -193,7 +193,8 @@ module Bluepill
     # @api private
     def send_process_command(application, command, *args)
       unless Application::PROCESS_COMMANDS.include?(command.to_sym)
-        raise UnknownCommandError, format("Unknown command `%s` (or application `%s` has not been loaded yet)", command, command)
+        raise UnknownCommandError,
+          format("Unknown command `%s` (or application `%s` has not been loaded yet)", command, command)
       end
 
       # these need to be sent to the daemon and the results printed out
@@ -235,7 +236,9 @@ module Bluepill
       version = Socket.client_command(base_dir, application, "version")
       return if Version.to_s.eql?(version)
 
-      raise VersionMismatchError, version.instance_of?(String) ? "#{OUT_OF_DATE}\nDaemon Version: #{version}, CLI Version: #{Version}" : OUT_OF_DATE
+      raise VersionMismatchError, OUT_OF_DATE unless version.instance_of?(String)
+
+      raise VersionMismatchError, "#{OUT_OF_DATE}\nDaemon Version: #{version}, CLI Version: #{Version}"
     rescue ArgumentError
       raise VersionMismatchError, OUT_OF_DATE
     end

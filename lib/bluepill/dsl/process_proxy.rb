@@ -119,7 +119,9 @@ module Bluepill
     #
     # @api public
     def monitor_children(&child_process_block)
-      raise ConfigError, "monitor_children for process '#{@name}' needs a block that configures the children" unless child_process_block
+      unless child_process_block
+        raise ConfigError, "monitor_children for process '#{@name}' needs a block that configures the children"
+      end
 
       @child_process_block = child_process_block
     end

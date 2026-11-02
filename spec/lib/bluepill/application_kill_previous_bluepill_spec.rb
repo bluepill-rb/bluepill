@@ -118,15 +118,18 @@ describe Bluepill::Application do
 
       it "interrupts it and waits for it to die" do
         allow(Bluepill::System).to receive(:pid_alive?).with(1234).and_return(true, true, false)
-        expect { kill_previous_bluepill }.to output(killing).to_stdout.and change(calls, :dup).to(killed_and_waited_for(2))
+        expect { kill_previous_bluepill }
+          .to output(killing).to_stdout.and change(calls, :dup).to(killed_and_waited_for(2))
       end
 
       it "raises when it does not die" do
-        expect { kill_previous_bluepill }.to previous_daemon_error("Previous bluepilld[1234] didn't die").and output(killing).to_stdout
+        expect { kill_previous_bluepill }
+          .to previous_daemon_error("Previous bluepilld[1234] didn't die").and output(killing).to_stdout
       end
 
       it "waits kill_timeout half seconds for it to die" do
-        expect { kill_previous_bluepill_until_error }.to output(killing).to_stdout.and change(calls, :dup).to(killed_and_waited_for(10))
+        expect { kill_previous_bluepill_until_error }
+          .to output(killing).to_stdout.and change(calls, :dup).to(killed_and_waited_for(10))
       end
 
       it "raises when it cannot be killed" do

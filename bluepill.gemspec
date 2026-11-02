@@ -12,7 +12,12 @@ Gem::Specification.new do |spec|
   spec.email = ["entombedvirus@gmail.com"]
   spec.homepage = "https://github.com/bluepill-rb/bluepill"
   spec.summary = "A process monitor written in Ruby with stability and minimalism in mind."
-  spec.description = "Bluepill keeps your daemons up while taking up as little resources as possible. After all you probably want the resources of your server to be used by whatever daemons you are running rather than the thing that's supposed to make sure they are brought back up, should they die or misbehave."
+  spec.description = <<~DESCRIPTION.tr("\n", " ").strip
+    Bluepill keeps your daemons up while taking up as little resources as possible.
+    After all you probably want the resources of your server to be used by whatever
+    daemons you are running rather than the thing that's supposed to make sure they
+    are brought back up, should they die or misbehave.
+  DESCRIPTION
   spec.license = "MIT"
 
   spec.metadata = {

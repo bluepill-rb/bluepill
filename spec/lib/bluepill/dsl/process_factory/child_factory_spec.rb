@@ -3,8 +3,17 @@
 describe Bluepill::ProcessFactory::ChildFactory do
   let(:logger) { instance_double(Bluepill::Logger) }
   let(:attributes) do
-    {start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 5, uid: "user", gid: "staff", supplementary_groups: ["rvm"], working_dir: "/srv"}
+    {
+      start_grace_time: 1,
+      stop_grace_time: 2,
+      restart_grace_time: 5,
+      uid: "user",
+      gid: "staff",
+      supplementary_groups: ["rvm"],
+      working_dir: "/srv"
+    }
   end
+  let(:halt) { proc { self.stop_command = "halt" } }
 
   before { allow(::Process).to receive(:kill).with(0, 123).and_return(1) }
 
@@ -20,13 +29,14 @@ describe Bluepill::ProcessFactory::ChildFactory do
     end
 
     it "checks the children's checks" do
-      expect { described_class.new("web", attributes, proc { (self.stop_command = "halt") && checks(:mem_usage, below: 1, belwo: 1) }) }
-        .to raise_error(ArgumentError, /belwo/)
+      config = proc { (self.stop_command = "halt") && checks(:mem_usage, below: 1, belwo: 1) }
+      expect { described_class.new("web", attributes, config) }.to raise_error(ArgumentError, /belwo/)
     end
 
     it "gives the block only the parent's grace times, user and groups" do
       seen = []
-      described_class.new("web", attributes.merge(start_command: "run"), proc { (seen << attributes.dup) && self.stop_command = "halt" })
+      config = proc { (seen << attributes.dup) && self.stop_command = "halt" }
+      described_class.new("web", attributes.merge(start_command: "run"), config)
       expect(seen).to eq([attributes.except(:working_dir)])
     end
 
@@ -39,7 +49,7 @@ describe Bluepill::ProcessFactory::ChildFactory do
 
   describe "#create_child_process" do
     it "creates a child process with the grace times, user and groups of its parent" do
-      expect(create_child(attributes, proc { self.stop_command = "halt" })).to be_a(Bluepill::Process).and have_attributes(
+      expect(create_child(attributes, halt)).to be_a(Bluepill::Process).and have_attributes(
         state: :up, name: "child", actual_pid: 123, logger:, stop_command: "halt",
         start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 5,
         uid: "user", gid: "staff", supplementary_groups: ["rvm"], working_dir: nil
@@ -47,7 +57,7 @@ describe Bluepill::ProcessFactory::ChildFactory do
     end
 
     it "gives a child the default grace times when its parent sets none" do
-      child = create_child({}, proc { self.stop_command = "halt" })
+      child = create_child({}, halt)
       expect([child.start_grace_time, child.stop_grace_time, child.restart_grace_time]).to eq([3, 3, 3])
     end
 
@@ -60,7 +70,8 @@ describe Bluepill::ProcessFactory::ChildFactory do
 
     it "leaves the parent's attributes as they were" do
       parent = {uid: "user"}
-      described_class.new("web", parent, proc { (self.uid = "other") && self.stop_command = "halt" }).create_child_process("child", 123, logger)
+      factory = described_class.new("web", parent, proc { (self.uid = "other") && self.stop_command = "halt" })
+      factory.create_child_process("child", 123, logger)
       expect(parent).to eq(uid: "user")
     end
   end

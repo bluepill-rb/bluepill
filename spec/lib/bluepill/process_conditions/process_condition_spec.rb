@@ -41,7 +41,8 @@ describe Bluepill::ProcessConditions::ProcessCondition do
 
     it "requires a subclass to define run and check?" do
       stub_const("SpecApp::DiskFree", Class.new(described_class))
-      expect { Bluepill::CheckRegistry.fetch(:disk_free) }.to raise_error(Bluepill::ConfigError, "SpecApp::DiskFree, the class of check 'disk_free', must define run and check?")
+      message = "SpecApp::DiskFree, the class of check 'disk_free', must define run and check?"
+      expect { Bluepill::CheckRegistry.fetch(:disk_free) }.to raise_error(Bluepill::ConfigError, message)
     end
 
     it "calls the inherited hook of its superclass" do

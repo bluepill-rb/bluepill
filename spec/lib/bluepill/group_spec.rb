@@ -115,13 +115,15 @@ describe Bluepill::Group do
 
         it "runs non-blocking commands in parallel" do
           noblock(event, true)
-          expected = command(event, "non-blocking", "first") + command(event, "non-blocking", "second") + [[:join], [:join]]
+          first = command(event, "non-blocking", "first")
+          expected = first + command(event, "non-blocking", "second") + [[:join], [:join]]
           expect([group.send(event), calls]).to eq([["web:first", "web:second"], expected])
         end
 
         it "only affects the named process" do
           noblock(event, false, [processes.last])
-          expect([group.send(event, "second"), calls]).to eq([["web:second"], command(event, "blocking", "second") + [[:join]]])
+          expected = command(event, "blocking", "second") + [[:join]]
+          expect([group.send(event, "second"), calls]).to eq([["web:second"], expected])
         end
       end
     end
@@ -130,7 +132,12 @@ describe Bluepill::Group do
       let(:child) { instance_double(Bluepill::Process, name: "child", state: :up) }
 
       before do
-        allow(processes.first).to receive_messages(actual_pid: 1, state: :up, monitor_children?: true, children: [child])
+        allow(processes.first).to receive_messages(
+          actual_pid: 1,
+          state: :up,
+          monitor_children?: true,
+          children: [child]
+        )
         allow(processes.last).to receive_messages(actual_pid: 2, state: :down, monitor_children?: false)
       end
 
@@ -144,7 +151,8 @@ describe Bluepill::Group do
       end
 
       it "lists the named process with its statistics" do
-        allow(processes.last).to receive(:statistics).and_return(instance_double(Bluepill::ProcessStatistics, to_s: "stats"))
+        statistics = instance_double(Bluepill::ProcessStatistics, to_s: "stats")
+        allow(processes.last).to receive(:statistics).and_return(statistics)
         expect(group.status("second")).to eq(["second(pid:2): down", "stats", ""])
       end
 

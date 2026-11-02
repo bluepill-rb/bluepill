@@ -21,7 +21,8 @@ module PsListing
     "sshd: deploy@pts/0",
     "-bash",
     "/usr/sbin/cron -f",
-    "/usr/lib/postgresql/16/bin/postgres -D /var/lib/postgresql/16/main -c config_file=/etc/postgresql/16/main/postgresql.conf",
+    "/usr/lib/postgresql/16/bin/postgres -D /var/lib/postgresql/16/main " \
+    "-c config_file=/etc/postgresql/16/main/postgresql.conf",
     "postgres: 16/main: checkpointer",
     "nginx: worker process",
     "/usr/bin/redis-server 127.0.0.1:6379",
@@ -54,14 +55,16 @@ module PsListing
     # The master's workers, each with some of the CPU and memory
     def worker_rows(worker_pids, random)
       worker_pids.each_with_index.collect do |pid, i|
-        [pid, MASTER, format("%.1f", random.rand(40.0)), 180_000 + random.rand(60_000), "03:12:09", "unicorn worker[#{i}] -c /srv/app/config/unicorn.rb -E production -D"]
+        [pid, MASTER, format("%.1f", random.rand(40.0)), 180_000 + random.rand(60_000), "03:12:09",
+          "unicorn worker[#{i}] -c /srv/app/config/unicorn.rb -E production -D"]
       end
     end
 
     # The workers' children, spread across the workers in turn
     def grandchild_rows(worker_pids, grandchildren)
       Array.new(grandchildren) do |i|
-        [MASTER + 1000 + i, worker_pids.fetch(i % worker_pids.length), "0.0", 2_048, "00:41", "sh -c convert /tmp/upload#{i}.png"]
+        [MASTER + 1000 + i, worker_pids.fetch(i % worker_pids.length), "0.0", 2_048, "00:41",
+          "sh -c convert /tmp/upload#{i}.png"]
       end
     end
 
@@ -71,7 +74,8 @@ module PsListing
       pid = 100
       Array.new([count, 0].max) do
         program = PROGRAMS.fetch(random.rand(PROGRAMS.length))
-        row = [pid, 1, format("%.1f", random.rand(5.0)), random.rand(400_000), ELAPSED.fetch(random.rand(ELAPSED.length)), program]
+        row = [pid, 1, format("%.1f", random.rand(5.0)), random.rand(400_000),
+          ELAPSED.fetch(random.rand(ELAPSED.length)), program]
         pid += 1 + random.rand(7)
         row
       end

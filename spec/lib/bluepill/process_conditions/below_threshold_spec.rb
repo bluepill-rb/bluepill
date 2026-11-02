@@ -25,6 +25,7 @@ describe Bluepill::ProcessConditions::BelowThreshold do
 
   it "is the base of the checks that compare a value with a limit" do
     conditions = Bluepill::ProcessConditions
-    expect([conditions::CpuUsage, conditions::FileTime, conditions::MemUsage, conditions::RunningTime]).to all(be < described_class)
+    thresholds = [conditions::CpuUsage, conditions::FileTime, conditions::MemUsage, conditions::RunningTime]
+    expect(thresholds).to all(be < described_class)
   end
 end

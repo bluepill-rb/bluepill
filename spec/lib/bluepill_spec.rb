@@ -86,7 +86,9 @@ describe Bluepill do
     end
 
     it "prints only the message of a config error that has no location" do
-      allow(app).to receive(:load).and_raise(Bluepill::ConfigError.new("Config Error: bad").tap { |e| allow(e).to receive(:location).and_return(nil) })
+      error = Bluepill::ConfigError.new("Config Error: bad")
+      allow(error).to receive(:location).and_return(nil)
+      allow(app).to receive(:load).and_raise(error)
       expect { described_class.application(:app_name, **options) { nil } }
         .to raise_error(SystemExit).and output("Config Error: bad\n").to_stderr
     end
@@ -99,7 +101,8 @@ describe Bluepill do
     end
 
     it "lets other errors through" do
-      expect { described_class.application(:app_name, **options) { raise ArgumentError, "bad" } }.to raise_error(ArgumentError, "bad")
+      expect { described_class.application(:app_name, **options) { raise ArgumentError, "bad" } }
+        .to raise_error(ArgumentError, "bad")
     end
 
     it "turns a misspelled app attribute into a config error" do

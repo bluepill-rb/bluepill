@@ -190,7 +190,8 @@ describe Bluepill::Daemonize do
       end
 
       it "raises" do
-        expect { described_class.detach }.to raise_error(Bluepill::Daemonize::Error, "cannot detach from controlling terminal")
+        message = "cannot detach from controlling terminal"
+        expect { described_class.detach }.to raise_error(Bluepill::Daemonize::Error, message)
       end
 
       it "doesn't ignore hangups" do

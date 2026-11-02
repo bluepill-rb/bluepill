@@ -370,6 +370,7 @@ module Bluepill
     include ProcessCommands
     include Pid
     include Children
+    include StateMachine
 
     CONFIGURABLE_ATTRIBUTES: Array[Symbol]
 
@@ -439,43 +440,6 @@ module Bluepill
       def loopback?: () -> bool
     end
 
-    TICKS: Hash[Symbol, Array[Symbol]]
-    STARTS: Array[Symbol]
-
-    TRANSITIONS: Hash[Symbol, Hash[Symbol, Symbol]]
-
-    attr_accessor state: String
-
-    def unmonitored?: () -> bool
-
-    def up?: () -> bool
-
-    def down?: () -> bool
-
-    def starting?: () -> bool
-
-    def stopping?: () -> bool
-
-    def restarting?: () -> bool
-
-    def start: () -> bool
-
-    def stop: () -> bool
-
-    def unmonitor: () -> bool
-
-    def restart: () -> bool
-
-    # Moves the process to the state an event leads to, and returns whether
-    # it moved
-    def fire_event: (Symbol event) -> bool
-
-    def tick_target: (Symbol from) -> Symbol?
-
-    def before_transition: (Transition transition) -> true
-
-    def after_transition: (Transition transition) -> void
-
     # Methods bluepill defines
 
     def initialize: (String process_name, Hash[Symbol, Hash[Symbol, untyped]] checks, ?Hash[Symbol, untyped] options) -> void
@@ -496,8 +460,6 @@ module Bluepill
     def add_trigger: (Symbol name, Hash[Symbol, untyped] options) -> Array[Trigger]
 
     def run_watches: () -> void
-
-    def determine_initial_state: () -> void
 
     def handle_user_command: (String cmd) -> void
 
@@ -567,6 +529,62 @@ module Bluepill
     def add_children: (Array[Integer] child_pids) -> void
 
     def new_child: (ProcessFactory factory, Integer child_pid) -> Process
+  end
+
+  # Moves a Process between its states, and runs the callbacks on the way
+  module Process::StateMachine : Process::StateMachine::_Host
+    # What StateMachine uses from Process
+    interface _Host
+      %a{pure} def auto_start: () -> bool?
+      def process_running?: (?bool force) -> bool
+      def clean_threads: () -> void
+      def start_process: () -> Integer
+      def stop_process: () -> Integer
+      def restart_process: () -> Integer
+      def post_start_process: () -> Thread?
+      def notify_transition: (_Transition transition) -> Thread?
+      def record_transition: (_Transition transition) -> void
+      def notify_triggers: (_Transition transition) -> void
+    end
+
+    TICKS: Hash[Symbol, Array[Symbol]]
+    STARTS: Array[Symbol]
+
+    TRANSITIONS: Hash[Symbol, Hash[Symbol, Symbol]]
+
+    attr_accessor state: String
+
+    def unmonitored?: () -> bool
+
+    def up?: () -> bool
+
+    def down?: () -> bool
+
+    def starting?: () -> bool
+
+    def stopping?: () -> bool
+
+    def restarting?: () -> bool
+
+    def start: () -> bool
+
+    def stop: () -> bool
+
+    def unmonitor: () -> bool
+
+    def restart: () -> bool
+
+    # Moves the process to the state an event leads to, and returns whether
+    # it moved
+    def fire_event: (Symbol event) -> bool
+
+    def tick_target: (Symbol from) -> Symbol?
+
+    def before_transition: (Process::Transition transition) -> true
+
+    def after_transition: (Process::Transition transition) -> void
+
+    def determine_initial_state: () -> void
   end
 
   # Keeps a short history of a process's events

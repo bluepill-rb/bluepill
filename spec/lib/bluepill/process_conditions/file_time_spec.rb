@@ -2,6 +2,7 @@ require 'tmpdir'
 
 describe Bluepill::ProcessConditions::FileTime do
   subject { described_class.new(below: 60, filename: filename) }
+
   around do |example|
     Dir.mktmpdir do |dir|
       @dir = dir
@@ -10,7 +11,6 @@ describe Bluepill::ProcessConditions::FileTime do
   end
 
   let(:filename) { File.join(@dir, 'heartbeat') }
-
 
   describe '#initialize' do
     it 'can be created without options' do

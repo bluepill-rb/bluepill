@@ -14,6 +14,7 @@ describe Bluepill::Application do
 
   describe '#initialize' do
     subject { described_class.new('test', options) }
+
     let(:options) { {} }
 
     before { expect_any_instance_of(described_class).to receive(:setup_pids_dir) }

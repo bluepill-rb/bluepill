@@ -1,5 +1,6 @@
 describe Bluepill::AppProxy do
   subject { described_class.new(:app_name, {}) }
+
   let(:app) { instance_double(Bluepill::Application, pids_dir: '/pids', add_process: nil) }
 
   around do |example|
@@ -20,7 +21,6 @@ describe Bluepill::AppProxy do
     # Silence the warning for processes without a known pid
     allow($stderr).to receive(:puts)
   end
-
 
   it 'creates an application' do
     expect(subject.app).to eq(app)

@@ -91,6 +91,8 @@ module Bluepill
 
     def send_to_process_or_group: (Symbol method, String? group_name, String? process_name) -> Array[String]
 
+    def send_to_groups: (Symbol method, *String args) -> Array[String]
+
     def setup_base_dir: (String? dir) -> void
 
     def default_base_dir: () -> String

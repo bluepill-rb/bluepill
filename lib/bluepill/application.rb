@@ -269,18 +269,27 @@ module Bluepill
     # @api private
     def send_to_process_or_group(method, group_name, process_name)
       if group_name.nil? && process_name.nil?
-        groups.values.collect do |group|
-          group.public_send(method)
-        end.flatten
+        send_to_groups(method)
       elsif groups.key?(group_name)
         groups.fetch(group_name).public_send(method, process_name)
       else
         # they must be targeting just by process name, which may contain ':'
-        process_name = [group_name, process_name].compact.join(":")
-        groups.values.collect do |group|
-          group.public_send(method, process_name)
-        end.flatten
+        send_to_groups(method, [group_name, process_name].compact.join(":"))
       end
+    end
+
+    # Send a command to every group
+    #
+    # @param [Symbol] method the command
+    # @param [Array<String>] args the process, or none for every process
+    #
+    # @return [Array<String>] what the groups returned, flattened
+    #
+    # @api private
+    def send_to_groups(method, *args)
+      groups.values.collect do |group|
+        group.public_send(method, *args)
+      end.flatten
     end
 
     # Set the base directory, and the journal and pid paths in it

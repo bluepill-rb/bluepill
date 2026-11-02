@@ -44,6 +44,15 @@ module Bluepill
 
     def self.positional_options?: (UnboundMethod initialize, Integer positional) -> bool
 
+    CHILD_ATTRIBUTES: Array[Symbol]
+
+    # Warns about a way of setting a process attribute that 0.3.0 removes
+    def self.check_attribute: (Symbol name, Symbol key) -> void
+
+    def self.check_monitor_children: (String process_name, Proc? block) -> void
+
+    def self.check_duplicate_check: (String process_name, Symbol name) -> void
+
     EVENTS: Array[Symbol]
     EVENTS_LIST: String
     NO_OPTIONS: Array[Symbol]

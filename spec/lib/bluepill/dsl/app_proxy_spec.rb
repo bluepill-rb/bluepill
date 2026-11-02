@@ -21,9 +21,9 @@ describe Bluepill::AppProxy do
     def added(attribute, own_value)
       values = []
       allow(app).to receive(:add_process) { |process, _| values << process.public_send(attribute) }
-      proxy.process("web") { start_command "run" }
+      proxy.process("web") { self.start_command = "run" }
       proxy.process("worker") do
-        start_command "run"
+        self.start_command = "run"
         public_send(attribute, own_value)
       end
       values
@@ -34,8 +34,8 @@ describe Bluepill::AppProxy do
         proxy.working_dir = "/work"
         proxy.uid = "user"
         proxy.process("web") do
-          start_command "run"
-          group "servers"
+          self.start_command = "run"
+          self.group = "servers"
         end
       end
 
@@ -60,20 +60,20 @@ describe Bluepill::AppProxy do
     end
 
     it "rejects a second process with the same name" do
-      proxy.process("web") { start_command "run" }
-      expect { proxy.process("web") { start_command "run" } }
+      proxy.process("web") { self.start_command = "run" }
+      expect { proxy.process("web") { self.start_command = "run" } }
         .to raise_error(SystemExit).and output("Config Error: You have two entries for the process name 'web'\n").to_stderr
     end
 
     it "checks its processes apart from another application's" do
-      proxy.process("web") { start_command "run" }
+      proxy.process("web") { self.start_command = "run" }
       other = described_class.new(:app_name, {})
-      other.process("web") { start_command "run" }
+      other.process("web") { self.start_command = "run" }
       expect(app).to have_received(:add_process).twice
     end
 
     it "adds a process without a group" do
-      proxy.process("worker") { start_command "run" }
+      proxy.process("worker") { self.start_command = "run" }
       expect(app).to have_received(:add_process).with(kind_of(Bluepill::Process), nil)
     end
   end

@@ -117,6 +117,8 @@ module Bluepill
 
     private
 
+    def set_attribute: (Symbol name, Symbol key, untyped value) -> untyped
+
     def attribute_call: (Symbol name, Array[untyped] args) -> ([Symbol, bool] | [Symbol, bool, untyped])?
 
     def unknown_attribute!: (Symbol key) -> bot

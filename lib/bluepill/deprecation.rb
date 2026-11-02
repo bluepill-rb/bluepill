@@ -89,3 +89,4 @@ end
 
 require "bluepill/deprecation/custom_checks"
 require "bluepill/deprecation/options"
+require "bluepill/deprecation/dsl"

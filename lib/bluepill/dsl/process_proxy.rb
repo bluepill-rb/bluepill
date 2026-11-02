@@ -6,13 +6,14 @@ module Bluepill
   # The self of a process block in a config file
   #
   # Any of the process's attributes can be set with `name = value`,
-  # `name value`, or `name!` for true, and read back with `name`. See
+  # `name value`, or `name!` for true, and read back with `name`. Bluepill
+  # 0.3.0 takes only `name = value`, so the others warn. See
   # {Process::CONFIGURABLE_ATTRIBUTES} for the attributes a process has.
   #
   # @example
   #   app.process('web') do |process|
   #     process.start_command = '/usr/bin/my_server'
-  #     process.daemonize!
+  #     process.daemonize = true
   #     process.checks :mem_usage, every: 10.seconds, below: 100.megabytes
   #   end
   #
@@ -63,12 +64,13 @@ module Bluepill
     # A name ending in `=`, or one given a value, sets the attribute. A name
     # ending in `!` sets it to true. A name alone reads an attribute that's
     # set. Only the attributes a process has can be set, so a misspelled one
-    # fails when the config loads instead of being ignored.
+    # fails when the config loads instead of being ignored. Bluepill 0.3.0
+    # removes the `name value` and `name!` forms, so they warn.
     #
     # @example
     #   process.start_command = '/usr/bin/my_server'
-    #   process.stop_grace_time 10.seconds
-    #   process.daemonize!
+    #   process.stop_grace_time 10.seconds # warns
+    #   process.daemonize! # warns
     #   process.start_command # => "/usr/bin/my_server"
     #
     # @param [Symbol] name the attribute's name
@@ -86,7 +88,7 @@ module Bluepill
         return @attributes.fetch(key) if reader && @attributes.key?(key)
 
         unknown_attribute!(key) unless self.class.attribute?(key)
-        return @attributes[key] = value unless reader
+        return set_attribute(name, key, value) unless reader
       end
       # A call with the wrong number of values, or the reader of a known
       # attribute that isn't set yet
@@ -148,6 +150,7 @@ module Bluepill
     #
     # @api public
     def checks(name, options = {})
+      Deprecation.check_duplicate_check(@name, name) if @watches.key?(name)
       @watches[name] = options
     end
 
@@ -170,6 +173,7 @@ module Bluepill
     #
     # @api public
     def monitor_children(&child_process_block)
+      Deprecation.check_monitor_children(@name, child_process_block)
       @attributes[:monitor_children] = true
       @attributes[:child_process_block] = child_process_block
     end
@@ -184,6 +188,20 @@ module Bluepill
     end
 
     private
+
+    # Set an attribute, and warn about a form that bluepill 0.3.0 removes
+    #
+    # @param [Symbol] name the method the pill file called
+    # @param [Symbol] key the attribute
+    # @param [Object] value its value
+    #
+    # @return [Object] the value
+    #
+    # @api private
+    def set_attribute(name, key, value)
+      Deprecation.check_attribute(name, key)
+      @attributes[key] = value
+    end
 
     # Return the attribute a call names, and the value it sets
     #

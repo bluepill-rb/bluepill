@@ -15,6 +15,18 @@ describe Bluepill::AppProxy do
     expect(proxy.app).to eq(app)
   end
 
+  context "when created" do
+    it "gives the application its options" do
+      foreground = instance_double(Bluepill::Application, "foreground")
+      allow(Bluepill::Application).to receive(:new).with("app_name", {foreground: true}).and_return(foreground)
+      expect(described_class.new(:app_name, {foreground: true}).app).to eq(foreground)
+    end
+
+    it "gives the application no options by default" do
+      expect(described_class.new(:app_name).app).to eq(app)
+    end
+  end
+
   describe "#process" do
     # Add a process that keeps the app's value of an attribute and one that
     # sets its own, and return the value each process ends up with

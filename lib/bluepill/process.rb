@@ -244,7 +244,7 @@ module Bluepill
     #
     # @api private
     def add_trigger(name, options)
-      triggers << Trigger[name].create(self, **options, logger: logger)
+      triggers << Trigger[name].create(self, name, **options, logger: logger)
     end
 
     # Run every watch that's due, and dispatch the events they fire

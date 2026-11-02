@@ -8,9 +8,6 @@ module Bluepill
     # The events, as a message lists them
     EVENTS_LIST = ":start, :stop, :unmonitor or :restart"
 
-    # The options that a trigger takes for itself, besides its own
-    TRIGGER_OPTIONS = %i[logger].freeze
-
     no_options = [] #: Array[Symbol]
 
     # The options of a check that takes none of its own, made once
@@ -48,7 +45,7 @@ module Bluepill
     # @param [Symbol, String] name the check's name, such as :mem_usage
     # @param [Hash{Symbol => Object}] options the check's options
     # @param [Array<Symbol>] taken the options that bluepill takes for
-    #   itself, ConditionWatch::WATCH_KEYS or TRIGGER_OPTIONS
+    #   itself, ConditionWatch::WATCH_KEYS, or none for a trigger
     #
     # @return [void]
     #

@@ -50,17 +50,19 @@ module Bluepill
     # trigger can take them either way, as bluepill 0.3.0's need keywords.
     #
     # @param [Process] process the process the trigger watches
-    # @param [Hash{Symbol => Object}] options the trigger's options, with
-    #   :logger
+    # @param [Symbol] check_name the name the config gave it, such as
+    #   :flapping
+    # @param [Logger, nil] logger the process's logger
+    # @param [Hash{Symbol => Object}] options the trigger's options
     #
     # @return [Trigger] the trigger
     #
     # @api private
-    def self.create(process, **options)
-      Deprecation.check_options(Util.underscore(name.to_s.split("::").last.to_s), options, Deprecation::TRIGGER_OPTIONS)
+    def self.create(process, check_name, logger:, **options)
+      Deprecation.check_options(check_name, options, Deprecation::NO_OPTIONS)
       Deprecation.check_trigger_class(self)
-      trigger = new(process, **options) #: untyped
-      Deprecation.check_logger(trigger, options[:logger])
+      trigger = new(process, **options, logger: logger) #: untyped
+      Deprecation.check_logger(trigger, logger)
       trigger
     end
 
@@ -89,7 +91,8 @@ module Bluepill
     #
     # @api private
     def logger=(logger)
-      Deprecation.check_logger_writer(self, Array(caller_locations(1, 1)).first)
+      locations = caller_locations(0, 2) #: Array[Thread::Backtrace::Location]
+      Deprecation.check_logger_writer(self, locations.last)
       @logger = logger
     end
 

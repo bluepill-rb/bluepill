@@ -36,7 +36,8 @@ module Bluepill
       #
       # @api private
       def logger=(logger)
-        Deprecation.check_logger_writer(self, Array(caller_locations(1, 1)).first)
+        locations = caller_locations(0, 2) #: Array[Thread::Backtrace::Location]
+        Deprecation.check_logger_writer(self, locations.last)
         @logger = logger
       end
 

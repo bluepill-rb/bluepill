@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-describe Bluepill::ProcessFactory do
+describe Bluepill::ProcessFactory::Children do
   describe "#check_children" do
     def create(&child_block)
       parent = proc do |process|
@@ -8,7 +8,7 @@ describe Bluepill::ProcessFactory do
         process.start_command = "server"
         process.monitor_children(&child_block)
       end
-      described_class.new({}, parent).create_process("web", "/pids")
+      Bluepill::ProcessFactory.new({}, parent).create_process("web", "/pids")
     end
 
     it "warns about a block that sets no stop_command" do
@@ -38,7 +38,7 @@ describe Bluepill::ProcessFactory do
     end
 
     it "warns about nothing without a block" do
-      factory = described_class.new({}, nil)
+      factory = Bluepill::ProcessFactory.new({}, nil)
       expect { factory.check_children("web") }.not_to output.to_stderr
     end
   end

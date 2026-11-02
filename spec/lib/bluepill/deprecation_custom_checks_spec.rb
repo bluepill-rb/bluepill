@@ -115,6 +115,14 @@ describe Bluepill::Deprecation do
       expect { described_class.check_trigger_class(klass) }.to output(positional_message("trigger", klass)).to_stderr
     end
 
+    it "warns about a custom initialize that takes the rest of its arguments as a list" do
+      klass = trigger_class do
+        define_method(:initialize) { |process, *args| super(process, *args) }
+        define_method(:notify) { |_transition| nil }
+      end
+      expect { described_class.check_trigger_class(klass) }.to output(positional_message("trigger", klass)).to_stderr
+    end
+
     it "says nothing about a custom initialize that takes keywords" do
       klass = trigger_class do
         define_method(:initialize) { |process, within: 1, **options| super(process, **options) && within }
@@ -180,6 +188,13 @@ describe Bluepill::Deprecation do
       expect { described_class.check_logger_writer(check, location) }.not_to output.to_stderr
     end
 
+    it "says nothing about bluepill's own code at a relative path" do
+      location = instance_double(Thread::Backtrace::Location, path: "lib/bluepill/condition_watch.rb")
+      Dir.chdir(BLUEPILL_ROOT) do
+        expect { described_class.check_logger_writer(check, location) }.not_to output.to_stderr
+      end
+    end
+
     it "says nothing without a location" do
       expect { described_class.check_logger_writer(check, nil) }.not_to output.to_stderr
     end
@@ -207,6 +222,25 @@ describe Bluepill::Deprecation do
     it "is checked when a trigger dispatches" do
       process = instance_double(Bluepill::Process, dispatch!: true)
       expect { Bluepill::Trigger.new(process, logger: logger).dispatch!("stop") }.to output(/dispatches "stop"/).to_stderr
+    end
+  end
+
+  describe ".custom?" do
+    it "is true for a method outside bluepill" do
+      expect(described_class.custom?(complete_check.instance_method(:run))).to be(true)
+    end
+
+    it "is false for a method of bluepill's" do
+      expect(described_class.custom?(Bluepill::Trigger.instance_method(:notify))).to be(false)
+    end
+
+    it "is false for bluepill's method at a relative path" do
+      method = instance_double(UnboundMethod, source_location: ["lib/bluepill/trigger.rb", 1])
+      expect(Dir.chdir(BLUEPILL_ROOT) { described_class.custom?(method) }).to be(false)
+    end
+
+    it "is false for a method of Ruby's own, which has no source" do
+      expect(described_class.custom?(BasicObject.instance_method(:initialize))).to be(false)
     end
   end
 end

@@ -59,7 +59,7 @@ module Bluepill
     def self.[]: %a{implicitly-returns-nil} (Symbol name) -> singleton(Trigger)
 
     # Makes a trigger, and warns about what 0.3.0 rejects in its class
-    def self.create: (Process process, **untyped options) -> Trigger
+    def self.create: (Process process, Symbol check_name, logger: Logger?, **untyped options) -> Trigger
 
     attr_accessor process: Process
     attr_reader logger: Logger

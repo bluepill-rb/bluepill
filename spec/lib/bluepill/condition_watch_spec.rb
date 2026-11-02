@@ -57,6 +57,14 @@ describe Bluepill::ConditionWatch do
   end
 
   describe "#initialize" do
+    it "warns about an option that 0.3.0 rejects" do
+      expect { described_class.new(:mem_usage, every: 10, below: 1, evry: 5) }.to output(/option evry: of checks :mem_usage/).to_stderr
+    end
+
+    it "warns about a fires: that 0.3.0 rejects" do
+      expect { described_class.new(:mem_usage, every: 10, below: 1, fires: "stop") }.to output(/fires: "stop" of checks :mem_usage/).to_stderr
+    end
+
     it "gives the condition its logger while the condition's initialize runs" do
       seen = []
       logging_condition(seen)

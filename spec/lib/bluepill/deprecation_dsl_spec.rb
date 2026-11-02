@@ -66,4 +66,78 @@ describe Bluepill::Deprecation do
       expect { checks(:cpu_usage, :mem_usage) }.not_to output.to_stderr
     end
   end
+
+  describe ".check_application_options" do
+    it "warns about each option that 0.3.0 rejects" do
+      expect { described_class.check_application_options(log_flie: "a.log", foreground: true, verbose: true) }.to output(
+        "DEPRECATION: bluepill 0.3.0 rejects the application option log_flie:, which 0.2 ignores. Remove it, or fix its name.\n" \
+        "DEPRECATION: bluepill 0.3.0 rejects the application option verbose:, which 0.2 ignores. Remove it, or fix its name.\n"
+      ).to_stderr
+    end
+
+    it "says nothing about the options that 0.3.0 takes" do
+      options = {foreground: true, log_file: "a.log", log_level: :info, base_dir: "/tmp", kill_timeout: 5}
+      expect { described_class.check_application_options(options) }.not_to output.to_stderr
+    end
+  end
+
+  describe ".check_child_stop_command" do
+    it "warns about children without a stop_command" do
+      expect { described_class.check_child_stop_command("web", {}) }.to output(
+        "DEPRECATION: bluepill 0.3.0 fails the config when a monitor_children block sets no stop_command, " \
+        "as for the children of 'web', where 0.2 exits the daemon when it first finds a child. " \
+        "Set the children's stop_command in the block.\n"
+      ).to_stderr
+    end
+
+    it "says nothing about children with one" do
+      expect { described_class.check_child_stop_command("web", stop_command: "halt") }.not_to output.to_stderr
+    end
+  end
+
+  describe ".check_daemon_version" do
+    it "warns about a daemon that answers with its Version module" do
+      expect { described_class.check_daemon_version(Bluepill::Version) }.to output(
+        "DEPRECATION: this daemon runs a bluepill older than 0.2.9, which the CLI of bluepill 0.3.0 says is out of date. " \
+        "Run bluepill load again, so the daemon runs this version.\n"
+      ).to_stderr
+    end
+
+    it "says nothing about a daemon that answers with its version" do
+      expect { described_class.check_daemon_version(Bluepill::Version.to_s) }.not_to output.to_stderr
+    end
+  end
+
+  describe ".check_keywords" do
+    # The arguments a ruby2_keywords method gets
+    def arguments(*args)
+      args
+    end
+    ruby2_keywords(:arguments)
+
+    it "warns about a Hash passed without **" do
+      options = {below: 5}
+      expect { described_class.check_keywords(arguments(options), "process.checks :cpu_usage") }.to output(
+        "DEPRECATION: bluepill 0.3.0 takes the options of process.checks :cpu_usage only as keyword arguments, " \
+        "so options kept in a Hash fail unless they're passed with **. Write process.checks :cpu_usage, **options, which 0.2 takes too.\n"
+      ).to_stderr
+    end
+
+    it "says nothing about options passed as keywords" do
+      expect { described_class.check_keywords(arguments(below: 5), "process.checks :cpu_usage") }.not_to output.to_stderr
+    end
+
+    it "says nothing without options" do
+      expect { described_class.check_keywords(arguments, "process.checks :cpu_usage") }.not_to output.to_stderr
+    end
+
+    it "says nothing about an argument that isn't a Hash" do
+      expect { described_class.check_keywords(arguments("options"), "process.checks :cpu_usage") }.not_to output.to_stderr
+    end
+
+    it "warns about a kind of Hash passed without **" do
+      options = Class.new(Hash).new.merge!(below: 5)
+      expect { described_class.check_keywords(arguments(options), "process.checks :cpu_usage") }.to output(/only as keyword arguments/).to_stderr
+    end
+  end
 end

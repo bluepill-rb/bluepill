@@ -16,8 +16,8 @@ module Bluepill
   #
   # @api private
   module Deprecation
-    # The Ruby that bluepill 0.3.0 needs, or newer
-    RUBY_REQUIRED = Gem::Version.new("3.0")
+    # The major version of the Ruby that bluepill 0.3.0 needs, or newer
+    RUBY_REQUIRED = 3
 
     @warned = Set.new #: Set[String]
     @logger = nil #: Logger?
@@ -79,7 +79,7 @@ module Bluepill
     #
     # @api private
     def self.check_ruby(version = RUBY_VERSION)
-      return unless Gem::Version.new(version) < RUBY_REQUIRED
+      return unless version.to_i < RUBY_REQUIRED
 
       warn("bluepill 0.3.0 needs Ruby 3.0 or newer, or JRuby 9.4 or newer, and this is Ruby #{version}. " \
            "Upgrade Ruby before you upgrade bluepill, or stay on 0.2.9.")

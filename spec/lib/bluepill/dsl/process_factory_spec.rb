@@ -19,6 +19,16 @@ describe Bluepill::ProcessFactory do
   end
 
   describe "#create_process" do
+    it "warns about the process's on_start_timeout, by its name" do
+      block = proc { |process| (process.start_command = "run") && (process.on_start_timeout = "stop") }
+      expect { create("web", block, daemonize: true) }.to output(/process 'web''s on_start_timeout of "stop"/).to_stderr
+    end
+
+    it "warns about the children's block, by the process's name" do
+      block = proc { |process| (process.start_command = "run") && process.monitor_children { nil } }
+      expect { create("web", block, daemonize: true) }.to output(/as for the children of 'web'/).to_stderr
+    end
+
     it "creates a process" do
       process = create("web", proc { self.start_command = "run" })
       expect(process).to be_a(Bluepill::Process).and have_attributes(name: "web", start_command: "run")

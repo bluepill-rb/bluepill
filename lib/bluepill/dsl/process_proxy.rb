@@ -88,7 +88,8 @@ module Bluepill
         return @attributes.fetch(key) if reader && @attributes.key?(key)
 
         unknown_attribute!(key) unless self.class.attribute?(key)
-        return set_attribute(name, key, value) unless reader
+        Deprecation.check_attribute(name, key) unless reader
+        return @attributes[key] = value unless reader
       end
       # A call with the wrong number of values, or the reader of a known
       # attribute that isn't set yet
@@ -195,20 +196,6 @@ module Bluepill
     end
 
     private
-
-    # Set an attribute, and warn about a form that bluepill 0.3.0 removes
-    #
-    # @param [Symbol] name the method the pill file called
-    # @param [Symbol] key the attribute
-    # @param [Object] value its value
-    #
-    # @return [Object] the value
-    #
-    # @api private
-    def set_attribute(name, key, value)
-      Deprecation.check_attribute(name, key)
-      @attributes[key] = value
-    end
 
     # Return the attribute a call names, and the value it sets
     #

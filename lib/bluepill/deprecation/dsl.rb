@@ -19,10 +19,9 @@ module Bluepill
     #
     # @api private
     def self.check_attribute(name, key)
-      form = name.to_s
-      if form.end_with?("!")
-        warn("bluepill 0.3.0 removes process.#{form}. Write process.#{key} = true, which 0.2 takes too.")
-      elsif !form.end_with?("=")
+      if name.end_with?("!")
+        warn("bluepill 0.3.0 removes process.#{name}. Write process.#{key} = true, which 0.2 takes too.")
+      elsif !name.end_with?("=")
         warn("bluepill 0.3.0 removes process.#{key} value. Write process.#{key} = value, which 0.2 takes too.")
       end
       return unless CHILD_ATTRIBUTES.include?(key)
@@ -99,8 +98,8 @@ module Bluepill
     #
     # @api private
     def self.check_keywords(args, call)
-      options = args.last
-      return unless options.is_a?(Hash) && !Hash.ruby2_keywords_hash?(options)
+      positional = args.grep(Hash).reject { |options| Hash.ruby2_keywords_hash?(options) }
+      return if positional.empty?
 
       warn("bluepill 0.3.0 takes the options of #{call} only as keyword arguments, " \
            "so options kept in a Hash fail unless they're passed with **. Write #{call}, **options, which 0.2 takes too.")

@@ -61,15 +61,23 @@ describe Bluepill::Trigger do
     end
 
     it "makes the trigger with its options" do
-      expect(Bluepill::Triggers::Flapping.create(process, times: 2, logger: logger)).to have_attributes(times: 2, logger: logger, process: process)
+      expect(Bluepill::Triggers::Flapping.create(process, :flapping, times: 2, logger: logger)).to have_attributes(times: 2, logger: logger, process: process)
     end
 
     it "warns about a class whose initialize takes an options Hash" do
-      expect { hash_trigger.create(process, logger: logger) }.to output(/takes them as a Hash/).to_stderr
+      expect { hash_trigger.create(process, :hash_trigger, logger: logger) }.to output(/takes them as a Hash/).to_stderr
+    end
+
+    it "warns about an option that 0.3.0 rejects" do
+      expect { Bluepill::Triggers::Flapping.create(process, :flapping, every: 10, logger: logger) }.to output(/option every: of checks :flapping/).to_stderr
+    end
+
+    it "gives the trigger its logger when its initialize takes keywords" do
+      expect { Bluepill::Triggers::Flapping.create(process, :flapping, logger: logger) }.not_to output.to_stderr
     end
 
     it "warns about a trigger that has no logger after its initialize" do
-      expect { hash_trigger.create(process, logger: logger) }.to output(/so it has no logger/).to_stderr
+      expect { hash_trigger.create(process, :hash_trigger, logger: logger) }.to output(/so it has no logger/).to_stderr
     end
   end
 
@@ -98,7 +106,34 @@ describe Bluepill::Trigger do
     end
   end
 
+  context "when its logger is set" do
+    it "sets the logger" do
+      other = instance_double(Bluepill::Logger)
+      allow($stderr).to receive(:puts)
+      trigger.logger = other
+      expect(trigger.logger).to be(other)
+    end
+
+    it "warns, with where it was called from, when code outside bluepill calls it" do
+      line = __LINE__ + 1
+      expect { trigger.logger = logger }.to output(/which #{Regexp.escape(__FILE__)}:#{line}:in .* on Bluepill::Trigger\./).to_stderr
+    end
+
+    it "says nothing when bluepill's process sets it" do
+      process = Bluepill::Process.new("web", {flapping: {}}, logger: logger)
+      expect { process.logger = logger }.not_to output.to_stderr
+    end
+  end
+
   describe "#dispatch!" do
+    it "warns about an event that isn't a Symbol" do
+      expect { trigger.dispatch!("stop") }.to output(/Bluepill::Trigger fails when it dispatches "stop"/).to_stderr
+    end
+
+    it "says nothing about a Symbol" do
+      expect { trigger.dispatch!(:stop) }.not_to output.to_stderr
+    end
+
     it "dispatches the event to the process with the trigger name as reason" do
       trigger.dispatch!(:start)
       expect(calls).to eq([[:dispatch!, :start, "Trigger"]])

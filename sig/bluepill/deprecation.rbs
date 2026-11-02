@@ -1,7 +1,7 @@
 module Bluepill
   # Warns, once each, about what bluepill 0.3.0 changes
   module Deprecation
-    RUBY_REQUIRED: Gem::Version
+    RUBY_REQUIRED: Integer
 
     self.@warned: Set[String]
     self.@logger: Logger?
@@ -67,7 +67,6 @@ module Bluepill
     EVENTS: Array[Symbol]
     EVENTS_LIST: String
     NO_OPTIONS: Array[Symbol]
-    TRIGGER_OPTIONS: Array[Symbol]
     CHECK_OPTIONS: Hash[Symbol, Array[Symbol]]
     REQUIRED_OPTIONS: Hash[Symbol, Array[Symbol]]
 

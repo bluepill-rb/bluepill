@@ -29,14 +29,14 @@ describe Bluepill::Deprecation do
     end
 
     it "warns about the watch's options on a trigger" do
-      expect { described_class.check_options(:flapping, {every: 10, times: 2}, described_class::TRIGGER_OPTIONS) }.to output(
+      expect { described_class.check_options(:flapping, {every: 10, times: 2}, described_class::NO_OPTIONS) }.to output(
         /option every: of checks :flapping/
       ).to_stderr
     end
 
     it "says nothing about a trigger's own options" do
-      options = {logger: nil, times: 2, within: 30, retry_in: 7}
-      expect { described_class.check_options(:flapping, options, described_class::TRIGGER_OPTIONS) }.not_to output.to_stderr
+      options = {times: 2, within: 30, retry_in: 7}
+      expect { described_class.check_options(:flapping, options, described_class::NO_OPTIONS) }.not_to output.to_stderr
     end
 
     it "says nothing about a custom check's options" do
@@ -56,6 +56,16 @@ describe Bluepill::Deprecation do
 
     it "says nothing about a check that needs no options" do
       expect { described_class.check_options(:zombie_process, {}, watch_keys) }.not_to output.to_stderr
+    end
+  end
+
+  describe ".check_watch" do
+    it "warns about the watch's options" do
+      expect { described_class.check_watch(:mem_usage, {below: 1, evry: 5}, []) }.to output(/option evry: of checks :mem_usage/).to_stderr
+    end
+
+    it "warns about the watch's events" do
+      expect { described_class.check_watch(:mem_usage, {below: 1}, ["stop"]) }.to output(/fires: "stop" of checks :mem_usage/).to_stderr
     end
   end
 
@@ -90,25 +100,6 @@ describe Bluepill::Deprecation do
 
     it "says nothing about a process that doesn't set it" do
       expect { described_class.check_on_start_timeout("web", {}) }.not_to output.to_stderr
-    end
-  end
-
-  describe "where bluepill checks them" do
-    it "checks a watch's options" do
-      expect { Bluepill::ConditionWatch.new(:mem_usage, every: 10, below: 1, evry: 5) }.to output(/option evry:/).to_stderr
-    end
-
-    it "checks a watch's fires:" do
-      expect { Bluepill::ConditionWatch.new(:mem_usage, every: 10, below: 1, fires: "stop") }.to output(/fires: "stop"/).to_stderr
-    end
-
-    it "checks a trigger's options" do
-      expect { Bluepill::Triggers::Flapping.create(nil, every: 10, logger: nil) }.to output(/option every: of checks :flapping/).to_stderr
-    end
-
-    it "checks a process's on_start_timeout" do
-      factory = Bluepill::ProcessFactory.new({daemonize: true, start_command: "server"}, proc { |process| process.on_start_timeout = "stop" })
-      expect { factory.create_process("web", "/tmp") }.to output(/on_start_timeout of "stop"/).to_stderr
     end
   end
 end

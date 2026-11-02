@@ -98,7 +98,7 @@ module Bluepill
     #
     # @api private
     def self.check_trigger_event(trigger, event)
-      return if event.is_a?(Symbol)
+      return if event.instance_of?(Symbol)
 
       warn("bluepill 0.3.0 takes a process's events only as Symbols, so #{trigger.class} " \
            "fails when it dispatches #{event.inspect}. Dispatch #{event.to_s.to_sym.inspect}, which 0.2.9 takes too.")

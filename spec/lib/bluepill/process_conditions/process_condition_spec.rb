@@ -58,4 +58,26 @@ describe Bluepill::ProcessConditions::ProcessCondition do
   it "formats values as is" do
     expect(condition.format_value(42)).to eq(42)
   end
+
+  context "when its logger is set" do
+    let(:logger) { instance_double(Bluepill::Logger) }
+
+    it "sets the logger" do
+      allow($stderr).to receive(:puts)
+      condition.logger = logger
+      expect(condition.logger).to equal(logger)
+    end
+
+    it "warns, with where it was called from, when code outside bluepill calls it" do
+      line = __LINE__ + 1
+      expect { condition.logger = logger }.to output(
+        /which #{Regexp.escape(__FILE__)}:#{line}:in .* on Bluepill::ProcessConditions::ProcessCondition\./
+      ).to_stderr
+    end
+
+    it "says nothing when bluepill's watch sets it" do
+      watch = Bluepill::ConditionWatch.new(:always_true, every: 10)
+      expect { watch.logger = logger }.not_to output.to_stderr
+    end
+  end
 end

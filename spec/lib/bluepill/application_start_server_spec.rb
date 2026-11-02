@@ -123,6 +123,12 @@ describe Bluepill::Application do
       end
     end
 
+    it "logs at crit the error's message, which can differ from what it says it is" do
+      error = anonymous_error("boom").new("other")
+      fail_load(error)
+      expect(logger).to have_received(:crit).with("Bluepill stopped: #{error.class} `boom`")
+    end
+
     it "reports the message of an error from an anonymous class" do
       allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks).and_raise(anonymous_error("boom"))
       expect { app.load }.to exit_with(5).and output(/^ `boom`$/).to_stderr

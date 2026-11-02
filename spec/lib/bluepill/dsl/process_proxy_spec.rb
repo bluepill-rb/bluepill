@@ -196,7 +196,40 @@ describe Bluepill::ProcessProxy do
     end
   end
 
+  context "when it sets an attribute with a form 0.3.0 removes" do
+    it "warns about name value, by the attribute's name" do
+      expect { described_class.new("web", {}, proc { stop_command "halt" }) }.to output(/removes process.stop_command value/).to_stderr
+    end
+
+    it "warns about name!, by the method's name" do
+      expect { described_class.new("web", {}, proc { daemonize! }) }.to output(/removes process.daemonize!\./).to_stderr
+    end
+
+    it "says nothing about name = value" do
+      expect { described_class.new("web", {}, proc { |p| p.stop_command = "halt" }) }.not_to output.to_stderr
+    end
+
+    # Read an attribute that isn't set, which raises
+    def read_unset
+      described_class.new("web", {}, proc { start_command })
+    rescue NameError
+      nil
+    end
+
+    it "says nothing when it reads an attribute that isn't set" do
+      expect { read_unset }.not_to output.to_stderr
+    end
+  end
+
   describe "#monitor_children" do
+    it "warns about monitor_children without a block, by the process's name" do
+      expect { described_class.new("web", {}, proc(&:monitor_children)) }.to output(/as for process 'web'/).to_stderr
+    end
+
+    it "says nothing about monitor_children with a block" do
+      expect { described_class.new("web", {}, proc { |p| p.monitor_children { nil } }) }.not_to output.to_stderr
+    end
+
     it "stores the child process block" do
       child_block = proc {}
       proxy = described_class.new("web", {}, proc { |p| p.monitor_children(&child_block) })

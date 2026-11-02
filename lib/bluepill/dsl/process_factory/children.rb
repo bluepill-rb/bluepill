@@ -45,7 +45,8 @@ module Bluepill
       # in it, such as a missing stop_command, where 0.2 exits the daemon
       # the first time it finds a child. This runs the block the same way,
       # to warn about the mistakes and about the checks that the children
-      # get. A block that raises for such a child warns about nothing.
+      # get. A block that raises for such a child, or no block, which
+      # monitor_children has warned about, warns about nothing.
       #
       # @param [String] parent_name the parent process's name
       #
@@ -53,8 +54,6 @@ module Bluepill
       #
       # @api private
       def check_children(parent_name)
-        return unless @process_block
-
         child = ProcessProxy.new("<child of #{parent_name}>", inherited_attributes, @process_block)
         Deprecation.check_on_start_timeout(child.name, child.attributes)
         Deprecation.check_child_stop_command(parent_name, child.attributes)

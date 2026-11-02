@@ -4,13 +4,13 @@ describe Bluepill::Socket do
   let(:socket) { double('socket', puts: nil) }
 
   describe '.socket_path' do
-    it 'should be in the socks directory of the base directory' do
+    it 'is in the socks directory of the base directory' do
       expect(described_class.socket_path(base_dir, 'app')).to eq(socket_path)
     end
   end
 
   describe '.client' do
-    it 'should open a UNIX socket and yield it' do
+    it 'opens a UNIX socket and yield it' do
       expect(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
       yielded = nil
       described_class.client(base_dir, 'app') { |s| yielded = s }
@@ -25,7 +25,7 @@ describe Bluepill::Socket do
       allow(described_class).to receive(:abort)
     end
 
-    it 'should send the command and return the response' do
+    it 'sends the command and return the response' do
       allow(socket).to receive(:read).and_return(Marshal.dump(%w[ok]))
       expect(UNIXSocket).to receive(:open).with(socket_path).once.and_yield(socket)
       expect(described_class.client_command(base_dir, 'app', 'status')).to eq(%w[ok])
@@ -34,7 +34,7 @@ describe Bluepill::Socket do
       expect(described_class).not_to have_received(:puts)
     end
 
-    it 'should retry after a timeout' do
+    it 'retries after a timeout' do
       calls = 0
       allow(socket).to receive(:read) do
         calls += 1
@@ -50,7 +50,7 @@ describe Bluepill::Socket do
       expect(described_class).not_to have_received(:abort)
     end
 
-    it 'should abort after the maximum number of attempts' do
+    it 'aborts after the maximum number of attempts' do
       allow(socket).to receive(:read).and_raise(EOFError)
       allow(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
       allow(described_class).to receive(:abort).and_raise(SystemExit)
@@ -64,7 +64,7 @@ describe Bluepill::Socket do
   describe '.server' do
     let(:server) { double('server') }
 
-    it 'should open a UNIX server socket' do
+    it 'opens a UNIX server socket' do
       expect(UNIXServer).to receive(:open).with(socket_path).and_return(server)
       expect(described_class.server(base_dir, 'app')).to be(server)
     end
@@ -80,7 +80,7 @@ describe Bluepill::Socket do
         end
       end
 
-      it 'should replace a stale socket file' do
+      it 'replaces a stale socket file' do
         expect(UNIXSocket).to receive(:open).with(socket_path).and_raise(Errno::ECONNREFUSED)
         expect(File).to receive(:delete).with(socket_path)
         expect(described_class.server(base_dir, 'app')).to be(server)
@@ -91,7 +91,7 @@ describe Bluepill::Socket do
           allow(UNIXSocket).to receive(:open).with(socket_path).and_return(socket)
         end
 
-        it 'should print an error and exit' do
+        it 'prints an error and exit' do
           expect($stderr).to receive(:puts).with('Server is already running!')
           expect(described_class).to receive(:exit).with(7)
           described_class.server(base_dir, 'app')

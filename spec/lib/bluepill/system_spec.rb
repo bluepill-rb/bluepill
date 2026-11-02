@@ -24,22 +24,22 @@ describe Bluepill::System do
   end
 
   describe '.pid_alive?' do
-    it 'should be true if process responds to zero signal' do
+    it 'is true if process responds to zero signal' do
       expect(Process).to receive(:kill).with(0, 555).and_return(1)
       expect(described_class.pid_alive?(555)).to be true
     end
 
-    it 'should be false if process throws exception on zero signal' do
+    it 'is false if process throws exception on zero signal' do
       expect(Process).to receive(:kill).with(0, 555).and_raise(Errno::ESRCH)
       expect(described_class.pid_alive?(555)).to be false
     end
 
-    it 'should be true if there is no permission to signal the process' do
+    it 'is true if there is no permission to signal the process' do
       expect(Process).to receive(:kill).with(0, 555).and_raise(Errno::EPERM)
       expect(described_class.pid_alive?(555)).to be true
     end
 
-    it 'should be false if signaling raises any other error' do
+    it 'is false if signaling raises any other error' do
       expect(Process).to receive(:kill).with(0, nil).and_raise(TypeError)
       expect(described_class.pid_alive?(nil)).to be false
     end
@@ -97,19 +97,19 @@ describe Bluepill::System do
   describe '.cpu_usage' do
     before(:each) { stub_ps(ps) }
 
-    it 'should be nil for an unknown pid' do
+    it 'is nil for an unknown pid' do
       expect(described_class.cpu_usage(99, true)).to be_nil
     end
 
-    it 'should return the cpu usage of the process' do
+    it 'returns the cpu usage of the process' do
       expect(described_class.cpu_usage(2, false)).to eq(2.5)
     end
 
-    it 'should include the cpu usage of all descendants' do
+    it 'includes the cpu usage of all descendants' do
       expect(described_class.cpu_usage(1, true)).to eq(12.0)
     end
 
-    it 'should skip children that are missing from ps output' do
+    it 'skips children that are missing from ps output' do
       allow(described_class).to receive(:get_children).with(1).and_return([2, 99])
       expect(described_class.cpu_usage(1, true)).to eq(4.0)
     end
@@ -118,24 +118,24 @@ describe Bluepill::System do
   describe '.memory_usage' do
     before(:each) { stub_ps(ps) }
 
-    it 'should be nil for an unknown pid' do
+    it 'is nil for an unknown pid' do
       expect(described_class.memory_usage(99, true)).to be_nil
     end
 
-    it 'should return the memory usage of the process' do
+    it 'returns the memory usage of the process' do
       expect(described_class.memory_usage(2, false)).to eql(200.0)
     end
 
-    it 'should include the memory usage of all descendants' do
+    it 'includes the memory usage of all descendants' do
       expect(described_class.memory_usage(1, true)).to eql(1000.0)
     end
 
-    it 'should skip children that are missing from ps output' do
+    it 'skips children that are missing from ps output' do
       allow(described_class).to receive(:get_children).with(1).and_return([2, 99])
       expect(described_class.memory_usage(1, true)).to eql(300.0)
     end
 
-    it 'should parse the memory usage of children as floats' do
+    it 'parses the memory usage of children as floats' do
       stub_ps(1 => ps[1], 2 => ['2', '1', '2.5', '200.5', '02:00', 'child one'])
       expect(described_class.memory_usage(1, true)).to eql(300.5)
     end
@@ -144,11 +144,11 @@ describe Bluepill::System do
   describe '.running_time' do
     before(:each) { stub_ps(ps) }
 
-    it 'should be nil for an unknown pid' do
+    it 'is nil for an unknown pid' do
       expect(described_class.running_time(99)).to be_nil
     end
 
-    it 'should return the elapsed time in seconds' do
+    it 'returns the elapsed time in seconds' do
       expect(described_class.running_time(3)).to eq(180)
     end
   end
@@ -156,11 +156,11 @@ describe Bluepill::System do
   describe '.command' do
     before(:each) { stub_ps(ps) }
 
-    it 'should be nil for an unknown pid' do
+    it 'is nil for an unknown pid' do
       expect(described_class.command(99)).to be_nil
     end
 
-    it 'should return the command of the process' do
+    it 'returns the command of the process' do
       expect(described_class.command(2)).to eq('child one')
     end
   end
@@ -168,15 +168,15 @@ describe Bluepill::System do
   describe '.get_children' do
     before(:each) { stub_ps(ps) }
 
-    it 'should return all descendants' do
+    it 'returns all descendants' do
       expect(described_class.get_children(1)).to eq([2, 4, 3])
     end
 
-    it 'should return an empty array for a process without children' do
+    it 'returns an empty array for a process without children' do
       expect(described_class.get_children(3)).to eq([])
     end
 
-    it 'should return an empty array if ps could not be run' do
+    it 'returns an empty array if ps could not be run' do
       allow(described_class).to receive(:ps_axu).and_raise(Bluepill::System::PsError)
       expect(described_class.get_children(1)).to eq([])
     end
@@ -185,15 +185,15 @@ describe Bluepill::System do
       # "PID".to_i and "PPID".to_i are both 0
       let(:ps) { super().merge(0 => %w[PID PPID %CPU RSS ELAPSED COMMAND]) }
 
-      it 'should return an empty array for a nil pid' do
+      it 'returns an empty array for a nil pid' do
         expect(described_class.get_children(nil)).to eq([])
       end
 
-      it 'should return an empty array for pid 0' do
+      it 'returns an empty array for pid 0' do
         expect(described_class.get_children(0)).to eq([])
       end
 
-      it 'should still return all descendants of a real pid' do
+      it 'stills return all descendants of a real pid' do
         expect(described_class.get_children(1)).to eq([2, 4, 3])
       end
     end
@@ -214,19 +214,19 @@ describe Bluepill::System do
         expect(Process).to receive(:detach).with(123)
       end
 
-      it 'should return the pid of the daemon' do
+      it 'returns the pid of the daemon' do
         allow(rd).to receive(:read).and_return('456')
         expect(described_class.daemonize('cmd')).to eq(456)
         expect(wr).to have_received(:close)
         expect(rd).to have_received(:close)
       end
 
-      it 'should return any positive pid' do
+      it 'returns any positive pid' do
         allow(rd).to receive(:read).and_return('1')
         expect(described_class.daemonize('cmd')).to eq(1)
       end
 
-      it 'should return nil if the child did not report a pid' do
+      it 'returns nil if the child did not report a pid' do
         allow(rd).to receive(:read).and_return('')
         expect(described_class.daemonize('cmd')).to be_nil
       end
@@ -265,7 +265,7 @@ describe Bluepill::System do
         end
       end
 
-      it 'should exit if the pid file cannot be written' do
+      it 'exits if the pid file cannot be written' do
         expect(described_class).to receive(:can_write_pid_file).with(pid_file, logger).and_return(false)
         expect(described_class).to receive(:exit).with(no_args).and_raise(SystemExit)
         expect { described_class.daemonize('cmd', options) }.to raise_error(SystemExit)
@@ -274,20 +274,20 @@ describe Bluepill::System do
         expect(Bluepill::Daemonize).not_to have_received(:call_as_daemon)
       end
 
-      it 'should run without options' do
+      it 'runs without options' do
         expect(described_class).to receive(:can_write_pid_file).with(nil, nil).and_return(false)
         expect(described_class).to receive(:exit).with(no_args).and_raise(SystemExit)
         expect { described_class.daemonize('cmd') }.to raise_error(SystemExit)
         expect(described_class).to have_received(:drop_privileges).with(nil, nil, nil)
       end
 
-      it 'should not redirect io that is not configured' do
+      it 'does not redirect io that is not configured' do
         allow(described_class).to receive(:can_write_pid_file).and_return(true)
         described_class.daemonize('cmd', pid_file: pid_file, logger: logger)
         expect(described_class).to have_received(:redirect_io).with(nil, nil, nil)
       end
 
-      it 'should write any positive pid to the pid file' do
+      it 'writes any positive pid to the pid file' do
         allow(described_class).to receive(:can_write_pid_file).and_return(true)
         allow(Bluepill::Daemonize).to receive(:call_as_daemon).and_return(1)
         described_class.daemonize('cmd', options)
@@ -295,7 +295,7 @@ describe Bluepill::System do
         expect(wr).to have_received(:write).with(1)
       end
 
-      it 'should exec the command as a daemon and report its pid' do
+      it 'execs the command as a daemon and report its pid' do
         allow(described_class).to receive(:can_write_pid_file).and_return(true)
         described_class.daemonize('echo "hello world"', options)
         expect(Dir).not_to have_received(:chdir)
@@ -310,7 +310,7 @@ describe Bluepill::System do
         expect(Process).to have_received(:exit!).with(true)
       end
 
-      it 'should not write a pid of 0 to the pid file' do
+      it 'does not write a pid of 0 to the pid file' do
         allow(described_class).to receive(:can_write_pid_file).and_return(true)
         allow(Bluepill::Daemonize).to receive(:call_as_daemon).and_return(0)
         described_class.daemonize('cmd', options)
@@ -318,7 +318,7 @@ describe Bluepill::System do
         expect(wr).to have_received(:write).with(0)
       end
 
-      it 'should change directory and set the environment' do
+      it 'changes directory and set the environment' do
         allow(described_class).to receive(:can_write_pid_file).and_return(true)
         options[:working_dir] = Pathname.new('/tmp/work')
         options[:environment] = {FOO: 1}
@@ -331,18 +331,18 @@ describe Bluepill::System do
   end
 
   describe '.delete_if_exists' do
-    it 'should do nothing for a nil filename' do
+    it 'does nothing for a nil filename' do
       expect(File).not_to receive(:unlink)
       described_class.delete_if_exists(nil)
     end
 
-    it 'should do nothing if the file does not exist' do
+    it 'does nothing if the file does not exist' do
       expect(File).to receive(:exist?).with('missing').and_return(false)
       expect(File).not_to receive(:unlink)
       described_class.delete_if_exists('missing')
     end
 
-    it 'should delete an existing file' do
+    it 'deletes an existing file' do
       Dir.mktmpdir do |dir|
         filename = File.join(dir, 'file')
         File.write(filename, 'x')
@@ -351,13 +351,13 @@ describe Bluepill::System do
       end
     end
 
-    it 'should ignore files that disappear before deletion' do
+    it 'ignores files that disappear before deletion' do
       allow(File).to receive(:exist?).with('file').and_return(true)
       expect(File).to receive(:unlink).with('file').and_raise(Errno::ENOENT)
       expect { described_class.delete_if_exists('file') }.not_to raise_error
     end
 
-    it 'should retry and then warn when permission is denied' do
+    it 'retries and then warn when permission is denied' do
       allow(File).to receive(:exist?).with('file').and_return(true)
       expect(File).to receive(:unlink).with('file').exactly(3).times.and_raise(Errno::EACCES)
       expect($stderr).to receive(:puts).with('Warning: permission denied trying to delete file')
@@ -378,7 +378,7 @@ describe Bluepill::System do
         allow(Process).to receive(:detach).with(123).and_return(waiter)
       end
 
-      it 'should return the result reported by the child' do
+      it 'returns the result reported by the child' do
         result = {exit_code: 1, stdout: 'out', stderr: 'err'}
         allow(rd).to receive(:read).and_return(Marshal.dump(result))
         expect(described_class.execute_blocking('cmd')).to eq(result)
@@ -386,12 +386,12 @@ describe Bluepill::System do
         expect(rd).to have_received(:close)
       end
 
-      it 'should return an empty successful result if the child reported nothing' do
+      it 'returns an empty successful result if the child reported nothing' do
         allow(rd).to receive(:read).and_return('')
         expect(described_class.execute_blocking('cmd')).to eq(exit_code: 0, stdout: '', stderr: '')
       end
 
-      it 'should wait for the child to be reaped' do
+      it 'waits for the child to be reaped' do
         allow(rd).to receive(:read).and_return('')
         described_class.execute_blocking('cmd')
         expect(Process).to have_received(:detach).with(123)
@@ -426,7 +426,7 @@ describe Bluepill::System do
         expect { described_class.execute_blocking('cmd', timeout: 2) }.to raise_error(Timeout::Error)
       end
 
-      it 'should reap the child and close the pipe if interrupted by a timeout' do
+      it 'reaps the child and close the pipe if interrupted by a timeout' do
         allow(rd).to receive(:read).and_raise(Timeout::Error)
         expect { described_class.execute_blocking('cmd') }.to raise_error(Timeout::Error)
         expect(Process).to have_received(:detach).with(123)
@@ -487,7 +487,7 @@ describe Bluepill::System do
         described_class.execute_blocking('echo')
       end
 
-      it 'should exec the command and report its output and exit code' do
+      it 'execs the command and report its output and exit code' do
         described_class.execute_blocking('echo "hello world"', options)
         expect(rd).to have_received(:close)
         expect(described_class).to have_received(:drop_privileges).with('user', 'group', ['extra'])
@@ -506,20 +506,20 @@ describe Bluepill::System do
         expect(Process).to have_received(:exit!).with(no_args)
       end
 
-      it 'should run without options' do
+      it 'runs without options' do
         described_class.execute_blocking('cmd')
         expect(described_class).to have_received(:drop_privileges).with(nil, nil, nil)
         expect(Kernel).to have_received(:exec).with('cmd')
       end
 
-      it 'should still exit if the parent stopped waiting for the result' do
+      it 'stills exit if the parent stopped waiting for the result' do
         allow(wr).to receive(:write).and_raise(Errno::EPIPE)
         described_class.execute_blocking('cmd', options)
         expect(wr).to have_received(:close).twice
         expect(Process).to have_received(:exit!).with(no_args)
       end
 
-      it 'should change directory and set the environment' do
+      it 'changes directory and set the environment' do
         options[:working_dir] = Pathname.new('/tmp/work')
         options[:environment] = {FOO: 1}
         described_class.execute_blocking('cmd', options)
@@ -528,7 +528,7 @@ describe Bluepill::System do
         expect(ENV).to have_received(:[]=).with('FOO', '1')
       end
 
-      it 'should report exceptions on the stderr pipe if it is still open' do
+      it 'reports exceptions on the stderr pipe if it is still open' do
         allow(described_class).to receive(:drop_privileges).and_raise(ArgumentError, 'no such user')
         described_class.execute_blocking('cmd', options)
         expect(err_wr).to have_received(:puts).with('Exception in grandchild: no such user.')
@@ -537,7 +537,7 @@ describe Bluepill::System do
         expect(described_class).to have_received(:exit).with(1)
       end
 
-      it 'should report exceptions on STDERR if the stderr pipe is closed' do
+      it 'reports exceptions on STDERR if the stderr pipe is closed' do
         allow(err_wr).to receive(:closed?).and_return(true)
         allow(Kernel).to receive(:exec).and_raise(Errno::ENOENT, 'cmd')
         described_class.execute_blocking('cmd', options)
@@ -550,28 +550,28 @@ describe Bluepill::System do
   end
 
   describe '.store' do
-    it 'should be Hash' do
+    it 'is Hash' do
       expect(described_class.store).to be_kind_of(Hash)
     end
 
-    it 'should return same Hash or every call' do
+    it 'returns same Hash or every call' do
       expect(described_class.store).to be_equal(described_class.store)
     end
 
-    it 'should store assigned pairs' do
+    it 'stores assigned pairs' do
       described_class.store[:somekey] = 10
       expect(described_class.store[:somekey]).to be_eql(10)
     end
   end
 
   describe '.reset_data' do
-    it 'should clear the #store' do
+    it 'clears the #store' do
       described_class.store[:anotherkey] = 'Lorem ipsum dolor sit amet.'
       described_class.reset_data
       expect(described_class.store).to be_empty
     end
 
-    it 'should leave an empty #store empty' do
+    it 'leaves an empty #store empty' do
       described_class.reset_data
       expect(described_class.store).to be_empty
     end
@@ -586,7 +586,7 @@ describe Bluepill::System do
       ].join("\n")
     end
 
-    it 'should parse ps output into a hash keyed by pid' do
+    it 'parses ps output into a hash keyed by pid' do
       expect(described_class).to receive(:`).with('ps -Ao pid,ppid,pcpu,rss,etime,args').once.and_return(output)
       expected = {
         0 => %w[PID PPID %CPU RSS ELAPSED ARGS],
@@ -597,7 +597,7 @@ describe Bluepill::System do
       expect(described_class.ps_axu).to eq(expected)
     end
 
-    it 'should only run ps once when called from several threads at once' do
+    it 'onlies run ps once when called from several threads at once' do
       expect(described_class).to receive(:`).once do
         sleep 0.05
         output
@@ -606,7 +606,7 @@ describe Bluepill::System do
       expect(threads.collect(&:value).uniq.size).to eq(1)
     end
 
-    it 'should raise a PsError and not retry until the next tick if ps cannot be run' do
+    it 'raises a PsError and not retry until the next tick if ps cannot be run' do
       expect(described_class).to receive(:`).once.and_raise(Errno::ENOMEM)
       message = 'Could not run ps: Errno::ENOMEM: Cannot allocate memory'
       expect { described_class.ps_axu }.to raise_error(Bluepill::System::PsError, message)
@@ -618,14 +618,14 @@ describe Bluepill::System do
   end
 
   describe '.parse_etime' do
-    it 'should parse etime format' do
+    it 'parses etime format' do
       expect(described_class.parse_elapsed_time('400-00:04:01')).to be_equal(34_560_241)
       expect(described_class.parse_elapsed_time('02:04:02')).to be_equal(7442)
       expect(described_class.parse_elapsed_time('20:03')).to be_equal(1203)
       expect(described_class.parse_elapsed_time('invalid')).to be_equal(0)
     end
 
-    it 'should parse fields with a leading zero as decimal' do
+    it 'parses fields with a leading zero as decimal' do
       expect(described_class.parse_elapsed_time('08-09:08:09')).to be_equal(724_089)
     end
   end
@@ -640,7 +640,7 @@ describe Bluepill::System do
       allow(ENV).to receive(:[]=)
     end
 
-    it 'should do nothing unless running as root' do
+    it 'does nothing unless running as root' do
       allow(Process::Sys).to receive(:geteuid).and_return(501)
       expect(Etc).not_to receive(:getpwnam)
       described_class.drop_privileges('user', 'group', ['extra'])
@@ -652,7 +652,7 @@ describe Bluepill::System do
         allow(Process::Sys).to receive(:geteuid).and_return(0)
       end
 
-      it 'should do nothing without a uid, gid or supplementary groups' do
+      it 'does nothing without a uid, gid or supplementary groups' do
         described_class.drop_privileges(nil, nil, nil)
         expect(Process).not_to have_received(:groups=)
         expect(Process::Sys).not_to have_received(:setgid)
@@ -660,7 +660,7 @@ describe Bluepill::System do
         expect(ENV).not_to have_received(:[]=)
       end
 
-      it "should give a user the user's own groups, the gid, and the supplementary groups" do
+      it "gives a user the user's own groups, the gid, and the supplementary groups" do
         allow(Etc).to receive(:getpwnam).with('user').and_return(double(name: 'user', uid: 501, gid: 10, dir: '/home/user'))
         allow(Etc).to receive(:getgrnam).with('group').and_return(double(gid: 20))
         allow(Etc).to receive(:getgrnam).with('extra').and_return(double(gid: 30))
@@ -674,7 +674,7 @@ describe Bluepill::System do
         expect(ENV).to have_received(:[]=).with('HOME', '/home/user')
       end
 
-      it "should give a user without a gid the user's primary group" do
+      it "gives a user without a gid the user's primary group" do
         allow(Etc).to receive(:getpwnam).with('user').and_return(double(name: 'user', uid: 501, gid: 10, dir: '/home/user'))
         allow(Process).to receive(:initgroups)
         described_class.drop_privileges('user', nil, [])
@@ -685,7 +685,7 @@ describe Bluepill::System do
         expect(ENV).to have_received(:[]=).with('HOME', '/home/user')
       end
 
-      it 'should keep the home directory if the user has none' do
+      it 'keeps the home directory if the user has none' do
         allow(Etc).to receive(:getpwnam).with('user').and_return(double(name: 'user', uid: 501, gid: 10, dir: nil))
         allow(Process).to receive(:initgroups)
         described_class.drop_privileges('user', nil, [])
@@ -693,7 +693,7 @@ describe Bluepill::System do
         expect(ENV).not_to have_received(:[]=)
       end
 
-      it 'should use only the gid and supplementary groups without a uid' do
+      it 'uses only the gid and supplementary groups without a uid' do
         allow(Etc).to receive(:getgrnam).with('group').and_return(double(gid: 20))
         allow(Etc).to receive(:getgrnam).with('extra').and_return(double(gid: 30))
         allow(Process).to receive(:groups).and_return([20])
@@ -706,7 +706,7 @@ describe Bluepill::System do
         expect(ENV).not_to have_received(:[]=)
       end
 
-      it "should add supplementary groups to bluepill's own without a uid or gid" do
+      it "adds supplementary groups to bluepill's own without a uid or gid" do
         allow(Etc).to receive(:getgrnam).with('extra').and_return(double(gid: 30))
         allow(Process).to receive(:groups).and_return([0])
         described_class.drop_privileges(nil, nil, ['extra'])
@@ -720,7 +720,7 @@ describe Bluepill::System do
   describe '.can_write_pid_file' do
     let(:logger) { double('logger') }
 
-    it 'should be true if the pid file can be written' do
+    it 'is true if the pid file can be written' do
       Dir.mktmpdir do |dir|
         pid_file = File.join(dir, 'test.pid')
         expect(described_class.can_write_pid_file(pid_file, logger)).to be true
@@ -728,7 +728,7 @@ describe Bluepill::System do
       end
     end
 
-    it 'should log the error and be false if the pid file cannot be written' do
+    it 'logs the error and be false if the pid file cannot be written' do
       Dir.mktmpdir do |dir|
         pid_file = File.join(dir, 'missing', 'test.pid')
         message = begin
@@ -750,27 +750,27 @@ describe Bluepill::System do
       allow($stderr).to receive(:reopen)
     end
 
-    it 'should not redirect anything without paths' do
+    it 'does not redirect anything without paths' do
       described_class.redirect_io(nil, nil, nil)
       expect($stdin).not_to have_received(:reopen)
       expect($stdout).not_to have_received(:reopen)
       expect($stderr).not_to have_received(:reopen)
     end
 
-    it 'should redirect stdout and stderr to the same file' do
+    it 'redirects stdout and stderr to the same file' do
       described_class.redirect_io('in', 'out.log', 'out.log')
       expect($stdin).to have_received(:reopen).with('in')
       expect($stdout).to have_received(:reopen).with('out.log', 'a')
       expect($stderr).to have_received(:reopen).with($stdout)
     end
 
-    it 'should redirect stdout and stderr to different files' do
+    it 'redirects stdout and stderr to different files' do
       described_class.redirect_io(nil, 'out.log', 'err.log')
       expect($stdout).to have_received(:reopen).with('out.log', 'a')
       expect($stderr).to have_received(:reopen).with('err.log', 'a')
     end
 
-    it 'should redirect only stderr' do
+    it 'redirects only stderr' do
       described_class.redirect_io(nil, nil, 'err.log')
       expect($stdout).not_to have_received(:reopen)
       expect($stderr).to have_received(:reopen).with('err.log', 'a')

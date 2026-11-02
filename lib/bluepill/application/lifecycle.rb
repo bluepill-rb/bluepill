@@ -153,42 +153,6 @@ module Bluepill
         FileUtils.chmod(0o777, pids_dir)
       end
 
-      # Interrupt a daemon for this application that's still running
-      #
-      # It waits up to kill_timeout half seconds for the daemon to exit, and
-      # exits with status 4 if it doesn't, or if signaling it fails.
-      #
-      # @return [void]
-      #
-      # @api private
-      def kill_previous_bluepill
-        return unless File.exist?(pid_file)
-
-        # An empty or garbled pid file reads as 0, and signaling pid 0 would
-        # interrupt bluepill's own process group
-        previous_pid = File.read(pid_file).to_i
-        return unless previous_pid > 0 && System.pid_alive?(previous_pid)
-
-        ::Process.kill(0, previous_pid)
-        puts "Killing previous bluepilld[#{previous_pid}]"
-        ::Process.kill(2, previous_pid)
-      rescue => e
-        $stderr.puts "Encountered error trying to kill previous bluepill:"
-        $stderr.puts "#{e.class}: #{e}"
-        exit(4) unless e.instance_of?(Errno::ESRCH)
-      else
-        kill_timeout.times do |_i|
-          # Kernel.sleep, not sleep, so the specs can stand in for the clock
-          Kernel.sleep(0.5)
-          break unless System.pid_alive?(previous_pid)
-        end
-
-        if System.pid_alive?(previous_pid)
-          $stderr.puts "Previous bluepilld[#{previous_pid}] didn't die"
-          exit(4)
-        end
-      end
-
       # Write the daemon's pid to its pid file
       #
       # @return [void]

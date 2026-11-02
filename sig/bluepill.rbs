@@ -41,6 +41,7 @@ module Bluepill
   class Application
     include Listener
     include Lifecycle
+    include PreviousDaemon
 
     PROCESS_COMMANDS: Array[Symbol]
 
@@ -119,7 +120,7 @@ module Bluepill
     end
 
     # Starts, runs and cleans up after the daemon, for Application only
-    module Lifecycle : Object, _Host, Listener
+    module Lifecycle : Object, _Host, Listener, PreviousDaemon
       # What Lifecycle uses from Application
       interface _Host
         %a{pure} def name: () -> String
@@ -162,9 +163,28 @@ module Bluepill
 
       def setup_pids_dir: () -> void
 
+      def write_pid_file: () -> void
+    end
+
+    # Stops a previous daemon for the application, for Application only
+    module PreviousDaemon : Object, _Host
+      # What PreviousDaemon uses from Application
+      interface _Host
+        %a{pure} def pid_file: () -> String
+        %a{pure} def kill_timeout: () -> Integer
+      end
+
+      # Ruby's protected methods are private in RBS
+
+      private
+
       def kill_previous_bluepill: () -> void
 
-      def write_pid_file: () -> void
+      def interrupt_previous_bluepill: () -> Integer?
+
+      def previous_bluepill_pid: () -> Integer?
+
+      def wait_for_previous_bluepill: (Integer previous_pid) -> void
     end
   end
 

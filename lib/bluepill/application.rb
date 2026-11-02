@@ -3,6 +3,7 @@ require "bluepill/system"
 require "bluepill/process_journal"
 require "bluepill/application/listener"
 require "bluepill/application/lifecycle"
+require "bluepill/application/previous_daemon"
 
 module Bluepill
   # The bluepill daemon for one application
@@ -14,6 +15,7 @@ module Bluepill
   class Application
     include Listener
     include Lifecycle
+    include PreviousDaemon
 
     # The commands that act on a process or group, and that the CLI sends
     PROCESS_COMMANDS = [:start, :stop, :restart, :unmonitor, :status].freeze

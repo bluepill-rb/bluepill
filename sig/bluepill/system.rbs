@@ -38,23 +38,63 @@ module Bluepill
     extend Commands
     extend Daemon
 
-    # Options for daemonize and execute_blocking
-    type command_options = {
-      ?uid: String?,
-      ?gid: String?,
-      ?working_dir: String?,
-      ?environment: Hash[_ToS, _ToS]?,
-      ?pid_file: String?,
-      ?logger: Logger,
-      ?stdin: String?,
-      # Hooks are killed after this many seconds
-      ?timeout: seconds,
-      ?stdout: String?,
-      ?stderr: String?,
-      ?supplementary_groups: Array[String]?
-    }
-
+    # What the child that runs a command sends its parent
     type blocking_result = { exit_code: Integer?, stdout: String, stderr: String }
+
+    # How a command runs, for daemonize and execute_blocking
+    class CommandOptions
+      attr_reader uid: String?
+      attr_reader gid: String?
+      attr_reader supplementary_groups: Array[String]?
+      attr_reader working_dir: String?
+      attr_reader environment: Hash[_ToS, _ToS]?
+      attr_reader stdin: String?
+      attr_reader stdout: String?
+      attr_reader stderr: String?
+      # Hooks are killed after this many seconds
+      attr_reader timeout: seconds?
+
+      def initialize: (
+        ?uid: String?,
+        ?gid: String?,
+        ?supplementary_groups: Array[String]?,
+        ?working_dir: String?,
+        ?environment: Hash[_ToS, _ToS]?,
+        ?stdin: String?,
+        ?stdout: String?,
+        ?stderr: String?,
+        ?timeout: seconds?
+      ) -> void
+
+      def for_hook: (Hash[String, String] env, seconds timeout) -> CommandOptions
+
+      def to_h: () -> {
+        uid: String?,
+        gid: String?,
+        supplementary_groups: Array[String]?,
+        working_dir: String?,
+        environment: Hash[_ToS, _ToS]?,
+        stdin: String?,
+        stdout: String?,
+        stderr: String?,
+        timeout: seconds?
+      }
+    end
+
+    # What a command that ran until it finished printed, and how it exited
+    class CommandResult
+      def self.from_h: (blocking_result result) -> CommandResult
+
+      attr_reader exit_code: Integer?
+      attr_reader stdout: String
+      attr_reader stderr: String
+
+      def initialize: (exit_code: Integer?, ?stdout: String, ?stderr: String) -> void
+
+      def success?: () -> bool
+
+      def to_h: () -> blocking_result
+    end
 
     type grandchild_pipes = { out: [IO, IO], err: [IO, IO], result: IO }
 
@@ -146,7 +186,7 @@ module Bluepill
 
     # Sets up the process that a command runs in
     module CommandSetup
-      def setup_command_environment: (command_options options) -> void
+      def setup_command_environment: (CommandOptions options) -> void
 
       def drop_privileges: (String? uid, String? gid, Array[String]? supplementary_groups) -> void
 
@@ -162,13 +202,13 @@ module Bluepill
       include CommandSetup
 
       # Returns the daemon's pid
-      def daemonize: (String cmd, ?command_options options) -> Integer?
+      def daemonize: (String cmd, ?CommandOptions options, pid_file: String, logger: Logger) -> Integer?
 
       def read_daemon_pid: (IO reader, IO writer) -> Integer?
 
-      def start_daemon: (String cmd, command_options options, IO pid_pipe) -> bot
+      def start_daemon: (String cmd, CommandOptions options, IO pid_pipe, pid_file: String, logger: Logger) -> bot
 
-      def daemon_command: (String cmd, command_options options) -> ^() -> void
+      def daemon_command: (String cmd, CommandOptions options) -> ^() -> void
 
       def can_write_pid_file: (String pid_file, Logger logger) -> bool
 
@@ -179,21 +219,21 @@ module Bluepill
     module Commands
       include CommandSetup
 
-      def execute_blocking: (String cmd, ?command_options options) -> blocking_result
+      def execute_blocking: (String cmd, ?CommandOptions options) -> CommandResult
 
-      def start_blocking_child: (String cmd, command_options options, IO reader, IO result_pipe) -> bot
+      def start_blocking_child: (String cmd, CommandOptions options, IO reader, IO result_pipe) -> bot
 
       def read_blocking_status: (String cmd, seconds? timeout, Integer child, IO reader) -> String
 
       def kill_group_after: (Integer child, seconds? timeout, String cmd) -> bot
 
-      def run_blocking_child: (String cmd, command_options options, IO result_pipe) -> bot
+      def run_blocking_child: (String cmd, CommandOptions options, IO result_pipe) -> bot
 
       def collect_blocking_result: (Integer pid, IO cmd_out_read, IO cmd_err_read) -> blocking_result
 
       def report_blocking_result: (IO result_pipe, blocking_result result) -> bot
 
-      def exec_blocking_grandchild: (String cmd, command_options options, grandchild_pipes pipes) -> bot
+      def exec_blocking_grandchild: (String cmd, CommandOptions options, grandchild_pipes pipes) -> bot
 
       def reopen_on_pipe: (IO stream, [IO, IO] pipe) -> void
 

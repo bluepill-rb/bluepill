@@ -28,16 +28,15 @@ module Bluepill
 
       # Return the options the process's commands run with
       #
-      # @return [Hash{Symbol => Object}] the uid, gid, working_dir, environment,
-      #   pid_file, logger, stdin, stdout, stderr and supplementary_groups
+      # @return [System::CommandOptions] its uid, gid, supplementary_groups,
+      #   working_dir, environment, stdin, stdout and stderr
       #
       # @api private
-      def system_command_options
-        {
-          uid: uid, gid: gid, supplementary_groups: supplementary_groups,
-          working_dir: working_dir, environment: environment, pid_file: pid_file,
-          logger: logger, stdin: stdin, stdout: stdout, stderr: stderr
-        }
+      def command_options
+        System::CommandOptions.new(
+          uid: uid, gid: gid, supplementary_groups: supplementary_groups, working_dir: working_dir,
+          environment: environment, stdin: stdin, stdout: stdout, stderr: stderr
+        )
       end
 
       # Run a block, and dispatch an event if it takes too long
@@ -67,20 +66,17 @@ module Bluepill
       # @param [String] cmd the command
       # @param [String] description what the command is, for the log, such as
       #   Start
-      # @param [Hash{Symbol => Object}] options how to run it, as
-      #   system_command_options returns
+      # @param [System::CommandOptions] options how to run it
       #
       # @return [void]
       #
       # @api private
-      def run_command(cmd, description, options = system_command_options)
+      def run_command(cmd, description, options = command_options)
         result = System.execute_blocking(cmd, options)
-        # The exit code is nil when a signal killed the command
-        exit_code = result.fetch(:exit_code)
-        return if exit_code&.zero?
+        return if result.success?
 
         logger.warning "#{description} command execution returned non-zero exit code:"
-        logger.warning result.inspect
+        logger.warning result.to_h.inspect
       end
     end
   end

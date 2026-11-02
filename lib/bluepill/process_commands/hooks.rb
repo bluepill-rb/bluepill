@@ -128,29 +128,11 @@ module Bluepill
       def run_hook(command, description, pid, env = {})
         cmd = substitute_pid(command, pid)
         logger.info "Executing #{description.downcase} command: #{cmd}"
-        run_command(cmd, description, hook_options(env))
+        run_command(cmd, description, command_options.for_hook(env, hook_timeout))
       rescue Timeout::Error
         logger.warning "#{description} command took longer than #{hook_timeout} seconds: #{command}"
       rescue => e
         logger.err "#{description} command failed: #{e}"
-      end
-
-      # Return the options a hook command runs with
-      #
-      # They're the process's command options, with more environment variables
-      # and hook_timeout.
-      #
-      # @param [Hash{String => String}] env more environment variables
-      #
-      # @return [Hash{Symbol => Object}] the options, as system_command_options
-      #   returns, with :timeout
-      #
-      # @api private
-      def hook_options(env)
-        options = system_command_options
-        options[:environment] = (environment || {}).merge(env)
-        options[:timeout] = hook_timeout
-        options
       end
 
       private

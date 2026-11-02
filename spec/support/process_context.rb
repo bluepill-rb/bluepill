@@ -19,9 +19,12 @@ RSpec.shared_context "with a process" do
     allow(Bluepill::Clock).to receive(:now).and_return(now)
     allow(Bluepill::ProcessJournal).to receive(:for).and_return(journal)
     allow(::Process).to receive(:kill).and_return(1)
-    allow(Bluepill::System).to receive(:execute_blocking).and_return(exit_code: 0)
+    allow(Bluepill::System).to receive(:execute_blocking).and_return(succeeded)
     allow(Bluepill::System).to receive(:delete_if_exists)
   end
+
+  # The result of a command that succeeded
+  def succeeded = Bluepill::System::CommandResult.new(exit_code: 0)
 
   def watch_double(name, events)
     instance_double(Bluepill::ConditionWatch, name.to_s, :name => name, :due? => true, :run => events, :to_s => name.to_s, :clear_history! => nil, :logger= => nil)
@@ -62,7 +65,7 @@ RSpec.shared_context "with a process" do
     calls = record_signals(alive)
     allow(journal).to receive(:kill_all) { calls << :cleanup }
     allow(Bluepill::System).to receive(:delete_if_exists) { calls << :unlink }
-    allow(Bluepill::System).to receive(:execute_blocking) { |command, _options| {exit_code: 0}.tap { calls << command } }
+    allow(Bluepill::System).to receive(:execute_blocking) { |command, _options| succeeded.tap { calls << command } }
     calls
   end
 
@@ -82,7 +85,7 @@ RSpec.shared_context "with a process" do
   # Record the threads the commands run on
   def record_command_threads
     threads = []
-    allow(Bluepill::System).to receive(:execute_blocking) { {exit_code: 0}.tap { threads << Thread.current } }
+    allow(Bluepill::System).to receive(:execute_blocking) { succeeded.tap { threads << Thread.current } }
     threads
   end
 

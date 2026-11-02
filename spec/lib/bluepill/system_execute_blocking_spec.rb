@@ -7,6 +7,8 @@ describe Bluepill::System, ".execute_blocking" do
   let(:rd) { instance_double(IO, close: nil) }
   let(:wr) { instance_double(IO, close: nil, write: nil) }
 
+  def opts(**options) = Bluepill::System::CommandOptions.new(**options)
+
   context "when in the parent" do
     let(:waiter) { instance_double(Thread, join: nil) }
 
@@ -20,7 +22,12 @@ describe Bluepill::System, ".execute_blocking" do
     it "returns the result reported by the child" do
       result = {exit_code: 1, stdout: "out", stderr: "err"}
       allow(rd).to receive(:read).and_return(Marshal.dump(result))
-      expect(described_class.execute_blocking("cmd")).to eq(result)
+      reported = described_class.execute_blocking("cmd")
+      expect([reported.class, reported.to_h]).to eq([Bluepill::System::CommandResult, result])
+    end
+
+    it "returns a CommandResult" do
+      expect(described_class.execute_blocking("cmd")).to be_a(Bluepill::System::CommandResult)
     end
 
     it "closes both ends of the pipe" do
@@ -29,7 +36,7 @@ describe Bluepill::System, ".execute_blocking" do
     end
 
     it "returns an empty successful result if the child reported nothing" do
-      expect(described_class.execute_blocking("cmd")).to eq(exit_code: 0, stdout: "", stderr: "")
+      expect(described_class.execute_blocking("cmd").to_h).to eq(exit_code: 0, stdout: "", stderr: "")
     end
 
     it "detaches the child" do
@@ -44,14 +51,14 @@ describe Bluepill::System, ".execute_blocking" do
 
     it "waits for the pipe with a timeout it can read, from a duration too" do
       allow(rd).to receive(:wait_readable).and_return(rd)
-      described_class.execute_blocking("cmd", timeout: 2.seconds)
+      described_class.execute_blocking("cmd", opts(timeout: 2.seconds))
       expect(rd).to have_received(:wait_readable).with(an_instance_of(Float)).once
     end
 
     it "times out even if the command has just finished" do
       allow(rd).to receive(:wait_readable).and_return(nil)
       allow(Process).to receive(:kill).with("KILL", -123).and_raise(Errno::ESRCH)
-      expect { described_class.execute_blocking("cmd", timeout: 2) }.to raise_error(Timeout::Error)
+      expect { described_class.execute_blocking("cmd", opts(timeout: 2)) }.to raise_error(Timeout::Error)
     end
 
     context "with a timeout the command finishes within" do
@@ -61,16 +68,16 @@ describe Bluepill::System, ".execute_blocking" do
       end
 
       it "returns its result" do
-        expect(described_class.execute_blocking("cmd", timeout: 2.5)).to eq(exit_code: 0, stdout: "", stderr: "")
+        expect(described_class.execute_blocking("cmd", opts(timeout: 2.5)).to_h).to eq(exit_code: 0, stdout: "", stderr: "")
       end
 
       it "waits for its result for that long, once" do
-        described_class.execute_blocking("cmd", timeout: 2.5)
+        described_class.execute_blocking("cmd", opts(timeout: 2.5))
         expect(rd).to have_received(:wait_readable).once
       end
 
       it "doesn't kill it" do
-        described_class.execute_blocking("cmd", timeout: 2.5)
+        described_class.execute_blocking("cmd", opts(timeout: 2.5))
         expect(Process).not_to have_received(:kill)
       end
     end
@@ -83,13 +90,13 @@ describe Bluepill::System, ".execute_blocking" do
 
       # Run the command, and carry on past the timeout
       def execute_blocking
-        described_class.execute_blocking("cmd", timeout: 2)
+        described_class.execute_blocking("cmd", opts(timeout: 2))
       rescue Timeout::Error
         nil
       end
 
       it "raises" do
-        expect { described_class.execute_blocking("cmd", timeout: 2) }
+        expect { described_class.execute_blocking("cmd", opts(timeout: 2)) }
           .to raise_error(Timeout::Error, "cmd took longer than 2 seconds")
       end
 
@@ -159,7 +166,7 @@ describe Bluepill::System, ".execute_blocking" do
     def sleep_alive_after_timeout
       pid_file = File.join(dir, "pid")
       cmd = %(#{RbConfig.ruby} -e "File.write('#{pid_file}', Process.spawn('sleep', '30').to_s)\nsleep 30")
-      described_class.execute_blocking(cmd, timeout: 2)
+      described_class.execute_blocking(cmd, opts(timeout: 2))
     rescue Timeout::Error
       sleep_pid = Integer(File.read(pid_file))
       # Killed, and reaped by init, since the command that started it is gone
@@ -201,7 +208,7 @@ describe Bluepill::System, ".execute_blocking" do
     end
 
     it "leads a process group of its own with a timeout" do
-      described_class.execute_blocking("echo", timeout: 5)
+      described_class.execute_blocking("echo", opts(timeout: 5))
       expect(Process).to have_received(:setpgid).with(0, 0).once
     end
 
@@ -211,7 +218,7 @@ describe Bluepill::System, ".execute_blocking" do
     end
 
     it "stays in bluepill's process group with a nil timeout" do
-      described_class.execute_blocking("echo", timeout: nil)
+      described_class.execute_blocking("echo", opts(timeout: nil))
       expect(Process).not_to have_received(:setpgid)
     end
 
@@ -227,7 +234,7 @@ describe Bluepill::System, ".execute_blocking" do
 
     context "when it execs a command" do
       before do
-        described_class.execute_blocking('echo "hello world"', options)
+        described_class.execute_blocking('echo "hello world"', opts(**options))
       end
 
       it "closes the read end of the result pipe" do
@@ -282,7 +289,7 @@ describe Bluepill::System, ".execute_blocking" do
     context "when the parent stopped waiting for the result" do
       before do
         allow(wr).to receive(:write).and_raise(Errno::EPIPE)
-        described_class.execute_blocking("cmd", options)
+        described_class.execute_blocking("cmd", opts(**options))
       end
 
       it "still closes the result pipe" do
@@ -296,7 +303,7 @@ describe Bluepill::System, ".execute_blocking" do
 
     context "with a working directory and an environment" do
       before do
-        described_class.execute_blocking("cmd", options.merge(working_dir: Pathname.new("/tmp/work"), environment: {FOO: 1}))
+        described_class.execute_blocking("cmd", opts(**options, working_dir: Pathname.new("/tmp/work"), environment: {FOO: 1}))
       end
 
       it "sets PWD to the working directory" do
@@ -315,7 +322,7 @@ describe Bluepill::System, ".execute_blocking" do
     context "when it fails before the exec, with the stderr pipe open" do
       before do
         allow(described_class).to receive(:drop_privileges).and_raise(ArgumentError, "no such user")
-        described_class.execute_blocking("cmd", options)
+        described_class.execute_blocking("cmd", opts(**options))
       end
 
       it "reports the exception on the stderr pipe" do
@@ -339,7 +346,7 @@ describe Bluepill::System, ".execute_blocking" do
       before do
         allow(err.last).to receive(:closed?).and_return(true)
         allow(Kernel).to receive(:exec).and_raise(Errno::ENOENT, "cmd")
-        described_class.execute_blocking("cmd", options)
+        described_class.execute_blocking("cmd", opts(**options))
       end
 
       it "reports the exception on STDERR" do

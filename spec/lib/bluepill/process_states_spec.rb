@@ -77,13 +77,13 @@ describe Bluepill::Process do
       nil
     end
     allow(Bluepill::System).to receive(:execute_blocking) do |command, options|
-      env = options.fetch(:environment)
+      env = options.environment
       calls << if command == "notify"
         [:notify_transition, env["BLUEPILL_FROM"], env["BLUEPILL_TO"], process.state]
       else
         [:post_start_process, process.state]
       end
-      {exit_code: 0}
+      Bluepill::System::CommandResult.new(exit_code: 0)
     end
   end
 

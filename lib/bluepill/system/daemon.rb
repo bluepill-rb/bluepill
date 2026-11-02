@@ -2,6 +2,7 @@
 
 require "shellwords"
 require "bluepill/daemonize"
+require "bluepill/system/command_options"
 require "bluepill/system/command_setup"
 
 module Bluepill
@@ -26,14 +27,15 @@ module Bluepill
       # parent the daemon's pid over a pipe.
       #
       # @param [String] cmd the command, split into words without a shell
-      # @param [Hash{Symbol => Object}] options :uid, :gid,
-      #   :supplementary_groups, :working_dir, :environment, :pid_file,
-      #   :logger, :stdin, :stdout and :stderr
+      # @param [CommandOptions] options its uid, gid, supplementary_groups,
+      #   working_dir, environment, stdin, stdout and stderr
+      # @param [String] pid_file where to write the daemon's pid
+      # @param [Logger] logger where to log why the pid file can't be written
       #
       # @return [Integer, nil] the daemon's pid, or nil if it didn't start
       #
       # @api private
-      def daemonize(cmd, options = {})
+      def daemonize(cmd, options = CommandOptions.new, pid_file:, logger:)
         rd, wr = IO.pipe
 
         child = Daemonize.safefork
@@ -46,8 +48,8 @@ module Bluepill
           # child
           rd.close
 
-          drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
-          start_daemon(cmd, options, wr)
+          drop_privileges(options.uid, options.gid, options.supplementary_groups)
+          start_daemon(cmd, options, wr, pid_file: pid_file, logger: logger)
         end
       end
 
@@ -74,17 +76,15 @@ module Bluepill
       # It runs in the child, once it has dropped privileges.
       #
       # @param [String] cmd the command
-      # @param [Hash{Symbol => Object}] options as for daemonize
+      # @param [CommandOptions] options as for daemonize
       # @param [IO] pid_pipe where to write the daemon's pid for the parent
+      # @param [String] pid_file where to write the daemon's pid
+      # @param [Logger] logger where to log why the pid file can't be written
       #
       # @return [void] it never returns, since it exits the child
       #
       # @api private
-      def start_daemon(cmd, options, pid_pipe)
-        # Processes that bluepill daemonizes always have a pid file and a logger
-        pid_file = options[:pid_file] #: String
-        logger = options[:logger] #: Logger
-
+      def start_daemon(cmd, options, pid_pipe, pid_file:, logger:)
         # if we cannot write the pid file as the provided user, err out
         exit unless can_write_pid_file(pid_file, logger)
 
@@ -102,7 +102,7 @@ module Bluepill
       # Return what the daemon runs: the command, in its environment
       #
       # @param [String] cmd the command
-      # @param [Hash{Symbol => Object}] options as for daemonize
+      # @param [CommandOptions] options as for daemonize
       #
       # @return [Proc] a block that execs the command
       #
@@ -110,7 +110,7 @@ module Bluepill
       def daemon_command(cmd, options)
         lambda do
           setup_command_environment(options)
-          redirect_io(options[:stdin], options[:stdout], options[:stderr])
+          redirect_io(options.stdin, options.stdout, options.stderr)
 
           Kernel.exec(*Shellwords.shellwords(cmd))
           exit

@@ -18,6 +18,7 @@ module Bluepill
       %a{pure} def uid: () -> String?
       %a{pure} def gid: () -> String?
       %a{pure} def working_dir: () -> String?
+      %a{pure} def environment: () -> Hash[_ToS, _ToS]?
       %a{pure} def pid_file: () -> String?
       %a{pure} def stdin: () -> String?
       %a{pure} def stdout: () -> String?
@@ -98,7 +99,6 @@ module Bluepill
       %a{pure} def gid: () -> String?
       %a{pure} def working_dir: () -> String?
       %a{pure} def environment: () -> Hash[_ToS, _ToS]?
-      %a{pure} def pid_file: () -> String?
       %a{pure} def stdin: () -> String?
       %a{pure} def stdout: () -> String?
       %a{pure} def stderr: () -> String?
@@ -111,13 +111,13 @@ module Bluepill
 
     def substitute_pid: (String command, Integer? pid) -> String
 
-    def system_command_options: () -> System::command_options
+    def command_options: () -> System::CommandOptions
 
     # Runs the block, and dispatches next_state if it takes longer than secs
     # It takes a String until on_start_timeout is always a Symbol
     def with_timeout: [T] (seconds secs, Symbol | String next_state) { (Numeric secs) -> T } -> (T | bool)
 
-    def run_command: (String cmd, String description, ?System::command_options options) -> void
+    def run_command: (String cmd, String description, ?System::CommandOptions options) -> void
   end
 
   # Runs the commands a Process has around its starts and stops, and on each
@@ -135,12 +135,11 @@ module Bluepill
       %a{pure} def hook_timeout: () -> seconds
       %a{pure} def app_name: () -> String?
       %a{pure} def group_name: () -> String?
-      %a{pure} def environment: () -> Hash[_ToS, _ToS]?
       def actual_pid: () -> Integer?
       def cached_pid: () -> Integer?
-      def system_command_options: () -> System::command_options
+      def command_options: () -> System::CommandOptions
       def substitute_pid: (String command, Integer? pid) -> String
-      def run_command: (String cmd, String description, ?System::command_options options) -> void
+      def run_command: (String cmd, String description, ?System::CommandOptions options) -> void
     end
 
     @stopping_pid: Integer?
@@ -161,8 +160,6 @@ module Bluepill
     def run_hook_in_background: (String command, String description, Integer? pid, ?Hash[String, String] env) -> Thread
 
     def run_hook: (String command, String description, Integer? pid, ?Hash[String, String] env) -> void
-
-    def hook_options: (Hash[String, String] env) -> System::command_options
 
     private
 

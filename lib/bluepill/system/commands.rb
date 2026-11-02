@@ -3,6 +3,8 @@
 require "io/wait"
 require "shellwords"
 require "bluepill/daemonize"
+require "bluepill/system/command_options"
+require "bluepill/system/command_result"
 require "bluepill/system/command_setup"
 require "bluepill/system/daemon"
 
@@ -19,22 +21,20 @@ module Bluepill
 
       # Run a command until it finishes, and return what it printed
       #
-      # With a :timeout, the command runs in a process group of its own, and
+      # With a timeout, the command runs in a process group of its own, and
       # if it hasn't finished in time, that whole group is killed, so a hung
       # command and anything it started don't keep running.
       #
       # @param [String] cmd the command, split into words without a shell
-      # @param [Hash{Symbol => Object}] options :uid, :gid,
-      #   :supplementary_groups, :working_dir, :environment and :timeout (in
-      #   seconds)
+      # @param [CommandOptions] options its uid, gid, supplementary_groups,
+      #   working_dir, environment and timeout
       #
-      # @return [Hash{Symbol => Object}] its :stdout and :stderr Strings, and
-      #   its :exit_code (nil if a signal ended it)
+      # @return [CommandResult] what it printed, and its exit code
       #
-      # @raise [Timeout::Error] if it ran longer than the :timeout
+      # @raise [Timeout::Error] if it ran longer than the timeout
       #
       # @api private
-      def execute_blocking(cmd, options = {})
+      def execute_blocking(cmd, options = CommandOptions.new)
         rd, wr = IO.pipe
 
         child = Daemonize.safefork
@@ -45,18 +45,21 @@ module Bluepill
         waiter = ::Process.detach(child)
 
         wr.close
-        cmd_status = read_blocking_status(cmd, options[:timeout], child, rd)
+        cmd_status = read_blocking_status(cmd, options.timeout, child, rd)
         waiter.join
 
-        cmd_status.empty? ? {exit_code: 0, stdout: "", stderr: ""} : Marshal.load(cmd_status)
+        return CommandResult.new(exit_code: 0) if cmd_status.empty?
+
+        # The child sends a Hash, so loading it needs only core classes
+        CommandResult.from_h(Marshal.load(cmd_status))
       end
 
       # Run the command in the child, which execute_blocking forked
       #
-      # With a :timeout, the child gets a process group of its own first.
+      # With a timeout, the child gets a process group of its own first.
       #
       # @param [String] cmd the command
-      # @param [Hash{Symbol => Object}] options as for execute_blocking
+      # @param [CommandOptions] options as for execute_blocking
       # @param [IO] reader the end of the pipe that only the parent uses
       # @param [IO] result_pipe where to write the result, marshaled
       #
@@ -66,7 +69,7 @@ module Bluepill
       def start_blocking_child(cmd, options, reader, result_pipe)
         reader.close
         # The command and what it starts can all be killed at once on a timeout
-        ::Process.setpgid(0, 0) if options[:timeout]
+        ::Process.setpgid(0, 0) if options.timeout
         run_blocking_child(cmd, options, result_pipe)
       end
 
@@ -119,7 +122,7 @@ module Bluepill
       # result_pipe.
       #
       # @param [String] cmd the command
-      # @param [Hash{Symbol => Object}] options as for execute_blocking
+      # @param [CommandOptions] options as for execute_blocking
       # @param [IO] result_pipe where to write the result, marshaled
       #
       # @return [void] it never returns, since it exits the child
@@ -191,7 +194,7 @@ module Bluepill
       # Replace the grandchild with the command, its output going to the pipes
       #
       # @param [String] cmd the command
-      # @param [Hash{Symbol => Object}] options as for execute_blocking
+      # @param [CommandOptions] options as for execute_blocking
       # @param [Hash{Symbol => Object}] pipes the :out and :err pipes, each a
       #   reader and a writer, and the :result pipe
       #
@@ -200,7 +203,7 @@ module Bluepill
       #
       # @api private
       def exec_blocking_grandchild(cmd, options, pipes)
-        drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
+        drop_privileges(options.uid, options.gid, options.supplementary_groups)
         setup_command_environment(options)
 
         # close unused fds so ancestors wont hang. This line is the only reason we are not

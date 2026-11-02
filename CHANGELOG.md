@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-11-02
+
 ### Changed
 
 - The `zombie_process` check tests for `<defunct>` with `match?`, so each check makes one fewer object.
@@ -840,7 +842,8 @@ Initial release.
 - Added the `bluepill` CLI with the `load`, `status`, `start`, `stop`, `restart`, `unmonitor`, `quit` and `log` commands.
 - Added syslog logging.
 
-[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.2.3...HEAD
+[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/bluepill-rb/bluepill/compare/v0.2.3...v0.2.5
 [0.2.3]: https://github.com/bluepill-rb/bluepill/compare/v0.2.1...v0.2.3
 [0.2.1]: https://github.com/bluepill-rb/bluepill/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/bluepill-rb/bluepill/compare/v0.1.6...v0.2.0

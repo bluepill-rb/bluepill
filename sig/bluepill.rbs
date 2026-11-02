@@ -943,6 +943,8 @@ module Bluepill
   # Memoizes ps output for a tick, and runs commands as daemons or until
   # they finish
   module System
+    extend Ps
+
     # Options for daemonize and execute_blocking
     type command_options = {
       ?uid: String?,
@@ -971,15 +973,27 @@ module Bluepill
 
     NO_PIDS: Array[Integer]
 
-    # The store lives on the module. Steep checks the module functions as
-    # instance methods, so it needs the instance variable too.
-    self.@store: Hash[Symbol, ps_table | String]
-    @store: Hash[Symbol, ps_table | String]
-    self.@children_by_parent: Hash[Integer, Array[Integer]]?
-    @children_by_parent: Hash[Integer, Array[Integer]]?
-
     # Raised when ps could not be run, so there is no data for this tick
     class PsError < StandardError
+    end
+
+    # Runs ps once a tick, and reads its table of processes
+    module Ps
+      # The store lives on System, which extends this module
+      @store: Hash[Symbol, ps_table | String]
+      @children_by_parent: Hash[Integer, Array[Integer]]?
+
+      def store: () -> Hash[Symbol, ps_table | String]
+
+      def reset_data: () -> void
+
+      def ps_axu: () -> ps_table
+
+      def read_ps_table: () -> (ps_table | String)
+
+      def children_by_parent: () -> Hash[Integer, Array[Integer]]
+
+      def get_children: (Integer? parent_pid) -> Array[Integer]
     end
 
     def self.pid_alive?: (Integer pid) -> bool
@@ -996,17 +1010,7 @@ module Bluepill
 
     def self.command: (Integer? pid) -> String?
 
-    def self.children_by_parent: () -> Hash[Integer, Array[Integer]]
-
-    def self.get_children: (Integer? parent_pid) -> Array[Integer]
-
     def self.delete_if_exists: (String? filename) -> void
-
-    def self.store: () -> Hash[Symbol, ps_table | String]
-
-    def self.reset_data: () -> void
-
-    def self.ps_axu: () -> ps_table
 
     def self.parse_elapsed_time: (String? str) -> Integer
 

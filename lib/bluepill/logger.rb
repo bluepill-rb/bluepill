@@ -150,7 +150,9 @@ module Bluepill
     #
     # @api private
     def require_syslog
-      require 'syslog'
+      # A HUP reopens the log from a signal trap, where require raises
+      # ThreadError, and syslog is loaded by then
+      require 'syslog' unless defined?(::Syslog)
     rescue LoadError
       message = 'Bluepill logs to syslog unless log_file is set, but the syslog library ' \
                 "could not be loaded. Since Ruby 3.4 it's a separate gem, so add gem 'syslog' " \

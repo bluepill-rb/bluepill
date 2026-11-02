@@ -37,6 +37,15 @@ module Bluepill
                    'where 0.1 gives it only its gid and supplementary_groups. ' \
                    "Make sure the user's groups don't give it access it shouldn't have.".freeze
 
+    # The warning about a process that monitors its children and runs as
+    # another user, whose children's commands bluepill 0.2.0 runs as that
+    # user too
+    #
+    # @api private
+    CHILDREN_USER = "bluepill 0.2.0 runs the commands of a monitor_children process's children, such as their stop_command, " \
+                    "as the parent's uid, gid and supplementary_groups, where 0.1 runs them as root. " \
+                    'Make sure they work as that user, or run one that needs root with sudo.'.freeze
+
     # Only the keys matter
     @@process_keys = {} #: Hash[Array[String?], nil]
     @@pid_files = {} #: Hash[String, nil]
@@ -241,19 +250,20 @@ module Bluepill
     # @api private
     def warn_of_0_2_changes
       Deprecation.warn(:pre_start_command, PRE_START_COMMAND) if attributes[:pre_start_command]
+      return unless attributes[:uid] || attributes[:gid] || attributes[:supplementary_groups]
+      # Bluepill only switches users and groups when it runs as root
+      return unless ::Process.euid.zero?
+
       warn_of_0_2_groups if attributes[:uid]
+      Deprecation.warn(:monitor_children_user, CHILDREN_USER) if attributes[:monitor_children]
     end
 
     # Warn that bluepill 0.2.0 runs a process with a uid in the user's groups
-    #
-    # Bluepill only switches users when it runs as root.
     #
     # @return [void]
     #
     # @api private
     def warn_of_0_2_groups
-      return unless ::Process.euid.zero?
-
       if attributes[:gid]
         Deprecation.warn(:uid_with_gid, UID_WITH_GID)
       else

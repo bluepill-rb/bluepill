@@ -68,6 +68,43 @@ describe Bluepill::ProcessFactory do
           expect(Bluepill::Deprecation).not_to receive(:warn)
           create('web', proc { start_command 'run' }, uid: nil, gid: 'deploy', daemonize: true)
         end
+
+        it 'warns once that 0.2.0 runs the children of a process with a uid as its user' do
+          block = proc do
+            start_command 'run'
+            monitor_children { stop_command 'kill {{PID}}' }
+          end
+          warnings = [Bluepill::ProcessFactory::UID_WITH_GID, Bluepill::ProcessFactory::CHILDREN_USER]
+          expect do
+            create('web', block, uid: 'deploy', gid: 'deploy', daemonize: true)
+            create('db', block, uid: 'deploy', gid: 'deploy', daemonize: true)
+          end.to output(warnings.collect { |warning| "DEPRECATION: #{warning}\n" }.join).to_stderr
+        end
+
+        [{gid: 'deploy'}, {supplementary_groups: ['rvm']}].each do |groups|
+          it "warns that 0.2.0 runs the children of a process with #{groups.keys.first} as its groups" do
+            block = proc do
+              start_command 'run'
+              monitor_children { stop_command 'kill {{PID}}' }
+            end
+            expect(Bluepill::Deprecation).to receive(:warn).once.with(:monitor_children_user, Bluepill::ProcessFactory::CHILDREN_USER)
+            create('web', block, groups.merge(daemonize: true))
+          end
+        end
+
+        it 'warns about no children for a process that does not monitor them' do
+          expect(Bluepill::Deprecation).not_to receive(:warn)
+          create('web', proc { start_command 'run' }, gid: 'deploy', monitor_children: false, daemonize: true)
+        end
+
+        it 'warns about nothing for the children of a process that runs as root' do
+          block = proc do
+            start_command 'run'
+            monitor_children { stop_command 'kill {{PID}}' }
+          end
+          expect(Bluepill::Deprecation).not_to receive(:warn)
+          create('web', block, uid: nil, gid: nil, supplementary_groups: nil, daemonize: true)
+        end
       end
 
       it 'warns about no uid when bluepill does not run as root, since it switches no users' do

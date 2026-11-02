@@ -699,6 +699,8 @@ module Bluepill
 
     UID_WITH_GID: String
 
+    CHILDREN_USER: String
+
     @@process_keys: Hash[Array[String?], nil]
     @@pid_files: Hash[String, nil]
 

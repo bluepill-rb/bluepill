@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Setting a process attribute that bluepill doesn't know, such as a misspelled `start_comand`, which bluepill 0.1 ignores. Bluepill 0.2.0 fails the config on it. The warning names the attribute: remove it, or fix its name. `hook_timeout` and the hooks that 0.2.0 adds don't warn, though 0.1 ignores them.
 - `pre_start_command`, which bluepill 0.2.0 runs like its other hooks: it kills one that runs longer than `hook_timeout`, 30 seconds by default, and starts the process even when the command can't run, such as a missing program. Bluepill 0.1 waits for it however long it takes. Set `hook_timeout`, which 0.1 ignores, for one that can take longer, such as a migration.
 - A process with a `uid`, when bluepill runs as root. Bluepill 0.2.0 runs it with every group the user is in, as after logging in, and without a `gid` in the user's primary group, where 0.1 gives it only its `gid` and `supplementary_groups`, and without a `gid` keeps it in root's groups. Set `gid` and `supplementary_groups` to the groups it needs.
+- `monitor_children` on a process with a `uid`, `gid` or `supplementary_groups`, when bluepill runs as root. Bluepill 0.2.0 runs the children's commands, such as their `stop_command`, as the parent's user and groups, where 0.1 runs them as root. Make sure they work as that user, or run one that needs root with `sudo`.
 
 ### Fixed
 

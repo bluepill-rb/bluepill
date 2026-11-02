@@ -205,8 +205,8 @@ describe Bluepill::ProcessJournal do
       end
 
       it "gives up after 10 attempts" do
-        expect { described_class.acquire_atomic_fs_lock(name) { raise "should not yield" } }.
-          to raise_error("Timeout waiting for lock #{name}.lock")
+        expect { described_class.acquire_atomic_fs_lock(name) { raise "should not yield" } }
+          .to raise_error("Timeout waiting for lock #{name}.lock")
       end
 
       it "waits a second between attempts" do

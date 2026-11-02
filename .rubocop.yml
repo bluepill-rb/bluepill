@@ -131,8 +131,9 @@ Style/CollectionMethods:
 Style/Documentation:
   Enabled: false
 
+# A chained call's dot starts its line, indented a level, as Standard wants
 Layout/DotPosition:
-  EnforcedStyle: trailing
+  EnforcedStyle: leading
 
 Style/DoubleNegation:
   Enabled: false
@@ -219,3 +220,6 @@ Style/StringLiteralsInInterpolation:
 # A bare rescue, which rescues StandardError, as Standard wants
 Style/RescueStandardError:
   EnforcedStyle: implicit
+
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: indented

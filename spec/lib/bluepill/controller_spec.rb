@@ -25,10 +25,10 @@ describe Bluepill::Controller do
   end
 
   def stub_daemon(command, response)
-    allow(Bluepill::Socket).to receive(:client_command).
-      with(base_dir, "app", "version").and_return(Bluepill::Version)
-    allow(Bluepill::Socket).to receive(:client_command).
-      with(base_dir, "app", command).and_return(response)
+    allow(Bluepill::Socket).to receive(:client_command)
+      .with(base_dir, "app", "version").and_return(Bluepill::Version)
+    allow(Bluepill::Socket).to receive(:client_command)
+      .with(base_dir, "app", command).and_return(response)
   end
 
   describe "#initialize" do
@@ -310,15 +310,15 @@ describe Bluepill::Controller do
 
     it "aborts when the daemon version differs" do
       stub_daemon("status", "up")
-      allow(Bluepill::Socket).to receive(:client_command).
-        with(base_dir, "app", "version").and_return("0.0.1")
+      allow(Bluepill::Socket).to receive(:client_command)
+        .with(base_dir, "app", "version").and_return("0.0.1")
       expect { controller.send_to_daemon("app", :status) }.to exit_with(1).and output("The running version of your daemon seems to be out of date.\nDaemon Version: 0.0.1, CLI Version: #{Bluepill::Version}\n").to_stderr
     end
 
     it "aborts when the daemon does not understand the version command" do
       stub_daemon("status", "up")
-      allow(Bluepill::Socket).to receive(:client_command).
-        with(base_dir, "app", "version").and_raise(ArgumentError)
+      allow(Bluepill::Socket).to receive(:client_command)
+        .with(base_dir, "app", "version").and_raise(ArgumentError)
       expect { controller.send_to_daemon("app", :status) }.to exit_with(1).and output("The running version of your daemon seems to be out of date.\n").to_stderr
     end
   end

@@ -87,8 +87,8 @@ describe Bluepill::System, ".execute_blocking" do
       end
 
       it "raises" do
-        expect { described_class.execute_blocking("cmd", timeout: 2) }.
-          to raise_error(Timeout::Error, "cmd took longer than 2 seconds")
+        expect { described_class.execute_blocking("cmd", timeout: 2) }
+          .to raise_error(Timeout::Error, "cmd took longer than 2 seconds")
       end
 
       it "waits for its result for that long, once" do

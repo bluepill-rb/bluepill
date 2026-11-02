@@ -1546,8 +1546,8 @@ describe Bluepill::Process do
       end
 
       it "runs the command with the pid, and the process's options and environment" do
-        expect(Bluepill::System).to have_received(:execute_blocking).
-          with("renice 20 7 7", options.merge(environment: {"A" => "1", "B" => "2"}, timeout: 30))
+        expect(Bluepill::System).to have_received(:execute_blocking)
+          .with("renice 20 7 7", options.merge(environment: {"A" => "1", "B" => "2"}, timeout: 30))
       end
     end
 
@@ -1785,8 +1785,8 @@ describe Bluepill::Process do
       run_process
       process.clear_pid
       process.notify_transition(transition).join
-      expect(Bluepill::System).to have_received(:execute_blocking).
-        with("alert 5", hash_including(environment: hash_including("BLUEPILL_APP" => "", "BLUEPILL_GROUP" => "", "BLUEPILL_REASON" => "", "BLUEPILL_PID" => "5")))
+      expect(Bluepill::System).to have_received(:execute_blocking)
+        .with("alert 5", hash_including(environment: hash_including("BLUEPILL_APP" => "", "BLUEPILL_GROUP" => "", "BLUEPILL_REASON" => "", "BLUEPILL_PID" => "5")))
     end
 
     it "gives no pid before the process has one" do

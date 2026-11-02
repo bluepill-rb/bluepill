@@ -282,7 +282,7 @@ module Bluepill
 
     attr_accessor name: String
     attr_accessor watches: Array[ConditionWatch]
-    attr_accessor triggers: Array[Trigger]
+    attr_accessor triggers: Array[Trigger | Trigger::Custom]
     attr_accessor skip_ticks_until: Integer?
     attr_accessor process_running: bool?
 
@@ -410,11 +410,12 @@ module Bluepill
 
     def record_transition: (_Transition transition) -> void
 
-    def notify_triggers: (_Transition transition) -> void
+    def notify_triggers: (_Transition & Object transition) -> void
 
     def add_watch: (Symbol name, Hash[Symbol, untyped] options) -> Array[ConditionWatch]
 
-    def add_trigger: (Symbol name, Hash[Symbol, untyped] options) -> Array[Trigger]
+    # Wraps a trigger that a config defines in a Trigger::Custom
+    def add_trigger: (Symbol name, Hash[Symbol, untyped] options) -> Array[Trigger | Trigger::Custom]
 
     def run_watches: () -> void
 
@@ -649,6 +650,40 @@ module Bluepill
     def schedule_event: (Symbol event, seconds delay) -> Thread
 
     def cancel_all_events: () -> void
+
+    # A trigger that a config defines, which gets transitions that warn
+    # about what bluepill 0.2.0's lack
+    class Custom
+      attr_reader trigger: Trigger
+
+      def initialize: (Trigger trigger) -> void
+
+      # state_machine's transition, which is an Object
+      def notify: (_Transition & Object transition) -> void
+
+      def reset!: () -> void
+
+      def logger=: (Logger logger) -> void
+    end
+
+    # A transition that warns about anything but from_name, to_name and
+    # loopback?, which are all that bluepill 0.2.0's have
+    class Transition
+      @transition: _Transition & Object
+      @trigger_class: Class
+
+      def initialize: (_Transition & Object transition, Class trigger_class) -> void
+
+      def from_name: () -> Symbol?
+
+      def to_name: () -> Symbol?
+
+      def loopback?: () -> bool
+
+      def method_missing: (Symbol name, *untyped args) ?{ (*untyped) -> untyped } -> untyped
+
+      def respond_to_missing?: (Symbol name, bool include_private) -> bool
+    end
   end
 
   module Triggers

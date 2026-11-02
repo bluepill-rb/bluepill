@@ -78,7 +78,7 @@ module Bluepill
 
     # Return the triggers notified of the process's transitions
     #
-    # @return [Array<Trigger>]
+    # @return [Array<Trigger, Trigger::Custom>]
     #
     # @api private
     attr_accessor :triggers
@@ -584,14 +584,19 @@ module Bluepill
 
     # Add a trigger to notify of the process's transitions
     #
+    # A trigger that a config defines gets transitions that warn about what
+    # bluepill 0.2.0's don't have. Bluepill's own, Flapping, gets them as
+    # they are.
+    #
     # @param [Symbol] name the trigger's name, such as :flapping
     # @param [Hash{Symbol => Object}] options the trigger's options
     #
-    # @return [Array<Trigger>] the process's triggers
+    # @return [Array<Trigger, Trigger::Custom>] the process's triggers
     #
     # @api private
     def add_trigger(name, options)
-      triggers << Trigger[name].new(self, options.merge(logger: logger))
+      trigger = Trigger[name].new(self, options.merge(logger: logger))
+      triggers << (trigger.instance_of?(Triggers::Flapping) ? trigger : Trigger::Custom.new(trigger))
     end
 
     # Run every watch, and dispatch the events they fire

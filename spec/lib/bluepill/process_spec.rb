@@ -311,6 +311,28 @@ describe Bluepill::Process do
     end
   end
 
+  describe '#add_trigger' do
+    it 'adds bluepill\'s own trigger as it is' do
+      subject.add_trigger(:flapping, times: 2)
+      expect(subject.triggers.first).to be_an_instance_of(Bluepill::Triggers::Flapping)
+      expect(subject.triggers.first.process).to be subject
+      expect(subject.triggers.first.logger).to be logger
+    end
+
+    it 'wraps a trigger that a config defines, so its transitions warn about what 0.2.0 drops' do
+      # A subclass of Flapping, which is a trigger of its own. Anonymous, so
+      # it isn't registered.
+      allow(Bluepill::Trigger).to receive(:inherited)
+      custom = Class.new(Bluepill::Triggers::Flapping)
+      allow(Bluepill::Trigger).to receive(:[]).with(:custom).and_return(custom)
+      subject.add_trigger(:custom, times: 2)
+      expect(subject.triggers.first).to be_an_instance_of(Bluepill::Trigger::Custom)
+      expect(subject.triggers.first.trigger).to be_an_instance_of(custom)
+      expect(subject.triggers.first.trigger.times).to eq 2
+      expect(subject.triggers.first.trigger.logger).to be logger
+    end
+  end
+
   describe '#add_watch' do
     it 'adds a condition watch' do
       subject.add_watch(:mem_usage, below: 10)

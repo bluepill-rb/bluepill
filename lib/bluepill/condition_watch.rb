@@ -68,9 +68,9 @@ module Bluepill
       @name = name
 
       @logger = options.delete(:logger)
-      @fires  = options.key?(:fires) ? Array(options.delete(:fires)) : [:restart]
-      @every  = options.delete(:every)
-      @times  = Array(options.delete(:times) || 1) # handles times: 5
+      @fires = options.key?(:fires) ? Array(options.delete(:fires)) : [:restart]
+      @every = options.delete(:every)
+      @times = Array(options.delete(:times) || 1) # handles times: 5
       @include_children = options.delete(:include_children) || false
 
       clear_history!

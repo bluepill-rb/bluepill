@@ -230,3 +230,8 @@ Layout/MultilineMethodCallIndentation:
 # alias_method, as Standard wants
 Style/Alias:
   EnforcedStyle: prefer_alias_method
+
+# No extra spaces to line things up, as Standard wants
+Layout/ExtraSpacing:
+  AllowForAlignment: false
+  AllowBeforeTrailingComments: true

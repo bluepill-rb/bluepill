@@ -14,7 +14,7 @@ module Bluepill
       # The bytes in a megabyte, from which a value shows in megabytes
       #
       # @api private
-      MB         = (1024**2) #: Integer
+      MB = (1024**2) #: Integer
 
       # How a value shows in the history: a number and its unit
       #
@@ -24,12 +24,12 @@ module Bluepill
       # The unit of a value that shows in megabytes
       #
       # @api private
-      MB_LABEL   = "MB".freeze
+      MB_LABEL = "MB".freeze
 
       # The unit of a value that shows in kilobytes
       #
       # @api private
-      KB_LABEL   = "KB".freeze
+      KB_LABEL = "KB".freeze
 
       # Create the check
       #

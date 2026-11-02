@@ -28,23 +28,23 @@ module Bluepill
     #
     # @api private
     def initialize(options = {})
-      @options  = options
-      @logger   = options[:logger] || create_logger
-      @prefix   = options[:prefix]
+      @options = options
+      @logger = options[:logger] || create_logger
+      @prefix = options[:prefix]
       @prefixes = {}
       level = priority(options[:log_level] || :debug)
       parent = @logger
       if parent.instance_of?(Logger)
         # The parent's level still applies, and so do its prefixes
-        @level  = [level, parent.level].min
-        @names  = parent.names + [@prefix]
+        @level = [level, parent.level].min
+        @names = parent.names + [@prefix]
         @stdout = parent.stdout
-        @sink   = parent.sink
+        @sink = parent.sink
       else
-        @level  = level
-        @names  = [] #: Array[String?]
+        @level = level
+        @names = [] #: Array[String?]
         @stdout = options[:stdout]
-        @sink   = [parent]
+        @sink = [parent]
       end
       @label = label(@names)
     end

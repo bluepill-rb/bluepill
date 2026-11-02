@@ -100,9 +100,9 @@ module Bluepill
     def initialize(name, options = {})
       self.name = name
 
-      @foreground   = options[:foreground]
+      @foreground = options[:foreground]
       self.log_file = options[:log_file]
-      @log_level    = options[:log_level]
+      @log_level = options[:log_level]
       # Only used for a non-root user, who has a home
       home = ENV.fetch("HOME", nil) #: String
       self.base_dir = options[:base_dir] ||

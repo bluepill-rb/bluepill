@@ -39,13 +39,11 @@ Metrics/BlockLength:
     - bin/bluepill
     - spec/**/*
 
-# Marshal only reads data from bluepill's own socket and child processes,
-# and in the specs, what the code under test wrote
+# Marshal only reads data from bluepill's own socket and child processes
 Security/MarshalLoad:
   Exclude:
     - lib/bluepill/socket.rb
     - lib/bluepill/system/commands.rb
-    - spec/spec_helper.rb
 
 Metrics/ParameterLists:
   Max: 4

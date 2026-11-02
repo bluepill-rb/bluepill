@@ -271,7 +271,7 @@ describe Bluepill::System, ".execute_blocking" do
       end
 
       it "reports its output and exit code" do
-        expect(wr).to have_received(:write).with(marshaled(stdout: "out", stderr: "err", exit_code: 2))
+        expect(wr).to have_received(:write).with(Marshal.dump(stdout: "out", stderr: "err", exit_code: 2))
       end
 
       it "exits with exit!" do

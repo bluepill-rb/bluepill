@@ -1,4 +1,4 @@
-$LOAD_PATH << File.expand_path("./lib", File.dirname(__FILE__))
+$LOAD_PATH << File.expand_path("lib", __dir__)
 require "bluepill/version"
 
 require "bundler"

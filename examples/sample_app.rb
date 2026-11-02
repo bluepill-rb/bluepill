@@ -18,7 +18,7 @@
 
 Bluepill.application(:sample_app) do |app|
   app.process("forking_server") do |process|
-    process.start_command = "#{File.expand_path("sample_forking_server", File.dirname(__FILE__))} 4242"
+    process.start_command = "#{File.expand_path("sample_forking_server", __dir__)} 4242"
     # INT stops the server and its workers right away
     process.stop_command = "kill -INT {{PID}}"
     process.pid_file = "/tmp/bluepill_sample_app.pid"

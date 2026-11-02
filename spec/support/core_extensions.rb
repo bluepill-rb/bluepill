@@ -1,7 +1,7 @@
 # Prints what loading bluepill adds to Ruby's own classes and modules, one
 # line each: the bluepill modules it mixes into them, and the methods it
 # defines on them in its own files. Run by spec/core_extensions_spec.rb.
-lib = File.expand_path("../../lib", File.dirname(__FILE__))
+lib = File.expand_path("../../lib", __dir__)
 
 # Ruby's own classes and modules, in every Ruby and JRuby bluepill supports.
 # (Walking every constant instead trips over JRuby's Java packages.)

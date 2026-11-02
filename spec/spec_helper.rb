@@ -36,13 +36,13 @@ unless ENV["MUTANT"]
 end
 
 # The checkout's root, for specs that read its files
-BLUEPILL_ROOT = File.expand_path("..", File.dirname(__FILE__))
+BLUEPILL_ROOT = File.expand_path("..", __dir__)
 
 $LOAD_PATH.unshift(File.join(BLUEPILL_ROOT, "lib"))
 
 # Bundler loads the gemspec, which requires bluepill/version, before
 # SimpleCov starts. Load it again so its coverage is recorded.
-load File.expand_path("../lib/bluepill/version.rb", File.dirname(__FILE__))
+load File.expand_path("../lib/bluepill/version.rb", __dir__)
 
 require "bluepill"
 require "rspec/core"
@@ -50,7 +50,7 @@ require "rspec/core"
 # Specs must stub Process.euid before bluepill code uses it. Other callers,
 # such as FileUtils.remove_entry_secure on Ruby 1.9, get the real value.
 module Process
-  LIB_DIR = File.expand_path("../lib", File.dirname(__FILE__))
+  LIB_DIR = File.expand_path("../lib", __dir__)
 
   class << self
     alias_method :unstubbed_euid, :euid

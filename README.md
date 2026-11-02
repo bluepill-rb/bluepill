@@ -518,7 +518,7 @@ end
 [rubygems]: http://rubygems.org/gems/bluepill
 
 ## Supported Ruby Versions
-This library aims to support and is [tested against][ci] the following Ruby
+This library aims to support and is [tested against][test] the following Ruby
 implementations:
 
 * Ruby 3.2 through 3.4

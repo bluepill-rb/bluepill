@@ -1,14 +1,38 @@
 require 'syslog'
 require 'tmpdir'
 
+# A stand-in for the syslog library, for the specs that load it
+FAKE_SYSLOG = <<-RUBY.freeze
+  module Syslog
+    LOG_PID = 1
+    LOG_LOCAL6 = 176
+
+    def self.opened?
+      false
+    end
+
+    def self.open(*)
+      self
+    end
+  end
+RUBY
+
 describe Bluepill::Logger do
-  # A logger that the block can stub before it initializes, such as its
-  # require
-  def logger_with(options = {})
-    logger = described_class.allocate
-    yield logger
-    logger.send(:initialize, options)
-    logger
+  # Make the next require 'syslog' in the block load a fake syslog.rb that
+  # runs code: put it first on the load path, and take the real syslog out
+  # of $LOADED_FEATURES until the block is done
+  def with_fake_syslog(code)
+    fake_dir = Dir.mktmpdir
+    File.write(File.join(fake_dir, 'syslog.rb'), code)
+    loaded = $LOADED_FEATURES.select { |feature| File.basename(feature, '.*') == 'syslog' }
+    $LOAD_PATH.unshift(fake_dir)
+    $LOADED_FEATURES.reject! { |feature| loaded.include?(feature) }
+    yield
+  ensure
+    $LOAD_PATH.delete(fake_dir)
+    $LOADED_FEATURES.reject! { |feature| feature.include?(File.basename(fake_dir)) }
+    $LOADED_FEATURES.concat(loaded)
+    FileUtils.remove_entry(fake_dir)
   end
 
   # Record each method's calls in lines, as [method, *args]
@@ -68,16 +92,25 @@ describe Bluepill::Logger do
       expect(lines).to eq([[:close], [:open, 'myapp', Syslog::LOG_PID, Syslog::LOG_LOCAL6]])
     end
 
+    it 'loads syslog when it is not loaded yet, and logs to it' do
+      hide_const('Syslog')
+      with_fake_syslog(FAKE_SYSLOG) do
+        expect(described_class.new.sink).to eq([Syslog])
+      end
+    end
+
     it 'explains how to fix a missing syslog library' do
       hide_const('Syslog')
-      expect do
-        logger_with { |logger| allow(logger).to receive(:require).with('syslog').and_raise(LoadError) }
-      end.to raise_error(LoadError, /add gem 'syslog' to your Gemfile or set log_file/)
+      with_fake_syslog("raise LoadError, 'cannot load such file -- syslog'\n") do
+        expect { described_class.new }.to raise_error(LoadError, /add gem 'syslog' to your Gemfile or set log_file/)
+      end
     end
 
     it 'does not load syslog when logging to a log file' do
-      logger = logger_with(log_file: log_file) { |l| allow(l).to receive(:require) }
-      expect(logger).not_to have_received(:require)
+      hide_const('Syslog')
+      with_fake_syslog("raise 'bluepill loaded syslog'\n") do
+        expect { described_class.new(log_file: log_file) }.not_to raise_error
+      end
     end
 
     it 'logs to a log file' do
@@ -244,17 +277,18 @@ describe Bluepill::Logger do
     end
 
     it 'does not require syslog again once it is loaded' do
-      allow(Syslog).to receive(:open).and_return(class_double(Syslog))
-      logger = logger_with { |l| allow(l).to receive(:require) }
-      logger.reopen
-      expect(logger).not_to have_received(:require)
+      stub_syslog(false, true)
+      with_fake_syslog("raise 'bluepill loaded syslog again'\n") do
+        expect { described_class.new.reopen }.not_to raise_error
+      end
     end
 
-    it 'reopens the parent logger of a prefixed logger' do
+    it "reopens the log file of a prefixed logger's parent" do
       logger = described_class.new(log_file: log_file)
-      allow(logger).to receive(:reopen)
+      FileUtils.mv(log_file, "#{log_file}.1")
       logger.prefix_with('app').reopen
-      expect(logger).to have_received(:reopen)
+      logger.info('after')
+      expect(File.read(log_file)).to include('after')
     end
   end
 end

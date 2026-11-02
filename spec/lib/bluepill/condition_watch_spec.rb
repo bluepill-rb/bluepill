@@ -236,6 +236,11 @@ describe Bluepill::ConditionWatch do
         cpu_usage(90)
         expect(cpu_watch.run(123, 20)).to eq([:restart])
       end
+
+      it "treats a kind of ps failure the same" do
+        allow(Bluepill::System).to receive(:cpu_usage).and_raise(Class.new(Bluepill::System::PsError), "Could not run ps")
+        expect(cpu_watch.run(123, 10)).to eq([])
+      end
     end
   end
 

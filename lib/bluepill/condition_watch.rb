@@ -131,24 +131,56 @@ module Bluepill
       last_ran_at = @last_ran_at
       if last_ran_at.nil? || (last_ran_at + @every) <= tick_number
         @last_ran_at = tick_number
-
-        begin
-          value = @process_condition.run(pid, @include_children)
-        rescue System::PsError => e
-          # No data this time, so leave the history alone and check again next interval
-          logger.warning("#{@name}: #{e}")
-          return EMPTY_ARRAY
-        rescue => e
-          logger.err(e.backtrace)
-          raise
-        end
-
-        @history << HistoryValue.new(@process_condition.format_value(value), @process_condition.check?(value))
-        logger.info(to_s)
-
-        return @fires if fired?
+        return run_check(pid)
       end
       EMPTY_ARRAY
+    end
+
+    # Run the check, add its value to the history, and log the history
+    #
+    # @param [Integer, nil] pid the process's pid
+    #
+    # @return [Array<Symbol>] the events to fire, empty unless enough of
+    #   the last values failed for the watch to fire, or ps failed
+    #
+    # @raise [StandardError] whatever the check raised, other than a
+    #   System::PsError, after logging it
+    #
+    # @api private
+    def run_check(pid)
+      begin
+        value = @process_condition.run(pid, @include_children)
+      rescue => e
+        return check_failed(e)
+      end
+      @history << HistoryValue.new(@process_condition.format_value(value), @process_condition.check?(value))
+      logger.info(to_s)
+      # Fire when the failures reach the times the check allows
+      return @fires if @history.count { |v| !v.critical } >= @times.first
+
+      EMPTY_ARRAY
+    end
+
+    # Log an error the check raised, and re-raise it unless ps failed
+    #
+    # Call it from where the error was rescued, so raise re-raises it.
+    #
+    # @param [StandardError] error what the check raised
+    #
+    # @return [Array<Symbol>] no events, when ps failed
+    #
+    # @raise [StandardError] the error, unless it's a System::PsError
+    #
+    # @api private
+    def check_failed(error)
+      if error.is_a?(System::PsError)
+        # No data this time, so leave the history alone and check again next interval
+        logger.warning("#{@name}: #{error}")
+        EMPTY_ARRAY
+      else
+        logger.err(error.backtrace)
+        raise
+      end
     end
 
     # Forget the values the check read, as when the process changes state
@@ -158,16 +190,6 @@ module Bluepill
     # @api private
     def clear_history!
       @history = Util::RotationalArray.new(@times.last)
-    end
-
-    # Return whether enough of the last values failed for the watch to fire
-    #
-    # @return [Boolean] true when the failures reach the times the check
-    #   allows
-    #
-    # @api private
-    def fired?
-      @history.count { |v| !v.critical } >= @times.first
     end
 
     # Return the check's name and history, as the log shows it

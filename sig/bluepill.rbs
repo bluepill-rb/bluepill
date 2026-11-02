@@ -722,9 +722,11 @@ module Bluepill
     def due?: (Integer tick_number) -> bool
     def run: (Integer? pid, ?Integer tick_number) -> Array[Symbol]
 
-    def clear_history!: () -> Util::RotationalArray[HistoryValue]
+    def run_check: (Integer? pid) -> Array[Symbol]
 
-    def fired?: () -> bool
+    def check_failed: (StandardError error) -> Array[Symbol]
+
+    def clear_history!: () -> Util::RotationalArray[HistoryValue]
 
     def to_s: () -> String
   end

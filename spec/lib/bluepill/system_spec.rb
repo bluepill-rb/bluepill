@@ -321,28 +321,7 @@ describe Bluepill::System do
     end
   end
 
-  describe ".store" do
-    it "is Hash" do
-      expect(described_class.store).to be_a(Hash)
-    end
-
-    it "returns the same Hash on every call" do
-      expect(described_class.store).to equal(described_class.store)
-    end
-
-    it "stores assigned pairs" do
-      described_class.store[:somekey] = 10
-      expect(described_class.store[:somekey]).to be(10)
-    end
-  end
-
   describe ".reset_data" do
-    it "clears the #store" do
-      described_class.store[:anotherkey] = "Lorem ipsum dolor sit amet."
-      described_class.reset_data
-      expect(described_class.store).to be_empty
-    end
-
     it "forgets the ps table" do
       allow(described_class).to receive(:`).and_return("    1     0  0.0   100    01:00 init")
       table = described_class.ps_axu
@@ -350,9 +329,12 @@ describe Bluepill::System do
       expect(described_class.ps_axu).not_to equal(table)
     end
 
-    it "leaves an empty #store empty" do
+    it "forgets the table get_children read" do
+      allow(described_class).to receive(:`).and_return("    1     0  0.0   100    01:00 init\n    2     1  0.0   100    01:00 child")
+      described_class.get_children(1)
       described_class.reset_data
-      expect(described_class.store).to be_empty
+      allow(described_class).to receive(:`).and_return("    1     0  0.0   100    01:00 init")
+      expect(described_class.get_children(1)).to eq([])
     end
   end
 

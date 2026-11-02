@@ -6,6 +6,11 @@ require "bluepill/system/command_setup"
 
 module Bluepill
   module System
+    # The mode that a daemon's stdout and stderr files are opened in
+    #
+    # @api private
+    APPEND_MODE = "a"
+
     # Run commands in the background, as daemons
     #
     # System extends this module, so these are System's module functions.

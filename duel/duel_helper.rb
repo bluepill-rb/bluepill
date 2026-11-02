@@ -92,6 +92,16 @@ ensure
   Bluepill::System.reset_data
 end
 
+# Put a ps table in place of the one ps would make this tick. The base
+# kept it in System.store, a Hash, before System kept it in @ps_table.
+def put_ps_table(table)
+  if Bluepill::System.respond_to?(:store)
+    Bluepill::System.store[:ps_axu] = table
+  else
+    Bluepill::System.instance_variable_set(:@ps_table, table)
+  end
+end
+
 # A logger that drops what bluepill writes to it, so the benchmarks time
 # bluepill's own logging (the prefixes and formatting) and not syslog
 class NullLog
@@ -106,7 +116,7 @@ end
 def table_hooks(processes, **listing)
   {
     setup: -> { @table = ps_table(ps_listing(processes, **listing)) },
-    before_sample: -> { Bluepill::System.store[:ps_axu] = @table }
+    before_sample: -> { put_ps_table(@table) }
   }
 end
 
@@ -122,12 +132,12 @@ def watch_hooks(check, options)
   {
     setup: lambda do
       @table = ps_table(ps_listing(300, workers: 4))
-      Bluepill::System.store[:ps_axu] = @table
+      put_ps_table(@table)
       @tick = 0
       @watch = Bluepill::ConditionWatch.new(check, **options, every: 10.seconds, logger: process_logger)
       10.times { run_watch }
     end,
-    before_sample: -> { Bluepill::System.store[:ps_axu] = @table }
+    before_sample: -> { put_ps_table(@table) }
   }
 end
 

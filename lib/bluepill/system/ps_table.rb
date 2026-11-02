@@ -2,6 +2,10 @@
 
 module Bluepill
   module System
+    # No pids, which get_children returns for a process with no children
+    no_pids = [] #: Array[Integer]
+    NO_PIDS = no_pids.freeze
+
     # A tick's table of processes, as ps listed them
     #
     # Each row is a process's ps fields, Strings in the order of the column

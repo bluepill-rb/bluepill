@@ -33,6 +33,8 @@ module Bluepill
   # they finish
   module System
     extend Ps
+    extend Usage
+    extend Files
     extend Commands
     extend Daemon
 
@@ -101,41 +103,46 @@ module Bluepill
 
     # Runs ps once a tick, and reads its table of processes
     module Ps
-      # The store lives on System, which extends this module
-      @store: Hash[Symbol, PsTable | String]
+      # The table lives on System, which extends this module, or why ps
+      # could not be run this tick
+      @ps_table: PsTable | PsError | nil
       # The table get_children read this tick
       @children_table: PsTable?
-
-      def store: () -> Hash[Symbol, PsTable | String]
 
       def reset_data: () -> void
 
       def ps_axu: () -> PsTable
 
-      def read_ps_table: () -> (PsTable | String)
+      def read_ps_table: () -> (PsTable | PsError)
 
       def get_children: (Integer? parent_pid) -> Array[Integer]
     end
 
-    def self.pid_alive?: (Integer pid) -> bool
+    # Asks the system about a process
+    module Usage : Ps
+      def pid_alive?: (Integer pid) -> bool
 
-    def self.started_at: (Integer pid) -> Integer?
+      def started_at: (Integer pid) -> Integer?
 
-    def self.boot_time: () -> Integer?
+      def boot_time: () -> Integer?
 
-    def self.cpu_usage: (Integer? pid, boolish include_children) -> Float?
+      def cpu_usage: (Integer? pid, boolish include_children) -> Float?
 
-    def self.memory_usage: (Integer? pid, boolish include_children) -> Float?
+      def memory_usage: (Integer? pid, boolish include_children) -> Float?
 
-    def self.usage: (Integer? pid, boolish include_children, Integer column) -> Float?
+      def usage: (Integer? pid, boolish include_children, Integer column) -> Float?
 
-    def self.running_time: (Integer? pid) -> Integer?
+      def running_time: (Integer? pid) -> Integer?
 
-    def self.command: (Integer? pid) -> String?
+      def command: (Integer? pid) -> String?
 
-    def self.delete_if_exists: (String? filename) -> void
+      def parse_elapsed_time: (String? str) -> Integer
+    end
 
-    def self.parse_elapsed_time: (String? str) -> Integer
+    # Deletes the files that bluepill leaves behind
+    module Files
+      def delete_if_exists: (String? filename) -> void
+    end
 
     # Sets up the process that a command runs in
     module CommandSetup

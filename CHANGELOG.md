@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Warnings about what bluepill 0.2.0 and later will change, each in a line that starts with `DEPRECATION:`, once each, on stderr, where `bluepill load` shows it, and in bluepill's log. Each says what to do now. See Deprecated for what they warn about.
 
+### Deprecated
+
+- An `http` check of an https URL that doesn't set `verify_ssl:`, since bluepill 0.3.0 verifies its certificate by default. Set `verify_ssl: true` to verify it now, or `verify_ssl: false` to keep checking a server with a self-signed certificate. Bluepill 0.2 ignores the option, so a pill file that sets it works with each version.
+
 ### Fixed
 
 - The README's group example gave every process the same pid file, and its `stop_signals` example waited longer than its stop grace time, so bluepill refused to load either config.
@@ -21,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - `bluepill log` built a shell command with the log file's path and the pattern unquoted, so a path with a space broke the command, and a quote or `$(...)` in the path or the process name ran as shell code. It now passes them to `tail` and `grep` as the shell's arguments, so they are never parsed.
+- The `http` check's `verify_ssl:` option. With `verify_ssl: true`, a check of an https URL verifies the server's certificate, so it fails against a server that isn't the one it names. It still doesn't verify it by default, as before, since that would fail the checks of servers with self-signed certificates. Bluepill 0.3.0 verifies it by default.
 
 ## [0.1.6] - 2026-11-02
 

@@ -10,6 +10,29 @@ describe Bluepill::ProcessConditions::Http do
   end
 
   describe '#initialize' do
+    it 'warns, once for each url, that 0.3.0 verifies an https certificate' do
+      warning = 'DEPRECATION: bluepill 0.3.0 verifies the TLS certificate of the http check of https://example.com/, ' \
+                "where 0.1 and 0.2 don't. Add verify_ssl: true to verify it now, or verify_ssl: false to keep checking a self-signed one.\n"
+      expect { http(url: 'https://example.com/') }.to output(warning).to_stderr
+      expect { http(url: 'https://example.com/') }.not_to output.to_stderr
+      expect { http(url: 'https://example.com/other') }.to output(%r{check of https://example.com/other,}).to_stderr
+    end
+
+    it 'does not warn about an https url that sets verify_ssl' do
+      expect { http(url: 'https://example.com/', verify_ssl: false) }.not_to output.to_stderr
+      expect { http(url: 'https://example.com/', verify_ssl: true) }.not_to output.to_stderr
+    end
+
+    it 'verifies the certificate only with verify_ssl: true' do
+      expect(http(verify_ssl: true).instance_variable_get(:@verify_ssl)).to be(true)
+      expect(http(verify_ssl: false).instance_variable_get(:@verify_ssl)).to be(false)
+      expect(http.instance_variable_get(:@verify_ssl)).to be_nil
+    end
+
+    it 'does not warn about an http url' do
+      expect { http }.not_to output.to_stderr
+    end
+
     it 'requires a url' do
       expect { Bluepill::ProcessConditions::Http.new }.to raise_error(URI::InvalidURIError)
     end
@@ -92,8 +115,9 @@ describe Bluepill::ProcessConditions::Http do
       expect(session).to have_received(:read_timeout=).with(2)
     end
 
-    it 'requests the url over https without verifying the certificate' do
-      condition = http(url: 'https://example.com/status?full=1')
+    it 'requests the url over https without verifying the certificate by default' do
+      condition = nil
+      expect { condition = http(url: 'https://example.com/status?full=1') }.to output(/DEPRECATION/).to_stderr
       allow(condition).to receive(:require).and_call_original
       allow(session).to receive(:use_ssl=)
       allow(session).to receive(:verify_mode=)
@@ -102,6 +126,25 @@ describe Bluepill::ProcessConditions::Http do
       expect(condition).to have_received(:require).with('net/https')
       expect(session).to have_received(:use_ssl=).with(true)
       expect(session).to have_received(:verify_mode=).with(OpenSSL::SSL::VERIFY_NONE)
+    end
+
+    it 'requests the url over https without verifying the certificate with verify_ssl: false' do
+      condition = http(url: 'https://example.com/status?full=1', verify_ssl: false)
+      allow(session).to receive(:use_ssl=)
+      allow(session).to receive(:verify_mode=)
+      expect(Net::HTTP).to receive(:new).with('example.com', 443).and_return(session)
+      expect(condition.run(123, false)).to eq(ok)
+      expect(session).to have_received(:verify_mode=).with(OpenSSL::SSL::VERIFY_NONE)
+    end
+
+    it 'verifies the certificate with verify_ssl: true' do
+      condition = http(url: 'https://example.com/status?full=1', verify_ssl: true)
+      allow(session).to receive(:use_ssl=)
+      allow(session).to receive(:verify_mode=)
+      expect(Net::HTTP).to receive(:new).with('example.com', 443).and_return(session)
+      expect(condition.run(123, false)).to eq(ok)
+      expect(session).to have_received(:use_ssl=).with(true)
+      expect(session).to have_received(:verify_mode=).with(OpenSSL::SSL::VERIFY_PEER)
     end
 
     context 'when the request fails' do

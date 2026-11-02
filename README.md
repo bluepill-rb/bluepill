@@ -111,6 +111,20 @@ Bluepill.application("app_name") do |app|
 end
 ```
 
+To restart a process when a URL stops answering:
+
+```ruby
+Bluepill.application("app_name") do |app|
+  app.process("process_name") do |process|
+    process.start_command = "/usr/bin/some_start_command"
+    process.pid_file = "/tmp/some_pid_file.pid"
+    process.checks :http, every: 30.seconds, url: "https://localhost:4443/status", kind: :success, timeout: 5.seconds, verify_ssl: true
+  end
+end
+```
+
+Bluepill 0.1 doesn't verify an https URL's certificate unless the check sets `verify_ssl: true`. Bluepill 0.3.0 verifies it by default, so set `verify_ssl: true` now, or `verify_ssl: false` for a server with a self-signed certificate.
+
 We can tell bluepill to give a process some grace time to start/stop/restart before resuming monitoring:
 
 ```ruby

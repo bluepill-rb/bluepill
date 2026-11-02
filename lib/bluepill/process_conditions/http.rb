@@ -9,17 +9,23 @@ module Bluepill
     # response it should be (a Net::HTTP class name such as :success or
     # :ok, or a status code such as 200, :success by default), pattern: a
     # Regexp its body should match, and timeout: (or open_timeout: and
-    # read_timeout:) in seconds, 5 by default.
+    # read_timeout:) in seconds, 5 by default. With verify_ssl: true, an
+    # https URL's certificate must be valid. Bluepill 0.1 doesn't verify it
+    # by default, but bluepill 0.3.0 does.
     #
     # @example
     #   process.checks :http, url: 'http://localhost:4567/', kind: :success, pattern: /html/, timeout: 3.seconds
+    #
+    # @example A server whose certificate must be valid
+    #   process.checks :http, url: 'https://localhost:4443/', verify_ssl: true
     #
     # @api private
     class Http < ProcessCondition
       # Create the check
       #
       # @param [Hash{Symbol => Object}] options the check's options, with
-      #   :url, :kind, :pattern, :timeout, :open_timeout and :read_timeout
+      #   :url, :kind, :pattern, :timeout, :open_timeout, :read_timeout and
+      #   :verify_ssl
       #
       # @return [void]
       #
@@ -43,11 +49,13 @@ module Bluepill
         @pattern = options[:pattern]
         @open_timeout = (options[:open_timeout] || options[:timeout] || 5).to_i
         @read_timeout = (options[:read_timeout] || options[:timeout] || 5).to_i
+        @verify_ssl = options[:verify_ssl]
+        warn_unverified unless options.key?(:verify_ssl)
       end
 
       # Get the URL
       #
-      # HTTPS is checked without verifying the certificate.
+      # HTTPS verifies the server's certificate only with verify_ssl.
       #
       # @param [Integer, nil] _pid the process's pid
       # @param [Boolean] _include_children whether to include its children
@@ -62,7 +70,7 @@ module Bluepill
         if @uri.scheme.eql?('https')
           require 'net/https'
           session.use_ssl = true
-          session.verify_mode = OpenSSL::SSL::VERIFY_NONE
+          session.verify_mode = @verify_ssl ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
         end
         session.open_timeout = @open_timeout
         session.read_timeout = @read_timeout
@@ -92,6 +100,23 @@ module Bluepill
       end
 
     private
+
+      # Warn that bluepill 0.3.0 verifies an https URL's certificate
+      #
+      # It warns about a check of an https URL that doesn't set verify_ssl,
+      # once for each URL.
+      #
+      # @return [void]
+      #
+      # @api private
+      def warn_unverified
+        return unless @uri.scheme.eql?('https')
+
+        message = "bluepill 0.3.0 verifies the TLS certificate of the http check of #{@uri}, where 0.1 and 0.2 don't. " \
+                  'Add verify_ssl: true to verify it now, or verify_ssl: false to keep checking a self-signed one.'
+        # The message names the URL, so it's the key
+        Deprecation.warn(message, message)
+      end
 
       # Run the block, raising a refused connection as one
       #

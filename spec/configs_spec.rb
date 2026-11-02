@@ -4,7 +4,7 @@ require 'rbconfig'
 # loads a config, without starting a daemon. Bluepill no longer depends on
 # ActiveSupport, so 10.seconds and 100.megabytes are bluepill's own plain
 # numbers here.
-describe 'The README and example configs' do
+describe 'The README and example configs', type: :integration do
   root = File.expand_path('..', File.dirname(__FILE__))
   readme = File.read(File.join(root, 'README.md'))
   configs = readme.scan(/^```ruby\n(.*?)^```/m).flatten.select { |code| code.include?('Bluepill.application') }

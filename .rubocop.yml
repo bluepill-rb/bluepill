@@ -199,3 +199,10 @@ RSpec/SpecFilePathFormat:
     AppProxy: dsl/app_proxy
     ProcessFactory: dsl/process_factory
     ProcessProxy: dsl/process_proxy
+
+# Integration specs, tagged type: :integration, test behavior across
+# classes instead of describing one
+RSpec/DescribeClass:
+  IgnoredMetadata:
+    type:
+      - integration

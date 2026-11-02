@@ -3,7 +3,7 @@ require 'rbconfig'
 # Bluepill adds the units that configs use, such as 10.seconds, to Numeric.
 # That should stay the only change it makes to Ruby's own classes, since
 # everything a pill file loads runs in the same process as bluepill.
-describe "Loading bluepill's changes to Ruby's own classes" do
+describe "Loading bluepill's changes to Ruby's own classes", type: :integration do
   root = File.expand_path('..', File.dirname(__FILE__))
 
   # The specs have loaded bluepill already, so this runs in a Ruby of its own

@@ -192,3 +192,10 @@ RSpec/Output:
   Exclude:
     - spec/support/active_support_config.rb
     - spec/support/core_extensions.rb
+
+# The specs mirror lib, so a class's spec is where its file is
+RSpec/SpecFilePathFormat:
+  CustomTransform:
+    AppProxy: dsl/app_proxy
+    ProcessFactory: dsl/process_factory
+    ProcessProxy: dsl/process_proxy

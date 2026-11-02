@@ -41,13 +41,28 @@ describe Bluepill::Application do
       nil
     end
 
-    # A previous bluepill whose pid is alive, with its signals and output recorded
+    # A previous bluepill whose pid is alive, with its signals and sleeps
+    # recorded, each with what had been printed by then
     def previous_bluepill_running
       write_pid
       allow(Bluepill::System).to receive(:pid_alive?).with(1234).and_return(true)
-      allow(::Process).to receive(:kill) { |signal, pid| calls << [:kill, signal, pid] }
-      allow($stdout).to receive(:puts) { |line| calls << [:puts, line] }
-      allow(Kernel).to receive(:sleep) { |seconds| calls << [:sleep, seconds] }
+      allow(::Process).to receive(:kill) { |signal, pid| calls << [:kill, signal, pid, printed] }
+      allow(Kernel).to receive(:sleep) { |seconds| calls << [:sleep, seconds, printed] }
+    end
+
+    # What's been printed so far, while an output matcher captures stdout
+    def printed
+      $stdout.string.dup
+    end
+
+    def killing
+      "Killing previous bluepilld[1234]\n"
+    end
+
+    # The signals and sleeps of a previous bluepill that's killed, and then
+    # waited for that many times
+    def killed_and_waited_for(times)
+      [[:kill, 0, 1234, ''], [:kill, 2, 1234, killing]] + ([[:sleep, 0.5, killing]] * times)
     end
 
     before do
@@ -104,20 +119,16 @@ describe Bluepill::Application do
 
       it 'interrupts it and waits for it to die' do
         allow(Bluepill::System).to receive(:pid_alive?).with(1234).and_return(true, true, false)
-        kill_previous_bluepill
-        expect(calls).to eq([[:kill, 0, 1234], [:puts, 'Killing previous bluepilld[1234]'], [:kill, 2, 1234]] + ([[:sleep, 0.5]] * 2))
+        expect { kill_previous_bluepill }.to output(killing).to_stdout.and change(calls, :dup).to(killed_and_waited_for(2))
       end
 
       it 'exits when it does not die' do
-        expect { kill_previous_bluepill }.to exit_with(4).and output("Previous bluepilld[1234] didn't die\n").to_stderr
+        expect { kill_previous_bluepill }.to exit_with(4).and output("Previous bluepilld[1234] didn't die\n").to_stderr.and output(killing).to_stdout
       end
 
       it 'waits kill_timeout half seconds for it to die' do
         allow($stderr).to receive(:puts)
-        kill_previous_bluepill_until_exit
-        expect(calls).to eq(
-          [[:kill, 0, 1234], [:puts, 'Killing previous bluepilld[1234]'], [:kill, 2, 1234]] + ([[:sleep, 0.5]] * 10)
-        )
+        expect { kill_previous_bluepill_until_exit }.to output(killing).to_stdout.and change(calls, :dup).to(killed_and_waited_for(10))
       end
 
       it 'exits when it cannot be killed' do

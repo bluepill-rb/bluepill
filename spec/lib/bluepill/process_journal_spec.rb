@@ -160,7 +160,7 @@ describe Bluepill::ProcessJournal do
         journal.acquire_atomic_fs_lock(name) { raise 'should not yield' }
       end.to raise_error("Timeout waiting for lock #{name}.lock")
       expect(File.directory?("#{name}.lock")).to be true
-      expect(log).to eq [[:debug, "Waiting for lock #{name}.lock"]] * 9 +
+      expect(log).to eq ([[:debug, "Waiting for lock #{name}.lock"]] * 9) +
         [[:info, "Timeout waiting for lock #{name}.lock"]]
     end
 

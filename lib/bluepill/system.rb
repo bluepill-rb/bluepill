@@ -275,11 +275,9 @@ module Bluepill
       # [[dd-]hh:]mm:ss
       match = /(?:(?:(\d+)-)?(\d\d):)?(\d\d):(\d\d)/.match(str)
       if match
-        days = match[1].to_i
-        hours = match[2].to_i
-        mins = match[3].to_i
-        secs = match[4].to_i
-        ((days * 24 + hours) * 60 + mins) * 60 + secs
+        hours = (match[1].to_i * 24) + match[2].to_i
+        mins = (hours * 60) + match[3].to_i
+        (mins * 60) + match[4].to_i
       else
         0
       end

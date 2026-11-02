@@ -144,6 +144,11 @@ describe Bluepill::Application do
       expect([answer.message, app.log_file]).to eq(["Unknown command `log_file=`", nil])
     end
 
+    it "answers an unknown command with a backtrace but no locations" do
+      allow(client).to receive(:readline).and_return("add_process:web\n")
+      expect(answer).to have_attributes(backtrace: include(/listener\.rb/), backtrace_locations: nil)
+    end
+
     it "answers an empty line with a NoMethodError" do
       allow(client).to receive(:readline).and_return("\n")
       expect(answer).to have_attributes(class: NoMethodError, message: "Unknown command ``")

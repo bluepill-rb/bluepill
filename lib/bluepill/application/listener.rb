@@ -89,8 +89,10 @@ module Bluepill
       #
       # @api private
       def daemon_command(command)
+        # The backtrace is caller's lines, with no locations, so Ruby 3.1's
+        # error_highlight doesn't add a snippet of this file to the message
         DAEMON_COMMANDS.detect { |name| name.to_s.eql?(command) } ||
-          raise(NoMethodError, "Unknown command `#{command}`")
+          raise(NoMethodError, "Unknown command `#{command}`", caller)
       end
 
       # Log an error that answering a client raised, with its backtrace

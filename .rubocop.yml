@@ -162,3 +162,8 @@ Style/EnvHome:
 # Array#to_h needs Ruby 2.1
 Style/HashConversion:
   Enabled: false
+
+# Bluepill never runs under a fiber scheduler, and IO#wait_readable isn't
+# on every Ruby it supports
+Lint/IncompatibleIoSelectWithFiberScheduler:
+  Enabled: false

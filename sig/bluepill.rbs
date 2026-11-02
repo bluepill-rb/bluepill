@@ -304,6 +304,7 @@ module Bluepill
       def dispatch!: (Symbol | String event, ?String? reason) -> bool
     end
 
+    include Execution
     include Hooks
     include StopSignals
 
@@ -317,15 +318,6 @@ module Bluepill
     def restart_process: () -> Integer
 
     def cleanup_process: () -> void
-
-    def prepare_command: (String command) -> String
-
-    def system_command_options: () -> System::command_options
-
-    # Runs the block, and dispatches next_state if it takes longer than secs
-    def with_timeout: [T] (seconds secs, String | Symbol next_state) { (Numeric secs) -> T } -> (T | bool)
-
-    def run_command: (String cmd, String description, ?System::command_options options) -> void
   end
 
   # Stops a Process with its stop_signals, with their delays
@@ -352,6 +344,35 @@ module Bluepill
     def running_after?: (Integer delay) -> bool
 
     def wait_for_stop: (seconds seconds) -> void
+  end
+
+  # Runs a Process's commands as its user, in its working_dir, with its
+  # environment and standard streams
+  module ProcessCommands::Execution : ProcessCommands::Execution::_Host
+    # What Execution uses from Process
+    interface _Host
+      %a{pure} def logger: () -> Logger
+      %a{pure} def uid: () -> String?
+      %a{pure} def gid: () -> String?
+      %a{pure} def working_dir: () -> String?
+      %a{pure} def environment: () -> Hash[_ToS, _ToS]?
+      %a{pure} def pid_file: () -> String?
+      %a{pure} def stdin: () -> String?
+      %a{pure} def stdout: () -> String?
+      %a{pure} def stderr: () -> String?
+      %a{pure} def supplementary_groups: () -> Array[String]?
+      def actual_pid: () -> Integer?
+      def dispatch!: (Symbol | String event, ?String? reason) -> bool
+    end
+
+    def prepare_command: (String command) -> String
+
+    def system_command_options: () -> System::command_options
+
+    # Runs the block, and dispatches next_state if it takes longer than secs
+    def with_timeout: [T] (seconds secs, String | Symbol next_state) { (Numeric secs) -> T } -> (T | bool)
+
+    def run_command: (String cmd, String description, ?System::command_options options) -> void
   end
 
   # Runs the commands a Process has around its starts and stops, and on each

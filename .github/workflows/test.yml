@@ -19,8 +19,6 @@ jobs:
       fail-fast: false
       matrix:
         ruby:
-          - '2.1'
-          - '2.2'
           - '2.3'
           - '2.4'
           - '2.5'
@@ -50,16 +48,7 @@ jobs:
       - uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
         with:
           ruby-version: ${{ matrix.ruby }}
-          bundler: ${{ matrix.ruby == '2.2' && 'none' || 'default' }}
-          bundler-cache: ${{ matrix.ruby != '2.2' }}
-      # RubyGems on Ruby 2.2 crashes reading the rubygems.org index, so
-      # install Bundler from a downloaded .gem file instead.
-      - name: Install Bundler and gems
-        if: matrix.ruby == '2.2'
-        run: |
-          curl -fsSLO https://rubygems.org/downloads/bundler-1.17.3.gem
-          gem install --local bundler-1.17.3.gem --no-document
-          bundle install --jobs 4
+          bundler-cache: true
       - run: bundle exec rake spec
       # The Gemfile only installs Steep on Ruby 3.3 and newer
       - name: Type check with Steep
@@ -71,38 +60,3 @@ jobs:
         with:
           format: simplecov
           fail-on-error: false
-
-  # setup-ruby has no builds of JRuby 9.0, and its Docker images no longer
-  # pull, so this installs the official release from Maven Central.
-  test-legacy-jruby:
-    name: jruby-${{ matrix.jruby }}
-    runs-on: ubuntu-latest
-    env:
-      JRUBY_OPTS: --debug
-    strategy:
-      fail-fast: false
-      matrix:
-        jruby:
-          - '9.0.5.0'
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
-        with:
-          distribution: temurin
-          java-version: '8'
-      - name: Install JRuby
-        run: |
-          curl -fsSL "https://repo1.maven.org/maven2/org/jruby/jruby-dist/${{ matrix.jruby }}/jruby-dist-${{ matrix.jruby }}-bin.tar.gz" | tar xz -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/jruby-${{ matrix.jruby }}/bin" >> "$GITHUB_PATH"
-      # JRuby 9.0 ships a jruby-openssl too old to connect to rubygems.org,
-      # so download a newer one with curl and install it locally.
-      - name: Upgrade jruby-openssl
-        if: matrix.jruby == '9.0.5.0'
-        run: |
-          curl -fsSLO https://rubygems.org/downloads/jruby-openssl-0.10.7-java.gem
-          gem install --local jruby-openssl-0.10.7-java.gem --no-document
-      - run: gem install bundler -v 1.17.3 --no-document
-      - run: bundle install --jobs 4
-      - run: bundle exec rake spec

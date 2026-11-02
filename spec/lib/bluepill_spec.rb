@@ -47,33 +47,33 @@ describe Bluepill do
     let(:options) { {foreground: true} }
 
     before do
-      allow(Bluepill::Application).to receive(:new).with("app_name", options).and_return(app)
+      allow(Bluepill::Application).to receive(:new).with("app_name", **options).and_return(app)
     end
 
     it "evaluates a block without arguments in the context of the app proxy" do
       context = nil
-      described_class.application(:app_name, options) { context = self }
+      described_class.application(:app_name, **options) { context = self }
       expect(context).to be_a(Bluepill::AppProxy).and have_attributes(app: app)
     end
 
     it "loads the app after a block without arguments" do
-      described_class.application(:app_name, options) { nil }
+      described_class.application(:app_name, **options) { nil }
       expect(app).to have_received(:load)
     end
 
     it "yields the app proxy to a block with one argument" do
       yielded = nil
-      described_class.application(:app_name, options) { |a| yielded = a }
+      described_class.application(:app_name, **options) { |a| yielded = a }
       expect(yielded).to be_a(Bluepill::AppProxy).and have_attributes(app: app)
     end
 
     it "loads the app after a block with one argument" do
-      described_class.application(:app_name, options) { |_app| nil }
+      described_class.application(:app_name, **options) { |_app| nil }
       expect(app).to have_received(:load)
     end
 
     it "defaults to no options" do
-      allow(Bluepill::Application).to receive(:new).with("app_name", {}).and_return(app)
+      allow(Bluepill::Application).to receive(:new).with("app_name").and_return(app)
       described_class.application(:app_name) { |_app| } # an app with no processes
       expect(app).to have_received(:load)
     end

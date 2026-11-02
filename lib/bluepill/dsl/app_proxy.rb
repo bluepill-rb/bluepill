@@ -110,8 +110,8 @@ module Bluepill
     # @return [void]
     #
     # @api private
-    def initialize(app_name, options)
-      @app = Application.new(app_name.to_s, options)
+    def initialize(app_name, **options)
+      @app = Application.new(app_name.to_s, **options)
       @registry = ProcessFactory::Registry.new
     end
 

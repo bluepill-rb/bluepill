@@ -100,20 +100,27 @@ module Bluepill
     # with status 5 if it can't write to its log file or base directory.
     #
     # @param [String] name the application's name
-    # @param [Hash{Symbol => Object}] options :foreground, :log_file,
-    #   :log_level, :base_dir and :kill_timeout
+    # @param [Boolean] foreground whether to run in the foreground, rather
+    #   than as a daemon
+    # @param [String, nil] log_file the file to log to, or nil for syslog
+    # @param [Symbol, String] log_level the least severe priority to log
+    #   (debug, so everything, by default)
+    # @param [String, nil] base_dir the directory for the socket and pid
+    #   files, or nil for the default
+    # @param [Numeric] kill_timeout how long to wait for an earlier daemon
+    #   to exit, in half seconds
     #
     # @return [void]
     #
     # @api private
-    def initialize(name, options = {})
+    def initialize(name, foreground: false, log_file: nil, log_level: :debug, base_dir: nil, kill_timeout: 10)
       self.name = name
 
-      @foreground = options[:foreground]
-      self.log_file = options[:log_file]
-      @log_level = options[:log_level]
-      setup_base_dir(options[:base_dir])
-      self.kill_timeout = options[:kill_timeout] || 10
+      @foreground = foreground
+      self.log_file = log_file
+      @log_level = log_level
+      setup_base_dir(base_dir)
+      self.kill_timeout = kill_timeout
 
       self.groups = {}
 

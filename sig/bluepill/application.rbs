@@ -20,10 +20,10 @@ module Bluepill
     attr_accessor log_file: String?
 
     @foreground: bool?
-    @log_level: (Symbol | String)?
+    @log_level: Symbol | String
     @mutex: Thread::Mutex
 
-    def initialize: (String name, ?Hash[Symbol, untyped] options) -> void
+    def initialize: (String name, ?foreground: bool, ?log_file: String?, ?log_level: Symbol | String, ?base_dir: String?, ?kill_timeout: Integer) -> void
 
     def foreground?: () -> bool
 
@@ -108,7 +108,7 @@ module Bluepill
         def synchronize: [T] () { () -> T } -> T
       end
 
-      @log_level: (Symbol | String)?
+      @log_level: Symbol | String
       @running: bool
 
       # Ruby's protected methods are private in RBS
@@ -166,7 +166,7 @@ module Bluepill
     attr_accessor log_file: String?
     attr_reader base_directory: BaseDirectory
 
-    def initialize: (Hash[Symbol, untyped] options) -> void
+    def initialize: (base_dir: String, ?log_file: String?) -> void
 
     def handle_command: (String application, String | Symbol command, *String args) -> void
 

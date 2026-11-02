@@ -52,16 +52,14 @@ module Bluepill
     #
     # @param [String, nil] name the group's name, or nil for the nameless
     #   group
-    # @param [Hash{Symbol => Object}] options the group's options, with
-    #   :logger
+    # @param [Logger, nil] logger the group's logger
     #
     # @return [void]
     #
     # @api private
-    def initialize(name, options = {})
+    def initialize(name, logger: nil)
       self.name = name
       self.processes = []
-      logger = options[:logger] #: Logger
       self.logger = logger
     end
 

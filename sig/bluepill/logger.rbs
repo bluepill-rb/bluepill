@@ -21,15 +21,6 @@ module Bluepill
       def debug: (String message) -> void
     end
 
-    type options = {
-      ?logger: Logger,
-      ?prefix: String?,
-      ?stdout: bool,
-      ?log_file: String?,
-      ?identity: String,
-      ?log_level: (Symbol | String)?
-    }
-
     LOG_METHODS: Array[Symbol]
 
     # A ::Logger that also answers to the syslog method names
@@ -49,7 +40,8 @@ module Bluepill
       alias notice info
     end
 
-    @options: options
+    @log_file: String?
+    @identity: String
     @logger: Logger | (Object & _Backend)
     @prefix: String?
     @stdout: bool?
@@ -59,7 +51,7 @@ module Bluepill
     @sink: Array[Object & _Backend]
     @prefixes: Hash[String?, Logger]
 
-    def initialize: (?options options) -> void
+    def initialize: (?logger: Logger | (Object & _Backend) | nil, ?prefix: String?, ?stdout: bool, ?log_file: String?, ?identity: String, ?log_level: Symbol | String) -> void
 
     def emerg: (_ToS msg, ?Array[String?]? prefix) -> void
 
@@ -91,7 +83,7 @@ module Bluepill
 
     private
 
-    def settings_from: (Logger | (Object & _Backend) parent, Integer level) -> [Integer, Array[String?], bool?, Array[Object & _Backend]]
+    def settings_from: (Logger | (Object & _Backend) parent, Integer level, bool stdout) -> [Integer, Array[String?], bool?, Array[Object & _Backend]]
 
     def label: (Array[String?] names) -> String?
 

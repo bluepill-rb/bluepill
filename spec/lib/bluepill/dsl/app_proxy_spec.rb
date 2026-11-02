@@ -1,18 +1,24 @@
 # frozen_string_literal: true
 
 describe Bluepill::AppProxy do
-  subject(:proxy) { described_class.new(:app_name, {}) }
+  subject(:proxy) { described_class.new(:app_name) }
 
   let(:app) { instance_double(Bluepill::Application, pids_dir: "/pids", add_process: nil) }
 
   before do
-    allow(Bluepill::Application).to receive(:new).with("app_name", {}).and_return(app)
+    allow(Bluepill::Application).to receive(:new).with("app_name").and_return(app)
     # Silence the warning for processes without a known pid
     allow($stderr).to receive(:puts)
   end
 
   it "creates an application" do
     expect(proxy.app).to eq(app)
+  end
+
+  it "gives the application its options" do
+    configured = instance_double(Bluepill::Application)
+    allow(Bluepill::Application).to receive(:new).with("app_name", foreground: true, log_level: :info).and_return(configured)
+    expect(described_class.new(:app_name, foreground: true, log_level: :info).app).to be(configured)
   end
 
   describe "#process" do
@@ -67,7 +73,7 @@ describe Bluepill::AppProxy do
 
     it "checks its processes apart from another application's" do
       proxy.process("web") { start_command "run" }
-      other = described_class.new(:app_name, {})
+      other = described_class.new(:app_name)
       other.process("web") { start_command "run" }
       expect(app).to have_received(:add_process).twice
     end

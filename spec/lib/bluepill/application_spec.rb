@@ -35,7 +35,7 @@ describe Bluepill::Application do
   end
 
   describe "#initialize" do
-    subject(:app) { described_class.new("test", options) }
+    subject(:app) { described_class.new("test", **options) }
 
     let(:options) { {} }
     let(:traps) { {} }
@@ -113,7 +113,7 @@ describe Bluepill::Application do
 
       it "logs to the log file, and not to stdout" do
         app
-        expect(Bluepill::Logger).to have_received(:new).with(log_file: nil, log_level: nil, stdout: false)
+        expect(Bluepill::Logger).to have_received(:new).with(log_file: nil, log_level: :debug, stdout: false)
       end
 
       it "gives the process journal the same logger" do

@@ -18,25 +18,29 @@ module Bluepill
 
     # Make a logger
     #
-    # @param [Hash{Symbol => Object}] options :logger, a parent logger to
-    #   write through, or an object to write to, :prefix, :stdout to echo
-    #   messages there too, :log_file to write to instead of syslog,
-    #   :identity, the name syslog shows, and :log_level, the least severe
-    #   priority to log (debug, so everything, by default)
+    # @param [Logger, Object, nil] logger a parent logger to write through,
+    #   or an object to write to, or nil for the log file or syslog
+    # @param [String, nil] prefix the name to add to the parent's
+    # @param [Boolean] stdout whether to echo messages to stdout too
+    # @param [String, nil] log_file the file to write to instead of syslog
+    # @param [String] identity the name syslog shows
+    # @param [Symbol, String] log_level the least severe priority to log
+    #   (debug, so everything, by default)
     #
     # @return [void]
     #
-    # @raise [ArgumentError] if :log_level isn't one of {LOG_METHODS}
+    # @raise [ArgumentError] if log_level isn't one of {LOG_METHODS}
     #
     # @api private
-    def initialize(options = {})
-      @options = options
-      @logger = options[:logger] || create_logger
-      @prefix = options[:prefix]
+    def initialize(logger: nil, prefix: nil, stdout: false, log_file: nil, identity: "bluepilld", log_level: :debug)
+      @log_file = log_file
+      @identity = identity
+      @logger = logger || create_logger
+      @prefix = prefix
       @prefixes = {}
       # Set here, and not in settings_from, since Ruby makes room in a new
       # Logger for the instance variables that initialize sets
-      @level, @names, @stdout, @sink = settings_from(@logger, priority(options[:log_level] || :debug))
+      @level, @names, @stdout, @sink = settings_from(@logger, priority(log_level), stdout)
       @label = label(@names)
     end
 
@@ -173,18 +177,20 @@ module Bluepill
     # @param [Logger, LoggerAdapter, Syslog, Object] parent the :logger
     #   option, or the log file or syslog without one
     # @param [Integer] level the position in {LOG_METHODS} of the least
-    #   severe priority the :log_level option allows
+    #   severe priority the log_level option allows
+    # @param [Boolean] stdout whether a logger without a parent echoes to
+    #   stdout
     #
     # @return [Array(Integer, Array<String, nil>, Boolean, Array<Object>)]
     #   the level, the prefixes, whether to echo to stdout, and the sink
     #
     # @api private
-    def settings_from(parent, level)
+    def settings_from(parent, level, stdout)
       if parent.instance_of?(Logger)
         [[level, parent.level].min, parent.names + [@prefix], parent.stdout, parent.sink]
       else
         names = [] #: Array[String?]
-        [level, names, @options[:stdout], [parent]]
+        [level, names, stdout, [parent]]
       end
     end
 
@@ -223,12 +229,13 @@ module Bluepill
     #
     # @api private
     def create_logger
-      if @options[:log_file]
-        LoggerAdapter.new(@options.fetch(:log_file))
+      log_file = @log_file
+      if log_file
+        LoggerAdapter.new(log_file)
       else
         require_syslog
         Syslog.close if Syslog.opened? # need to explictly close it before reopening it
-        Syslog.open(@options[:identity] || "bluepilld", Syslog::LOG_PID, Syslog::LOG_LOCAL6)
+        Syslog.open(@identity, Syslog::LOG_PID, Syslog::LOG_LOCAL6)
       end
     end
 

@@ -501,7 +501,7 @@ module Bluepill
 
     NOBLOCK: Hash[Symbol, Symbol]
 
-    def initialize: (String? name, ?{ ?logger: Logger } options) -> void
+    def initialize: (String? name, ?logger: untyped) -> void
 
     def add_process: (Process process) -> Array[Process]
 

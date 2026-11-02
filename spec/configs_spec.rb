@@ -41,7 +41,7 @@ describe "The README and example configs", type: :integration do
   README_CONFIGS.each_with_index do |config, i|
     it "loads README config #{i + 1}" do
       eval(config, binding, "README.md") # rubocop:disable Security/Eval
-      expect(Bluepill::Application).to have_received(:new).with("app_name", kind_of(Hash))
+      expect(Bluepill::Application).to have_received(:new).with("app_name", any_args)
     end
 
     # A few only show the application's options, with no processes

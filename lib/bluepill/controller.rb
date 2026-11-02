@@ -45,14 +45,17 @@ module Bluepill
     # It creates the sockets and pids directories, and removes the socket
     # and pid file of each daemon that's no longer running.
     #
-    # @param [Hash{Symbol => Object}] options :base_dir, and :log_file
+    # @param [String] base_dir the directory with the daemons' sockets and
+    #   pid files
+    # @param [String, nil] log_file the log file to tail when a daemon names
+    #   none
     #
     # @return [void]
     #
     # @api private
-    def initialize(options)
-      self.log_file = options[:log_file]
-      self.base_dir = options.fetch(:base_dir)
+    def initialize(base_dir:, log_file: nil)
+      self.log_file = log_file
+      self.base_dir = base_dir
       @base_directory = BaseDirectory.new(base_dir)
 
       setup_dir_structure

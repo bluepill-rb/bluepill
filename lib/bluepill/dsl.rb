@@ -17,7 +17,7 @@ module Bluepill
   #
   # @param [#to_s] app_name the application's name
   # @param [Hash{Symbol => Object}] options the application's options, such
-  #   as :log_file, :foreground and :base_dir
+  #   as log_file:, foreground: and base_dir:
   #
   # @yield [app] describes the application's processes
   # @yieldparam [AppProxy] app the application's proxy, which is also self
@@ -26,8 +26,8 @@ module Bluepill
   # @return [void]
   #
   # @api public
-  def self.application(app_name, options = {}, &block)
-    app_proxy = AppProxy.new(app_name, options)
+  def self.application(app_name, **options, &block)
+    app_proxy = AppProxy.new(app_name, **options)
     # instance_eval also passes the proxy to a block that takes an argument
     app_proxy.instance_eval(&block)
     app_proxy.app.load

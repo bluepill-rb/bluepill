@@ -14,7 +14,7 @@ module Bluepill
 
     @registry: ProcessFactory::Registry
 
-    def initialize: (_ToS app_name, Hash[Symbol, untyped] options) -> void
+    def initialize: (_ToS app_name, **untyped options) -> void
 
     # The block runs with self set to the ProcessProxy, and also gets it as
     # an argument

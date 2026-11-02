@@ -15,7 +15,7 @@ module Bluepill
 
   # Loads an application from a config file. The block runs with self set to
   # the AppProxy, and also gets it as an argument.
-  def self.application: (_ToS app_name, ?Hash[Symbol, untyped] options) { (AppProxy app) [self: AppProxy] -> void } -> void
+  def self.application: (_ToS app_name, **untyped options) { (AppProxy app) [self: AppProxy] -> void } -> void
 
   module Version
     def self.major: () -> Integer

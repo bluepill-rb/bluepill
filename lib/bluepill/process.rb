@@ -115,22 +115,25 @@ module Bluepill
     # @param [String] process_name the process's name
     # @param [Hash{Symbol => Hash{Symbol => Object}}] checks options by
     #   check name
-    # @param [Hash{Symbol => Object}] options the process's options, such as
-    #   CONFIGURABLE_ATTRIBUTES, :logger and :actual_pid
+    # @param [Logger, nil] logger the process's logger
+    # @param [Integer, nil] actual_pid the pid of a child process that's
+    #   already running
+    # @param [Hash{Symbol => Object}] attributes the process's attributes,
+    #   of which those in CONFIGURABLE_ATTRIBUTES are set
     #
     # @return [void]
     #
     # @api private
-    def initialize(process_name, checks, options = {})
+    def initialize(process_name, checks, logger: nil, actual_pid: nil, **attributes)
       @name = process_name
       @event_mutex = Monitor.new
       @children = []
       @threads = []
       @statistics = ProcessStatistics.new
-      @actual_pid = options[:actual_pid]
-      add_checks(checks, options[:logger])
+      @actual_pid = actual_pid
+      add_checks(checks, logger)
       @state = :unmonitored
-      configure(options)
+      configure(attributes)
     end
 
     # Check on the process once a tick

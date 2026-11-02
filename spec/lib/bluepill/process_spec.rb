@@ -1519,7 +1519,7 @@ describe Bluepill::Process do
   end
 
   describe "#system_command_options" do
-    subject(:process) { described_class.new(:proc_name, [], options.merge(logger: logger)) }
+    subject(:process) { described_class.new(:proc_name, [], **options, logger: logger) }
 
     let(:options) do
       {

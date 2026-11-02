@@ -213,7 +213,7 @@ module Bluepill
 
     # Methods bluepill defines
 
-    def initialize: (String process_name, Hash[Symbol, Hash[Symbol, untyped]] checks, ?Hash[Symbol, untyped] options) -> void
+    def initialize: (String process_name, Hash[Symbol, Hash[Symbol, untyped]] checks, ?logger: untyped, ?actual_pid: Integer?, **untyped attributes) -> void
 
     # Runs the state machine's tick event, then the watches and children
     def tick: () -> void

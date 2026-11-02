@@ -180,7 +180,7 @@ module Bluepill
     #
     # @api private
     def to_process
-      Process.new(@name, @watches, @attributes)
+      Process.new(@name, @watches, **@attributes)
     end
 
     private

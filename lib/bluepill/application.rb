@@ -219,6 +219,10 @@ module Bluepill
     # Define a method for each of the PROCESS_COMMANDS
     PROCESS_COMMANDS.each do |command|
       class_eval <<-RUBY, __FILE__, __LINE__ + 1
+        # def start(group_name = nil, process_name = nil)
+        #   self.send_to_process_or_group(:start, group_name, process_name)
+        # end
+
         def #{command}(group_name = nil, process_name = nil)
           self.send_to_process_or_group(:#{command}, group_name, process_name)
         end

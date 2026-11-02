@@ -144,19 +144,19 @@ module Bluepill
     #   @api private
     [:start, :unmonitor, :stop, :restart].each do |event|
       class_eval <<-RUBY, __FILE__, __LINE__ + 1
-        def #{event}(process_name = nil)
+        def #{event}(process_name = nil) # def start(process_name = nil)
           threads = []
           affected = []
           self.processes.each do |process|
             next if process_name && process_name != process.name
             affected << [self.name, process.name].join(":")
-            noblock = process.group_#{event}_noblock
+            noblock = process.group_#{event}_noblock # process.group_start_noblock
             if noblock
-              self.logger.debug("Command #{event} running in non-blocking mode.")
-              threads << Thread.new { process.handle_user_command("#{event}") }
+              self.logger.debug("Command #{event} running in non-blocking mode.") # Command start running in...
+              threads << Thread.new { process.handle_user_command("#{event}") } # handle_user_command("start")
             else
-              self.logger.debug("Command #{event} running in blocking mode.")
-              thread = Thread.new { process.handle_user_command("#{event}") }
+              self.logger.debug("Command #{event} running in blocking mode.") # Command start running in...
+              thread = Thread.new { process.handle_user_command("#{event}") } # handle_user_command("start")
               thread.join
             end
           end

@@ -99,16 +99,16 @@ module Bluepill
     #   @api private
     LOG_METHODS.each_with_index do |method, priority|
       class_eval <<-RUBY, __FILE__, __LINE__ + 1
-        def #{method}(msg, prefix = nil)
+        def #{method}(msg, prefix = nil) # def emerg(msg, prefix = nil)
           # Below the log level, so dropped before anything is formatted
-          return if #{priority} > @level
+          return if #{priority} > @level # return if 0 > @level
 
           line = "\#{prefix ? label(@names + prefix) : @label}\#{msg}"
           if @stdout
-            $stdout.puts("[#{method}]: \#{line}")
+            $stdout.puts("[#{method}]: \#{line}") # $stdout.puts("[emerg]: ...")
             $stdout.flush
           end
-          @sink[0].#{method}(line)
+          @sink[0].#{method}(line) # @sink[0].emerg(line)
         end
       RUBY
     end

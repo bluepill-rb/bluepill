@@ -162,6 +162,7 @@ module Bluepill
   class Controller
     include Directory
 
+    TAIL_COMMAND: String
     OUT_OF_DATE: String
 
     attr_accessor base_dir: String

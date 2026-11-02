@@ -16,6 +16,12 @@ module Bluepill
   class Controller
     include Directory
 
+    # The shell command that tails a log file ($1) through grep -E ($2)
+    #
+    # The path and the pattern are the shell's arguments, so they're never
+    # parsed as shell code, whatever characters they hold.
+    TAIL_COMMAND = 'tail -n 100 -f "$1" | grep -E "$2"'
+
     # What the CLI says when the daemon runs another version of bluepill
     OUT_OF_DATE = "The running version of your daemon seems to be out of date."
 
@@ -147,7 +153,7 @@ module Bluepill
     # Tail the daemon's log, showing only a process or group's lines
     #
     # It falls back to the controller's log_file when the daemon doesn't
-    # name one, and replaces the CLI with tail.
+    # name one, and replaces the CLI with tail piped through grep.
     #
     # @param [String] application the application's name
     # @param [String, nil] requested_pattern the process or group
@@ -156,14 +162,11 @@ module Bluepill
     #
     # @api private
     def tail_log(application, requested_pattern)
-      log_file_location = send_to_daemon(application, :log_file)
-      log_file_location = log_file if log_file_location.to_s.rstrip.empty?
+      log_file_location = send_to_daemon(application, :log_file).to_s
+      log_file_location = log_file.to_s if log_file_location.rstrip.empty?
 
-      pattern = grep_pattern(application, requested_pattern)
-
-      tail = "tail -n 100 -f #{log_file_location} | grep -E '#{pattern}'"
       puts "Tailing log for #{requested_pattern}..."
-      Kernel.exec(tail)
+      Kernel.exec("sh", "-c", TAIL_COMMAND, "sh", log_file_location, grep_pattern(application, requested_pattern))
     end
 
     # Send one of the PROCESS_COMMANDS to the daemon and print what it did

@@ -99,6 +99,7 @@ class Integer
   include Bluepill::Units
 end
 
+# So Float multiplies by the units too
 class Float
   include Bluepill::Units
 end

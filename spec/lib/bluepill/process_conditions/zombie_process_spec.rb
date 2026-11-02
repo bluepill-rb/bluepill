@@ -15,4 +15,8 @@ describe Bluepill::ProcessConditions::ZombieProcess do
   it "fails when the process is defunct" do
     expect(condition.check?("[ruby] <defunct>")).to be false
   end
+
+  it "passes when ps no longer lists the process" do
+    expect(condition.check?(nil)).to be true
+  end
 end

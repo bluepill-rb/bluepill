@@ -71,10 +71,12 @@ module Bluepill
       # @api private
       def check?(value)
         return false unless value.is_a?(@kind)
-        return true unless @pattern
+
+        pattern = @pattern
+        return true unless pattern
 
         response = value #: Net::HTTPResponse
-        !(@pattern =~ response.body).nil?
+        pattern.match?(response.body)
       end
 
       private

@@ -34,7 +34,7 @@ module Bluepill
       #
       # @api private
       def check?(value)
-        (value =~ /<defunct>/).nil?
+        !value&.match?(/<defunct>/)
       end
     end
   end

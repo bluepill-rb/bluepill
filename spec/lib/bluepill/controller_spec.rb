@@ -217,6 +217,9 @@ describe Bluepill::Controller do
   end
 
   describe "#handle_command log" do
+    # What the CLI runs to tail a log file through grep
+    def tail(path, pattern) = ["sh", "-c", 'tail -n 100 -f "$1" | grep -E "$2"', "sh", path, pattern]
+
     before do
       # Keep the examples that don't check the output quiet
       allow($stdout).to receive(:puts)
@@ -232,26 +235,39 @@ describe Bluepill::Controller do
 
       it "tails the log file" do
         controller.handle_command("app", "log", "web")
-        expect(Kernel).to have_received(:exec).with("tail -n 100 -f /tmp/app.log | grep -E '\\[.*app:web.*'")
+        expect(Kernel).to have_received(:exec).with(*tail("/tmp/app.log", '\[.*app:web.*'))
       end
     end
 
     it "uses only the first argument as the pattern" do
       stub_daemon("log_file", "/tmp/app.log")
       controller.handle_command("app", "log", "web", "extra")
-      expect(Kernel).to have_received(:exec).with("tail -n 100 -f /tmp/app.log | grep -E '\\[.*app:web.*'")
+      expect(Kernel).to have_received(:exec).with(*tail("/tmp/app.log", '\[.*app:web.*'))
+    end
+
+    it "passes the log file and the pattern to the shell as arguments" do
+      stub_daemon("log_file", "/tmp/my app's $(log)")
+      controller.handle_command("app", "log", "it's")
+      expect(Kernel).to have_received(:exec).with(*tail("/tmp/my app's $(log)", "\\[.*app:it's.*"))
+    end
+
+    it "tails an empty path without any log file" do
+      stub_daemon("log_file", nil)
+      controller.log_file = nil
+      controller.handle_command("app", :log)
+      expect(Kernel).to have_received(:exec).with(*tail("", '\[.*app.*'))
     end
 
     it "falls back to its own log file when the daemon logs to syslog" do
       stub_daemon("log_file", nil)
       controller.handle_command("app", :log)
-      expect(Kernel).to have_received(:exec).with("tail -n 100 -f /var/log/bluepill.log | grep -E '\\[.*app.*'")
+      expect(Kernel).to have_received(:exec).with(*tail("/var/log/bluepill.log", '\[.*app.*'))
     end
 
     it "falls back to its own log file" do
       stub_daemon("log_file", " ")
       controller.handle_command("app", :log)
-      expect(Kernel).to have_received(:exec).with("tail -n 100 -f /var/log/bluepill.log | grep -E '\\[.*app.*'")
+      expect(Kernel).to have_received(:exec).with(*tail("/var/log/bluepill.log", '\[.*app.*'))
     end
   end
 

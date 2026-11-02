@@ -26,8 +26,6 @@ Naming/FileName:
     - local-bluepill
 
 Metrics/BlockLength:
-  AllowedMethods:
-    - state_machine
   Exclude:
     - bin/bluepill
     - spec/**/*
@@ -37,39 +35,14 @@ Security/MarshalLoad:
   Exclude:
     - lib/bluepill/socket.rb
     - lib/bluepill/system/commands.rb
-    - spec/lib/bluepill/application_spec.rb
 
 Lint/SuppressedException:
   Exclude:
     - bin/bluepill
-    - lib/bluepill/application.rb
-    - lib/bluepill/process_journal.rb
     - lib/bluepill/system.rb
-    - spec/spec_helper.rb
-
-Metrics/AbcSize:
-  Enabled: false
 
 Metrics/BlockNesting:
   Max: 3
-
-Metrics/ClassLength:
-  CountComments: false
-  Enabled: false
-
-Metrics/CyclomaticComplexity:
-  Enabled: false
-
-Metrics/MethodLength:
-  CountComments: false
-  Enabled: false
-
-Metrics/ModuleLength:
-  CountComments: false
-  Enabled: false
-
-Metrics/PerceivedComplexity:
-  Enabled: false
 
 Layout/LineLength:
   AllowURI: true

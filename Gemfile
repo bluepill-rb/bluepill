@@ -34,12 +34,9 @@ group :test do
   gem "rubocop", "~> 1.91"
   gem "rubocop-rake"
   gem "rubocop-rspec"
-  # Standard, and its performance rules, need Ruby 3.0 or newer
-  if RUBY_VERSION >= "3.0"
-    gem "standard", ">= 1.57", require: false
-    gem "standard-performance", require: false
-  end
   gem "simplecov", ">= 0.4"
+  gem "standard", ">= 1.57", require: false
+  gem "standard-performance", require: false
   gem "steep", "~> 2.1", require: false if RUBY_VERSION >= "3.3" && RUBY_ENGINE == "ruby"
   # Mutant needs Ruby 3.3 or newer and doesn't support JRuby
   if RUBY_VERSION >= "3.3" && RUBY_ENGINE == "ruby"

@@ -11,7 +11,7 @@ AllCops:
   Include:
     - .duel.rb
   # The oldest Ruby the gem supports
-  TargetRubyVersion: 2.7
+  TargetRubyVersion: 3.0
   NewCops: enable
   SuggestExtensions: true
 

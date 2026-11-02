@@ -108,18 +108,10 @@ end
 
 desc "Run the specs, like rake spec"
 task test: :spec
-# Standard needs Ruby 3.0 or newer, so the Gemfile only installs it there.
-# Its rake standard task checks the code against Standard's style.
-begin
-  require "standard/rake"
-  standard = true
-rescue LoadError
-  standard = false
-end
+# Its rake standard task checks the code against Standard's style
+require "standard/rake"
 
-default_tasks = %i[spec rubocop]
-default_tasks << :standard if standard
-default_tasks << :yardstick
+default_tasks = %i[spec rubocop standard yardstick]
 default_tasks << :steep if steep
 default_tasks << :mutant if mutant
 task default: default_tasks

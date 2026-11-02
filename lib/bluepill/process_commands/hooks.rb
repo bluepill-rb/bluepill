@@ -171,16 +171,6 @@ module Bluepill
       #
       # @api private
       attr_reader :transition_reason
-
-      # Return the process's pid, or the last one it had if it has died
-      #
-      # A process that has died has no pid by the time its state changes,
-      # but notify_command still gets the one it had.
-      #
-      # @return [Integer, nil]
-      #
-      # @api private
-      def cached_pid = @actual_pid || @last_pid
     end
   end
 end

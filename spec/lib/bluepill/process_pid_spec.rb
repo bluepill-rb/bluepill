@@ -39,6 +39,11 @@ describe Bluepill::Process do
         process.process_running?
         expect(process.instance_variable_get(:@actual_pid)).to be_nil
       end
+
+      it "memoizes that it's not running" do
+        2.times { process.process_running? }
+        expect(::Process).to have_received(:kill).once.with(0, 5)
+      end
     end
   end
 
@@ -46,6 +51,11 @@ describe Bluepill::Process do
     it "uses the pid command when configured" do
       process.pid_command = "echo 123"
       expect(process.actual_pid).to eq 123
+    end
+
+    it "reads pid 1 from the pid command" do
+      process.pid_command = "echo 1"
+      expect(process.actual_pid).to eq 1
     end
 
     it "returns nil when the pid command prints 0" do
@@ -140,6 +150,12 @@ describe Bluepill::Process do
         process.actual_pid
         expect(logger).to have_received(:warning).with("pid_file #{process.pid_file} does not exist or cannot be read")
       end
+
+      it "doesn't warn about a pid file without a pid" do
+        File.write(process.pid_file, "garbage")
+        process.actual_pid
+        expect(logger).not_to have_received(:warning)
+      end
     end
   end
 
@@ -152,6 +168,23 @@ describe Bluepill::Process do
 
     it "sets the pid" do
       expect(process.actual_pid).to eq 12
+    end
+  end
+
+  describe "#cached_pid" do
+    it "is the pid" do
+      process.actual_pid = 5
+      expect(process.cached_pid).to eq 5
+    end
+
+    it "is the last pid once the pid is cleared" do
+      process.actual_pid = 5
+      process.clear_pid
+      expect(process.cached_pid).to eq 5
+    end
+
+    it "is nil before the process has had a pid" do
+      expect(process.cached_pid).to be_nil
     end
   end
 

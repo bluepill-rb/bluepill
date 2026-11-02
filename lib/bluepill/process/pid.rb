@@ -19,12 +19,11 @@ module Bluepill
       #
       # @api private
       def process_running?(force = false)
-        @process_running = nil if force # clear existing state if forced
-
-        @process_running ||= signal_process(0)
+        running = @process_running unless force
+        running = @process_running = signal_process(0) if running.nil?
         # the process isn't running, so we should clear the PID
-        clear_pid unless @process_running
-        @process_running #: bool
+        clear_pid unless running
+        running
       end
 
       # Send a signal to the process
@@ -79,14 +78,23 @@ module Bluepill
       def pid_from_file
         return @actual_pid if cache_actual_pid? && @actual_pid
 
-        @actual_pid = if pid_file
-          if File.exist?(pid_file)
-            positive_pid(File.read(pid_file).to_i)
-          else
-            logger.warning("pid_file #{pid_file} does not exist or cannot be read")
-            nil
-          end
-        end
+        file = pid_file
+        @actual_pid = (PidFile.read(file) || warn_if_missing(file) if file)
+      end
+
+      # Warn if the pid file is missing
+      #
+      # An empty or garbled pid file has no pid either, but it's there, so
+      # it's not warned about.
+      #
+      # @param [String] file the pid file
+      #
+      # @return [nil] no pid
+      #
+      # @api private
+      def warn_if_missing(file)
+        logger.warning("pid_file #{file} does not exist or cannot be read") unless File.exist?(file)
+        nil
       end
 
       # Return the pid that pid_command prints
@@ -97,20 +105,8 @@ module Bluepill
       #
       # @api private
       def pid_from_command
-        # Output that is not just digits reads as nil, so as 0
-        positive_pid(`#{pid_command}`.strip[/\A\d+\z/].to_i)
-      end
-
-      # Return the pid, unless it's 0 or less
-      #
-      # An empty or garbled pid file reads as 0, which is never a real process.
-      #
-      # @param [Integer] pid the pid that was read
-      #
-      # @return [Integer, nil] the pid, or nil if it's not a real one
-      #
-      # @api private
-      def positive_pid(pid)
+        # Output that is not just digits reads as nil, so as 0, which is no pid
+        pid = `#{pid_command}`.strip[/\A\d+\z/].to_i
         pid if pid > 0
       end
 
@@ -125,6 +121,16 @@ module Bluepill
         ProcessJournal.append_pid_to_journal(name, pid) # be sure to always log the pid
         @actual_pid = pid
       end
+
+      # Return the process's pid, or the last one it had if it has died
+      #
+      # A process that has died has no pid by the time its state changes,
+      # but notify_command still gets the one it had.
+      #
+      # @return [Integer, nil]
+      #
+      # @api private
+      def cached_pid = @actual_pid || @last_pid
 
       # Forget the process's pid
       #

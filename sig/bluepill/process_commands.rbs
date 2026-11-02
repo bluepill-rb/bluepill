@@ -136,14 +136,13 @@ module Bluepill
       %a{pure} def group_name: () -> String?
       %a{pure} def environment: () -> Hash[_ToS, _ToS]?
       def actual_pid: () -> Integer?
+      def cached_pid: () -> Integer?
       def system_command_options: () -> System::command_options
       def substitute_pid: (String command, Integer? pid) -> String
       def run_command: (String cmd, String description, ?System::command_options options) -> void
     end
 
     @stopping_pid: Integer?
-    @actual_pid: Integer?
-    @last_pid: Integer?
     @transition_reason: String?
 
     def pre_start_process: () -> void
@@ -169,8 +168,6 @@ module Bluepill
     attr_reader stopping_pid: Integer?
 
     attr_reader transition_reason: String?
-
-    def cached_pid: () -> Integer?
   end
 
   # Finds, signals and forgets a Process's pid
@@ -200,9 +197,12 @@ module Bluepill
 
     def pid_from_command: () -> Integer?
 
-    def positive_pid: (Integer pid) -> Integer?
+    def warn_if_missing: (String file) -> nil
 
     def actual_pid=: (Integer pid) -> void
+
+    # The pid, or the last one it had if it has died
+    def cached_pid: () -> Integer?
 
     def clear_pid: () -> nil
 

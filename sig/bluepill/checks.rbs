@@ -160,12 +160,16 @@ module Bluepill
       @pattern: Regexp?
       @open_timeout: Integer
       @read_timeout: Integer
+      @verify_ssl: boolish
 
       def run: (Integer? pid, boolish include_children) -> (Net::HTTPResponse | StandardError)
 
       def check?: (Net::HTTPResponse | StandardError value) -> bool
 
       private
+
+      # Warns about an https check that doesn't set verify_ssl
+      def warn_unverified: (Hash[Symbol, untyped] options) -> void
 
       def response_class: (untyped kind) -> Class
 

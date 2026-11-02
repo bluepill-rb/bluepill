@@ -10,18 +10,25 @@ module Bluepill
     # A config names it `checks :http`, with url: the URL to get, kind: the
     # response it should be (a Net::HTTP class name such as :success or
     # :ok, or a status code such as 200, :success by default), pattern: a
-    # Regexp its body should match, and timeout: (or open_timeout: and
-    # read_timeout:) in seconds, 5 by default.
+    # Regexp its body should match, timeout: (or open_timeout: and
+    # read_timeout:) in seconds, 5 by default, and verify_ssl: true to
+    # verify an https server's certificate, which bluepill 0.3.0 does by
+    # default.
     #
     # @example
     #   process.checks :http, url: 'http://localhost:4567/', kind: :success, pattern: /html/, timeout: 3.seconds
+    #   process.checks :http, url: 'https://example.com/', verify_ssl: true
     #
     # @api private
     class Http < ProcessCondition
       # Create the check
       #
+      # It warns when an https check doesn't say whether to verify the
+      # server's certificate, since bluepill 0.3.0 verifies it by default.
+      #
       # @param [Hash{Symbol => Object}] options the check's options, with
-      #   :url, :kind, :pattern, :timeout, :open_timeout and :read_timeout
+      #   :url, :kind, :pattern, :timeout, :open_timeout, :read_timeout and
+      #   :verify_ssl
       #
       # @return [void]
       #
@@ -37,6 +44,8 @@ module Bluepill
         @pattern = options[:pattern]
         @open_timeout = (options[:open_timeout] || options[:timeout] || 5).to_i
         @read_timeout = (options[:read_timeout] || options[:timeout] || 5).to_i
+        @verify_ssl = options.fetch(:verify_ssl, false)
+        warn_unverified(options)
       end
 
       # Get the URL
@@ -81,6 +90,21 @@ module Bluepill
 
       private
 
+      # Warn about an https check that doesn't set verify_ssl
+      #
+      # @param [Hash{Symbol => Object}] options the check's options
+      #
+      # @return [void]
+      #
+      # @api private
+      def warn_unverified(options)
+        return unless @uri.scheme.eql?("https") && !options.key?(:verify_ssl)
+
+        Deprecation.warn([:verify_ssl, @uri.to_s], "bluepill 0.3.0 verifies the certificate of an https check, so the check of #{@uri} fails " \
+                                                  "if its certificate is self-signed or otherwise invalid. Add verify_ssl: true to verify it now, " \
+                                                  "or verify_ssl: false to keep checking it without verification.")
+      end
+
       # Return the Net::HTTPResponse class of a kind of response
       #
       # @param [Integer, String, Symbol, nil] kind a status code, such as
@@ -118,7 +142,7 @@ module Bluepill
         if @uri.scheme.eql?("https")
           require "net/https"
           session.use_ssl = true
-          session.verify_mode = OpenSSL::SSL::VERIFY_NONE
+          session.verify_mode = @verify_ssl ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
         end
         session.open_timeout = @open_timeout
         session.read_timeout = @read_timeout

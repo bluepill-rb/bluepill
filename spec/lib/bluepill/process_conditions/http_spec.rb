@@ -56,6 +56,36 @@ describe Bluepill::ProcessConditions::Http do
       expect(http(kind: :not_found).instance_variable_get(:@kind)).to eq(Net::HTTPNotFound)
     end
 
+    it "doesn't verify certificates by default" do
+      expect(http.instance_variable_get(:@verify_ssl)).to be(false)
+    end
+
+    it "accepts verify_ssl: true" do
+      expect(http(verify_ssl: true).instance_variable_get(:@verify_ssl)).to be(true)
+    end
+
+    it "warns that 0.3.0 verifies an https check's certificate" do
+      expect { http(url: "https://example.com/") }.to output(
+        "DEPRECATION: bluepill 0.3.0 verifies the certificate of an https check, so the check of https://example.com/ fails " \
+        "if its certificate is self-signed or otherwise invalid. Add verify_ssl: true to verify it now, " \
+        "or verify_ssl: false to keep checking it without verification.\n"
+      ).to_stderr
+    end
+
+    it "warns once for each url" do
+      expect { 2.times { http(url: "https://example.com/") } }.to output(/\A[^\n]*\n\z/).to_stderr
+    end
+
+    [true, false].each do |verify_ssl|
+      it "doesn't warn about an https check with verify_ssl: #{verify_ssl}" do
+        expect { http(url: "https://example.com/", verify_ssl: verify_ssl) }.not_to output.to_stderr
+      end
+    end
+
+    it "doesn't warn about an http check" do
+      expect { http }.not_to output.to_stderr
+    end
+
     it "uses a default timeout of 5 seconds" do
       expect(timeouts(http)).to eq([5, 5])
     end
@@ -104,7 +134,7 @@ describe Bluepill::ProcessConditions::Http do
     end
 
     context "with an https url" do
-      let(:https) { http(url: "https://example.com/status?full=1") }
+      let(:https) { http(url: "https://example.com/status?full=1", verify_ssl: false) }
 
       before do
         allow(https).to receive(:require).and_call_original
@@ -127,9 +157,14 @@ describe Bluepill::ProcessConditions::Http do
         expect(session).to have_received(:use_ssl=).with(true)
       end
 
-      it "does not verify the certificate" do
+      it "does not verify the certificate with verify_ssl: false" do
         https.run(123, false)
         expect(session).to have_received(:verify_mode=).with(OpenSSL::SSL::VERIFY_NONE)
+      end
+
+      it "verifies the certificate with verify_ssl: true" do
+        http(url: "https://example.com/status?full=1", verify_ssl: true).run(123, false)
+        expect(session).to have_received(:verify_mode=).with(OpenSSL::SSL::VERIFY_PEER)
       end
     end
 

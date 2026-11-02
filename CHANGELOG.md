@@ -7,11 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The `http` check's `verify_ssl:` option. Set it to true to verify an https server's certificate, which bluepill 0.3.0 does by default. It's off by default in 0.2.9, so a check of a server with a self-signed certificate keeps passing.
+
 ### Deprecated
 
 Bluepill 0.2.9 warns, once each, about what will break in 0.3.0. Each warning starts with `DEPRECATION:` and says what to change, and `bluepill load` prints it, before the daemon starts, and logs it at `warning`. A pill file that loads without any works with 0.3.0.
 
 - Running on Ruby 2.7. Bluepill 0.3.0 needs Ruby 3.0 or newer, or JRuby 9.4 or newer.
+- An https `http` check without `verify_ssl:`. Bluepill 0.3.0 verifies the server's certificate by default, so set `verify_ssl: false` to keep checking a server with a self-signed certificate.
 
 ### Fixed
 
@@ -22,6 +27,7 @@ Bluepill 0.2.9 warns, once each, about what will break in 0.3.0. Each warning st
 
 ### Security
 
+- The `http` check can verify an https server's certificate, with `verify_ssl: true`. Without it, the check passes against any server that answers, whatever its certificate.
 - `bluepill log` passes the log file's path and the pattern to `tail` and `grep` as the shell's arguments, so a path with spaces works, and a quote or `$(...)` in the path or in a process's name no longer runs as shell code.
 
 ## [0.2.7] - 2026-11-02
@@ -116,6 +122,7 @@ To upgrade, install 0.2.0 and run `bluepill load` with the same pill file. It re
 
 ### Security
 
+- The `http` check can verify an https server's certificate, with `verify_ssl: true`. Without it, the check passes against any server that answers, whatever its certificate.
 - The daemon now runs only the commands that the CLI sends over its socket: `start`, `stop`, `restart`, `unmonitor`, `status`, `version` and `log_file`. Before, it called whatever method a line on the socket named, so anyone who could write to the socket could call any of the daemon's public methods, such as `instance_eval` with code of their own. The socket takes the daemon's umask, so with the usual umask of 022 only the daemon's own user could connect. Any other command now gets a `NoMethodError` back.
 
 ## [0.1.5] - 2026-11-01

@@ -4,24 +4,27 @@ require "syslog"
 require "tmpdir"
 
 # A stand-in for the syslog library, for the specs that load it
-FAKE_SYSLOG = <<~RUBY
-  module Syslog
-    LOG_PID = 1
-    LOG_LOCAL6 = 176
+module FakeSyslog
+  LOG_PID = 1
+  LOG_LOCAL6 = 176
 
-    def self.opened?
-      false
-    end
-
-    def self.open(*)
-      self
-    end
-
-    def self.lines = @lines ||= []
-
-    def self.info(message) = lines << message
+  def self.opened?
+    false
   end
-RUBY
+
+  def self.open(*)
+    self
+  end
+
+  def self.lines = @lines ||= []
+
+  def self.info(message) = lines << message
+end
+
+# A syslog.rb that defines Syslog as FakeSyslog. It stubs the constant, so
+# RSpec removes it before putting back the real Syslog that hide_const hid,
+# and Ruby doesn't warn that Syslog is already defined.
+FAKE_SYSLOG = "RSpec::Mocks::ConstantMutator.stub('Syslog', FakeSyslog)\n"
 
 describe Bluepill::Logger do
   # Make the next require 'syslog' in the block load a fake syslog.rb that

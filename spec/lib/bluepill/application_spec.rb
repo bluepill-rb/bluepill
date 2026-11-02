@@ -27,6 +27,7 @@ describe Bluepill::Application do
         it { is_expected.to eq(File.join(ENV.fetch('HOME', nil), '.bluepill')) }
       end
     end
+
     context 'when euid is root' do
       before { allow(::Process).to receive(:euid).and_return(0) }
 

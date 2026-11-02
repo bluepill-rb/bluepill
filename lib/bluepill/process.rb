@@ -2,6 +2,7 @@ require "bluepill/system"
 require "bluepill/process_journal"
 require "bluepill/process_commands"
 require "bluepill/process/pid"
+require "bluepill/process/children"
 
 module Bluepill
   # A process that bluepill monitors
@@ -14,6 +15,7 @@ module Bluepill
   class Process
     include ProcessCommands
     include Pid
+    include Children
 
     # The options a config can set for a process
     CONFIGURABLE_ATTRIBUTES = [
@@ -962,15 +964,6 @@ module Bluepill
       !!daemonize
     end
 
-    # Return whether bluepill watches the process's children
-    #
-    # @return [Boolean]
-    #
-    # @api private
-    def monitor_children?
-      !!monitor_children
-    end
-
     # Skip ticks for a while, such as for a command's grace time
     #
     # The times add up, so a stop followed by a start, which is how
@@ -993,36 +986,6 @@ module Bluepill
     # @api private
     def skipping_ticks?
       skip_ticks_until && skip_ticks_until > Integer(Time.now)
-    end
-
-    # Update the list of children from the tick's ps table
-    #
-    # Children that are no longer running are dropped, and a Process is made
-    # for each new one, with the checks monitor_children gave.
-    #
-    # @return [void]
-    #
-    # @api private
-    def refresh_children!
-      # First prune the list of dead children
-      @children.delete_if { |child| !child.process_running?(true) }
-
-      # Add new found children to the list
-      new_children_pids = System.get_children(actual_pid) - @children.collect(&:actual_pid)
-
-      logger.info "Existing children: #{@children.collect(&:actual_pid).join(",")}. Got new children: #{new_children_pids} for #{actual_pid}" unless new_children_pids.empty?
-
-      # Construct a new process wrapper for each new found children
-      # monitor_children sets the factory
-      factory = child_process_factory #: ProcessFactory
-      new_children_pids.each do |child_pid|
-        ProcessJournal.append_pid_to_journal(name, child_pid) if daemonize?
-        child_name = "<child(pid:#{child_pid})>"
-        child_logger = logger.prefix_with(child_name)
-
-        child = factory.create_child_process(child_name, child_pid, child_logger)
-        @children << child
-      end
     end
   end
 end

@@ -369,6 +369,7 @@ module Bluepill
   class Process
     include ProcessCommands
     include Pid
+    include Children
 
     CONFIGURABLE_ATTRIBUTES: Array[Symbol]
 
@@ -504,13 +505,9 @@ module Bluepill
 
     def daemonize?: () -> bool
 
-    def monitor_children?: () -> bool
-
     def skip_ticks_for: (seconds seconds) -> Integer
 
     def skipping_ticks?: () -> bool?
-
-    def refresh_children!: () -> void
   end
 
   # Finds, signals and forgets a Process's pid
@@ -547,6 +544,29 @@ module Bluepill
     def clear_pid: () -> nil
 
     def unlink_pid: () -> void
+  end
+
+  # Keeps a Process for each of a Process's children, when it monitors them
+  module Process::Children : Process::Children::_Host
+    # What Children uses from Process
+    interface _Host
+      %a{pure} def name: () -> String
+      %a{pure} def logger: () -> Logger
+      %a{pure} def monitor_children: () -> bool
+      %a{pure} def child_process_factory: () -> ProcessFactory?
+      def daemonize?: () -> bool
+      def actual_pid: () -> Integer?
+    end
+
+    @children: Array[Process]
+
+    def monitor_children?: () -> bool
+
+    def refresh_children!: () -> void
+
+    def add_children: (Array[Integer] child_pids) -> void
+
+    def new_child: (ProcessFactory factory, Integer child_pid) -> Process
   end
 
   # Keeps a short history of a process's events

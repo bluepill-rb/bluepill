@@ -4,6 +4,8 @@ describe Bluepill::Application do
   let(:logger) { instance_double(Bluepill::Logger) }
   let(:base_dir) { Dir.mktmpdir }
   let(:app) { described_class.new('test', base_dir: base_dir) }
+  let(:group) { instance_double(Bluepill::Group) }
+  let(:calls) { [] }
 
   before do
     allow(logger).to receive(:prefix_with).and_return(logger)
@@ -29,30 +31,73 @@ describe Bluepill::Application do
     File.join(base_dir, 'pids', 'test.pid')
   end
 
+  # Stub and record what starting the server calls
+  def stub_startup
+    app.groups = {'web' => group}
+    # A previous bluepill's pid file, which kill_previous_bluepill reads
+    File.write(pid_file, '4321')
+    record(Bluepill::System, :pid_alive?, false)
+    [
+      [Bluepill::ProcessJournal, :clear_all_atomic_fs_locks], [::Process, :setpgid], [Bluepill::Daemonize, :daemonize],
+      [logger, :reopen], [group, :determine_initial_state], [Bluepill::System, :reset_data], [group, :tick]
+    ].each { |object, method| record(object, method) }
+    # After creating the app, which traps signals too
+    allow(Signal).to receive(:trap) { |signal| calls << [:trap, signal] }
+    # Don't run the listener
+    allow(Thread).to receive(:new) { calls << [:thread] }
+    allow(Bluepill::Socket).to receive(:server) do |*args|
+      calls << [:server, *args]
+      instance_double(UNIXServer)
+    end
+    # End the run loop after its first tick
+    allow(Kernel).to receive(:sleep) do |seconds|
+      calls << [:sleep, seconds]
+      raise Interrupt
+    end
+  end
+
+  # Record a call to a method, and return result
+  def record(object, method, result = nil)
+    allow(object).to receive(method) do |*args|
+      calls << [method, *args]
+      result
+    end
+  end
+
+  # Start the server until its run loop sleeps, which raises Interrupt
+  def start_server
+    app.send(:start_server)
+  rescue Interrupt
+    nil
+  end
+
   describe '#load' do
-    it 'starts the server' do
-      allow(app).to receive(:start_server)
+    def load_app
       app.load
-      expect(app).to have_received(:start_server)
+    rescue Interrupt
+      nil
+    end
+
+    it 'starts the server' do
+      stub_startup
+      load_app
+      expect(Bluepill::Socket).to have_received(:server)
     end
 
     it 'exits when the server fails to start' do
       error = RuntimeError.new('boom')
       error.set_backtrace(['a.rb:1'])
-      allow(app).to receive(:start_server).and_raise(error)
+      allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks).and_raise(error)
       expect { app.load }.to exit_with(5).and output("Failed to start bluepill:\nRuntimeError `boom`\na.rb:1\n").to_stderr
     end
 
     it 'reports the message of an error from an anonymous class' do
-      allow(app).to receive(:start_server).and_raise(anonymous_error('boom'))
+      allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks).and_raise(anonymous_error('boom'))
       expect { app.load }.to exit_with(5).and output(/^ `boom`$/).to_stderr
     end
   end
 
   describe 'start_server' do
-    let(:group) { instance_double(Bluepill::Group) }
-    let(:calls) { [] }
-
     around do |example|
       program_name = $0
       begin
@@ -62,43 +107,7 @@ describe Bluepill::Application do
       end
     end
 
-    before do
-      app.groups = {'web' => group}
-      # A previous bluepill's pid file, which kill_previous_bluepill reads
-      File.write(pid_file, '4321')
-      record(Bluepill::System, :pid_alive?, false)
-      [
-        [Bluepill::ProcessJournal, :clear_all_atomic_fs_locks], [::Process, :setpgid], [Bluepill::Daemonize, :daemonize],
-        [logger, :reopen], [group, :determine_initial_state], [Bluepill::System, :reset_data], [group, :tick]
-      ].each { |object, method| record(object, method) }
-      # After creating the app, which traps signals too
-      allow(Signal).to receive(:trap) { |signal| calls << [:trap, signal] }
-      # Don't run the listener
-      allow(Thread).to receive(:new) { calls << [:thread] }
-      allow(Bluepill::Socket).to receive(:server) do |*args|
-        calls << [:server, *args]
-        instance_double(UNIXServer)
-      end
-      # End the run loop after its first tick
-      allow(Kernel).to receive(:sleep) do |seconds|
-        calls << [:sleep, seconds]
-        raise Interrupt
-      end
-    end
-
-    # Record a call to a method, and return result
-    def record(object, method, result = nil)
-      allow(object).to receive(method) do |*args|
-        calls << [method, *args]
-        result
-      end
-    end
-
-    def start_server
-      app.send(:start_server)
-    rescue Interrupt
-      nil
-    end
+    before { stub_startup }
 
     def startup_calls
       [

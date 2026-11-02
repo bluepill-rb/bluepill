@@ -16,11 +16,12 @@ module Bluepill
     # @api private
     LOG_METHODS = %i[emerg alert crit err warning notice info debug].freeze
 
-    # Make a logger
+    # Make a logger without prefixes
     #
-    # @param [Logger, Object, nil] logger a parent logger to write through,
-    #   or an object to write to, or nil for the log file or syslog
-    # @param [String, nil] prefix the name to add to the parent's
+    # prefix_with makes the loggers that add prefixes.
+    #
+    # @param [Object, nil] logger the backend to write to, which answers to
+    #   the {LOG_METHODS}, or nil for the log file or syslog
     # @param [Boolean] stdout whether to echo messages to stdout too
     # @param [String, nil] log_file the file to write to instead of syslog
     # @param [String] identity the name syslog shows
@@ -32,73 +33,66 @@ module Bluepill
     # @raise [ArgumentError] if log_level isn't one of {LOG_METHODS}
     #
     # @api private
-    def initialize(logger: nil, prefix: nil, stdout: false, log_file: nil, identity: "bluepilld", log_level: :debug)
+    def initialize(logger: nil, stdout: false, log_file: nil, identity: "bluepilld", log_level: :debug)
       @log_file = log_file
       @identity = identity
-      @logger = logger || create_logger
-      @prefix = prefix
+      @level = priority(log_level)
+      @stdout = stdout
+      @names = [] #: Array[String?]
+      @label = nil
+      # A box, not the backend itself, so that reopen can swap the backend
+      # for this logger and every logger that prefix_with makes from it
+      @sink = [logger || create_logger]
       @prefixes = {}
-      # Set here, and not in settings_from, since Ruby makes room in a new
-      # Logger for the instance variables that initialize sets
-      @level, @names, @stdout, @sink = settings_from(@logger, priority(log_level), stdout)
-      @label = label(@names)
     end
 
-    # @!method emerg(msg, prefix = nil)
+    # @!method emerg(msg)
     #   Log a message at the emergency priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    # @!method alert(msg, prefix = nil)
+    # @!method alert(msg)
     #   Log a message at the alert priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    # @!method crit(msg, prefix = nil)
+    # @!method crit(msg)
     #   Log a message at the critical priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    # @!method err(msg, prefix = nil)
+    # @!method err(msg)
     #   Log a message at the error priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    # @!method warning(msg, prefix = nil)
+    # @!method warning(msg)
     #   Log a message at the warning priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    # @!method notice(msg, prefix = nil)
+    # @!method notice(msg)
     #   Log a message at the notice priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    # @!method info(msg, prefix = nil)
+    # @!method info(msg)
     #   Log a message at the info priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
-    # @!method debug(msg, prefix = nil)
+    # @!method debug(msg)
     #   Log a message at the debug priority
     #   @param [String] msg the message
-    #   @param [Array<String, nil>, nil] prefix more prefixes, after this logger's
     #   @return [void]
     #   @api private
     LOG_METHODS.each_with_index do |method, priority|
       class_eval <<~RUBY, __FILE__, __LINE__ + 1
-        def #{method}(msg, prefix = nil) # def emerg(msg, prefix = nil)
+        def #{method}(msg) # def emerg(msg)
           # Below the log level, so dropped before anything is formatted
           return if #{priority} > @level # return if 0 > @level
 
-          line = "\#{prefix ? label(@names + prefix) : @label}\#{msg}"
+          line = "\#{@label}\#{msg}"
           if @stdout
             $stdout.puts("[#{method}]: \#{line}") # $stdout.puts("[emerg]: ...")
             $stdout.flush
@@ -110,86 +104,45 @@ module Bluepill
 
     # Return a logger that adds a prefix to this one's messages
     #
-    # It's made once for each prefix, and kept.
+    # It's a copy of this logger, so it has the same level and echoes to
+    # stdout if this one does, and it shares the sink. It's made once for
+    # each prefix, and kept.
     #
-    # @param [String] prefix the prefix, such as a process's name
+    # @param [String, nil] prefix the prefix, such as a process's name, or
+    #   nil for none
     #
     # @return [Logger] the prefixed logger
     #
     # @api private
-    def prefix_with(prefix) = @prefixes[prefix] ||= self.class.new(logger: self, prefix: prefix)
+    def prefix_with(prefix) = @prefixes[prefix] ||= dup.add_prefix(prefix)
 
     # Open the log file or syslog again, such as after log rotation
+    #
+    # Every logger made from the same one shares the sink, so they all
+    # write to the new one.
     #
     # @return [void]
     #
     # @api private
-    def reopen
-      parent = @logger
-      if parent.instance_of?(Logger)
-        parent.reopen
-      else
-        @sink.replace([create_logger])
-      end
-    end
-
-    # The position in {LOG_METHODS} of the least severe priority to log
-    #
-    # @return [Integer]
-    #
-    # @api private
-    attr_reader :level
-
-    # Whether messages are echoed to stdout too
-    #
-    # @return [Boolean, nil]
-    #
-    # @api private
-    attr_reader :stdout
-
-    # Where the messages go, which every logger made from this one shares
-    #
-    # It holds one LoggerAdapter, Syslog, or given logger, and reopen
-    # replaces it.
-    #
-    # @return [Array<Object>]
-    #
-    # @api private
-    attr_reader :sink
-
-    # This logger's prefixes, its parents' first
-    #
-    # @return [Array<String, nil>]
-    #
-    # @api private
-    attr_reader :names
+    def reopen = @sink.replace([create_logger])
 
     protected
 
-    # Return the level, prefixes, stdout and sink of a new logger
+    # Add a prefix to a copy of a logger, which prefix_with made
     #
-    # A logger made with a parent logger writes through it: the parent's
-    # level still applies, and so do its prefixes. One made with anything
-    # else writes to that, without prefixes.
+    # The copy gets its own prefixes and prefixed loggers, so the logger it
+    # copies keeps its own.
     #
-    # @param [Logger, LoggerAdapter, Syslog, Object] parent the :logger
-    #   option, or the log file or syslog without one
-    # @param [Integer] level the position in {LOG_METHODS} of the least
-    #   severe priority the log_level option allows
-    # @param [Boolean] stdout whether a logger without a parent echoes to
-    #   stdout
+    # @param [String, nil] prefix the prefix, or nil for none
     #
-    # @return [Array(Integer, Array<String, nil>, Boolean, Array<Object>)]
-    #   the level, the prefixes, whether to echo to stdout, and the sink
+    # @return [Logger] the copy
     #
     # @api private
-    def settings_from(parent, level, stdout)
-      if parent.instance_of?(Logger)
-        [[level, parent.level].min, parent.names + [@prefix], parent.stdout, parent.sink]
-      else
-        names = [] #: Array[String?]
-        [level, names, stdout, [parent]]
-      end
+    def add_prefix(prefix)
+      @names += [prefix]
+      @label = label(@names)
+      @prefixes = {}
+      self
     end
 
     # Return the prefixes as they start a message, as in "[app:web] "

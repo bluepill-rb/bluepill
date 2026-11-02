@@ -16,6 +16,10 @@ FAKE_SYSLOG = <<~RUBY
     def self.open(*)
       self
     end
+
+    def self.lines = @lines ||= []
+
+    def self.info(message) = lines << message
   end
 RUBY
 
@@ -99,7 +103,8 @@ describe Bluepill::Logger do
     it "loads syslog when it is not loaded yet, and logs to it" do
       hide_const("Syslog")
       with_fake_syslog(FAKE_SYSLOG) do
-        expect(described_class.new.sink).to eq([Syslog])
+        described_class.new.info("hello")
+        expect(Syslog.lines).to eq(["hello"])
       end
     end
 
@@ -128,10 +133,9 @@ describe Bluepill::Logger do
       expect(lines).to eq([[:open, "bluepilld", Syslog::LOG_PID, Syslog::LOG_LOCAL6]])
     end
 
-    it "prefixes messages with the given prefix" do
-      parent = described_class.new(logger: sink)
-      described_class.new(logger: parent, prefix: "app").info("message")
-      expect(lines).to eq([[:info, "[app] message"]])
+    it "doesn't prefix messages" do
+      described_class.new(logger: sink).info("message")
+      expect(lines).to eq([[:info, "message"]])
     end
 
     it "writes to stdout if requested" do
@@ -144,6 +148,13 @@ describe Bluepill::Logger do
       record_stdout
       described_class.new(logger: sink, stdout: false).info("message")
       expect(lines).to eq([[:info, "message"]])
+    end
+
+    # The log methods are hot, and read the same instance variables from
+    # every logger, so a prefixed logger and its parent share one shape
+    it "sets the instance variables that a prefixed logger has, in the same order" do
+      logger = described_class.new(logger: sink)
+      expect(logger.instance_variables).to eq(logger.prefix_with("app").instance_variables)
     end
 
     it "starts without prefixed loggers" do
@@ -196,34 +207,15 @@ describe Bluepill::Logger do
         expect(log_file_messages).to eq(["failed"])
       end
 
-      it "keeps the stricter of a prefixed logger level and its parent" do
-        parent = described_class.new(logger: sink, log_level: :info)
-        described_class.new(logger: parent, prefix: "app", log_level: :debug).debug("details")
-        described_class.new(logger: parent, prefix: "app", log_level: :warning).info("hello")
-        described_class.new(logger: parent, prefix: "app", log_level: :warning).warning("careful")
-        expect(lines).to eq([[:warning, "[app] careful"]])
-      end
-
       it "echoes prefixed messages to stdout from the parent" do
         record_stdout
         described_class.new(logger: sink, stdout: true).prefix_with("app").info("hello")
         expect(lines).to eq([[:puts, "[info]: [app] hello"], [:flush], [:info, "[app] hello"]])
       end
 
-      it "adds more prefixes after its own" do
-        described_class.new(logger: sink).prefix_with("app").info("hello", ["web", nil])
-        expect(lines).to eq([[:info, "[app:web] hello"]])
-      end
-
-      it "adds every parent prefix, the outermost first" do
-        app = described_class.new(logger: described_class.new(logger: sink), prefix: "app")
-        described_class.new(logger: app, prefix: "web").info("hello")
-        expect(lines).to eq([[:info, "[app:web] hello"]])
-      end
-
       it "does not echo prefixed messages unless the parent does" do
         record_stdout
-        described_class.new(logger: described_class.new(logger: sink), prefix: "app").info("hello")
+        described_class.new(logger: sink).prefix_with("app").info("hello")
         expect(lines).to eq([[:info, "[app] hello"]])
       end
 
@@ -238,7 +230,7 @@ describe Bluepill::Logger do
   describe "log methods" do
     it "also writes to stdout if requested" do
       record_stdout
-      described_class.new(logger: sink, stdout: true).debug("message", ["a", nil, "b"])
+      described_class.new(logger: sink, stdout: true).prefix_with("a").prefix_with(nil).prefix_with("b").debug("message")
       expect(lines).to eq([[:puts, "[debug]: [a:b] message"], [:flush], [:debug, "[a:b] message"]])
     end
   end
@@ -258,9 +250,31 @@ describe Bluepill::Logger do
       expect(lines).to eq([[:info, "[app] hello"]])
     end
 
+    it "adds no prefix for nil" do
+      logger.prefix_with(nil).info("message")
+      expect(lines).to eq([[:info, "message"]])
+    end
+
+    it "leaves the logger's own messages unprefixed" do
+      logger.prefix_with("app")
+      logger.info("message")
+      expect(lines).to eq([[:info, "message"]])
+    end
+
+    it "leaves a sibling's prefixes alone" do
+      logger.prefix_with("app").prefix_with("web")
+      logger.prefix_with("other").info("message")
+      expect(lines).to eq([[:info, "[other] message"]])
+    end
+
     it "memoizes prefixed loggers" do
       first = logger.prefix_with("app")
       expect(logger.prefix_with("app")).to be(first)
+    end
+
+    it "memoizes a prefixed logger's own prefixed loggers apart from its parent's" do
+      app = logger.prefix_with("app")
+      expect(app.prefix_with("web")).not_to be(logger.prefix_with("web"))
     end
   end
 

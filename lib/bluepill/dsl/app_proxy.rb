@@ -110,6 +110,7 @@ module Bluepill
     # @api private
     def initialize(app_name, options)
       @app = Application.new(app_name.to_s, options)
+      @registry = ProcessFactory::Registry.new
     end
 
     # Define a process of the application
@@ -138,11 +139,8 @@ module Bluepill
       attributes = {} #: Hash[Symbol, untyped]
       APP_ATTRIBUTES.each { |a| attributes[a] = public_send(a) }
 
-      process_factory = ProcessFactory.new(attributes, process_block)
-
-      process = process_factory.create_process(process_name, @app.pids_dir)
-      group = process_factory.attributes.delete(:group)
-
+      process_factory = ProcessFactory.new(attributes, process_block, @registry)
+      process, group = process_factory.create_process(process_name, @app.pids_dir)
       @app.add_process(process, group)
     end
   end

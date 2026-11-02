@@ -3,19 +3,6 @@ describe Bluepill::AppProxy do
 
   let(:app) { instance_double(Bluepill::Application, pids_dir: "/pids", add_process: nil) }
 
-  around do |example|
-    process_keys = Bluepill::ProcessFactory.class_variable_get(:@@process_keys)
-    pid_files = Bluepill::ProcessFactory.class_variable_get(:@@pid_files)
-    Bluepill::ProcessFactory.class_variable_set(:@@process_keys, {})
-    Bluepill::ProcessFactory.class_variable_set(:@@pid_files, {})
-    begin
-      example.run
-    ensure
-      Bluepill::ProcessFactory.class_variable_set(:@@process_keys, process_keys)
-      Bluepill::ProcessFactory.class_variable_set(:@@pid_files, pid_files)
-    end
-  end
-
   before do
     allow(Bluepill::Application).to receive(:new).with("app_name", {}).and_return(app)
     # Silence the warning for processes without a known pid
@@ -68,6 +55,19 @@ describe Bluepill::AppProxy do
     it "gives every process the app's notify_command, unless it sets its own" do
       proxy.notify_command = "alert"
       expect(added(:notify_command, "page")).to eq(%w[alert page])
+    end
+
+    it "rejects a second process with the same name" do
+      proxy.process("web") { start_command "run" }
+      expect { proxy.process("web") { start_command "run" } }
+        .to raise_error(SystemExit).and output("Config Error: You have two entries for the process name 'web'\n").to_stderr
+    end
+
+    it "checks its processes apart from another application's" do
+      proxy.process("web") { start_command "run" }
+      other = described_class.new(:app_name, {})
+      other.process("web") { start_command "run" }
+      expect(app).to have_received(:add_process).twice
     end
 
     it "adds a process without a group" do

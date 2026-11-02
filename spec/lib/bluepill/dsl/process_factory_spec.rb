@@ -1,23 +1,13 @@
 describe Bluepill::ProcessFactory do
-  around do |example|
-    process_keys = described_class.class_variable_get(:@@process_keys)
-    pid_files = described_class.class_variable_get(:@@pid_files)
-    described_class.class_variable_set(:@@process_keys, {})
-    described_class.class_variable_set(:@@pid_files, {})
-    begin
-      example.run
-    ensure
-      described_class.class_variable_set(:@@process_keys, process_keys)
-      described_class.class_variable_set(:@@pid_files, pid_files)
-    end
-  end
+  let(:registry) { Bluepill::ProcessFactory::Registry.new }
 
   # Silence the warning for processes without a known pid. The output
   # matcher swaps $stderr, so specs can still check what is written.
   before { allow($stderr).to receive(:puts) }
 
   def create(name, block, attributes = {})
-    Bluepill::ProcessFactory.new(attributes, block).create_process(name, "/pids")
+    process, = Bluepill::ProcessFactory.new(attributes, block, registry).create_process(name, "/pids")
+    process
   end
 
   def expect_config_error(message, &block)
@@ -50,6 +40,31 @@ describe Bluepill::ProcessFactory do
     it "keeps an explicit pid file" do
       process = create("web", proc { start_command "run" }, pid_file: "/var/web.pid")
       expect(process.pid_file).to eq("/var/web.pid")
+    end
+
+    it "returns the group that the block sets" do
+      factory = described_class.new({}, proc do
+        start_command "run"
+        group "servers"
+      end, registry)
+      expect(factory.create_process("web", "/pids")).to match([be_a(Bluepill::Process), "servers"])
+    end
+
+    it "returns no group when the process has none" do
+      factory = described_class.new({}, proc { start_command "run" }, registry)
+      expect(factory.create_process("web", "/pids")).to match([be_a(Bluepill::Process), nil])
+    end
+
+    it "leaves the factory's attributes as they were" do
+      attributes = {uid: "user"}
+      block = proc { |p| p.start_command("run") && p.monitor_children { stop_command "halt" } }
+      described_class.new(attributes, block, registry).create_process("web", "/pids")
+      expect(attributes).to eq(uid: "user")
+    end
+
+    it "checks each process against a registry of its own by default" do
+      described_class.new({}, proc { start_command "run" }).create_process("web", "/pids")
+      expect { described_class.new({}, proc { start_command "run" }).create_process("web", "/pids") }.not_to raise_error
     end
 
     it "exposes its attributes" do
@@ -109,6 +124,14 @@ describe Bluepill::ProcessFactory do
         create("web", proc { start_command "run" })
         expect_config_error("Config Error: You have two entries for the process name 'web'\n") do
           create("web", proc { start_command "run" }, pid_file: "/other.pid")
+        end
+      end
+
+      it "names the group that the process block sets" do
+        block = proc { start_command("run") && group("servers") }
+        create("web", block)
+        expect_config_error("Config Error: You have two entries for the process name 'web' in the group 'servers'\n") do
+          create("web", block, pid_file: "/other.pid")
         end
       end
 

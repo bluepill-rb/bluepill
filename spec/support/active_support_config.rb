@@ -41,7 +41,7 @@ factory = Bluepill::ProcessFactory.new(
   },
   proc {}
 )
-process = factory.create_process("active_support", "/tmp")
+process, = factory.create_process("active_support", "/tmp")
 process.logger = logger
 process.skip_ticks_for(process.start_grace_time)
 check("a grace time skips ticks") { process.skip_ticks_until - Integer(Time.now) >= 1 }

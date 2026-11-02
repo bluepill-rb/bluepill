@@ -10,19 +10,6 @@ README_CONFIGS = File.read(File.join(BLUEPILL_ROOT, "README.md")).scan(/^```ruby
 describe "The README and example configs", type: :integration do
   let(:processes) { {} }
 
-  around do |example|
-    process_keys = Bluepill::ProcessFactory.class_variable_get(:@@process_keys)
-    pid_files = Bluepill::ProcessFactory.class_variable_get(:@@pid_files)
-    Bluepill::ProcessFactory.class_variable_set(:@@process_keys, {})
-    Bluepill::ProcessFactory.class_variable_set(:@@pid_files, {})
-    begin
-      example.run
-    ensure
-      Bluepill::ProcessFactory.class_variable_set(:@@process_keys, process_keys)
-      Bluepill::ProcessFactory.class_variable_set(:@@pid_files, pid_files)
-    end
-  end
-
   before do
     app = instance_double(Bluepill::Application, pids_dir: "/tmp/pids", load: nil)
     allow(app).to receive(:add_process) { |process, _group| processes[process.name] = process }

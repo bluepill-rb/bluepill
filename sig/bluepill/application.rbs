@@ -213,6 +213,11 @@ module Bluepill
     end
   end
 
+  # Reads a daemon's pid file
+  module PidFile
+    def self.read: (String path) -> Integer?
+  end
+
   module Socket
     TIMEOUT: Integer
     MAX_ATTEMPTS: Integer

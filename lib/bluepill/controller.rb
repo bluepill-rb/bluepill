@@ -1,5 +1,6 @@
 require "fileutils"
 require "bluepill/system"
+require "bluepill/pid_file"
 require "bluepill/controller/directory"
 
 module Bluepill

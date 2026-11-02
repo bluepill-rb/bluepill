@@ -51,12 +51,8 @@ module Bluepill
       #
       # @api private
       def previous_bluepill_pid
-        return unless File.exist?(pid_file)
-
-        # An empty or garbled pid file reads as 0, and signaling pid 0 would
-        # interrupt bluepill's own process group
-        previous_pid = File.read(pid_file).to_i
-        previous_pid if previous_pid > 0 && System.pid_alive?(previous_pid)
+        previous_pid = PidFile.read(pid_file)
+        previous_pid if previous_pid && System.pid_alive?(previous_pid)
       end
 
       # Wait up to kill_timeout half seconds for the previous daemon to exit

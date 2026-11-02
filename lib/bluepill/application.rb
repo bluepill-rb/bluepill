@@ -1,6 +1,7 @@
 require "thread"
 require "bluepill/system"
 require "bluepill/process_journal"
+require "bluepill/pid_file"
 require "bluepill/application/listener"
 require "bluepill/application/lifecycle"
 require "bluepill/application/previous_daemon"

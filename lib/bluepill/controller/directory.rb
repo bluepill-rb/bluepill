@@ -42,13 +42,8 @@ module Bluepill
       #
       # @api private
       def pid_for(app)
-        pid_file = File.join(pids_dir, "#{app}.pid")
-        return false unless File.exist?(pid_file)
-
-        # An empty or garbled pid file reads as 0, and signaling pid 0 would
-        # hit the CLI's own process group
-        pid = File.read(pid_file).to_i
-        (pid > 0) ? pid : false
+        # false, not nil, so quit says "bluepilld[false] not running"
+        PidFile.read(File.join(pids_dir, "#{app}.pid")) || false
       end
 
       # Create the sockets and pids directories

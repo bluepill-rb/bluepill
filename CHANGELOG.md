@@ -33,13 +33,13 @@ To upgrade, install 0.2.0 and run `bluepill load` with the same pill file. It re
 
 ### Changed
 
-- A check's method that says whether a value is fine is now `check?`. A custom check that defines `check`, as in bluepill 0.1, still works.
 - **Breaking:** an attribute in a `process` block that bluepill doesn't know, such as a misspelled `start_comand`, now fails when the config loads, naming the attribute and the process and suggesting the closest one. Before, bluepill accepted it and quietly ignored it ([#40](https://github.com/bluepill-rb/bluepill/issues/40)).
-- A process's `state` is now a Symbol, such as `:up`, where it was a String, such as `"up"`. A custom trigger that compares `process.state` with a String needs to compare it with a Symbol instead. `bluepill status`, the log, and `notify_command`'s `BLUEPILL_FROM` and `BLUEPILL_TO` show the states as before, and a tick that leaves a process's state alone no longer makes a new transition and string to do it.
+- **Breaking:** a process's `state` is now a Symbol, such as `:up`, where it was a String, such as `"up"`. A custom trigger that compares `process.state` with a String needs to compare it with a Symbol instead. `bluepill status`, the log, and `notify_command`'s `BLUEPILL_FROM` and `BLUEPILL_TO` show the states as before, and a tick that leaves a process's state alone no longer makes a new transition and string to do it.
 - **Breaking:** `pre_start_command` now runs like the other hooks. Bluepill waits for it for up to `hook_timeout` (30 seconds by default), kills it if it runs longer, and logs it if it fails to run, then starts the process either way. Before, it had no time limit, and one that couldn't run, such as a missing program, stopped the start. A setup step that takes longer needs a bigger `hook_timeout`.
+- **Breaking:** a process with a `uid` now runs with every group the user belongs to, as it would after logging in, and with the user's primary group when it sets no `gid`. Before, it got only its `gid` and `supplementary_groups`, and without a `gid` it kept the root group and root's other groups ([#28](https://github.com/bluepill-rb/bluepill/issues/28)).
+- **Breaking:** the commands of a process's children with `monitor_children`, such as their `stop_command`, now run as the parent's `uid`, `gid` and `supplementary_groups`. Before, they ran as root ([#28](https://github.com/bluepill-rb/bluepill/issues/28)).
+- A check's method that says whether a value is fine is now `check?`. A custom check that defines `check`, as in bluepill 0.1, still works.
 - A process's logger works out its prefixes once, and writes straight to the log, so a log line takes 1 allocation instead of 10, and each check's run takes about 10% less time.
-- A process with a `uid` now runs with every group the user belongs to, as it would after logging in, and with the user's primary group when it sets no `gid`. Before, it got only its `gid` and `supplementary_groups`, and without a `gid` it kept the root group and root's other groups ([#28](https://github.com/bluepill-rb/bluepill/issues/28)).
-- The commands of a process's children with `monitor_children`, such as their `stop_command`, now run as the parent's `uid`, `gid` and `supplementary_groups`. Before, they ran as root ([#28](https://github.com/bluepill-rb/bluepill/issues/28)).
 
 ### Removed
 
@@ -52,9 +52,11 @@ To upgrade, install 0.2.0 and run `bluepill load` with the same pill file. It re
 
 - The README's group example gave every process the same pid file, and its `stop_signals` example waited longer than its stop grace time, so bluepill refused to load either config.
 
+## [0.1.6] - 2026-11-02
+
 ### Security
 
-- The daemon now runs only the commands that the CLI sends over its socket: `start`, `stop`, `restart`, `unmonitor`, `status`, `version` and `log_file`. Before, it called whatever method a line on the socket named, so anyone who could write to the socket could call any of the daemon's public methods, such as `instance_eval` with code of their own. Any other command now gets a `NoMethodError` back.
+- The daemon now runs only the commands that the CLI sends over its socket: `start`, `stop`, `restart`, `unmonitor`, `status`, `version` and `log_file`. Before, it called whatever method a line on the socket named, so anyone who could write to the socket could call any of the daemon's public methods, such as `instance_eval` with code of their own. The socket takes the daemon's umask, so with the usual umask of 022 only the daemon's own user could connect. Any other command now gets a `NoMethodError` back.
 
 ## [0.1.5] - 2026-11-01
 
@@ -807,7 +809,8 @@ Initial release.
 - Added the `bluepill` CLI with the `load`, `status`, `start`, `stop`, `restart`, `unmonitor`, `quit` and `log` commands.
 - Added syslog logging.
 
-[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.1.5...HEAD
+[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/bluepill-rb/bluepill/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/bluepill-rb/bluepill/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/bluepill-rb/bluepill/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/bluepill-rb/bluepill/compare/v0.1.2...v0.1.3

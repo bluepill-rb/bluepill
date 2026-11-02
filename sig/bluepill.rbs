@@ -1029,6 +1029,12 @@ module Bluepill
 
     def self.drop_privileges: (String? uid, String? gid, Array[String]? supplementary_groups) -> void
 
+    def self.join_groups: (Etc::Passwd? user, Integer? gid_num) -> Integer?
+
+    def self.add_supplementary_groups: (Array[String]? supplementary_groups) -> void
+
+    def self.switch_to_user: (Etc::Passwd user) -> void
+
     def self.can_write_pid_file: (String pid_file, Logger logger) -> bool
 
     def self.redirect_io: (String? io_in, String? io_out, String? io_err) -> void

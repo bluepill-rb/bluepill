@@ -163,11 +163,10 @@ module Bluepill
       @@pid_files[pid_key] = nil
     end
 
-    # Exit unless stop_signals alternates signals and delays
+    # Exit on a mistake in stop_signals
     #
     # The signals and delays must alternate, starting and ending with a
-    # signal, and stop_grace_time must be longer than the delays. Checks the
-    # more specific problems before the 'odd number' message.
+    # signal, and stop_grace_time must be longer than the delays.
     #
     # @return [void]
     #
@@ -176,6 +175,22 @@ module Bluepill
       stop_signals = attributes[:stop_signals]
       return if stop_signals.nil?
 
+      validate_stop_signal_order!(stop_signals)
+      validate_stop_grace_time!(stop_signals)
+    end
+
+    # Exit unless stop_signals alternates signals and delays
+    #
+    # The signals and delays must alternate, starting and ending with a
+    # signal. Checks the more specific problems before the 'odd number'
+    # message.
+    #
+    # @param [Array<Symbol, Integer>] stop_signals the signals and delays
+    #
+    # @return [void]
+    #
+    # @api private
+    def validate_stop_signal_order!(stop_signals)
       stop_signals.each_with_index do |value, i|
         expected, label = i.even? ? [Symbol, "a symbol (signal)"] : [Integer, "a number (delay)"]
         next if value.is_a?(expected)
@@ -183,7 +198,16 @@ module Bluepill
         config_error!("Config Error: Invalid stop_signals!  Expected #{label} at position #{i} instead of '#{value}'.")
       end
       config_error!("Config Error: Invalid stop_signals!  Expected an odd number of elements.") unless stop_signals.size.odd?
+    end
 
+    # Exit unless stop_grace_time is longer than the stop_signals delays
+    #
+    # @param [Array<Symbol, Integer>] stop_signals the signals and delays
+    #
+    # @return [void]
+    #
+    # @api private
+    def validate_stop_grace_time!(stop_signals)
       stop_grace_time = attributes[:stop_grace_time]
       delays = stop_signals.select.with_index { |_, i| i.odd? }
       return unless stop_grace_time.nil? || stop_grace_time <= delays.inject(0, :+)

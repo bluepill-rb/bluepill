@@ -698,6 +698,10 @@ module Bluepill
 
     def validate_stop_signals!: () -> void
 
+    def validate_stop_signal_order!: (Array[Symbol | Integer] stop_signals) -> void
+
+    def validate_stop_grace_time!: (Array[Symbol | Integer] stop_signals) -> void
+
     def warn_unless_pid_known: (ProcessProxy process, String? default_pid_file) -> void
 
     def config_error!: (String message) -> bot

@@ -19,7 +19,7 @@ module Bluepill
     # and then on_start_timeout is dispatched. Ticks are skipped for
     # start_grace_time either way.
     #
-    # @return [Integer] when ticks resume, in epoch seconds
+    # @return [Integer] when ticks resume, from Clock.now
     #
     # @api private
     def start_process
@@ -82,7 +82,7 @@ module Bluepill
     # Stop signals are sent from a thread of their own, with their delays.
     # Ticks are skipped for stop_grace_time.
     #
-    # @return [Integer] when ticks resume, in epoch seconds
+    # @return [Integer] when ticks resume, from Clock.now
     #
     # @api private
     def stop_process
@@ -141,7 +141,7 @@ module Bluepill
 
     # Restart the process with its restart command, or by stopping and starting
     #
-    # @return [Integer] when ticks resume, in epoch seconds
+    # @return [Integer] when ticks resume, from Clock.now
     #
     # @api private
     def restart_process
@@ -161,7 +161,7 @@ module Bluepill
     #
     # @param [String] command the restart command
     #
-    # @return [Integer] when ticks resume, in epoch seconds
+    # @return [Integer] when ticks resume, from Clock.now
     #
     # @api private
     def run_restart_command(command)

@@ -30,6 +30,7 @@ require "monitor"
 require "timeout"
 require "logger"
 
+require "bluepill/clock"
 require "bluepill/units"
 require "bluepill/util/inflections"
 

@@ -6,10 +6,10 @@ describe Bluepill::Process do
   end
 
   let(:logger) { instance_double(Bluepill::Logger).as_null_object }
-  let(:now) { Time.at(1_000_000) }
+  let(:now) { 1_000_000 }
 
   before do
-    allow(Time).to receive(:now).and_return(now)
+    allow(Bluepill::Clock).to receive(:now).and_return(now)
     allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal)
     allow(Bluepill::ProcessJournal).to receive(:append_pid_to_journal)
     allow(::Process).to receive(:kill).and_return(1)
@@ -194,7 +194,7 @@ describe Bluepill::Process do
 
     context "when skipping ticks" do
       before do
-        process.skip_ticks_until = now.to_i + 10
+        process.skip_ticks_until = now + 10
         thread
         process.tick
       end
@@ -204,7 +204,7 @@ describe Bluepill::Process do
       end
 
       it "keeps skipping them" do
-        expect(process.skip_ticks_until).to eq now.to_i + 10
+        expect(process.skip_ticks_until).to eq now + 10
       end
     end
 
@@ -228,7 +228,7 @@ describe Bluepill::Process do
 
     context "when unmonitored" do
       before do
-        process.skip_ticks_until = now.to_i - 1
+        process.skip_ticks_until = now - 1
         thread
         process.tick
       end
@@ -530,7 +530,7 @@ describe Bluepill::Process do
       end
 
       it "runs the watches with the pid and the time" do
-        expect(quiet).to have_received(:run).with(5, now.to_i)
+        expect(quiet).to have_received(:run).with(5, now)
       end
 
       it "dispatches events from watches" do
@@ -542,7 +542,7 @@ describe Bluepill::Process do
       let(:idle) { watch_double(:idle, [:restart]) }
 
       before do
-        allow(idle).to receive(:due?).with(now.to_i).and_return(false)
+        allow(idle).to receive(:due?).with(now).and_return(false)
         allow(Thread).to receive(:new).and_call_original
         process.watches << idle
         process.run_watches
@@ -786,7 +786,7 @@ describe Bluepill::Process do
       end
 
       it "skips ticks for start_grace_time" do
-        expect(process.skip_ticks_until).to eq now.to_i + 3
+        expect(process.skip_ticks_until).to eq now + 3
       end
     end
 
@@ -1012,7 +1012,7 @@ describe Bluepill::Process do
       end
 
       it "skips ticks for stop_grace_time" do
-        expect(process.skip_ticks_until).to eq now.to_i + 3
+        expect(process.skip_ticks_until).to eq now + 3
       end
     end
 
@@ -1139,7 +1139,7 @@ describe Bluepill::Process do
       end
 
       it "skips ticks for restart_grace_time" do
-        expect(process.skip_ticks_until).to eq now.to_i + 3
+        expect(process.skip_ticks_until).to eq now + 3
       end
     end
 
@@ -1400,14 +1400,14 @@ describe Bluepill::Process do
 
   describe "#skip_ticks_for" do
     it "adds to an existing skip" do
-      process.skip_ticks_until = now.to_i + 5
+      process.skip_ticks_until = now + 5
       process.skip_ticks_for(2.5)
-      expect(process.skip_ticks_until).to eq now.to_i + 7
+      expect(process.skip_ticks_until).to eq now + 7
     end
 
     it "starts from now without a skip" do
       process.skip_ticks_for(2)
-      expect(process.skip_ticks_until).to eq now.to_i + 2
+      expect(process.skip_ticks_until).to eq now + 2
     end
   end
 

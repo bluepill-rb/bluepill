@@ -54,7 +54,7 @@ describe Bluepill::Triggers::Flapping do
   end
 
   def notify_at(trigger, time, transition = starting)
-    allow(Time).to receive(:now).and_return(Time.at(time))
+    allow(Bluepill::Clock).to receive(:now).and_return(time)
     trigger.notify(transition)
   end
 

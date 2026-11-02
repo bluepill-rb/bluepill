@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Breaking:** support for Ruby 2.0. Bluepill 0.2.1 needs Ruby 2.1 or newer, or JRuby 9.0 or newer. Bluepill 0.2.0 still runs on Ruby 2.0.
 
+### Fixed
+
+- Bluepill timed its ticks, checks, grace times and flapping detection with the system clock, so a change to the clock, such as an NTP correction after a VM resumes, could put off ticks and checks for as long as the clock went back, or end grace times early when it went forward. It now times them with the monotonic clock, which only counts up, and a tick no longer makes a `Time` to do it.
+
 ## [0.2.0] - 2026-11-02
 
 ### Upgrading from 0.1

@@ -94,7 +94,7 @@ module Bluepill
       # the others. One that isn't due would do nothing, so it gets no
       # thread.
       #
-      # @param [Integer] now the time, in epoch seconds
+      # @param [Integer] now the time, from Clock.now
       #
       # @yieldreturn [Integer, nil] the process's pid, read on each watch's
       #   thread

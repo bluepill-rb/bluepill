@@ -182,7 +182,7 @@ describe Bluepill::ConditionWatch do
 
     it "uses the current time as the default tick" do
       cpu_usage(90)
-      allow(Time).to receive(:now).and_return(Time.at(100))
+      allow(Bluepill::Clock).to receive(:now).and_return(100)
       w = watch
       expect([w.run(123), w.run(123, 109), w.run(123, 110)]).to eq([[:restart], [], [:restart]])
     end

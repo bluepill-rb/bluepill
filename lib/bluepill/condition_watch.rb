@@ -121,7 +121,7 @@ module Bluepill
     #
     # It's due on its first run, and then every `every` seconds.
     #
-    # @param [Integer] tick_number the current time, in seconds
+    # @param [Integer] tick_number the time, from Clock.now
     #
     # @return [Boolean]
     #
@@ -137,7 +137,7 @@ module Bluepill
     # run adds the value to the history and logs the history.
     #
     # @param [Integer, nil] pid the process's pid
-    # @param [Integer] tick_number the current time, in seconds
+    # @param [Integer] tick_number the time, from Clock.now
     #
     # @return [Array<Symbol>] the events to fire, empty unless the check
     #   ran and failed often enough
@@ -146,7 +146,7 @@ module Bluepill
     #   System::PsError, after logging it
     #
     # @api private
-    def run(pid, tick_number = Integer(Time.now))
+    def run(pid, tick_number = Clock.now)
       # The same test as due?, written out to save a call on every check.
       # An if, not a guard clause: the guard ran 3% slower on the zombie
       # benchmark, with the same instructions.

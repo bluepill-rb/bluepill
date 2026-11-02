@@ -48,7 +48,7 @@ module Bluepill
     # @api private
     attr_accessor :triggers
 
-    # Return the time, in epoch seconds, before which ticks are skipped
+    # Return the time, from Clock.now, before which ticks are skipped
     #
     # Set while a start, stop or restart command has its grace time to take
     # effect.
@@ -242,7 +242,7 @@ module Bluepill
     #
     # @api private
     def run_watches
-      events = watches.run(Integer(Time.now)) { actual_pid }
+      events = watches.run(Clock.now) { actual_pid }
       return if events.empty?
 
       @transitioned = false
@@ -280,11 +280,11 @@ module Bluepill
     #
     # @param [Integer, Float] seconds how long to skip ticks for
     #
-    # @return [Integer] when ticks resume, in epoch seconds
+    # @return [Integer] when ticks resume, from Clock.now
     #
     # @api private
     def skip_ticks_for(seconds)
-      self.skip_ticks_until = (skip_ticks_until || Integer(Time.now)) + Integer(seconds)
+      self.skip_ticks_until = (skip_ticks_until || Clock.now) + Integer(seconds)
     end
 
     # Return whether ticks are being skipped
@@ -293,7 +293,7 @@ module Bluepill
     #
     # @api private
     def skipping_ticks?
-      skip_ticks_until && skip_ticks_until > Integer(Time.now)
+      skip_ticks_until && skip_ticks_until > Clock.now
     end
   end
 end

@@ -33,6 +33,11 @@ module Bluepill
     def self.to_s: () -> String
   end
 
+  # The monotonic clock that times ticks, checks and grace times
+  module Clock
+    def self.now: () -> Integer
+  end
+
   # What a process passes to its transition callbacks and triggers
   interface _Transition
     def from_name: () -> Symbol?

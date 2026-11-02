@@ -25,7 +25,8 @@ module Bluepill
       #
       # @api private
       def before_transition(transition)
-        notify_triggers(transition)
+        # @triggers and not triggers, to save a call on every tick
+        @triggers.notify(transition)
         clean_threads if transition.from_name.equal?(:stopping)
         true
       end
@@ -51,21 +52,6 @@ module Bluepill
         record_transition(transition)
         post_start_process if transition.to_name.equal?(:up) && STARTS.include?(transition.from_name)
         notify_transition(transition)
-      end
-
-      # Tell every trigger about a transition
-      #
-      # An error a trigger raises stops the transition, and tick logs it.
-      #
-      # @param [#from_name, #to_name, #loopback?] transition the transition
-      #
-      # @return [void]
-      #
-      # @raise [StandardError] what a trigger raised
-      #
-      # @api private
-      def notify_triggers(transition)
-        triggers.each { |trigger| trigger.notify(transition) }
       end
 
       # Clear the watches' history after the process changes state

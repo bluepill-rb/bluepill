@@ -445,24 +445,6 @@ describe Bluepill::Process do
     end
   end
 
-  describe "#notify_triggers" do
-    let(:transition) { described_class::Transition.new(:up, :down) }
-    let(:trigger) { instance_double(Bluepill::Trigger, "trigger", :logger= => nil, :notify => nil) }
-    let(:error) { RuntimeError.new("boom") }
-
-    before { process.triggers << trigger }
-
-    it "notifies each trigger" do
-      process.notify_triggers(transition)
-      expect(trigger).to have_received(:notify).with(transition)
-    end
-
-    it "re-raises errors" do
-      allow(trigger).to receive(:notify).and_raise(error)
-      expect { process.notify_triggers(transition) }.to raise_error(error)
-    end
-  end
-
   describe "#run_watches" do
     before { process.actual_pid = 5 }
 

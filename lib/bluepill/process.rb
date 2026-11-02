@@ -12,6 +12,7 @@ require "bluepill/process/transition"
 require "bluepill/process/state_machine"
 require "bluepill/process/transition_callbacks"
 require "bluepill/process/watches"
+require "bluepill/process/triggers"
 require "bluepill/process/user_commands"
 
 module Bluepill
@@ -47,10 +48,10 @@ module Bluepill
 
     # Return the triggers notified of the process's transitions
     #
-    # @return [Array<Trigger>]
+    # @return [Triggers]
     #
     # @api private
-    attr_accessor :triggers
+    attr_reader :triggers
 
     # Return the time, from Clock.now, before which ticks are skipped
     #
@@ -191,7 +192,7 @@ module Bluepill
     def logger=(logger)
       @logger = logger
       watches.logger = logger
-      triggers.each { |t| t.logger = logger }
+      triggers.logger = logger
     end
 
     # Record an event and fire it on the state machine
@@ -237,7 +238,7 @@ module Bluepill
     # @api private
     def add_checks(checks, logger)
       @watches = Watches.new
-      @triggers = []
+      @triggers = Triggers.new
       self.logger = logger
       checks.each { |name, options| add_check(name, options) }
     end
@@ -257,7 +258,7 @@ module Bluepill
     def add_check(name, options)
       check = CheckRegistry.fetch(name)
       if check < Trigger
-        triggers << check.new(self, **options, logger: logger)
+        triggers.add(check, self, **options)
       else
         watches.add(name, **options)
       end

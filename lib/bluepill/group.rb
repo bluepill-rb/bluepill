@@ -32,13 +32,6 @@ module Bluepill
     # @api private
     attr_accessor :logger
 
-    # Return a logger for processes, which bluepill doesn't use
-    #
-    # @return [Object] whatever was set
-    #
-    # @api private
-    attr_accessor :process_logger
-
     # The setting that says whether each command runs on a process without
     # waiting for it
     NOBLOCK = {

@@ -65,7 +65,7 @@ module Bluepill
       def user_unmonitor
         # When the user issues an unmonitor cmd, reset any triggers so that
         # scheduled events gets cleared
-        triggers.each(&:reset!)
+        triggers.reset!
         dispatch!(:unmonitor, "user initiated")
       end
     end

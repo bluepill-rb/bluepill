@@ -36,11 +36,12 @@ describe Bluepill::Process do
   let(:calls) { [] }
   let(:running) { true }
 
-  # Each callback is seen through what it calls: notify_triggers through a
-  # trigger, clean_threads through a thread it kills, start_process through
-  # System.daemonize, stop_process through the TERM signal, record_transition
-  # and run_watches through a watch, and post_start_process and
-  # notify_transition through the hook commands they run
+  # Each callback is seen through what it calls: the triggers' notify (as
+  # notify_triggers) through a trigger, clean_threads through a thread it
+  # kills, start_process through System.daemonize, stop_process through the
+  # TERM signal, record_transition and run_watches through a watch, and
+  # post_start_process and notify_transition through the hook commands they
+  # run
   before do
     trigger = instance_double(Bluepill::Trigger)
     allow(trigger).to receive(:notify) do |transition|

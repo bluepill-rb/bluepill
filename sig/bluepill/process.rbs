@@ -15,7 +15,7 @@ module Bluepill
 
     attr_accessor name: String
     attr_reader watches: Process::Watches
-    attr_accessor triggers: Array[Trigger]
+    attr_reader triggers: Process::Triggers
     attr_accessor skip_ticks_until: Integer?
     attr_accessor process_running: bool?
 
@@ -118,7 +118,7 @@ module Bluepill
     interface _Host
       %a{pure} def logger: () -> Logger
       %a{pure} def watches: () -> Process::Watches
-      %a{pure} def triggers: () -> Array[Trigger]
+      %a{pure} def triggers: () -> Process::Triggers
       %a{pure} def children: () -> Array[Process]
       def monitor_children?: () -> bool
       def clean_threads: () -> void
@@ -132,12 +132,11 @@ module Bluepill
     STARTS: Array[Symbol]
 
     @transitioned: bool
+    @triggers: Process::Triggers
 
     def before_transition: (Process::Transition transition) -> true
 
     def after_transition: (Process::Transition transition) -> void
-
-    def notify_triggers: (_Transition transition) -> void
 
     def record_transition: (_Transition transition) -> void
   end
@@ -173,12 +172,35 @@ module Bluepill
     def events: (Array[[ConditionWatch, Thread]] threads) -> Array[[Symbol, String]]
   end
 
+  # The triggers a Process tells of its transitions
+  class Process::Triggers
+    include Enumerable[Trigger]
+
+    attr_reader logger: Logger
+
+    @triggers: Array[Trigger]
+
+    def initialize: () -> void
+
+    def add: (Class klass, Process process, **untyped options) -> Process::Triggers
+
+    def <<: (Trigger trigger) -> Process::Triggers
+
+    def each: () { (Trigger trigger) -> void } -> Array[Trigger]
+
+    def logger=: (Logger logger) -> void
+
+    def notify: (_Transition transition) -> Array[Trigger]
+
+    def reset!: () -> Array[Trigger]
+  end
+
   # Carries out the commands a user gives a Process from the command line
   module Process::UserCommands : Process::UserCommands::_Host
     # What UserCommands uses from Process
     interface _Host
       %a{pure} def logger: () -> Logger
-      %a{pure} def triggers: () -> Array[Trigger]
+      %a{pure} def triggers: () -> Process::Triggers
       def process_running?: (?bool force) -> bool
       def dispatch!: (Symbol | String event, ?String? reason) -> bool
       def stop_process: () -> Integer
@@ -218,8 +240,6 @@ module Bluepill
     attr_accessor name: String?
     attr_accessor processes: Array[Process]
     attr_accessor logger: Logger
-    # Not used by bluepill
-    attr_accessor process_logger: untyped
 
     NOBLOCK: Hash[Symbol, Symbol]
 

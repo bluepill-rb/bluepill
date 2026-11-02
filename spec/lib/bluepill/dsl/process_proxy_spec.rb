@@ -140,25 +140,6 @@ describe Bluepill::ProcessProxy do
       proxy = described_class.new("web", {}, proc {})
       expect(proxy.send(:suggest, :xid)).to eq("gid")
     end
-  end
-
-  describe ".distance" do
-    it "counts the insertions, deletions and replacements between two names" do
-      pairs = [
-        %w[start_comand start_command], %w[pid_file pidfile], %w[daemonise daemonize],
-        %w[kitten sitting], %w[sitting kitten], %w[flaw lawn], %w[ab ba]
-      ]
-      expect(pairs.collect { |a, b| described_class.distance(a, b) }).to eq([1, 1, 1, 3, 3, 2, 2])
-    end
-
-    it "counts every character against an empty name" do
-      pairs = [["", "uid"], ["gid", ""], ["", ""]]
-      expect(pairs.collect { |a, b| described_class.distance(a, b) }).to eq([3, 3, 0])
-    end
-
-    it "is 0 between a name and itself" do
-      expect(described_class.distance("stop_command", "stop_command")).to eq(0)
-    end
 
     it "leaves a bang method with an argument to NoMethodError" do
       expect { described_class.new("web", {}, proc { daemonize! true }) }.to raise_error(NoMethodError, /undefined method/)

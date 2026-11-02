@@ -108,11 +108,6 @@ module Bluepill
 
     def self.attribute_names: () -> Array[Symbol]
 
-    # The Levenshtein distance between two names
-    def self.distance: (String from, String to) -> Integer
-
-    def self.next_row!: (Array[Integer] row, Integer from_length, String from_char, String to) -> void
-
     def checks: (Symbol name, ?Hash[Symbol, untyped] options) -> Hash[Symbol, untyped]
 
     # The block configures the children like a process block

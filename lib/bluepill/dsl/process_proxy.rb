@@ -1,3 +1,5 @@
+require "bluepill/util/levenshtein"
+
 module Bluepill
   # The self of a process block in a config file
   #
@@ -130,54 +132,6 @@ module Bluepill
       Process::CONFIGURABLE_ATTRIBUTES + [:group]
     end
 
-    # Return how many edits turn one name into another
-    #
-    # Counts the characters to insert, delete or replace (the Levenshtein
-    # distance), a row of the table at a time.
-    #
-    # @example
-    #   ProcessProxy.distance('start_comand', 'start_command') # => 1
-    #
-    # @param [String] from the name to start from
-    # @param [String] to the name to end at
-    #
-    # @return [Integer] the number of edits
-    #
-    # @api private
-    def self.distance(from, to)
-      row = (0..to.length).to_a
-      from.each_char.with_index(1) do |from_char, i|
-        next_row!(row, i, from_char, to)
-      end
-      row.fetch(-1)
-    end
-
-    # Turn a row of the distance table into the next one, in place
-    #
-    # Cell j becomes the fewest edits that turn the first from_length
-    # characters of the from name into the first j characters of the to
-    # name.
-    #
-    # @param [Array<Integer>] row the row for the characters before from_char
-    # @param [Integer] from_length the number of from's characters, through
-    #   from_char
-    # @param [String] from_char the from name's next character
-    # @param [String] to the name to end at
-    #
-    # @return [void]
-    #
-    # @api private
-    def self.next_row!(row, from_length, from_char, to)
-      diagonal = row.fetch(0)
-      row[0] = from_length
-      to.each_char.with_index(1) do |to_char, j|
-        above = row.fetch(j)
-        substitution = diagonal + (from_char.eql?(to_char) ? 0 : 1)
-        row[j] = [above + 1, row.fetch(j - 1) + 1, substitution].min
-        diagonal = above
-      end
-    end
-
     # Add a check of the process, or a trigger such as :flapping
     #
     # @example
@@ -286,7 +240,7 @@ module Bluepill
     # @api private
     def suggest(key)
       word = key.to_s
-      distances = self.class.attribute_names.collect { |name| [self.class.distance(word, name.to_s), name.to_s] } #: Array[[Integer, String]]
+      distances = self.class.attribute_names.collect { |name| [Util.levenshtein_distance(word, name.to_s), name.to_s] } #: Array[[Integer, String]]
       closest = distances.min #: [Integer, String]
       distance, name = closest
       name if distance <= word.length / 3

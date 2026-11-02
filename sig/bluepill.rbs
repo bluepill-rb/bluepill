@@ -91,6 +91,13 @@ module Bluepill
     # does
     def self.underscore: (String name) -> String
 
+    # The Levenshtein distance between two strings
+    def self.levenshtein_distance: (String from, String to) -> Integer
+
+    private
+
+    def self.next_levenshtein_row!: (Array[Integer] row, Integer from_length, String from_char, String to) -> void
+
     # An array that drops its oldest element when it grows past its capacity
     class RotationalArray[Elem] < Array[Elem]
       @capacity: Integer

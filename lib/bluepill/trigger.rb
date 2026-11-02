@@ -43,6 +43,26 @@ module Bluepill
       @implementations[name]
     end
 
+    # Create a trigger, and warn about what 0.3.0 rejects in its class
+    #
+    # The trigger gets its options as keyword arguments, which an
+    # initialize that takes an options Hash gets as the Hash, so a custom
+    # trigger can take them either way, as bluepill 0.3.0's need keywords.
+    #
+    # @param [Process] process the process the trigger watches
+    # @param [Hash{Symbol => Object}] options the trigger's options, with
+    #   :logger
+    #
+    # @return [Trigger] the trigger
+    #
+    # @api private
+    def self.create(process, **options)
+      Deprecation.check_trigger_class(self)
+      trigger = new(process, **options) #: untyped
+      Deprecation.check_logger(trigger, options[:logger])
+      trigger
+    end
+
     # Return the process the trigger watches
     #
     # @return [Process] the process
@@ -55,7 +75,22 @@ module Bluepill
     # @return [Logger] the process's logger
     #
     # @api private
-    attr_accessor :logger
+    attr_reader :logger
+
+    # Set the logger the trigger writes to
+    #
+    # The process sets it. Bluepill 0.3.0 removes it, so it warns when code
+    # outside bluepill calls it.
+    #
+    # @param [Logger, nil] logger the process's logger
+    #
+    # @return [void]
+    #
+    # @api private
+    def logger=(logger)
+      Deprecation.check_logger_writer(self, Array(caller_locations(1, 1)).first)
+      @logger = logger
+    end
 
     # Return the events the trigger scheduled, each with its thread
     #
@@ -117,6 +152,7 @@ module Bluepill
     #
     # @api private
     def dispatch!(event)
+      Deprecation.check_trigger_event(self, event)
       process.dispatch!(event, @reason)
     end
 

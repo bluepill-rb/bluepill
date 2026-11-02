@@ -23,7 +23,22 @@ module Bluepill
       # @return [Logger, nil] the process's logger
       #
       # @api public
-      attr_accessor :logger
+      attr_reader :logger
+
+      # Set the logger the condition writes to
+      #
+      # The watch sets it. Bluepill 0.3.0 removes it, so it warns when
+      # code outside bluepill calls it.
+      #
+      # @param [Logger, nil] logger the process's logger
+      #
+      # @return [void]
+      #
+      # @api private
+      def logger=(logger)
+        Deprecation.check_logger_writer(self, Array(caller_locations(1, 1)).first)
+        @logger = logger
+      end
 
       # Create a condition with the options a config gave its check
       #

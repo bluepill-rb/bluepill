@@ -105,7 +105,9 @@ module Bluepill
       condition_options = options.reject { |key, _| WATCH_KEYS.include?(key) }
       condition_options[:logger] = @logger
       condition = ProcessConditions[@name] #: untyped
+      Deprecation.check_condition_class(condition)
       @process_condition = condition.new(**condition_options)
+      Deprecation.check_logger(@process_condition, @logger)
       self.logger = @logger
     end
 

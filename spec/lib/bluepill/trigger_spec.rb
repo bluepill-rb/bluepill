@@ -49,6 +49,30 @@ describe Bluepill::Trigger do
     end
   end
 
+  describe ".create" do
+    # A trigger class whose initialize takes an options Hash, and doesn't
+    # call super
+    def hash_trigger
+      allow(described_class).to receive(:inherited)
+      stub_const("Bluepill::Triggers::HashTrigger", Class.new(described_class) do
+        define_method(:initialize) { |process, _options = {}| @process = process }
+        define_method(:notify) { |_transition| nil }
+      end)
+    end
+
+    it "makes the trigger with its options" do
+      expect(Bluepill::Triggers::Flapping.create(process, times: 2, logger: logger)).to have_attributes(times: 2, logger: logger, process: process)
+    end
+
+    it "warns about a class whose initialize takes an options Hash" do
+      expect { hash_trigger.create(process, logger: logger) }.to output(/takes them as a Hash/).to_stderr
+    end
+
+    it "warns about a trigger that has no logger after its initialize" do
+      expect { hash_trigger.create(process, logger: logger) }.to output(/so it has no logger/).to_stderr
+    end
+  end
+
   it "throws :halt to stop a transition" do
     expect(described_class::HALT).to be(:halt)
   end

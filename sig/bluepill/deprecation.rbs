@@ -18,5 +18,30 @@ module Bluepill
 
     # Warns when bluepill runs on a Ruby that 0.3.0 doesn't support
     def self.check_ruby: (?String version) -> void
+
+    LIB_DIR: String
+    POSITIONAL: Array[Symbol]
+
+    # Warns about what a custom check's class does that 0.3.0 rejects
+    def self.check_condition_class: (Class klass) -> void
+
+    # Warns about what a custom trigger's class does that 0.3.0 rejects
+    def self.check_trigger_class: (Class klass) -> void
+
+    def self.check_logger: (ProcessConditions::ProcessCondition[untyped] | Trigger check, Logger? logger) -> void
+
+    def self.check_logger_writer: (ProcessConditions::ProcessCondition[untyped] | Trigger check, Thread::Backtrace::Location? location) -> void
+
+    def self.check_trigger_event: (Trigger trigger, untyped event) -> void
+
+    def self.warn_positional_options: (Class klass, String kind, Integer positional) -> void
+
+    def self.warn_check_methods: (Class klass, Class base) -> void
+
+    def self.warn_missing_methods: (Class klass, Class base, bool checks) -> void
+
+    def self.custom?: (UnboundMethod method) -> bool
+
+    def self.positional_options?: (UnboundMethod initialize, Integer positional) -> bool
   end
 end

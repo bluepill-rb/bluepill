@@ -64,6 +64,18 @@ describe Bluepill::ConditionWatch do
       expect([seen, w.instance_variable_get(:@process_condition).logger]).to eq([[logger, {below: 5}], logger])
     end
 
+    it "warns about a condition whose initialize takes an options Hash" do
+      logging_condition([])
+      expect { described_class.new(:logging_check, logger: logger, every: 10) }.to output(/takes them as a Hash/).to_stderr
+    end
+
+    it "warns about a condition that has no logger after its initialize" do
+      stub_const("Bluepill::ProcessConditions::NoSuperCheck", Class.new(Bluepill::ProcessConditions::ProcessCondition) do
+        define_method(:initialize) { |**_options| nil }
+      end)
+      expect { described_class.new(:no_super_check, logger: logger, every: 10) }.to output(/so it has no logger/).to_stderr
+    end
+
     it "gives its logger to a condition whose initialize doesn't call super" do
       stub_const("Bluepill::ProcessConditions::NoSuperCheck", Class.new(Bluepill::ProcessConditions::ProcessCondition) do
         define_method(:initialize) { |_options = {}| nil }

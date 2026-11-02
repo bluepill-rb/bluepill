@@ -18,6 +18,12 @@ Bluepill 0.2.9 warns, once each, about what will break in 0.3.0. Each warning st
 
 - Running on Ruby 2.7. Bluepill 0.3.0 needs Ruby 3.0 or newer, or JRuby 9.4 or newer.
 - An https `http` check without `verify_ssl:`. Bluepill 0.3.0 verifies the server's certificate by default, so set `verify_ssl: false` to keep checking a server with a self-signed certificate.
+- A custom check or trigger whose `initialize` takes its options as a Hash, as in `def initialize(options = {})`. Bluepill 0.3.0 passes them as keyword arguments, so name them, as in `def initialize(path:, below:, **options)`, and call `super(**options)`.
+- A custom check that defines `check` instead of `check?`, or that doesn't define `run` and `check?`, and a custom trigger that doesn't define `notify`. Bluepill 0.3.0 fails the config.
+- A custom check or trigger whose `initialize` doesn't call `super`. Bluepill 0.3.0 gives it its logger only through `super`.
+- Calling `logger=` on a check or trigger from outside bluepill. Bluepill 0.3.0 removes it.
+- A custom trigger that dispatches an event as a String, such as `dispatch!("start")`. Bluepill 0.3.0 takes only Symbols.
+- A custom check that subclasses `MemUsage`. Bluepill 0.3.0 gives its `run`, `check?` and `format_value` the memory usage in bytes, where 0.2 gives kilobytes.
 
 ### Fixed
 

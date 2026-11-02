@@ -58,8 +58,14 @@ module Bluepill
 
     def self.[]: %a{implicitly-returns-nil} (Symbol name) -> singleton(Trigger)
 
+    # Makes a trigger, and warns about what 0.3.0 rejects in its class
+    def self.create: (Process process, **untyped options) -> Trigger
+
     attr_accessor process: Process
-    attr_accessor logger: Logger
+    attr_reader logger: Logger
+
+    # Sets the logger, and warns when code outside bluepill calls it
+    def logger=: (Logger logger) -> void
     attr_reader scheduled_events: Array[[Symbol, Thread]]
 
     @reason: String
@@ -113,7 +119,10 @@ module Bluepill
       @options: Hash[Symbol, untyped]
 
       # The watch's logger
-      attr_accessor logger: Logger?
+      attr_reader logger: Logger?
+
+      # Sets the logger, and warns when code outside bluepill calls it
+      def logger=: (Logger? logger) -> void
 
       def initialize: (?Hash[Symbol, untyped] options) -> void
 

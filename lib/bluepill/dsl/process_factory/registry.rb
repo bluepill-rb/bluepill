@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "set"
-
 module Bluepill
   class ProcessFactory
     # The process names and pid files that an application's config has used

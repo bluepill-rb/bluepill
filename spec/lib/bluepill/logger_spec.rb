@@ -29,6 +29,12 @@ describe Bluepill::Logger do
     $LOADED_FEATURES.reject! { |feature| loaded.include?(feature) }
     yield
   ensure
+    remove_fake_syslog(fake_dir, loaded)
+  end
+
+  # Undo with_fake_syslog: take the fake syslog off the load path and out
+  # of $LOADED_FEATURES, put the real one back, and delete the fake
+  def remove_fake_syslog(fake_dir, loaded)
     $LOAD_PATH.delete(fake_dir)
     $LOADED_FEATURES.reject! { |feature| feature.include?(File.basename(fake_dir)) }
     $LOADED_FEATURES.concat(loaded)

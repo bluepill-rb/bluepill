@@ -32,20 +32,9 @@ module Bluepill
       @logger = options[:logger] || create_logger
       @prefix = options[:prefix]
       @prefixes = {}
-      level = priority(options[:log_level] || :debug)
-      parent = @logger
-      if parent.instance_of?(Logger)
-        # The parent's level still applies, and so do its prefixes
-        @level = [level, parent.level].min
-        @names = parent.names + [@prefix]
-        @stdout = parent.stdout
-        @sink = parent.sink
-      else
-        @level = level
-        @names = [] #: Array[String?]
-        @stdout = options[:stdout]
-        @sink = [parent]
-      end
+      # Set here, and not in settings_from, since Ruby makes room in a new
+      # Logger for the instance variables that initialize sets
+      @level, @names, @stdout, @sink = settings_from(@logger, priority(options[:log_level] || :debug))
       @label = label(@names)
     end
 
@@ -172,6 +161,30 @@ module Bluepill
     attr_reader :names
 
     protected
+
+    # Return the level, prefixes, stdout and sink of a new logger
+    #
+    # A logger made with a parent logger writes through it: the parent's
+    # level still applies, and so do its prefixes. One made with anything
+    # else writes to that, without prefixes.
+    #
+    # @param [Logger, LoggerAdapter, Syslog, Object] parent the :logger
+    #   option, or the log file or syslog without one
+    # @param [Integer] level the position in {LOG_METHODS} of the least
+    #   severe priority the :log_level option allows
+    #
+    # @return [Array(Integer, Array<String, nil>, Boolean, Array<Object>)]
+    #   the level, the prefixes, whether to echo to stdout, and the sink
+    #
+    # @api private
+    def settings_from(parent, level)
+      if parent.instance_of?(Logger)
+        [[level, parent.level].min, parent.names + [@prefix], parent.stdout, parent.sink]
+      else
+        names = [] #: Array[String?]
+        [level, names, @options[:stdout], [parent]]
+      end
+    end
 
     # Return the prefixes as they start a message, as in "[app:web] "
     #

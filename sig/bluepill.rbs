@@ -678,6 +678,8 @@ module Bluepill
 
     private
 
+    def settings_from: (Logger | (Object & _Backend) parent, Integer level) -> [Integer, Array[String?], bool?, Array[Object & _Backend]]
+
     def label: (Array[String?] names) -> String?
 
     def priority: (Symbol | String level) -> Integer

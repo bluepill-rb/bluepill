@@ -557,6 +557,15 @@ describe Bluepill::Process do
       end
     end
 
+    # A tick with no watch due has nothing to wait for or dispatch, so it
+    # returns before it resets the transition
+    it "returns early when no watch is due" do
+      process.instance_variable_set(:@transitioned, true)
+      process.watches << watch_double(:idle, [:restart]).tap { |idle| allow(idle).to receive(:due?).and_return(false) }
+      process.run_watches
+      expect(process.instance_variable_get(:@transitioned)).to be(true)
+    end
+
     it "dispatches after a transition in an earlier run" do
       process.instance_variable_set(:@transitioned, true)
       process.watches << watch_double(:loud, [:restart])

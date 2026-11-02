@@ -371,6 +371,7 @@ module Bluepill
     include Pid
     include Children
     include StateMachine
+    include Checks
 
     CONFIGURABLE_ATTRIBUTES: Array[Symbol]
 
@@ -451,15 +452,11 @@ module Bluepill
 
     def dispatch!: (Symbol | String event, ?String? reason) -> bool
 
-    def record_transition: (_Transition transition) -> void
-
-    def notify_triggers: (_Transition transition) -> void
+    def add_checks: (Hash[Symbol, Hash[Symbol, untyped]] checks) -> void
 
     def add_watch: (Symbol name, Hash[Symbol, untyped] options) -> Array[ConditionWatch]
 
     def add_trigger: (Symbol name, Hash[Symbol, untyped] options) -> Array[Trigger]
-
-    def run_watches: () -> void
 
     def handle_user_command: (String cmd) -> void
 
@@ -585,6 +582,32 @@ module Bluepill
     def after_transition: (Process::Transition transition) -> void
 
     def determine_initial_state: () -> void
+  end
+
+  # Runs a Process's watches, and tells its triggers about its transitions
+  module Process::Checks : Process::Checks::_Host
+    # What Checks uses from Process
+    interface _Host
+      %a{pure} def logger: () -> Logger
+      %a{pure} def watches: () -> Array[ConditionWatch]
+      %a{pure} def triggers: () -> Array[Trigger]
+      %a{pure} def children: () -> Array[Process]
+      def monitor_children?: () -> bool
+      def actual_pid: () -> Integer?
+      def dispatch!: (Symbol | String event, ?String? reason) -> bool
+    end
+
+    @transitioned: bool
+
+    def record_transition: (_Transition transition) -> void
+
+    def notify_triggers: (_Transition transition) -> void
+
+    def run_watches: () -> void
+
+    def watch_events: (Array[[ConditionWatch, Thread]] threads) -> Array[[Symbol, String]]
+
+    def dispatch_watch_events: (Array[[Symbol, String]] events) -> void
   end
 
   # Keeps a short history of a process's events

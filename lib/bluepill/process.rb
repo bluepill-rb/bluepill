@@ -5,6 +5,7 @@ require "bluepill/process/pid"
 require "bluepill/process/children"
 require "bluepill/process/transition"
 require "bluepill/process/state_machine"
+require "bluepill/process/checks"
 
 module Bluepill
   # A process that bluepill monitors
@@ -19,6 +20,7 @@ module Bluepill
     include Pid
     include Children
     include StateMachine
+    include Checks
 
     # The options a config can set for a process
     CONFIGURABLE_ATTRIBUTES = [
@@ -460,14 +462,7 @@ module Bluepill
       @statistics = ProcessStatistics.new
       @actual_pid = options[:actual_pid]
       self.logger = options[:logger]
-
-      checks.each do |name, opts|
-        if Trigger[name]
-          add_trigger(name, opts)
-        else
-          add_watch(name, opts)
-        end
-      end
+      add_checks(checks)
 
       # These defaults are overriden below if it's configured to be something else.
       @monitor_children = false
@@ -549,48 +544,20 @@ module Bluepill
       end
     end
 
-    # Clear the watches' history after the process changes state
+    # Add each check, as a trigger if one has its name, or else as a watch
     #
-    # A process that's monitoring its children also clears their list, so it
-    # finds them again. A loopback, such as up to up, changes nothing.
-    #
-    # @param [#from_name, #to_name, #loopback?] transition the transition
+    # @param [Hash{Symbol => Hash{Symbol => Object}}] checks options by
+    #   check name
     #
     # @return [void]
     #
     # @api private
-    def record_transition(transition)
-      return if transition.loopback?
-
-      @transitioned = true
-
-      # When a process changes state, we should clear the memory of all the watches
-      watches.each(&:clear_history!)
-
-      # Also, when a process changes state, we should re-populate its child list
-      if monitor_children?
-        logger.warning "Clearing child list"
-        children.clear
-      end
-      logger.info "Going from #{transition.from_name} => #{transition.to_name}"
-    end
-
-    # Tell every trigger about a transition
-    #
-    # @param [#from_name, #to_name, #loopback?] transition the transition
-    #
-    # @return [void]
-    #
-    # @raise [StandardError] what a trigger raised, after logging it
-    #
-    # @api private
-    def notify_triggers(transition)
-      triggers.each do |trigger|
-        begin
-          trigger.notify(transition)
-        rescue => e
-          logger.err e.backtrace
-          raise
+    def add_checks(checks)
+      checks.each do |name, opts|
+        if Trigger[name]
+          add_trigger(name, opts)
+        else
+          add_watch(name, opts)
         end
       end
     end
@@ -617,42 +584,6 @@ module Bluepill
     # @api private
     def add_trigger(name, options)
       triggers << Trigger[name].new(self, options.merge(logger: logger))
-    end
-
-    # Run every watch, and dispatch the events they fire
-    #
-    # Each watch runs in a thread of its own. Once an event changes the
-    # process's state, the events after it are dropped.
-    #
-    # @return [void]
-    #
-    # @api private
-    def run_watches
-      now = Integer(Time.now)
-
-      # Each check that's due runs in a thread of its own, so a slow one
-      # doesn't hold up the others. One that isn't due would do nothing, so
-      # it gets no thread.
-      threads = [] #: Array[[ConditionWatch, Thread]]
-      watches.each do |watch|
-        threads << [watch, Thread.new { watch.run(actual_pid, now) }] if watch.due?(now)
-      end
-
-      @transitioned = false
-
-      threads.each_with_object([]) do |(watch, thread), events|
-        watch_events = thread.value #: Array[Symbol]
-        next if watch_events.empty?
-
-        logger.info "#{watch.name} dispatched: #{watch_events.join(",")}"
-        watch_events.each do |event|
-          events << [event, watch.to_s]
-        end
-      end.each do |event, reason| # rubocop:disable Style/MultilineBlockChain
-        break if @transitioned
-
-        dispatch!(event, reason)
-      end
     end
 
     # Carry out a command from the command line

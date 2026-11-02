@@ -32,13 +32,13 @@ module Bluepill
         super
         @uri = URI.parse(options[:url]) #: URI::HTTP
         @kind = case options[:kind]
-                when Integer
-                  Net::HTTPResponse::CODE_TO_OBJ.fetch(options.fetch(:kind).to_s)
-                when String, Symbol
-                  Net.const_get("HTTP#{Util.camelize(options.fetch(:kind))}")
-                else
-                  Net::HTTPSuccess
-                end
+        when Integer
+          Net::HTTPResponse::CODE_TO_OBJ.fetch(options.fetch(:kind).to_s)
+        when String, Symbol
+          Net.const_get("HTTP#{Util.camelize(options.fetch(:kind))}")
+        else
+          Net::HTTPSuccess
+        end
 
         @pattern = options[:pattern]
         @open_timeout = (options[:open_timeout] || options[:timeout] || 5).to_i

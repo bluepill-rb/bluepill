@@ -375,10 +375,10 @@ module Bluepill
         now = System.started_at(id)
         journaled = started.fetch(id)
         ours = if now && journaled
-                 (now - journaled).abs <= 2
-               else
-                 !boot.nil? && (journaled || written) >= boot - 2
-               end
+          (now - journaled).abs <= 2
+        else
+          !boot.nil? && (journaled || written) >= boot - 2
+        end
         logger.info("Skipping old #{label} #{id}, which isn't the one bluepill started") unless ours
         ours
       end

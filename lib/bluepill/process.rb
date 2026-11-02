@@ -1044,13 +1044,13 @@ module Bluepill
       return @actual_pid if cache_actual_pid? && @actual_pid
 
       @actual_pid = if pid_file
-                      if File.exist?(pid_file)
-                        positive_pid(File.read(pid_file).to_i)
-                      else
-                        logger.warning("pid_file #{pid_file} does not exist or cannot be read")
-                        nil
-                      end
-                    end
+        if File.exist?(pid_file)
+          positive_pid(File.read(pid_file).to_i)
+        else
+          logger.warning("pid_file #{pid_file} does not exist or cannot be read")
+          nil
+        end
+      end
     end
 
     # Return the pid that pid_command prints

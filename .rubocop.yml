@@ -252,3 +252,10 @@ Style/EmptyMethod:
 
 Style/SingleLineMethods:
   AllowIfMethodIsEmpty: false
+
+# end lined up with the variable a case or if is assigned to, as Standard wants
+Layout/EndAlignment:
+  EnforcedStyleAlignWith: variable
+
+Layout/CaseIndentation:
+  EnforcedStyle: end

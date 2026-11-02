@@ -39,6 +39,7 @@ To upgrade, install 0.2.0 and run `bluepill load` with the same pill file. It re
 - **Breaking:** a process with a `uid` now runs with every group the user belongs to, as it would after logging in, and with the user's primary group when it sets no `gid`. Before, it got only its `gid` and `supplementary_groups`, and without a `gid` it kept the root group and root's other groups ([#28](https://github.com/bluepill-rb/bluepill/issues/28)).
 - **Breaking:** the commands of a process's children with `monitor_children`, such as their `stop_command`, now run as the parent's `uid`, `gid` and `supplementary_groups`. Before, they ran as root ([#28](https://github.com/bluepill-rb/bluepill/issues/28)).
 - A check's method that says whether a value is fine is now `check?`. A custom check that defines `check`, as in bluepill 0.1, still works.
+- Each tick does much less work. Compared with 0.1.4 on the benchmarks in `duel/`, a tick of a process that's up takes 94% fewer instructions and makes 2 objects instead of 166, finding a process's children among 300 others takes over 99% fewer, checking the memory of a process and its workers 98% fewer, and parsing `ps` about a third fewer.
 - A process's logger works out its prefixes once, and writes straight to the log, so a log line takes 1 allocation instead of 10, and each check's run takes about 10% less time.
 
 ### Removed

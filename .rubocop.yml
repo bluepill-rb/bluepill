@@ -158,3 +158,7 @@ Style/RedundantConstantBase:
 # for root under init, and bluepill reads HOME before it knows it's root
 Style/EnvHome:
   Enabled: false
+
+# Array#to_h needs Ruby 2.1
+Style/HashConversion:
+  Enabled: false

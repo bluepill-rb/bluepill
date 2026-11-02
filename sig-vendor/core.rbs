@@ -2,8 +2,6 @@
 # the signatures from rbs leave out
 
 module Process
-  def self.exit!: (?int | bool status) -> bot
-
   # The same as Kernel#spawn
   def self.spawn: (String command, *String args, **untyped options) -> Integer
                 | (Hash[string, string?] env, String command, *String args, **untyped options) -> Integer

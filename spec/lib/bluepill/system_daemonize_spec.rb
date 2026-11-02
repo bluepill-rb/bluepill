@@ -80,8 +80,8 @@ describe Bluepill::System, ".daemonize" do
       allow(described_class).to receive(:exec).and_raise("exec must be called on Kernel")
       allow(Dir).to receive(:chdir)
       allow(ENV).to receive(:[]=)
-      allow(Process).to receive(:exit!)
-      allow(described_class).to receive(:exit!).and_raise("exit! must be called on Process")
+      allow(Kernel).to receive(:exit!)
+      allow(described_class).to receive(:exit!).and_raise("exit! must be called on Kernel")
       allow(File).to receive(:write).with(pid_file, anything)
       allow(Bluepill::Daemonize).to receive(:call_as_daemon) do |block, _|
         block.call
@@ -197,7 +197,7 @@ describe Bluepill::System, ".daemonize" do
       end
 
       it "exits with exit!" do
-        expect(Process).to have_received(:exit!).with(true)
+        expect(Kernel).to have_received(:exit!).with(true)
       end
     end
 

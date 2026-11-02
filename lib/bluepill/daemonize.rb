@@ -83,7 +83,7 @@ module Bluepill
 
     # Run a block in a daemon, and return the daemon's pid
     #
-    # The forked processes exit with Process.exit!, never exit. They're
+    # The forked processes exit with Kernel.exit!, never exit. They're
     # copies of the bluepill daemon made while it handles a command, so exit
     # would unwind the daemon's own stack in the copy, run its ensure
     # blocks against the socket it shares with the real daemon, and make
@@ -136,14 +136,14 @@ module Bluepill
       detach
       if safefork
         writer.close
-        ::Process.exit!(true)
+        Kernel.exit!(true)
       end
 
       writer.write(::Process.pid)
       writer.close
       become_daemon(name)
       block.call
-      ::Process.exit!(true)
+      Kernel.exit!(true)
     end
 
     # Turn the calling process into a daemon
@@ -160,7 +160,7 @@ module Bluepill
       exit if safefork
 
       session = detach
-      ::Process.exit!(true) if safefork
+      Kernel.exit!(true) if safefork
 
       become_daemon
       session

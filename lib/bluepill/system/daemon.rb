@@ -173,7 +173,7 @@ module Bluepill
         pid_pipe.write daemon_id
         pid_pipe.close
 
-        ::Process.exit!(true)
+        Kernel.exit!(true)
       end
 
       # Return what the daemon runs: the command, in its environment

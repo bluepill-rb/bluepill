@@ -172,7 +172,7 @@ module Bluepill
         end
         result_pipe.close
 
-        ::Process.exit!
+        Kernel.exit!
       end
 
       # Replace the grandchild with the command, its output going to the pipes

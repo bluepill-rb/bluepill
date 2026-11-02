@@ -234,7 +234,7 @@ describe Bluepill::System, ".execute_blocking" do
       allow(Kernel).to receive(:exec)
       allow(described_class).to receive(:exec).and_raise("exec must be called on Kernel")
       allow(Process).to receive(:waitpid2).with(456).and_return([456, instance_double(Process::Status, exitstatus: 2)])
-      allow(Process).to receive(:exit!)
+      allow(Kernel).to receive(:exit!)
       allow(Process).to receive(:setpgid)
     end
 
@@ -313,7 +313,7 @@ describe Bluepill::System, ".execute_blocking" do
       end
 
       it "exits with exit!" do
-        expect(Process).to have_received(:exit!).with(no_args)
+        expect(Kernel).to have_received(:exit!).with(no_args)
       end
     end
 
@@ -328,7 +328,7 @@ describe Bluepill::System, ".execute_blocking" do
       end
 
       it "still exits" do
-        expect(Process).to have_received(:exit!).with(no_args)
+        expect(Kernel).to have_received(:exit!).with(no_args)
       end
     end
 

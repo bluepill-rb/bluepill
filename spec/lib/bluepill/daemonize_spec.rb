@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
 describe Bluepill::Daemonize do
-  # Stands in for Process.exit!, which would end the spec run
+  # Stands in for Kernel.exit!, which would end the spec run
   let(:exited) { Class.new(StandardError) }
   # What the daemon does to the system, in order
   let(:events) { [] }
 
   before do
-    allow(Process).to(receive(:exit!)) do |*args|
+    allow(Kernel).to(receive(:exit!)) do |*args|
       events << [:exit!, *args]
       raise exited
     end
-    allow(described_class).to receive(:exit!).and_raise("exit! must be called on Process")
+    allow(described_class).to receive(:exit!).and_raise("exit! must be called on Kernel")
     allow(Process).to(receive(:waitpid)) { |pid| events << [:waitpid, pid] }
     allow(Process).to(receive(:setsid)) do
       events << [:setsid]
@@ -110,11 +110,11 @@ describe Bluepill::Daemonize do
       before do
         # https://github.com/bluepill-rb/bluepill/issues/1: exit would run
         # the real daemon's ensure blocks in the copy
-        allow(described_class).to receive(:exit).and_raise("a forked copy must exit with Process.exit!, not exit")
+        allow(described_class).to receive(:exit).and_raise("a forked copy must exit with Kernel.exit!, not exit")
         allow(described_class).to(receive(:become_daemon)) { |*args| events << [:become_daemon, *args] }
       end
 
-      # Call it until the copy exits with Process.exit!, as it always must
+      # Call it until the copy exits with Kernel.exit!, as it always must
       def call_as_daemon(*args)
         described_class.call_as_daemon(block, *args)
       rescue exited

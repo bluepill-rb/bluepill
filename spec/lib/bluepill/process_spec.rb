@@ -385,9 +385,24 @@ describe Bluepill::Process do
       subject.handle_user_command('stop')
     end
 
-    it 'restarts' do
+    it 'restarts through the state machine' do
+      expect(subject).to receive(:dispatch!).with(:restart, 'user initiated').and_return(true)
+      expect(subject).not_to receive(:restart_process)
+      subject.handle_user_command('restart')
+    end
+
+    it 'restarts an up process by going to restarting' do
+      subject.state = 'up'
       expect(subject).to receive(:restart_process)
       subject.handle_user_command('restart')
+      expect(subject.state).to eq('restarting')
+    end
+
+    it 'restarts directly from a state restart cannot leave' do
+      subject.state = 'unmonitored'
+      expect(subject).to receive(:restart_process)
+      subject.handle_user_command('restart')
+      expect(subject.state).to eq('unmonitored')
     end
 
     it 'resets triggers and unmonitors' do
@@ -852,6 +867,15 @@ describe Bluepill::Process do
         expect(subject.actual_pid).to eq 77
         File.open(subject.pid_file, 'w') { |f| f.write("78\n") }
         expect(subject.actual_pid).to eq 77
+      end
+
+      it 'forgets the cached pid when it cleans up after a stop' do
+        File.open(subject.pid_file, 'w') { |f| f.write("77\n") }
+        expect(subject.actual_pid).to eq 77
+        subject.cleanup_process
+        expect(File.exist?(subject.pid_file)).to be false
+        File.open(subject.pid_file, 'w') { |f| f.write("78\n") }
+        expect(subject.actual_pid).to eq 78
       end
 
       it 'rereads the pid when not caching' do

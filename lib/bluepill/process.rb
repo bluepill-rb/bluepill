@@ -925,7 +925,10 @@ module Bluepill
         stop_process
         dispatch!(:unmonitor, 'user initiated')
       when 'restart'
-        restart_process
+        # Through the state machine, like a check's restart, so the process
+        # shows as restarting and post_start_command runs once it's up. A
+        # state restart can't leave, such as unmonitored, restarts it directly.
+        restart_process unless dispatch!(:restart, 'user initiated')
       when 'unmonitor'
         # When the user issues an unmonitor cmd, reset any triggers so that
         # scheduled events gets cleared

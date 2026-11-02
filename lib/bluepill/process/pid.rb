@@ -78,8 +78,7 @@ module Bluepill
       def pid_from_file
         return @actual_pid if cache_actual_pid? && @actual_pid
 
-        file = pid_file
-        @actual_pid = (PidFile.read(file) || warn_if_missing(file) if file)
+        @actual_pid = (PidFile.read(pid_file) || warn_if_missing(pid_file) if pid_file)
       end
 
       # Warn if the pid file is missing

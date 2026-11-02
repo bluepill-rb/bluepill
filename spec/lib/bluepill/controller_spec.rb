@@ -32,11 +32,8 @@ describe Bluepill::Controller do
   end
 
   describe "#initialize" do
-    it "keeps its options and the directories in the base dir" do
-      expect(controller).to have_attributes(
-        log_file: "/var/log/bluepill.log", base_dir: base_dir,
-        sockets_dir: File.join(base_dir, "socks"), pids_dir: File.join(base_dir, "pids")
-      )
+    it "keeps its options" do
+      expect(controller).to have_attributes(log_file: "/var/log/bluepill.log", base_dir: base_dir)
     end
 
     it "has the paths in the base dir" do

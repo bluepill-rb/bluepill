@@ -50,7 +50,7 @@ module Bluepill
       #
       # @api private
       def setup_dir_structure
-        [sockets_dir, pids_dir].each do |dir|
+        [base_directory.sockets_dir, base_directory.pids_dir].each do |dir|
           FileUtils.mkdir_p(dir)
         end
       end

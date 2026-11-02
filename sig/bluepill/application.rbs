@@ -164,8 +164,6 @@ module Bluepill
 
     attr_accessor base_dir: String
     attr_accessor log_file: String?
-    attr_accessor sockets_dir: String
-    attr_accessor pids_dir: String
     attr_reader base_directory: BaseDirectory
 
     def initialize: (Hash[Symbol, untyped] options) -> void
@@ -195,8 +193,6 @@ module Bluepill
     module Directory : _Host
       # What Directory uses from Controller
       interface _Host
-        def sockets_dir: () -> String
-        def pids_dir: () -> String
         def base_directory: () -> BaseDirectory
       end
 

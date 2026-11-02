@@ -14,7 +14,7 @@ module Bluepill
   class Controller
     include Directory
 
-    attr_accessor :base_dir, :log_file, :sockets_dir, :pids_dir
+    attr_accessor :base_dir, :log_file
     attr_reader :base_directory
 
     # @!attribute [rw] base_dir
@@ -28,20 +28,6 @@ module Bluepill
     #   The log file to tail when the daemon doesn't name one
     #
     #   @return [String, nil]
-    #
-    #   @api private
-
-    # @!attribute [rw] sockets_dir
-    #   The directory with the daemons' sockets
-    #
-    #   @return [String]
-    #
-    #   @api private
-
-    # @!attribute [rw] pids_dir
-    #   The directory with the daemons' pid files
-    #
-    #   @return [String]
     #
     #   @api private
 
@@ -66,8 +52,6 @@ module Bluepill
       self.log_file = options[:log_file]
       self.base_dir = options.fetch(:base_dir)
       @base_directory = BaseDirectory.new(base_dir)
-      self.sockets_dir = base_directory.sockets_dir
-      self.pids_dir = base_directory.pids_dir
 
       setup_dir_structure
       cleanup_bluepill_directory

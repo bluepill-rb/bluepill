@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-11-02
+
 ### Added
 
 - Warnings about what bluepill 0.2.0 and later will change, each in a line that starts with `DEPRECATION:`, once each, on stderr, where `bluepill load` shows it, and in bluepill's log. Each says what to do now. See Deprecated for what they warn about.
@@ -791,7 +793,8 @@ Initial release.
 - Added the `bluepill` CLI with the `load`, `status`, `start`, `stop`, `restart`, `unmonitor`, `quit` and `log` commands.
 - Added syslog logging.
 
-[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.1.6...HEAD
+[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/bluepill-rb/bluepill/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/bluepill-rb/bluepill/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/bluepill-rb/bluepill/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/bluepill-rb/bluepill/compare/v0.1.3...v0.1.4

@@ -10,7 +10,7 @@ AllCops:
   # RuboCop can check against. CI runs the specs on 1.9.3 to catch syntax
   # that 1.9 does not support.
   TargetRubyVersion: 2.0
-  NewCops: disable
+  NewCops: enable
   SuggestExtensions: false
 
 # required_ruby_version is 1.9.3, which RuboCop cannot target

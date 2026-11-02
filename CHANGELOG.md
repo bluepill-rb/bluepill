@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Most pill files work with 0.2.0 unchanged. Check these before you upgrade:
 
+- **Bluepill needs Ruby 2.0 or newer.** On Ruby 1.9.3 or JRuby 1.7, stay on 0.1.6, which has every fix that doesn't change behavior, or upgrade Ruby first.
 - **A setting bluepill doesn't know now fails the config.** 0.1 quietly ignored a misspelled or unsupported setting in a `process` block, such as `start_comand`. Now `bluepill load` stops with the setting's name and the closest one it knows. The config fails before bluepill touches anything, so a running daemon and its processes keep going, and loading the new config is a safe way to find out.
 - **Bluepill no longer loads ActiveSupport for you.** `10.seconds`, `2.minutes`, and `100.megabytes` still work, as plain numbers of seconds and bytes. A pill file that uses anything else from ActiveSupport, such as `5.minutes.ago`, `blank?`, or `present?`, needs the `activesupport` gem and a `require "active_support/all"` (or just the parts it uses) at the top.
 - **A process with a `uid` gets that user's groups.** It now runs with every group the user belongs to, as after logging in. Without a `gid`, it used to keep root's groups, and now it gets the user's primary group instead. Set `gid` or `supplementary_groups` for a process that needs a group the user isn't in.
@@ -42,6 +43,7 @@ To upgrade, install 0.2.0 and run `bluepill load` with the same pill file. It re
 
 ### Removed
 
+- **Breaking:** support for Ruby 1.9.3 and JRuby 1.7. Bluepill 0.2 needs Ruby 2.0 or newer, or JRuby 9.0 or newer. Bluepill 0.1.6 still runs on both.
 - The `state_machine` dependency, whose last release was in 2013. A process's states and events are now a small transition table in `Bluepill::Process`, which moves between the same states, in the same order of callbacks. With all three dependencies gone, bluepill has no runtime dependencies. This isn't a breaking change ([#61](https://github.com/bluepill-rb/bluepill/issues/61)).
 - The `activesupport` dependency, which loaded about 300 files into the daemon for six small methods. `10.seconds`, `2.minutes`, `100.megabytes` and the rest of the durations and sizes that configs use now come from bluepill, as plain numbers of seconds and bytes. Bluepill only adds them where they aren't defined already, so a config that loads ActiveSupport keeps its versions, which bluepill still accepts. This isn't a breaking change ([#61](https://github.com/bluepill-rb/bluepill/issues/61)).
 - The `blue-daemons` dependency. Bluepill now has its own copy of the few functions it used from it, as `Bluepill::Daemonize`, so an app that also uses the `daemons` gem no longer gets whichever of the two loads first. This isn't a breaking change ([#61](https://github.com/bluepill-rb/bluepill/issues/61)).

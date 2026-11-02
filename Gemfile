@@ -3,11 +3,8 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in bluepill.gemspec
 gemspec
 
-gem "json", "< 2.3" if RUBY_VERSION < "2.0"
 gem "rake"
 gem "syslog" if RUBY_VERSION >= "3.4"
-gem "term-ansicolor", "~> 1.3.2" if RUBY_VERSION < "2.0"
-gem "tins", "~> 1.6.0" if RUBY_VERSION < "2.0"
 
 # Duel, with its plugin that counts the objects a benchmark leaves alive,
 # and StackProf for its profiles of regressions, need Ruby 3.4 or newer on

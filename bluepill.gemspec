@@ -13,17 +13,14 @@ Gem::Specification.new do |spec|
   spec.description = "Bluepill keeps your daemons up while taking up as little resources as possible. After all you probably want the resources of your server to be used by whatever daemons you are running rather than the thing that's supposed to make sure they are brought back up, should they die or misbehave."
   spec.license = "MIT"
 
-  # RubyGems before 2.0, which Ruby 1.9.3 ships with, has no metadata
-  if spec.respond_to?(:metadata=)
-    spec.metadata = {
-      "source_code_uri" => "https://github.com/bluepill-rb/bluepill",
-      "changelog_uri" => "https://github.com/bluepill-rb/bluepill/blob/master/CHANGELOG.md",
-      "bug_tracker_uri" => "https://github.com/bluepill-rb/bluepill/issues",
-      "rubygems_mfa_required" => "true"
-    }
-  end
+  spec.metadata = {
+    "source_code_uri" => "https://github.com/bluepill-rb/bluepill",
+    "changelog_uri" => "https://github.com/bluepill-rb/bluepill/blob/master/CHANGELOG.md",
+    "bug_tracker_uri" => "https://github.com/bluepill-rb/bluepill/issues",
+    "rubygems_mfa_required" => "true"
+  }
 
-  spec.required_ruby_version = ">= 1.9.3"
+  spec.required_ruby_version = ">= 2.0"
 
   # sig has the RBS signatures, and the standard libraries they use in manifest.yaml
   spec.executables = %w[bluepill bpsv]

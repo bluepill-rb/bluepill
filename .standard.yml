@@ -1,13 +1,15 @@
 # Standard's configuration: https://github.com/standardrb/standard
 #
-# The gem still supports Ruby 1.9.3, so leave out the rules that need a
+# The gem still supports Ruby 2.0, so leave out the rules that need a
 # newer Ruby
-ruby_version: 1.9
+ruby_version: 2.0
 
 ignore:
-  # Writing to $stderr keeps errors visible under ruby -W0, which silences
-  # warn, and lets the specs capture them
+  # HashConversion suggests Array#to_h, which needs Ruby 2.1. Writing to
+  # $stderr keeps errors visible under ruby -W0, which silences warn, and
+  # lets the specs capture them.
   - '**/*':
+      - Style/HashConversion
       - Style/StderrPuts
   # Daemonizing and running commands reopen file descriptors 0, 1 and 2,
   # which STDIN, STDOUT and STDERR always are. $stdout and the others can

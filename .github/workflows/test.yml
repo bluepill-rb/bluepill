@@ -10,7 +10,7 @@ permissions:
 jobs:
   test:
     name: ${{ matrix.ruby }}
-    # ubuntu-22.04 is the only runner image with prebuilt Ruby 1.9.3
+    # ubuntu-22.04 has prebuilt builds of the oldest Rubies here
     runs-on: ubuntu-22.04
     continue-on-error: ${{ matrix.allow-failure == true }}
     env:
@@ -19,7 +19,6 @@ jobs:
       fail-fast: false
       matrix:
         ruby:
-          - '1.9.3'
           - '2.0'
           - '2.1'
           - '2.2'
@@ -74,8 +73,8 @@ jobs:
           format: simplecov
           fail-on-error: false
 
-  # setup-ruby has no builds of JRuby 1.7 or 9.0, and their Docker images
-  # no longer pull, so these install the official release from Maven Central.
+  # setup-ruby has no builds of JRuby 9.0, and its Docker images no longer
+  # pull, so this installs the official release from Maven Central.
   test-legacy-jruby:
     name: jruby-${{ matrix.jruby }}
     runs-on: ubuntu-latest
@@ -85,7 +84,6 @@ jobs:
       fail-fast: false
       matrix:
         jruby:
-          - '1.7.27'
           - '9.0.5.0'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

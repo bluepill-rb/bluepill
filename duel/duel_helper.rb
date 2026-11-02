@@ -124,7 +124,7 @@ def watch_hooks(check, options)
       @table = ps_table(ps_listing(300, workers: 4))
       Bluepill::System.store[:ps_axu] = @table
       @tick = 0
-      @watch = Bluepill::ConditionWatch.new(check, options.merge(every: 10.seconds, logger: process_logger))
+      @watch = Bluepill::ConditionWatch.new(check, **options, every: 10.seconds, logger: process_logger)
       10.times { run_watch }
     end,
     before_sample: -> { Bluepill::System.store[:ps_axu] = @table }

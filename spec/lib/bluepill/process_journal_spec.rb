@@ -50,7 +50,7 @@ describe Bluepill::ProcessJournal do
     it 'only sets the logger once' do
       journal.instance_variable_set(:@logger, nil)
       journal.logger = logger
-      journal.logger = double('other logger')
+      journal.logger = instance_double(Bluepill::Logger)
       expect(journal.logger).to eq logger
     end
   end
@@ -108,7 +108,7 @@ describe Bluepill::ProcessJournal do
 
       # On Ruby before 2.4 ids are Fixnums or Bignums, subclasses of Integer
       it 'accepts instances of Integer subclasses' do
-        id = double('id')
+        id = instance_double(Integer)
         allow(id).to receive(:is_a?).with(Integer).and_return(true)
         allow(id).to receive(:<=).with(1).and_return(false)
         expect(journal.send(method, id)).to be false

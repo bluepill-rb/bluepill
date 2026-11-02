@@ -24,7 +24,7 @@ describe 'The README and example configs', type: :integration do
   end
 
   before do
-    app = double('app', pids_dir: '/tmp/pids', load: nil)
+    app = instance_double(Bluepill::Application, pids_dir: '/tmp/pids', load: nil)
     allow(app).to receive(:add_process) { |process, _group| processes[process.name] = process }
     allow(Bluepill::Application).to receive(:new).and_return(app)
   end
@@ -81,7 +81,7 @@ describe 'The README and example configs', type: :integration do
     process = processes.fetch('forking_server')
     expect(process.stop_grace_time).to be(5)
     child_factory = process.child_process_factory
-    child = child_factory.create_child_process('child', 1, double('logger').as_null_object)
+    child = child_factory.create_child_process('child', 1, instance_double(Bluepill::Logger).as_null_object)
     expect(condition(child, :mem_usage).instance_variable_get(:@below)).to be(52_428_800)
     expect(process.triggers.first.within).to be(30)
   end

@@ -4,7 +4,7 @@ describe Bluepill::Group do
   let(:group) { described_class.new('web', logger: logger) }
 
   def process_double(name, attributes = {})
-    double(name, {name: name, :logger= => nil}.merge(attributes))
+    instance_double(Bluepill::Process, name, {name: name, :logger= => nil}.merge(attributes))
   end
 
   describe '#initialize' do
@@ -57,7 +57,7 @@ describe Bluepill::Group do
 
     [:start, :unmonitor, :stop, :restart].each do |event|
       describe "##{event}" do
-        let(:thread) { double('thread', join: nil) }
+        let(:thread) { instance_double(Thread, join: nil) }
 
         before do
           allow(Thread).to receive(:new) do |&block|
@@ -96,7 +96,7 @@ describe Bluepill::Group do
     end
 
     describe '#status' do
-      let(:child) { double('child', name: 'child', state: 'up') }
+      let(:child) { instance_double(Bluepill::Process, name: 'child', state: 'up') }
 
       before do
         allow(first).to receive_messages(actual_pid: 1, state: 'up', monitor_children?: true, children: [child])
@@ -126,7 +126,7 @@ describe Bluepill::Group do
       end
 
       it 'lists the named process with its statistics' do
-        allow(second).to receive(:statistics).and_return(double('statistics', to_s: 'stats'))
+        allow(second).to receive(:statistics).and_return(instance_double(Bluepill::ProcessStatistics, to_s: 'stats'))
         expect(group.status('second')).to eq(['second(pid:2): down', 'stats', ''])
       end
 

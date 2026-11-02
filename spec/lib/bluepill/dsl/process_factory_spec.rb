@@ -212,7 +212,7 @@ describe Bluepill::ProcessFactory do
         # Like a Fixnum before Ruby 2.4, which is an Integer but not an
         # instance of it
         it 'accepts any kind of Integer as a delay' do
-          delay = double('delay', is_a?: true)
+          delay = instance_double(Integer, is_a?: true)
           expect_config_error(/Stop_grace_time should be greater than the sum of stop_signals delays/) do
             create_with_signals([:quit, delay, :term], nil)
           end

@@ -20,7 +20,7 @@ describe Bluepill::Process do
     'restarting' => %w[up down],
   }
 
-  subject(:process) { described_class.new('proc', {}, logger: double('logger').as_null_object) }
+  subject(:process) { described_class.new('proc', {}, logger: instance_double(Bluepill::Logger).as_null_object) }
 
   let(:calls) { [] }
   let(:running) { true }

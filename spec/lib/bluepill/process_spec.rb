@@ -16,7 +16,7 @@ describe Bluepill::Process do
   end
 
   def watch_double(name, events)
-    double(name.to_s, name: name, run: events, to_s: name.to_s, clear_history!: nil, :logger= => nil)
+    instance_double(Bluepill::ConditionWatch, name.to_s, name: name, run: events, to_s: name.to_s, clear_history!: nil, :logger= => nil)
   end
 
   describe '#initialize' do
@@ -196,7 +196,7 @@ describe Bluepill::Process do
     end
 
     it 'ticks children when monitoring children' do
-      child = double('child')
+      child = instance_double(Bluepill::Process, 'child')
       process.state = 'up'
       process.monitor_children = true
       allow(process).to receive(:process_running?).and_return(true)
@@ -269,7 +269,7 @@ describe Bluepill::Process do
 
   describe '#record_transition' do
     it 'ignores loopback transitions' do
-      transition = double('transition', loopback?: true)
+      transition = Bluepill::Process::Transition.new(:up, :up)
       expect(logger).not_to receive(:info)
       process.record_transition(transition)
       expect(process.instance_variable_get(:@transitioned)).to be_nil
@@ -278,7 +278,7 @@ describe Bluepill::Process do
     it 'clears watch history and logs' do
       watch = watch_double(:w, [])
       process.watches << watch
-      transition = double('transition', loopback?: false, from_name: :up, to_name: :down)
+      transition = Bluepill::Process::Transition.new(:up, :down)
       expect(watch).to receive(:clear_history!)
       expect(logger).to receive(:info).with('Going from up => down')
       expect(logger).not_to receive(:warning)
@@ -288,8 +288,8 @@ describe Bluepill::Process do
 
     it 'clears the child list when monitoring children' do
       process.monitor_children = true
-      process.children << double('child')
-      transition = double('transition', loopback?: false, from_name: :up, to_name: :down)
+      process.children << instance_double(Bluepill::Process, 'child')
+      transition = Bluepill::Process::Transition.new(:up, :down)
       expect(logger).to receive(:warning).with('Clearing child list')
       process.record_transition(transition)
       expect(process.children).to be_empty
@@ -297,8 +297,8 @@ describe Bluepill::Process do
   end
 
   describe '#notify_triggers' do
-    let(:transition) { double('transition') }
-    let(:trigger) { double('trigger', :logger= => nil) }
+    let(:transition) { Bluepill::Process::Transition.new(:up, :down) }
+    let(:trigger) { instance_double(Bluepill::Trigger, 'trigger', :logger= => nil) }
 
     before { process.triggers << trigger }
 
@@ -418,7 +418,7 @@ describe Bluepill::Process do
     end
 
     it 'resets triggers and unmonitors' do
-      trigger = double('trigger', :logger= => nil)
+      trigger = instance_double(Bluepill::Trigger, 'trigger', :logger= => nil)
       process.triggers << trigger
       expect(trigger).to receive(:reset!)
       expect(process).to receive(:dispatch!).with(:unmonitor, 'user initiated')
@@ -541,7 +541,7 @@ describe Bluepill::Process do
 
       it 'journals children pids when monitoring children' do
         process.monitor_children = true
-        process.children << double('child', actual_pid: 100)
+        process.children << instance_double(Bluepill::Process, 'child', actual_pid: 100)
         allow(Bluepill::System).to receive(:daemonize).and_return(99)
         expect(Bluepill::ProcessJournal).to receive(:append_pid_to_journal).with(:proc_name, 99)
         expect(Bluepill::ProcessJournal).to receive(:append_pid_to_journal).with(:proc_name, 100)
@@ -767,7 +767,7 @@ describe Bluepill::Process do
 
   describe '#clean_threads' do
     it 'kills and clears threads' do
-      thread = double('thread')
+      thread = instance_double(Thread, 'thread')
       process.instance_variable_get(:@threads) << thread
       expect(thread).to receive(:kill)
       process.clean_threads
@@ -950,8 +950,8 @@ describe Bluepill::Process do
   end
 
   describe '#refresh_children!' do
-    let(:factory) { double('factory') }
-    let(:child_logger) { double('child logger') }
+    let(:factory) { instance_double(Bluepill::ProcessFactory, 'factory') }
+    let(:child_logger) { instance_double(Bluepill::Logger, 'child logger') }
 
     before do
       process.actual_pid = 5
@@ -960,10 +960,10 @@ describe Bluepill::Process do
     end
 
     it 'prunes dead children and adds new ones' do
-      dead = double('dead', actual_pid: 6)
-      alive = double('alive', actual_pid: 7)
-      other = double('other', actual_pid: 9, process_running?: true)
-      new_child = double('new child')
+      dead = instance_double(Bluepill::Process, 'dead', actual_pid: 6)
+      alive = instance_double(Bluepill::Process, 'alive', actual_pid: 7)
+      other = instance_double(Bluepill::Process, 'other', actual_pid: 9, process_running?: true)
+      new_child = instance_double(Bluepill::Process, 'new child')
       process.children << dead << alive << other
       expect(dead).to receive(:process_running?).with(true).and_return(false)
       expect(alive).to receive(:process_running?).with(true).and_return(true)
@@ -981,7 +981,7 @@ describe Bluepill::Process do
     it 'journals new children when daemonized' do
       process.daemonize = true
       allow(Bluepill::System).to receive(:get_children).and_return([8])
-      allow(factory).to receive(:create_child_process).and_return(double('child'))
+      allow(factory).to receive(:create_child_process).and_return(instance_double(Bluepill::Process, 'child'))
       expect(Bluepill::ProcessJournal).to receive(:append_pid_to_journal).with(:proc_name, 8)
       process.refresh_children!
     end
@@ -1197,7 +1197,7 @@ describe Bluepill::Process do
   end
 
   describe '#notify_transition' do
-    let(:transition) { double('transition', from_name: :up, to_name: :restarting, loopback?: false) }
+    let(:transition) { Bluepill::Process::Transition.new(:up, :restarting) }
     let(:thread) { instance_double(Thread) }
 
     before { process.notify_command = 'alert' }

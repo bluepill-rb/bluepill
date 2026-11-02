@@ -2,8 +2,8 @@ describe Bluepill::Daemonize do
   # Stands in for Process.exit!, which would end the spec run
   let(:exited) { Class.new(StandardError) }
 
-  let(:rd) { double('rd', close: nil, read: '') }
-  let(:wr) { double('wr', close: nil, write: nil) }
+  let(:rd) { instance_double(IO, close: nil, read: '') }
+  let(:wr) { instance_double(IO, close: nil, write: nil) }
 
   before do
     allow(IO).to receive(:pipe).and_return([rd, wr])
@@ -40,7 +40,7 @@ describe Bluepill::Daemonize do
   end
 
   describe '.call_as_daemon' do
-    let(:block) { double('block', call: nil) }
+    let(:block) { instance_double(Proc, call: nil) }
 
     it 'returns the pid the daemon reports, once the process between exits' do
       allow(described_class).to receive(:safefork).and_return(42)
@@ -167,11 +167,11 @@ describe Bluepill::Daemonize do
   end
 
   describe '.close_io' do
-    let(:open_io) { double('open', closed?: false, close: nil) }
-    let(:closed_io) { double('closed', closed?: true) }
-    let(:failing_io) { double('failing', closed?: false) }
-    let(:first_fd) { double('fd 3', close: nil) }
-    let(:last_fd) { double('last fd', close: nil) }
+    let(:open_io) { instance_double(IO, closed?: false, close: nil) }
+    let(:closed_io) { instance_double(IO, closed?: true) }
+    let(:failing_io) { instance_double(IO, closed?: false) }
+    let(:first_fd) { instance_double(IO, close: nil) }
+    let(:last_fd) { instance_double(IO, close: nil) }
 
     before do
       allow(failing_io).to receive(:close).and_raise(IOError)

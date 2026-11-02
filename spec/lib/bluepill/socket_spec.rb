@@ -1,7 +1,7 @@
 describe Bluepill::Socket do
   let(:base_dir) { '/var/run/bluepill' }
   let(:socket_path) { '/var/run/bluepill/socks/app.sock' }
-  let(:socket) { double('socket', puts: nil) }
+  let(:socket) { instance_double(UNIXSocket, puts: nil) }
 
   describe '.socket_path' do
     it 'is in the socks directory of the base directory' do
@@ -62,7 +62,7 @@ describe Bluepill::Socket do
   end
 
   describe '.server' do
-    let(:server) { double('server') }
+    let(:server) { instance_double(UNIXServer) }
 
     it 'opens a UNIX server socket' do
       expect(UNIXServer).to receive(:open).with(socket_path).and_return(server)

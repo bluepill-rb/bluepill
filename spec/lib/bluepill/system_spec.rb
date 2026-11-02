@@ -200,9 +200,9 @@ describe Bluepill::System do
   end
 
   describe '.daemonize' do
-    let(:rd) { double('rd', close: nil) }
-    let(:wr) { double('wr', close: nil, write: nil) }
-    let(:logger) { double('logger') }
+    let(:rd) { instance_double(IO, close: nil) }
+    let(:wr) { instance_double(IO, close: nil, write: nil) }
+    let(:logger) { instance_double(Bluepill::Logger) }
 
     before do
       allow(IO).to receive(:pipe).and_return([rd, wr])
@@ -372,11 +372,11 @@ describe Bluepill::System do
   end
 
   describe '.execute_blocking' do
-    let(:rd) { double('rd', close: nil) }
-    let(:wr) { double('wr', close: nil, write: nil) }
+    let(:rd) { instance_double(IO, close: nil) }
+    let(:wr) { instance_double(IO, close: nil, write: nil) }
 
     context 'when in the parent' do
-      let(:waiter) { double('waiter', join: nil) }
+      let(:waiter) { instance_double(Thread, join: nil) }
 
       before do
         allow(IO).to receive(:pipe).and_return([rd, wr])
@@ -455,11 +455,11 @@ describe Bluepill::System do
     end
 
     context 'when in the child' do
-      let(:out_rd) { double('out_rd', close: nil, read: 'out') }
-      let(:out_wr) { double('out_wr', close: nil) }
-      let(:err_rd) { double('err_rd', close: nil, read: 'err') }
-      let(:err_wr) { double('err_wr', close: nil, puts: nil, closed?: false) }
-      let(:status) { double('status', exitstatus: 2) }
+      let(:out_rd) { instance_double(IO, close: nil, read: 'out') }
+      let(:out_wr) { instance_double(IO, close: nil) }
+      let(:err_rd) { instance_double(IO, close: nil, read: 'err') }
+      let(:err_wr) { instance_double(IO, close: nil, puts: nil, closed?: false) }
+      let(:status) { instance_double(Process::Status, exitstatus: 2) }
       let(:options) { {uid: 'user', gid: 'group', supplementary_groups: ['extra']} }
 
       before do
@@ -667,9 +667,9 @@ describe Bluepill::System do
       end
 
       it "gives a user the user's own groups, the gid, and the supplementary groups" do
-        allow(Etc).to receive(:getpwnam).with('user').and_return(double(name: 'user', uid: 501, gid: 10, dir: '/home/user'))
-        allow(Etc).to receive(:getgrnam).with('group').and_return(double(gid: 20))
-        allow(Etc).to receive(:getgrnam).with('extra').and_return(double(gid: 30))
+        allow(Etc).to receive(:getpwnam).with('user').and_return(instance_double(Etc::Passwd, name: 'user', uid: 501, gid: 10, dir: '/home/user'))
+        allow(Etc).to receive(:getgrnam).with('group').and_return(instance_double(Etc::Group, gid: 20))
+        allow(Etc).to receive(:getgrnam).with('extra').and_return(instance_double(Etc::Group, gid: 30))
         allow(Process).to receive(:initgroups)
         allow(Process).to receive(:groups).and_return([10, 20])
         described_class.drop_privileges('user', 'group', ['extra'])
@@ -681,7 +681,7 @@ describe Bluepill::System do
       end
 
       it "gives a user without a gid the user's primary group" do
-        allow(Etc).to receive(:getpwnam).with('user').and_return(double(name: 'user', uid: 501, gid: 10, dir: '/home/user'))
+        allow(Etc).to receive(:getpwnam).with('user').and_return(instance_double(Etc::Passwd, name: 'user', uid: 501, gid: 10, dir: '/home/user'))
         allow(Process).to receive(:initgroups)
         described_class.drop_privileges('user', nil, [])
         expect(Process).to have_received(:initgroups).with('user', 10)
@@ -692,7 +692,7 @@ describe Bluepill::System do
       end
 
       it 'keeps the home directory if the user has none' do
-        allow(Etc).to receive(:getpwnam).with('user').and_return(double(name: 'user', uid: 501, gid: 10, dir: nil))
+        allow(Etc).to receive(:getpwnam).with('user').and_return(instance_double(Etc::Passwd, name: 'user', uid: 501, gid: 10, dir: nil))
         allow(Process).to receive(:initgroups)
         described_class.drop_privileges('user', nil, [])
         expect(Process::Sys).to have_received(:setuid).with(501)
@@ -700,8 +700,8 @@ describe Bluepill::System do
       end
 
       it 'uses only the gid and supplementary groups without a uid' do
-        allow(Etc).to receive(:getgrnam).with('group').and_return(double(gid: 20))
-        allow(Etc).to receive(:getgrnam).with('extra').and_return(double(gid: 30))
+        allow(Etc).to receive(:getgrnam).with('group').and_return(instance_double(Etc::Group, gid: 20))
+        allow(Etc).to receive(:getgrnam).with('extra').and_return(instance_double(Etc::Group, gid: 30))
         allow(Process).to receive(:groups).and_return([20])
         expect(Process).not_to receive(:initgroups)
         described_class.drop_privileges(nil, 'group', ['extra'])
@@ -713,7 +713,7 @@ describe Bluepill::System do
       end
 
       it "adds supplementary groups to bluepill's own without a uid or gid" do
-        allow(Etc).to receive(:getgrnam).with('extra').and_return(double(gid: 30))
+        allow(Etc).to receive(:getgrnam).with('extra').and_return(instance_double(Etc::Group, gid: 30))
         allow(Process).to receive(:groups).and_return([0])
         described_class.drop_privileges(nil, nil, ['extra'])
         expect(Process).to have_received(:groups=).with([0, 30])
@@ -724,7 +724,7 @@ describe Bluepill::System do
   end
 
   describe '.can_write_pid_file' do
-    let(:logger) { double('logger') }
+    let(:logger) { instance_double(Bluepill::Logger) }
 
     it 'is true if the pid file can be written' do
       Dir.mktmpdir do |dir|

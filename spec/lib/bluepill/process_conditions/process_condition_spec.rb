@@ -6,7 +6,7 @@ describe Bluepill::ProcessConditions::ProcessCondition do
   end
 
   it 'takes its logger out of its options' do
-    logger = double('logger')
+    logger = instance_double(Bluepill::Logger)
     logged = described_class.new(below: 5, logger: logger)
     expect(logged.logger).to equal(logger)
     expect(logged.instance_variable_get(:@options)).to eq(below: 5)

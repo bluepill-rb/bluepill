@@ -233,7 +233,7 @@ describe Bluepill::Application do
     end
 
     describe '#add_process' do
-      let(:process) { double('process', :app_name= => nil, :group_name= => nil) }
+      let(:process) { instance_double(Bluepill::Process, :app_name= => nil, :group_name= => nil) }
 
       it 'adds the process to a new group named after the group name' do
         group_logger = instance_double(Bluepill::Logger)
@@ -337,7 +337,7 @@ describe Bluepill::Application do
     end
 
     describe 'start_server' do
-      let(:socket) { double('socket') }
+      let(:socket) { instance_double(UNIXServer) }
       let(:program_name) { $0 }
 
       before do
@@ -428,7 +428,7 @@ describe Bluepill::Application do
     end
 
     describe 'cleanup' do
-      let(:socket) { double('socket', path: File.join(base_dir, 'test.sock')) }
+      let(:socket) { instance_double(UNIXServer, path: File.join(base_dir, 'test.sock')) }
 
       before do
         allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks)
@@ -465,9 +465,9 @@ describe Bluepill::Application do
     end
 
     describe 'start_listener' do
-      let(:client) { double('client', readline: "status:web\n", write: nil, close: nil) }
-      let(:server_socket) { double('server socket', accept: client) }
-      let(:thread) { double('thread') }
+      let(:client) { instance_double(UNIXSocket, readline: "status:web\n", write: nil, close: nil) }
+      let(:server_socket) { instance_double(UNIXServer, accept: client) }
+      let(:thread) { instance_double(Thread) }
       let(:listener) { [] }
 
       before do

@@ -1,7 +1,7 @@
 describe Bluepill::Triggers::Flapping do
   let(:process) { instance_double(Bluepill::Process) }
   let(:logger) { instance_double(Bluepill::Logger, info: nil) }
-  let(:starting) { double('transition', to_name: :starting) }
+  let(:starting) { Bluepill::Process::Transition.new(:down, :starting) }
 
   def flapping(options = {})
     trigger = Bluepill::Triggers::Flapping.new(process, {logger: logger}.merge(options))
@@ -48,13 +48,13 @@ describe Bluepill::Triggers::Flapping do
   describe '#notify' do
     it 'ignores transitions to other states' do
       trigger = flapping(times: 1)
-      notify_at(trigger, 0, double('transition', to_name: :up))
+      notify_at(trigger, 0, Bluepill::Process::Transition.new(:starting, :up))
       expect(trigger.timeline).to eq([])
     end
 
     it 'records restarts' do
       trigger = flapping
-      notify_at(trigger, 0, double('transition', to_name: :restarting))
+      notify_at(trigger, 0, Bluepill::Process::Transition.new(:up, :restarting))
       expect(trigger.timeline).to eq([0])
     end
 

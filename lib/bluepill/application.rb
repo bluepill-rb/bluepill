@@ -148,7 +148,7 @@ module Bluepill
     # @return [Object] what the block returns
     #
     # @api private
-    def synchronize(&block) = @mutex.synchronize(&block)
+    def synchronize(&) = @mutex.synchronize(&)
 
     # Start the daemon and monitor the application's processes
     #

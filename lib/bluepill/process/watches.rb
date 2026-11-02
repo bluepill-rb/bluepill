@@ -67,7 +67,7 @@ module Bluepill
       # @return [Array<ConditionWatch>] the watches
       #
       # @api private
-      def each(&block) = @watches.each(&block)
+      def each(&) = @watches.each(&)
 
       # Forget what the watches have read, as when the process changes state
       #

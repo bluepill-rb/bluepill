@@ -30,11 +30,11 @@ module Bluepill
   # @return [void]
   #
   # @api public
-  def self.application(app_name, **options, &block)
+  def self.application(app_name, **options, &)
     app_proxy = AppProxy.new(app_name, **options)
     # evaluate also passes the proxy to a block that takes an argument, and
     # turns a misspelled attribute into a ConfigError
-    app_proxy.evaluate(&block)
+    app_proxy.evaluate(&)
     app_proxy.app.load
   rescue Error => e
     location = e.location if e.is_a?(ConfigError)

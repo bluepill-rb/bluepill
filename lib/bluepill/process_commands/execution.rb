@@ -51,8 +51,8 @@ module Bluepill
       #   transition happened
       #
       # @api private
-      def with_timeout(secs, next_state, &blk)
-        Timeout.timeout(secs, &blk)
+      def with_timeout(secs, next_state, &)
+        Timeout.timeout(secs, &)
       rescue Timeout::Error
         logger.err "Execution is taking longer than expected."
         logger.err "Did you forget to tell bluepill to daemonize this process?"

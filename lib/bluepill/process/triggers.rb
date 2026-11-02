@@ -58,7 +58,7 @@ module Bluepill
       # @return [Array<Trigger>] the triggers
       #
       # @api private
-      def each(&block) = @triggers.each(&block)
+      def each(&) = @triggers.each(&)
 
       # Tell every trigger about a transition, before it happens
       #

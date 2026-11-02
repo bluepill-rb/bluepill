@@ -89,8 +89,8 @@ module Bluepill
       # @raise [ConfigError] for a method the proxy doesn't have
       #
       # @api private
-      def evaluate(&block)
-        instance_eval(&block)
+      def evaluate(&)
+        instance_eval(&)
       rescue NameError => e
         raise unless e.receiver.equal?(self)
 

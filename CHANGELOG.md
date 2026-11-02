@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-11-02
+
 ### Security
 
 - The daemon now runs only the commands that the CLI sends over its socket: `start`, `stop`, `restart`, `unmonitor`, `status`, `version` and `log_file`. Before, it called whatever method a line on the socket named, so anyone who could write to the socket could call any of the daemon's public methods, such as `instance_eval` with code of their own. The socket takes the daemon's umask, so with the usual umask of 022 only the daemon's own user could connect. Any other command now gets a `NoMethodError` back.
@@ -762,7 +764,8 @@ Initial release.
 - Added the `bluepill` CLI with the `load`, `status`, `start`, `stop`, `restart`, `unmonitor`, `quit` and `log` commands.
 - Added syslog logging.
 
-[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.1.5...HEAD
+[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/bluepill-rb/bluepill/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/bluepill-rb/bluepill/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/bluepill-rb/bluepill/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/bluepill-rb/bluepill/compare/v0.1.2...v0.1.3

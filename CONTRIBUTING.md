@@ -42,3 +42,14 @@ Performance
     bundle exec duel
 
 A pull request that makes a benchmark slower, allocate more, or leave more objects alive fails the Perf workflow. To check that new benchmarks pass on unchanged code, run `bundle exec duel --force`, and to run some of them, add `--filter "^watch:"`.
+
+Design
+------
+
+- Each bluepill daemon monitors one application, so a system can run several daemons.
+- The `bluepill` command talks to a daemon over a UNIX socket in the base directory's `socks`, one for each application.
+- The daemon runs `ps` once a tick, and every check of every process reads that table instead of running its own.
+- A check keeps its history, and a process its recent events, in a rotational array, which holds only the last few.
+- The DSL is a layer over plain constructors: `ProcessProxy` collects what a pill file sets and creates a `Process` from it, so the monitoring code never depends on the DSL.
+- The daemon runs the commands it gets one at a time, under the same lock as a tick, so they can't race each other or the checks.
+- Triggers, such as flapping, hear about each state change from the process's state machine.

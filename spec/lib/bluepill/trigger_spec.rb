@@ -64,34 +64,46 @@ describe Bluepill::Trigger do
   end
 
   describe '#schedule_event' do
-    before do
-      allow(trigger).to receive(:sleep)
+    # Wake the thread of a scheduled event until it finishes. It may not be
+    # asleep yet, or be done by the time it's woken.
+    def finish(thread)
+      until thread.join(0.01)
+        begin
+          thread.wakeup
+        rescue ThreadError
+          nil
+        end
+      end
     end
 
-    it 'dispatches the event after the delay' do
-      thread = trigger.schedule_event(:start, 5)
-      thread.join
-      expect(trigger.scheduled_events).to eq([])
-      expect(trigger).to have_received(:sleep).with(5.0)
+    it 'sleeps before it dispatches the event' do
+      events = []
+      allow(process).to receive(:dispatch!) { events << :dispatched }
+      thread = trigger.schedule_event(:start, 60)
+      Thread.pass while thread.status == 'run'
+      events << thread.status
+      finish(thread)
+      expect(events).to eq(['sleep', :dispatched])
+    end
+
+    it 'dispatches the event once it wakes' do
+      finish(trigger.schedule_event(:start, 60))
       expect(process).to have_received(:dispatch!).with(:start, 'Trigger')
     end
 
     it 'sleeps for a duration in seconds' do
-      trigger.schedule_event(:start, 1.5.seconds).join
-      expect(trigger).to have_received(:sleep) { |delay| expect(delay).to be(1.5) }
+      started = Time.now
+      trigger.schedule_event(:start, 0.05.seconds).join
+      expect(Time.now - started).to be >= 0.05
     end
 
     it 'records the scheduled events in order until each one is dispatched' do
-      gates = {1.0 => Queue.new, 2.0 => Queue.new}
-      allow(trigger).to receive(:sleep) { |delay| gates.fetch(delay).pop }
-      first = trigger.schedule_event(:start, 1)
-      second = trigger.schedule_event(:stop, 2)
+      first = trigger.schedule_event(:start, 60)
+      second = trigger.schedule_event(:stop, 60)
       expect(trigger.scheduled_events).to eq([[:start, first], [:stop, second]])
-      gates.fetch(1.0).push(nil)
-      first.join
+      finish(first)
       expect(trigger.scheduled_events).to eq([[:stop, second]])
-      gates.fetch(2.0).push(nil)
-      second.join
+      finish(second)
       expect(trigger.scheduled_events).to eq([])
     end
 

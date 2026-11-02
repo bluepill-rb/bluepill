@@ -57,7 +57,9 @@ describe Bluepill::Error do
     end
 
     describe "#location" do
-      let(:dir) { Dir.mktmpdir }
+      # Resolved, since JRuby's backtraces resolve symlinks, such as macOS's
+      # /var, which is /private/var
+      let(:dir) { File.realpath(Dir.mktmpdir) }
 
       after { FileUtils.remove_entry(dir) }
 

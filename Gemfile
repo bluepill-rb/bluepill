@@ -34,7 +34,11 @@ group :test do
   # and sizes still work. ActiveSupport 5 needs Ruby 2.2.2.
   gem 'activesupport', RUBY_VERSION < '2.2.2' ? '~> 4.2' : '>= 3.2'
   gem 'rspec', '>= 3'
-  gem 'rubocop', '~> 1.92' if RUBY_VERSION >= '2.7'
+  if RUBY_VERSION >= '2.7'
+    gem 'rubocop', '~> 1.92'
+    gem 'rubocop-rake'
+    gem 'rubocop-rspec'
+  end
   gem 'simplecov', '>= 0.4'
   gem 'steep', '~> 2.1', require: false if RUBY_VERSION >= '3.3' && RUBY_ENGINE == 'ruby'
   # Mutant needs Ruby 3.3 or newer and doesn't support JRuby

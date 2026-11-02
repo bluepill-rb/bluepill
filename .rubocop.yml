@@ -1,3 +1,7 @@
+plugins:
+  - rubocop-rake
+  - rubocop-rspec
+
 inherit_mode:
   merge:
     - Include
@@ -11,7 +15,7 @@ AllCops:
   # that 1.9 does not support.
   TargetRubyVersion: 2.0
   NewCops: enable
-  SuggestExtensions: false
+  SuggestExtensions: true
 
 # required_ruby_version is 1.9.3, which RuboCop cannot target
 Gemspec/RequiredRubyVersion:

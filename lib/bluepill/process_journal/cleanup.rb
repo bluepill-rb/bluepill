@@ -138,7 +138,7 @@ module Bluepill
         # Journals only grow until they're cleared, under the lock this runs in
         return [] unless File.exist?(filename)
 
-        started = Hash[journal_entries(filename)]
+        started = journal_entries(filename).to_h
         boot = System.boot_time
         written = Integer(File.mtime(filename))
         ids.select do |id|

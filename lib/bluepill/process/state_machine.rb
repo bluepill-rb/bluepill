@@ -39,7 +39,7 @@ module Bluepill
 
       # The transition from each state to itself, made once, so a tick that
       # leaves the state alone makes no new object
-      LOOPBACKS = Hash[STATES.zip(STATES.collect { |state| Transition.new(state, state).freeze })].freeze
+      LOOPBACKS = STATES.collect { |state| [state, Transition.new(state, state).freeze] }.to_h.freeze
 
       # Return the process's state, such as :up
       #

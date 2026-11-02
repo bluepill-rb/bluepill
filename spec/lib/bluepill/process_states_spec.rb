@@ -9,7 +9,7 @@ describe Bluepill::Process do
   targets = {
     start: {unmonitored: :starting, down: :starting},
     stop: {up: :stopping},
-    unmonitor: Hash[PROCESS_STATES.collect { |state| [state, :unmonitored] }],
+    unmonitor: PROCESS_STATES.collect { |state| [state, :unmonitored] }.to_h,
     restart: {up: :restarting, down: :restarting}
   }
   ticks = {

@@ -86,37 +86,11 @@ module Bluepill
       when :status
         puts send_to_daemon(application, :status, *args)
       when :quit
-        pid = pid_for(application)
-        if pid && System.pid_alive?(pid)
-          ::Process.kill("TERM", pid)
-          puts "Killing bluepilld[#{pid}]"
-        else
-          puts "bluepilld[#{pid}] not running"
-        end
+        quit_daemon(application)
       when :log
-        log_file_location = send_to_daemon(application, :log_file)
-        log_file_location = log_file if log_file_location.to_s.rstrip.empty?
-
-        requested_pattern = args.first
-        pattern = grep_pattern(application, requested_pattern)
-
-        tail = "tail -n 100 -f #{log_file_location} | grep -E '#{pattern}'"
-        puts "Tailing log for #{requested_pattern}..."
-        Kernel.exec(tail)
-      when *Application::PROCESS_COMMANDS
-        # these need to be sent to the daemon and the results printed out
-        affected = send_to_daemon(application, command, *args)
-        if affected.empty?
-          puts "No processes effected"
-        else
-          puts "Sent #{command} to:"
-          affected.each do |process|
-            puts "  #{process}"
-          end
-        end
+        tail_log(application, args.first)
       else
-        $stderr.puts(format("Unknown command `%s` (or application `%s` has not been loaded yet)", command, command))
-        exit(1)
+        send_process_command(application, command, *args)
       end
     end
 
@@ -138,15 +112,8 @@ module Bluepill
 
       command = [command, *args].join(":")
       response = Socket.client_command(base_dir, application, command)
-      if response.is_a?(Exception)
-        $stderr.puts "Received error from server:"
-        $stderr.puts response.inspect
-        # join flattens the backtrace and makes a missing one empty
-        $stderr.puts [response.backtrace].join("\n")
-        exit(8)
-      else
-        response
-      end
+      exit_with_daemon_error(response) if response.is_a?(Exception)
+      response
     rescue Errno::ECONNREFUSED
       abort("Connection Refused: Server is not running")
     end
@@ -165,6 +132,100 @@ module Bluepill
     end
 
     private
+
+    # Stop an application's daemon, if it's running
+    #
+    # @param [String] application the application's name
+    #
+    # @return [void]
+    #
+    # @api private
+    def quit_daemon(application)
+      pid = pid_for(application)
+      if pid && System.pid_alive?(pid)
+        ::Process.kill("TERM", pid)
+        puts "Killing bluepilld[#{pid}]"
+      else
+        puts "bluepilld[#{pid}] not running"
+      end
+    end
+
+    # Tail the daemon's log, showing only a process or group's lines
+    #
+    # It falls back to the controller's log_file when the daemon doesn't
+    # name one, and replaces the CLI with tail.
+    #
+    # @param [String] application the application's name
+    # @param [String, nil] requested_pattern the process or group
+    #
+    # @return [void]
+    #
+    # @api private
+    def tail_log(application, requested_pattern)
+      log_file_location = send_to_daemon(application, :log_file)
+      log_file_location = log_file if log_file_location.to_s.rstrip.empty?
+
+      pattern = grep_pattern(application, requested_pattern)
+
+      tail = "tail -n 100 -f #{log_file_location} | grep -E '#{pattern}'"
+      puts "Tailing log for #{requested_pattern}..."
+      Kernel.exec(tail)
+    end
+
+    # Send one of the PROCESS_COMMANDS to the daemon and print what it did
+    #
+    # It exits with status 1 for any other command.
+    #
+    # @param [String] application the application's name
+    # @param [String, Symbol] command the command
+    # @param [Array<String>] args the group or process, for example
+    #
+    # @return [void]
+    #
+    # @api private
+    def send_process_command(application, command, *args)
+      unless Application::PROCESS_COMMANDS.include?(command.to_sym)
+        $stderr.puts(format("Unknown command `%s` (or application `%s` has not been loaded yet)", command, command))
+        exit(1)
+      end
+
+      # these need to be sent to the daemon and the results printed out
+      print_affected(command, send_to_daemon(application, command, *args))
+    end
+
+    # Print the processes that a command affected
+    #
+    # @param [String, Symbol] command the command
+    # @param [Array<String>] affected the processes, as group:process
+    #
+    # @return [void]
+    #
+    # @api private
+    def print_affected(command, affected)
+      if affected.empty?
+        puts "No processes effected"
+      else
+        puts "Sent #{command} to:"
+        affected.each do |process|
+          puts "  #{process}"
+        end
+      end
+    end
+
+    # Print an error that the daemon raised, and exit with status 8
+    #
+    # @param [Exception] error the error
+    #
+    # @return [void]
+    #
+    # @api private
+    def exit_with_daemon_error(error)
+      $stderr.puts "Received error from server:"
+      $stderr.puts error.inspect
+      # join flattens the backtrace and makes a missing one empty
+      $stderr.puts [error.backtrace].join("\n")
+      exit(8)
+    end
 
     # Remove the socket and pid file of each daemon that's not running
     #

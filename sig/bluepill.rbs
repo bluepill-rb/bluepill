@@ -128,6 +128,16 @@ module Bluepill
 
     private
 
+    def quit_daemon: (String application) -> void
+
+    def tail_log: (String application, String? requested_pattern) -> void
+
+    def send_process_command: (String application, String | Symbol command, *String args) -> void
+
+    def print_affected: (String | Symbol command, Array[String] affected) -> void
+
+    def exit_with_daemon_error: (Exception error) -> void
+
     def cleanup_bluepill_directory: () -> void
 
     def pid_for: (String app) -> (Integer | false)

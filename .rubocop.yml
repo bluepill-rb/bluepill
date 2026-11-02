@@ -167,3 +167,10 @@ Style/HashConversion:
 # on every Ruby it supports
 Lint/IncompatibleIoSelectWithFiberScheduler:
   Enabled: false
+
+# units.rb defines Bluepill::Units and mixes it into Numeric, and the
+# benchmark helper holds the small doubles the benchmarks share
+Style/OneClassPerFile:
+  Exclude:
+    - lib/bluepill/units.rb
+    - duel/duel_helper.rb

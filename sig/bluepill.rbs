@@ -368,12 +368,11 @@ module Bluepill
   # A monitored process
   class Process
     include ProcessCommands
+    include Attributes
     include Pid
     include Children
     include StateMachine
     include Checks
-
-    CONFIGURABLE_ATTRIBUTES: Array[Symbol]
 
     attr_accessor name: String
     attr_accessor watches: Array[ConditionWatch]
@@ -381,7 +380,60 @@ module Bluepill
     attr_accessor skip_ticks_until: Integer?
     attr_accessor process_running: bool?
 
-    # CONFIGURABLE_ATTRIBUTES
+    attr_reader children: Array[Process]
+    attr_reader statistics: ProcessStatistics
+    attr_reader logger: Logger
+
+    @event_mutex: Monitor
+    @threads: Array[Thread]
+    @actual_pid: Integer?
+    @transition_reason: String?
+
+    attr_accessor app_name: String?
+    attr_accessor group_name: String?
+
+    # A process's move from one state to another
+    class Transition
+      attr_reader from_name: Symbol
+      attr_reader to_name: Symbol
+
+      def initialize: (Symbol from_name, Symbol to_name) -> void
+
+      def loopback?: () -> bool
+    end
+
+    # Methods bluepill defines
+
+    def initialize: (String process_name, Hash[Symbol, Hash[Symbol, untyped]] checks, ?Hash[Symbol, untyped] options) -> void
+
+    # Runs the state machine's tick event, then the watches and children
+    def tick: () -> void
+
+    def logger=: (Logger logger) -> void
+
+    def dispatch!: (Symbol | String event, ?String? reason) -> bool
+
+    def add_checks: (Hash[Symbol, Hash[Symbol, untyped]] checks, Logger logger) -> void
+
+    def add_watch: (Symbol name, Hash[Symbol, untyped] options) -> Array[ConditionWatch]
+
+    def add_trigger: (Symbol name, Hash[Symbol, untyped] options) -> Array[Trigger]
+
+    def handle_user_command: (String cmd) -> void
+
+    def clean_threads: () -> void
+
+    def daemonize?: () -> bool
+
+    def skip_ticks_for: (seconds seconds) -> Integer
+
+    def skipping_ticks?: () -> bool?
+  end
+
+  # The options a config can set for a Process, and their defaults
+  module Process::Attributes
+    CONFIGURABLE_ATTRIBUTES: Array[Symbol]
+
     attr_accessor pre_start_command: String?
     attr_accessor start_command: String?
     attr_accessor stop_command: String?
@@ -417,56 +469,9 @@ module Bluepill
     attr_accessor group_stop_noblock: bool
     attr_accessor group_unmonitor_noblock: bool
 
-    attr_reader children: Array[Process]
-    attr_reader statistics: ProcessStatistics
-    attr_reader logger: Logger
+    def configure: (Hash[Symbol, untyped] options) -> void
 
-    @event_mutex: Monitor
-    @threads: Array[Thread]
-    @actual_pid: Integer?
-    @transitioned: bool
-    @last_pid: Integer?
-    @transition_reason: String?
-
-    attr_accessor app_name: String?
-    attr_accessor group_name: String?
-
-    # A process's move from one state to another
-    class Transition
-      attr_reader from_name: Symbol
-      attr_reader to_name: Symbol
-
-      def initialize: (Symbol from_name, Symbol to_name) -> void
-
-      def loopback?: () -> bool
-    end
-
-    # Methods bluepill defines
-
-    def initialize: (String process_name, Hash[Symbol, Hash[Symbol, untyped]] checks, ?Hash[Symbol, untyped] options) -> void
-
-    # Runs the state machine's tick event, then the watches and children
-    def tick: () -> void
-
-    def logger=: (Logger logger) -> void
-
-    def dispatch!: (Symbol | String event, ?String? reason) -> bool
-
-    def add_checks: (Hash[Symbol, Hash[Symbol, untyped]] checks) -> void
-
-    def add_watch: (Symbol name, Hash[Symbol, untyped] options) -> Array[ConditionWatch]
-
-    def add_trigger: (Symbol name, Hash[Symbol, untyped] options) -> Array[Trigger]
-
-    def handle_user_command: (String cmd) -> void
-
-    def clean_threads: () -> void
-
-    def daemonize?: () -> bool
-
-    def skip_ticks_for: (seconds seconds) -> Integer
-
-    def skipping_ticks?: () -> bool?
+    def apply_defaults: () -> void
   end
 
   # Finds, signals and forgets a Process's pid

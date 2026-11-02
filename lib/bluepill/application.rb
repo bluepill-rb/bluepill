@@ -110,14 +110,7 @@ module Bluepill
       @foreground = options[:foreground]
       self.log_file = options[:log_file]
       @log_level = options[:log_level]
-      # Only used for a non-root user, who has a home
-      home = ENV.fetch("HOME", nil) #: String
-      self.base_dir = options[:base_dir] ||
-        ENV["BLUEPILL_BASE_DIR"] ||
-        (::Process.euid.zero? ? "/var/run/bluepill" : File.join(home, ".bluepill"))
-      ProcessJournal.setup(base_dir, name)
-      self.pid_file = File.join(base_dir, "pids", "#{name}.pid")
-      self.pids_dir = File.join(base_dir, "pids", name)
+      setup_base_dir(options[:base_dir])
       self.kill_timeout = options[:kill_timeout] || 10
 
       self.groups = {}
@@ -288,6 +281,31 @@ module Bluepill
           group.public_send(method, process_name)
         end.flatten
       end
+    end
+
+    # Set the base directory, and the journal and pid paths in it
+    #
+    # @param [String, nil] dir the base_dir option
+    #
+    # @return [void]
+    #
+    # @api private
+    def setup_base_dir(dir)
+      self.base_dir = dir || ENV["BLUEPILL_BASE_DIR"] || default_base_dir
+      ProcessJournal.setup(base_dir, name)
+      self.pid_file = File.join(base_dir, "pids", "#{name}.pid")
+      self.pids_dir = File.join(base_dir, "pids", name)
+    end
+
+    # Return the base directory without an option or BLUEPILL_BASE_DIR
+    #
+    # @return [String] /var/run/bluepill for root, or ~/.bluepill
+    #
+    # @api private
+    def default_base_dir
+      # Only used for a non-root user, who has a home
+      home = ENV.fetch("HOME", nil) #: String
+      ::Process.euid.zero? ? "/var/run/bluepill" : File.join(home, ".bluepill")
     end
   end
 end

@@ -91,6 +91,10 @@ module Bluepill
 
     def send_to_process_or_group: (Symbol method, String? group_name, String? process_name) -> Array[String]
 
+    def setup_base_dir: (String? dir) -> void
+
+    def default_base_dir: () -> String
+
     # Answers the CLI's commands on the socket, for Application only
     module Listener : Object, _Host
       # What Listener uses from Application

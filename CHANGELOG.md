@@ -9,9 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading from 0.2
 
-Most pill files work with 0.3.0 unchanged. Check these before you upgrade:
+Most pill files work with 0.3.0 unchanged. Upgrade to 0.2.9 first, and run `bluepill load`: it warns, with a `DEPRECATION:` line, about each of these that it can find in your pill file and your custom checks and triggers, and a pill file that loads without any works with 0.3.0. Check these before you upgrade:
 
-- **Bluepill needs Ruby 3.0 or newer.** On Ruby 2.7, stay on 0.2.7.
+- **Bluepill needs Ruby 3.0 or newer, or JRuby 9.4 or newer.** On Ruby 2.7, stay on 0.2.9.
 - **A custom check or trigger takes its options as keyword arguments.** One written as `def initialize(options = {})` that calls `super` now fails with an `ArgumentError`, since `super` passes the hash on as one positional argument. Name the options it needs and pass the rest on, as the README's example does: `def initialize(path:, below:, **options)`, then `super(**options)`. One written for bluepill 0.1, which defines `check`, also needs it renamed `check?`.
 - **An application option that bluepill doesn't know fails the config.** `Bluepill.application("app", log_flie: "/var/log/app.log")` now stops with Ruby's unknown keyword error. Before, bluepill ignored the option.
 - **A check without an option it needs fails the config.** `checks :mem_usage`, `:cpu_usage` or `:running_time` without `below:`, and `:file_time` without `filename:` or `below:`, now stop the pill file from loading, with Ruby's missing keyword error. Before, `mem_usage` without `below:` always passed, and the others raised an error each time they ran. `:http` without `url:` fails with the same error, where it failed with a `URI::InvalidURIError`.
@@ -19,15 +19,16 @@ Most pill files work with 0.3.0 unchanged. Check these before you upgrade:
 - **Pass options kept in a hash with `**`.** A pill file that keeps a check's or the application's options in a variable passes them as `process.checks :mem_usage, **options`, since a hash passed without `**` no longer counts as options.
 - **An https `http` check verifies the server's certificate.** One against a self-signed or otherwise invalid certificate now fails the check. Add `verify_ssl: false` to keep checking it without verification.
 - **Set attributes with `=`.** `process.daemonize!` and `process.start_command "cmd"` no longer work. Write `process.daemonize = true` and `process.start_command = "cmd"`.
-- **`on_start_timeout` and `fires:` take Symbols**, such as `process.on_start_timeout = :unmonitor` or `fires: :stop`, from `:start`, `:stop`, `:unmonitor` and `:restart`.
+- **`on_start_timeout`, `fires:` and a custom trigger's `dispatch!` take Symbols**, such as `process.on_start_timeout = :unmonitor` or `fires: :stop`, from `:start`, `:stop`, `:unmonitor` and `:restart`.
+- **Two checks of the same kind both run.** A process with two `checks :http` of different URLs, of which 0.2 ran only the last, now runs both, so the first one can restart the process too.
+- **A `monitor_children` block needs a `stop_command`, and runs once at load.** Bluepill runs it when the pill file loads, with `actual_pid` nil, to check it, and fails the config if it sets no `stop_command`. `monitor_children` needs a block, and a process block can't set `monitor_children` or `child_process_factory` itself.
 - **A custom check that subclasses `MemUsage` gets bytes.** Its `run`, `check?` and `format_value` see the memory usage in bytes, where they saw kilobytes.
 - **Call `super` first in a custom check's `initialize`.** A check gets its logger only through the `logger:` keyword, which `super` stores, so one that doesn't call `super` has no logger. Don't set a check's or trigger's `logger` yourself: the writer is gone.
 - **Upgrade the daemon along with the CLI.** A 0.3.0 `bluepill` command says a 0.2 daemon is out of date, so run `bluepill load` again after upgrading. Bluepill monitors the running processes again without restarting them.
 
 ### Added
 
-- `Bluepill::ConfigError`, which bluepill raises for a mistake in a pill file, such as a misspelled process attribute or two processes with the same pid file.
-- `Bluepill::Error`, the base of the errors that stop the `bluepill` command, with the status it exits with. `ConfigError` is one, alongside `StartupError`, `PreviousDaemonError`, `AlreadyRunningError`, `ConnectionError`, `VersionMismatchError`, `UnknownCommandError` and `DaemonError`.
+- `Bluepill::Error`, the base of the errors that stop the `bluepill` command, with the status it exits with: `ConfigError`, for a mistake in a pill file, such as a misspelled process attribute or two processes with the same pid file, `StartupError`, `PreviousDaemonError`, `AlreadyRunningError`, `ConnectionError`, `VersionMismatchError`, `UnknownCommandError` and `DaemonError`.
 - The `http` check's `verify_ssl:` option. Set it to false for a server with a self-signed certificate.
 - A custom check or trigger can be defined in any module, since bluepill finds it by its class name.
 - The daemon logs what stops it at `crit`, with the backtrace, since its stderr is `/dev/null`.
@@ -49,11 +50,10 @@ Most pill files work with 0.3.0 unchanged. Check these before you upgrade:
 - **Breaking:** `Bluepill::Logger`'s log methods take only the message, and `prefix_with` is the only way to make a prefixed logger (the `prefix:` option is gone).
 - A mistake in a `monitor_children` block, such as a missing `stop_command`, fails the config when it loads. Before, the daemon exited the first time it found a child. `monitor_children` without a block fails the config.
 - The daemon traps signals and creates its pids directory when it starts, not while the pill file loads.
-- The `mem_usage` check takes 1.4% fewer instructions.
 - **Breaking:** the commands a process runs take a `System::CommandOptions`, and `System.execute_blocking` returns a `System::CommandResult`, instead of Hashes. `System.daemonize` takes the pid file and the logger as keywords.
 - **Breaking:** each process reaches its pid and process group journals through `ProcessJournal.for(name)`, and a journal lock held too long raises `ProcessJournal::LockTimeoutError`.
 - **Breaking:** the ps table is kept in `System`'s own state, and `System.store` is gone.
-- Checking a process's CPU takes 8% fewer instructions.
+- Checking a process's CPU takes 8% fewer instructions, and the `mem_usage` check 1.4% fewer.
 - A process gets its logger, prefixed with the names of its app, its group and itself, when it's made, and passes it to its watches, checks and triggers as they're made, instead of being handed a new logger when it joins its group.
 - A process's `stop_signals` is parsed and checked once, when the pill file loads, into a `Bluepill::Process::StopSignals`.
 - **Breaking:** `Process#stop_signals` returns a `Bluepill::Process::StopSignals` instead of an Array (`to_a` gives the Array), and `Process#stop_signals=` raises `Bluepill::ConfigError` for a malformed Array, a monitored child's too.
@@ -61,7 +61,7 @@ Most pill files work with 0.3.0 unchanged. Check these before you upgrade:
 ### Removed
 
 - **Breaking:** a custom check that defines `check`, as in bluepill 0.1, no longer works. Name the method `check?`, as bluepill 0.2 does.
-- **Breaking:** support for Ruby 2.7. Bluepill 0.3.0 needs Ruby 3.0 or newer, or JRuby 9.4 or newer. Bluepill 0.2.7 still runs on Ruby 2.7.
+- **Breaking:** support for Ruby 2.7. Bluepill 0.3.0 needs Ruby 3.0 or newer, or JRuby 9.4 or newer. Bluepill 0.2.9 still runs on Ruby 2.7.
 - **Breaking:** the undocumented `name!` and `name value` forms of setting a process attribute.
 - **Breaking:** setting `monitor_children` or `child_process_factory` in a process block. Use `monitor_children` with a block.
 - **Breaking:** the `logger=` writers of `Process`, `Process::Watches`, `Process::Triggers`, `ConditionWatch`, `ProcessConditions::ProcessCondition` and `Trigger`. A custom check or trigger gets its logger only through the `logger:` keyword.

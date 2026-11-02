@@ -1,7 +1,0 @@
-# Methods from Ruby and its standard library that bluepill uses, but that
-# the signatures from rbs leave out
-
-class UNIXSocket
-  def self.open: (String path) -> instance
-    | [T] (String path) { (instance socket) -> T } -> T
-end

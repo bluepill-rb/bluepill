@@ -27,7 +27,14 @@ module Bluepill
     # @return [Object] what the block returns
     #
     # @api private
-    def self.client(base_dir, name, &) = UNIXSocket.open(socket_path(base_dir, name), &)
+    def self.client(base_dir, name)
+      socket = UNIXSocket.new(socket_path(base_dir, name))
+      begin
+        yield socket
+      ensure
+        socket.close
+      end
+    end
 
     # Send a command to an application's daemon, and return its answer
     #
@@ -105,7 +112,7 @@ module Bluepill
     def self.server(base_dir, name)
       # @type var path: String
       path = socket_path(base_dir, name)
-      UNIXServer.open(path)
+      UNIXServer.new(path)
     rescue Errno::EADDRINUSE
       replace_stale_socket(path)
     end
@@ -123,10 +130,10 @@ module Bluepill
     # @api private
     def self.replace_stale_socket(path)
       # if sock file has been created, test to see if there is a server
-      UNIXSocket.open(path)
+      UNIXSocket.new(path).close
     rescue Errno::ECONNREFUSED
       File.delete(path)
-      UNIXServer.open(path)
+      UNIXServer.new(path)
     else
       raise AlreadyRunningError, "Server is already running!"
     end

@@ -3,7 +3,7 @@
 describe Bluepill::Socket do
   let(:base_dir) { "/var/run/bluepill" }
   let(:socket_path) { "/var/run/bluepill/socks/app.sock" }
-  let(:socket) { instance_double(UNIXSocket, puts: nil) }
+  let(:socket) { instance_double(UNIXSocket, puts: nil, close: nil) }
 
   describe ".socket_path" do
     it "is in the socks directory of the base directory" do
@@ -12,11 +12,39 @@ describe Bluepill::Socket do
   end
 
   describe ".client" do
+    before { allow(UNIXSocket).to receive(:new).with(socket_path).and_return(socket) }
+
     it "opens a UNIX socket and yields it" do
-      allow(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
       yielded = nil
       described_class.client(base_dir, "app") { |s| yielded = s }
       expect(yielded).to be(socket)
+    end
+
+    it "returns what the block returns" do
+      expect(described_class.client(base_dir, "app") { :answer }).to eq(:answer)
+    end
+
+    it "closes the socket after the block" do
+      calls = []
+      allow(socket).to(receive(:close)) { calls << :close }
+      described_class.client(base_dir, "app") { calls << :block }
+      expect(calls).to eq(%i[block close])
+    end
+
+    # Connect with a block that raises, and rescue what it raised
+    def client_with_failing_block
+      described_class.client(base_dir, "app") { raise EOFError }
+    rescue EOFError => e
+      e
+    end
+
+    it "lets the block's error through" do
+      expect(client_with_failing_block).to be_a(EOFError)
+    end
+
+    it "closes the socket when the block raises" do
+      client_with_failing_block
+      expect(socket).to have_received(:close)
     end
   end
 
@@ -25,7 +53,7 @@ describe Bluepill::Socket do
 
     before do
       allow(Timeout).to receive(:timeout).with(Bluepill::Socket::TIMEOUT).and_yield
-      allow(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
+      allow(UNIXSocket).to receive(:new).with(socket_path).and_return(socket)
       allow(described_class).to receive(:puts) { |line| printed << line }
     end
 
@@ -50,7 +78,7 @@ describe Bluepill::Socket do
 
       it "connects once" do
         client_command
-        expect(UNIXSocket).to have_received(:open).once
+        expect(UNIXSocket).to have_received(:new).once
       end
 
       it "does not retry" do
@@ -98,7 +126,7 @@ describe Bluepill::Socket do
 
       it "tries MAX_ATTEMPTS times" do
         client_command_until_giving_up
-        expect(UNIXSocket).to have_received(:open).exactly(Bluepill::Socket::MAX_ATTEMPTS).times
+        expect(UNIXSocket).to have_received(:new).exactly(Bluepill::Socket::MAX_ATTEMPTS).times
       end
 
       it "says it retries after each attempt but the last" do
@@ -112,14 +140,14 @@ describe Bluepill::Socket do
     let(:server) { instance_double(UNIXServer) }
 
     it "opens a UNIX server socket" do
-      allow(UNIXServer).to receive(:open).with(socket_path).and_return(server)
+      allow(UNIXServer).to receive(:new).with(socket_path).and_return(server)
       expect(described_class.server(base_dir, "app")).to be(server)
     end
 
     context "when the socket file already exists" do
       before do
         calls = 0
-        allow(UNIXServer).to receive(:open).with(socket_path) do
+        allow(UNIXServer).to receive(:new).with(socket_path) do
           calls += 1
           raise Errno::EADDRINUSE if calls == 1
 
@@ -129,18 +157,31 @@ describe Bluepill::Socket do
       end
 
       it "replaces a stale socket file" do
-        allow(UNIXSocket).to receive(:open).with(socket_path).and_raise(Errno::ECONNREFUSED)
+        allow(UNIXSocket).to receive(:new).with(socket_path).and_raise(Errno::ECONNREFUSED)
         expect(described_class.server(base_dir, "app")).to be(server)
       end
 
       it "deletes a stale socket file" do
-        allow(UNIXSocket).to receive(:open).with(socket_path).and_raise(Errno::ECONNREFUSED)
+        allow(UNIXSocket).to receive(:new).with(socket_path).and_raise(Errno::ECONNREFUSED)
         described_class.server(base_dir, "app")
         expect(File).to have_received(:delete).with(socket_path)
       end
 
+      # Open the server while another one is listening, and rescue the error
+      def server_while_another_listens
+        allow(UNIXSocket).to receive(:new).with(socket_path).and_return(socket)
+        described_class.server(base_dir, "app")
+      rescue Bluepill::AlreadyRunningError => e
+        e
+      end
+
+      it "closes its connection to another server that is listening" do
+        server_while_another_listens
+        expect(socket).to have_received(:close)
+      end
+
       it "raises when another server is listening" do
-        allow(UNIXSocket).to receive(:open).with(socket_path).and_return(socket)
+        allow(UNIXSocket).to receive(:new).with(socket_path).and_return(socket)
         running = having_attributes(message: "Server is already running!", exit_status: 7)
         expect { described_class.server(base_dir, "app") }.to raise_error(
           an_instance_of(Bluepill::AlreadyRunningError).and(running)

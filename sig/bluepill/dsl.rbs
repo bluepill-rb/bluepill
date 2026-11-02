@@ -111,18 +111,14 @@ module Bluepill
 
     # The process names and pid files an application's config has used
     class Registry
-      @process_keys: Hash[Array[String?], nil]
-      @pid_files: Hash[String, nil]
+      @process_keys: Set[[String?, String]]
+      @pid_files: Set[String]
 
       def initialize: () -> void
 
       def add_process?: (_ToS? group, _ToS name) -> bool
 
       def add_pid_file?: (String pid_file) -> bool
-
-      private
-
-      def add?: [K < Hash::_Key] (Hash[K, nil] keys, K key) -> bool
     end
 
     # Creates the processes of a process's children, for ProcessFactory,

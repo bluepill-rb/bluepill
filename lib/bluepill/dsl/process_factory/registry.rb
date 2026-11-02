@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "set"
+
 module Bluepill
   class ProcessFactory
     # The process names and pid files that an application's config has used
@@ -17,9 +19,8 @@ module Bluepill
       #
       # @api private
       def initialize
-        # Only the keys matter
-        @process_keys = {} #: Hash[Array[String?], nil]
-        @pid_files = {} #: Hash[String, nil]
+        @process_keys = Set.new #: Set[[String?, String]]
+        @pid_files = Set.new #: Set[String]
       end
 
       # Add a process's name in its group, unless it's there already
@@ -34,9 +35,7 @@ module Bluepill
       # @return [Boolean] true for a new name, false for one already added
       #
       # @api private
-      def add_process?(group, name)
-        add?(@process_keys, [group, name].collect { |part| part && part.to_s })
-      end
+      def add_process?(group, name) = !@process_keys.add?([group&.to_s, name.to_s]).nil?
 
       # Add a pid file, unless it's there already
       #
@@ -46,24 +45,7 @@ module Bluepill
       #   added
       #
       # @api private
-      def add_pid_file?(pid_file) = add?(@pid_files, pid_file)
-
-      private
-
-      # Add a key to a hash, unless it's there already
-      #
-      # @param [Hash{Object => nil}] keys the keys added so far
-      # @param [Object] key the key to add
-      #
-      # @return [Boolean] true for a new key, false for one already added
-      #
-      # @api private
-      def add?(keys, key)
-        return false if keys.key?(key)
-
-        keys[key] = nil
-        true
-      end
+      def add_pid_file?(pid_file) = !@pid_files.add?(pid_file).nil?
     end
   end
 end

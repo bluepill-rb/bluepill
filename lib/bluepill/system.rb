@@ -269,12 +269,13 @@ module Bluepill
           lines = `ps -Ao pid,ppid,pcpu,rss,etime,args`.split("\n")
 
           table = {} #: ps_table
+          command = IDX_MAP.fetch(:command)
           lines.each do |line|
-            chunks = line.split
-            pid = chunks.fetch(IDX_MAP.fetch(:pid)).to_i
-            command = chunks.slice!(IDX_MAP.fetch(:command), chunks.length) #: Array[String]
-            chunks[IDX_MAP.fetch(:command)] = command.join ' '
-            table[pid] = chunks
+            # Split off the fields before the command, and keep the command
+            # whole, as ps printed it
+            chunks = line.split(' ', command + 1)
+            chunks[command] ||= ''
+            table[chunks.fetch(IDX_MAP.fetch(:pid)).to_i] = chunks
           end
           table
         rescue SystemCallError => e

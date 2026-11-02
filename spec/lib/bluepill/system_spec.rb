@@ -372,6 +372,8 @@ describe Bluepill::System do
         '  PID  PPID  %CPU    RSS     ELAPSED ARGS',
         '    1     0   0.0   1234 10-01:02:03 /sbin/init',
         '  321     1  12.5  56789       01:02 ruby -e "sleep 1"',
+        '  322     1   0.0      0       00:01',
+        '  323     1   0.0    512       00:02 sh -c "echo  two  spaces"',
       ].join("\n")
     end
 
@@ -381,6 +383,8 @@ describe Bluepill::System do
           0 => %w[PID PPID %CPU RSS ELAPSED ARGS],
           1 => ['1', '0', '0.0', '1234', '10-01:02:03', '/sbin/init'],
           321 => ['321', '1', '12.5', '56789', '01:02', 'ruby -e "sleep 1"'],
+          322 => ['322', '1', '0.0', '0', '00:01', ''],
+          323 => ['323', '1', '0.0', '512', '00:02', 'sh -c "echo  two  spaces"'],
         }
       end
 
@@ -395,6 +399,26 @@ describe Bluepill::System do
       it 'runs ps once a tick' do
         2.times { described_class.ps_axu }
         expect(described_class).to have_received(:`).with('ps -Ao pid,ppid,pcpu,rss,etime,args').once
+      end
+    end
+
+    # A pill file could set $;, which split uses when it's given no pattern
+    context 'when $; is set' do
+      let(:table) { {0 => %w[PID PPID %CPU RSS ELAPSED ARGS], 1 => ['1', '0', '0.0', '1234', '10-01:02:03', '/sbin/init']} }
+
+      around do |example|
+        separator = $;
+        begin
+          $; = ','
+          example.run
+        ensure
+          $; = separator
+        end
+      end
+
+      it 'still splits ps output on whitespace' do
+        allow(described_class).to receive(:`).and_return(output.lines.first(2).join)
+        expect(described_class.ps_axu).to eq(table)
       end
     end
 

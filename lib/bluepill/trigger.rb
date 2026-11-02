@@ -7,6 +7,12 @@ module Bluepill
   #
   # @api private
   class Trigger
+    # The symbol a trigger throws from notify to stop the transition it was
+    # told of. The process catches it and stays in its state.
+    #
+    # @api private
+    HALT = :halt
+
     @implementations = {}
 
     # Register a subclass by its underscored name, such as :flapping
@@ -47,20 +53,16 @@ module Bluepill
     # @api private
     attr_accessor :logger
 
-    # Return the lock that guards the scheduled events
-    #
-    # @return [Thread::Mutex] the lock
-    #
-    # @api private
-    attr_accessor :mutex
-
     # Return the events the trigger scheduled, each with its thread
+    #
+    # Read them under the lock, since their threads remove them as they
+    # finish.
     #
     # @return [Array<Array(Symbol, Thread)>] each event and the thread that
     #   dispatches it
     #
     # @api private
-    attr_accessor :scheduled_events
+    attr_reader :scheduled_events
 
     # Create a trigger for a process
     #
@@ -74,8 +76,11 @@ module Bluepill
     def initialize(process, options = {})
       self.process = process
       self.logger = options[:logger]
-      self.mutex = Mutex.new
-      self.scheduled_events = []
+      @mutex = Mutex.new
+      @scheduled_events = []
+      # The reason the trigger gives the process for what it dispatches,
+      # such as "Flapping"
+      @reason = self.class.name.split("::").last
     end
 
     # Cancel the events the trigger scheduled, as when the user unmonitors
@@ -108,7 +113,7 @@ module Bluepill
     #
     # @api private
     def dispatch!(event)
-      process.dispatch!(event, self.class.name.split("::").last)
+      process.dispatch!(event, @reason)
     end
 
     # Dispatch an event after a delay, in a thread of its own
@@ -162,5 +167,14 @@ module Bluepill
         scheduled_events.clear
       end
     end
+
+    private
+
+    # Return the lock that guards the scheduled events
+    #
+    # @return [Thread::Mutex] the lock
+    #
+    # @api private
+    attr_reader :mutex
   end
 end

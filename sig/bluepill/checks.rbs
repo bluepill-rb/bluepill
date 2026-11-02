@@ -50,6 +50,8 @@ module Bluepill
   # Reacts to a process's state transitions. Subclasses register themselves
   # by their underscored name.
   class Trigger
+    HALT: :halt
+
     self.@implementations: Hash[Symbol, singleton(Trigger)]
 
     def self.inherited: (singleton(Trigger) klass) -> void
@@ -58,8 +60,9 @@ module Bluepill
 
     attr_accessor process: Process
     attr_accessor logger: Logger
-    attr_accessor mutex: Thread::Mutex
-    attr_accessor scheduled_events: Array[[Symbol, Thread]]
+    attr_reader scheduled_events: Array[[Symbol, Thread]]
+
+    @reason: String
 
     def initialize: (Process process, ?Hash[Symbol, untyped] options) -> void
 
@@ -74,6 +77,10 @@ module Bluepill
     def run_scheduled_event: (Symbol event, seconds delay) -> void
 
     def cancel_all_events: () -> void
+
+    private
+
+    attr_reader mutex: Thread::Mutex
   end
 
   module Triggers
@@ -81,7 +88,6 @@ module Bluepill
     # again later
     class Flapping < Trigger
       TRIGGER_STATES: Array[Symbol]
-      PARAMS: Array[Symbol]
 
       attr_accessor times: Integer
       attr_accessor within: Integer

@@ -47,13 +47,22 @@ describe Bluepill::Trigger do
     end
   end
 
+  it "throws :halt to stop a transition" do
+    expect(described_class::HALT).to be(:halt)
+  end
+
   describe "#initialize" do
     it "sets up the trigger" do
-      expect(trigger).to have_attributes(process: process, logger: logger, mutex: be_a(Mutex), scheduled_events: [])
+      expect([trigger, trigger.send(:mutex)]).to match([have_attributes(process: process, logger: logger, scheduled_events: []), be_a(Mutex)])
     end
 
     it "can be created without options" do
       expect(described_class.new(process).logger).to be_nil
+    end
+
+    it "takes its class's name, without its modules, as its dispatch reason" do
+      Bluepill::Triggers::Flapping.new(process, logger: logger).dispatch!(:start)
+      expect(calls).to eq([[:dispatch!, :start, "Flapping"]])
     end
   end
 
@@ -165,7 +174,7 @@ describe Bluepill::Trigger do
   describe "#reset!" do
     it "cancels all scheduled events while it holds the lock" do
       thread = instance_double(Thread)
-      allow(thread).to receive(:kill) { calls << [:kill, trigger.mutex.locked?] }
+      allow(thread).to receive(:kill) { calls << [:kill, trigger.send(:mutex).locked?] }
       trigger.scheduled_events.push([:start, thread])
       trigger.reset!
       expect([calls, trigger.scheduled_events]).to eq([[[:info, "Canceling all scheduled events"], [:kill, true]], []])

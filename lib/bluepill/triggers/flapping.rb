@@ -22,11 +22,6 @@ module Bluepill
       # @api private
       TRIGGER_STATES = [:starting, :restarting].freeze
 
-      # The options the trigger takes
-      #
-      # @api private
-      PARAMS = [:times, :within, :retry_in].freeze
-
       # Return how many starts or restarts count as flapping
       #
       # @return [Integer] the number of transitions
@@ -65,12 +60,9 @@ module Bluepill
       #
       # @api private
       def initialize(process, options = {})
-        options = {times: 5, within: 1, retry_in: 5}.merge(options)
-
-        options.each_pair do |name, val|
-          instance_variable_set("@#{name}", val) if PARAMS.include?(name)
-        end
-
+        @times = options.fetch(:times, 5)
+        @within = options.fetch(:within, 1)
+        @retry_in = options.fetch(:retry_in, 5)
         @timeline = Util::RotationalArray.new(@times)
         super
       end
@@ -107,7 +99,7 @@ module Bluepill
       #
       # @return [void]
       #
-      # @raise [UncaughtThrowError] :halt, which state_machine catches to stop
+      # @raise [UncaughtThrowError] HALT, which the process catches to stop
       #   the transition that flapped
       #
       # @api private
@@ -125,8 +117,8 @@ module Bluepill
 
         @timeline.clear
 
-        # This will prevent a transition from happening in the process state_machine
-        throw :halt
+        # Keep the process from making the transition that flapped
+        throw HALT
       end
     end
   end

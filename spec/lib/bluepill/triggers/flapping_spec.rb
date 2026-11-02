@@ -34,7 +34,7 @@ describe Bluepill::Triggers::Flapping do
   # Wait for the events the trigger has scheduled to dispatch, so its
   # threads don't outlast the example and its doubles
   def settle(trigger)
-    trigger.mutex.synchronize { trigger.scheduled_events.collect(&:last) }.each(&:join)
+    trigger.send(:mutex).synchronize { trigger.scheduled_events.collect(&:last) }.each(&:join)
   end
 
   # Notify the trigger, and wait for the events it schedules to dispatch

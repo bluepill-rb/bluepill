@@ -248,10 +248,13 @@ module Bluepill
 
     # Return the daemon's version, which the CLI checks against its own
     #
-    # @return [Module] the Version module
+    # It's a String, since Marshal sends a module as only its name, which
+    # the CLI would load as its own Version.
+    #
+    # @return [String] the version, such as "0.3.0"
     #
     # @api private
-    def version = Version
+    def version = Version.to_s
 
     protected
 

@@ -45,7 +45,7 @@ module Bluepill
 
     def add_process: (Process process, ?_ToS? group_name) -> Array[Process]
 
-    def version: () -> singleton(Version)
+    def version: () -> String
 
     # Ruby's protected methods are private in RBS
 
@@ -161,6 +161,8 @@ module Bluepill
   # Runs the bluepill commands, and sends them to the daemon over its socket
   class Controller
     include Directory
+
+    OUT_OF_DATE: String
 
     attr_accessor base_dir: String
     attr_accessor log_file: String?

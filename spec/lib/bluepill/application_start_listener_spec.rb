@@ -115,7 +115,7 @@ describe Bluepill::Application do
 
     it "answers the version command" do
       allow(client).to receive(:readline).and_return("version\n")
-      expect(answer).to eq(Bluepill::Version)
+      expect(answer).to eq(Bluepill::Version.to_s)
     end
 
     it "answers the log_file command" do

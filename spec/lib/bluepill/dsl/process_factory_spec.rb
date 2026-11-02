@@ -140,133 +140,133 @@ describe Bluepill::ProcessFactory do
         end
       end
 
-      context 'without a known pid' do
-        let(:warning) do
-          "Config Warning: 'web' sets no daemonize, pid_file or pid_command, " \
-            'so bluepill cannot find its pid unless start_command writes it to /pids/web.pid. ' \
-            "Set daemonize = true if start_command runs in the foreground.\n"
-        end
-
-        it 'warns about a process that is not daemonized and uses the default pid file' do
-          expect { create('web', proc { start_command 'run' }) }.to output(warning).to_stderr
-        end
-
-        it 'warns about a process with daemonize set to false' do
-          expect { create('web', proc { start_command 'run' }, daemonize: false) }.to output(warning).to_stderr
-        end
-
-        it 'warns about a process with a nil pid command' do
-          expect { create('web', proc { start_command 'run' }, pid_command: nil) }.to output(warning).to_stderr
-        end
-
-        it 'warns about a process that sets the default pid file itself' do
-          block = proc do
-            start_command 'run'
-            pid_file '/pids/web.pid'
-          end
-          expect { create('web', block) }.to output(warning).to_stderr
-        end
-
-        it 'does not warn about a daemonized process' do
-          expect { create('web', proc { start_command 'run' }, daemonize: true) }.not_to output.to_stderr
-        end
-
-        it 'does not warn about a process with a pid command' do
-          expect { create('web', proc { start_command 'run' }, pid_command: 'pgrep web') }.not_to output.to_stderr
-        end
-
-        it 'does not warn about a process with its own pid file' do
-          block = proc do
-            start_command 'run'
-            pid_file '/var/web.pid'
-          end
-          expect { create('web', block) }.not_to output.to_stderr
-        end
-
-        it 'does not warn about a pid file set before the default is assigned' do
-          expect { create('web', proc { start_command 'run' }, pid_file: '/var/web.pid') }.not_to output.to_stderr
-        end
-      end
-
       it 'rejects duplicate pid files' do
         create('web', proc { start_command 'run' }, pid_file: '/shared.pid')
         expect_config_error("Config Error: You have two entries with the pid file: /shared.pid\n") do
           create('worker', proc { start_command 'run' }, pid_file: ' /shared.pid ')
         end
       end
+    end
 
-      describe 'stop_signals' do
-        def create_with_signals(signals, grace_time)
-          create('web', proc do
-            start_command 'run'
-            stop_signals signals
-            stop_grace_time grace_time unless grace_time.nil?
-          end)
+    context 'without a known pid' do
+      let(:warning) do
+        "Config Warning: 'web' sets no daemonize, pid_file or pid_command, " \
+          'so bluepill cannot find its pid unless start_command writes it to /pids/web.pid. ' \
+          "Set daemonize = true if start_command runs in the foreground.\n"
+      end
+
+      it 'warns about a process that is not daemonized and uses the default pid file' do
+        expect { create('web', proc { start_command 'run' }) }.to output(warning).to_stderr
+      end
+
+      it 'warns about a process with daemonize set to false' do
+        expect { create('web', proc { start_command 'run' }, daemonize: false) }.to output(warning).to_stderr
+      end
+
+      it 'warns about a process with a nil pid command' do
+        expect { create('web', proc { start_command 'run' }, pid_command: nil) }.to output(warning).to_stderr
+      end
+
+      it 'warns about a process that sets the default pid file itself' do
+        block = proc do
+          start_command 'run'
+          pid_file '/pids/web.pid'
         end
+        expect { create('web', block) }.to output(warning).to_stderr
+      end
 
-        it 'accepts valid stop signals' do
-          process = create_with_signals([:quit, 5, :term], 10)
-          expect(process.stop_signals).to eq([:quit, 5, :term])
+      it 'does not warn about a daemonized process' do
+        expect { create('web', proc { start_command 'run' }, daemonize: true) }.not_to output.to_stderr
+      end
+
+      it 'does not warn about a process with a pid command' do
+        expect { create('web', proc { start_command 'run' }, pid_command: 'pgrep web') }.not_to output.to_stderr
+      end
+
+      it 'does not warn about a process with its own pid file' do
+        block = proc do
+          start_command 'run'
+          pid_file '/var/web.pid'
         end
+        expect { create('web', block) }.not_to output.to_stderr
+      end
 
-        it 'accepts a single stop signal' do
-          process = create_with_signals([:term], 10)
-          expect(process.stop_signals).to eq([:term])
+      it 'does not warn about a pid file set before the default is assigned' do
+        expect { create('web', proc { start_command 'run' }, pid_file: '/var/web.pid') }.not_to output.to_stderr
+      end
+    end
+
+    describe 'stop_signals' do
+      def create_with_signals(signals, grace_time)
+        create('web', proc do
+          start_command 'run'
+          stop_signals signals
+          stop_grace_time grace_time unless grace_time.nil?
+        end)
+      end
+
+      it 'accepts valid stop signals' do
+        process = create_with_signals([:quit, 5, :term], 10)
+        expect(process.stop_signals).to eq([:quit, 5, :term])
+      end
+
+      it 'accepts a single stop signal' do
+        process = create_with_signals([:term], 10)
+        expect(process.stop_signals).to eq([:term])
+      end
+
+      it 'accepts Active Support durations as delays' do
+        process = create_with_signals([:quit, 5.seconds, :term], 10)
+        expect(process.stop_signals).to eq([:quit, 5, :term])
+      end
+
+      # Like a Fixnum before Ruby 2.4, which is an Integer but not an
+      # instance of it
+      it 'accepts any kind of Integer as a delay' do
+        delay = instance_double(Integer, is_a?: true)
+        expect_config_error(/Stop_grace_time should be greater than the sum of stop_signals delays/) do
+          create_with_signals([:quit, delay, :term], nil)
         end
+      end
 
-        it 'accepts Active Support durations as delays' do
-          process = create_with_signals([:quit, 5.seconds, :term], 10)
-          expect(process.stop_signals).to eq([:quit, 5, :term])
+      it 'accepts a stop_grace_time just above the sum of the delays' do
+        process = create_with_signals([:quit, 9, :term], 10)
+        expect(process.stop_signals).to eq([:quit, 9, :term])
+      end
+
+      it 'rejects a stop_grace_time below the sum of the delays' do
+        expect_config_error(/Stop_grace_time should be greater than the sum of stop_signals delays/) do
+          create_with_signals([:quit, 10, :term], 5)
         end
+      end
 
-        # Like a Fixnum before Ruby 2.4, which is an Integer but not an
-        # instance of it
-        it 'accepts any kind of Integer as a delay' do
-          delay = instance_double(Integer, is_a?: true)
-          expect_config_error(/Stop_grace_time should be greater than the sum of stop_signals delays/) do
-            create_with_signals([:quit, delay, :term], nil)
-          end
+      it 'requires signals to be symbols' do
+        expect_config_error(/Expected a symbol \(signal\) at position 2 instead of 'term'/) do
+          create_with_signals([:quit, 5, 'term'], 10)
         end
+      end
 
-        it 'accepts a stop_grace_time just above the sum of the delays' do
-          process = create_with_signals([:quit, 9, :term], 10)
-          expect(process.stop_signals).to eq([:quit, 9, :term])
+      it 'requires delays to be numbers' do
+        expect_config_error(/Expected a number \(delay\) at position 1 instead of 'five'/) do
+          create_with_signals([:quit, 'five', :term], 10)
         end
+      end
 
-        it 'rejects a stop_grace_time below the sum of the delays' do
-          expect_config_error(/Stop_grace_time should be greater than the sum of stop_signals delays/) do
-            create_with_signals([:quit, 10, :term], 5)
-          end
+      it 'requires an odd number of elements' do
+        expect_config_error("Config Error: Invalid stop_signals!  Expected an odd number of elements.\n") do
+          create_with_signals([:quit, 5], 10)
         end
+      end
 
-        it 'requires signals to be symbols' do
-          expect_config_error(/Expected a symbol \(signal\) at position 2 instead of 'term'/) do
-            create_with_signals([:quit, 5, 'term'], 10)
-          end
+      it 'requires a stop_grace_time' do
+        expect_config_error(/Stop_grace_time should be greater than the sum of stop_signals delays/) do
+          create_with_signals([:quit, 5, :term], nil)
         end
+      end
 
-        it 'requires delays to be numbers' do
-          expect_config_error(/Expected a number \(delay\) at position 1 instead of 'five'/) do
-            create_with_signals([:quit, 'five', :term], 10)
-          end
-        end
-
-        it 'requires an odd number of elements' do
-          expect_config_error("Config Error: Invalid stop_signals!  Expected an odd number of elements.\n") do
-            create_with_signals([:quit, 5], 10)
-          end
-        end
-
-        it 'requires a stop_grace_time' do
-          expect_config_error(/Stop_grace_time should be greater than the sum of stop_signals delays/) do
-            create_with_signals([:quit, 5, :term], nil)
-          end
-        end
-
-        it 'requires stop_grace_time to exceed the sum of the delays' do
-          expect_config_error(/Stop_grace_time should be greater than the sum of stop_signals delays/) do
-            create_with_signals([:quit, 5, :term, 5, :kill], 10)
-          end
+      it 'requires stop_grace_time to exceed the sum of the delays' do
+        expect_config_error(/Stop_grace_time should be greater than the sum of stop_signals delays/) do
+          create_with_signals([:quit, 5, :term, 5, :kill], 10)
         end
       end
     end

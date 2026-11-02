@@ -98,72 +98,28 @@ describe Bluepill::Process do
         :post_start_command, :pre_stop_command, :post_stop_command, :notify_command,
         :app_name, :group_name
       ].each do |attr|
-        describe "##{attr}" do
-          subject { super().send(attr) }
-
-          it { is_expected.to be_nil }
+        it "leaves ##{attr} unset" do
+          expect(process.public_send(attr)).to be_nil
         end
       end
 
-      describe '#monitor_children' do
-        subject { super().monitor_children }
-
-        it { is_expected.to be false }
-      end
-
-      describe '#hook_timeout' do
-        subject { super().hook_timeout }
-
-        it { is_expected.to eq 30 }
-      end
-
-      describe '#cache_actual_pid' do
-        subject { super().cache_actual_pid }
-
-        it { is_expected.to be true }
-      end
-
-      describe '#start_grace_time' do
-        subject { super().start_grace_time }
-
-        it { is_expected.to eq 3 }
-      end
-
-      describe '#stop_grace_time' do
-        subject { super().stop_grace_time }
-
-        it { is_expected.to eq 3 }
-      end
-
-      describe '#restart_grace_time' do
-        subject { super().restart_grace_time }
-
-        it { is_expected.to eq 3 }
-      end
-
-      describe '#on_start_timeout' do
-        subject { super().on_start_timeout }
-
-        it { is_expected.to eq 'start' }
-      end
-
-      describe '#environment' do
-        subject { super().environment }
-
-        it { is_expected.to eq({}) }
-      end
-
-      describe '#state' do
-        subject { super().state }
-
-        it { is_expected.to eq 'unmonitored' }
-      end
-
-      [:group_start_noblock, :group_stop_noblock, :group_restart_noblock, :group_unmonitor_noblock].each do |attr|
-        describe "##{attr}" do
-          subject { super().send(attr) }
-
-          it { is_expected.to be true }
+      {
+        monitor_children: false,
+        hook_timeout: 30,
+        cache_actual_pid: true,
+        start_grace_time: 3,
+        stop_grace_time: 3,
+        restart_grace_time: 3,
+        on_start_timeout: 'start',
+        environment: {},
+        state: 'unmonitored',
+        group_start_noblock: true,
+        group_stop_noblock: true,
+        group_restart_noblock: true,
+        group_unmonitor_noblock: true,
+      }.each do |attr, value|
+        it "sets ##{attr} to #{value.inspect}" do
+          expect(process.public_send(attr)).to eq value
         end
       end
     end
@@ -187,10 +143,8 @@ describe Bluepill::Process do
     describe 'overrides' do
       subject(:process) { described_class.new(:proc_name, [], start_grace_time: 17) }
 
-      describe '#start_grace_time' do
-        subject { super().start_grace_time }
-
-        it { is_expected.to eq 17 }
+      it 'sets an option it is given' do
+        expect(process.start_grace_time).to eq 17
       end
     end
 

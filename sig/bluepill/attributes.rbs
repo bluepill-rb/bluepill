@@ -31,7 +31,7 @@ module Bluepill
     attr_accessor supplementary_groups: Array[String]?
     # Signal names alternating with delays in seconds
     attr_accessor stop_signals: Array[Symbol | Integer]?
-    attr_accessor on_start_timeout: String | Symbol
+    attr_accessor on_start_timeout: Symbol
     attr_accessor post_start_command: String?
     attr_accessor pre_stop_command: String?
     attr_accessor post_stop_command: String?

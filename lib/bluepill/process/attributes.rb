@@ -80,7 +80,7 @@ module Bluepill
         stop_grace_time: 3,
         restart_grace_time: 3,
         environment: NO_ENVIRONMENT,
-        on_start_timeout: "start",
+        on_start_timeout: :start,
         hook_timeout: 30,
         group_start_noblock: true,
         group_stop_noblock: true,
@@ -341,9 +341,10 @@ module Bluepill
 
       # Return the event to dispatch when the start command takes too long
       #
-      # The default is start, which tries again.
+      # The default is :start, which tries again. The factory only accepts
+      # an event of the state machine, such as :unmonitor.
       #
-      # @return [String, Symbol]
+      # @return [Symbol]
       #
       # @api private
       attr_accessor :on_start_timeout

@@ -102,6 +102,8 @@ module Bluepill
 
     def validate_stop_grace_time!: (Array[Symbol | Integer] stop_signals, Integer? stop_grace_time) -> void
 
+    def validate_on_start_timeout!: (ProcessProxy process) -> void
+
     def warn_unless_pid_known: (ProcessProxy process, String default_pid_file) -> void
 
     def config_error!: (String message) -> bot
@@ -154,6 +156,7 @@ module Bluepill
     def group: () -> untyped
     def pid_file: () -> String?
     def stop_command: () -> String?
+    def on_start_timeout: () -> untyped
 
     def checks: (Symbol name, **untyped options) -> nil
 

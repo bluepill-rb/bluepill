@@ -225,6 +225,33 @@ describe Bluepill::ProcessFactory do
       end
     end
 
+    describe "on_start_timeout" do
+      def create_with(event, name = "web") = create(name, proc { (self.start_command = "run") && self.on_start_timeout = event })
+
+      it "accepts each event of the state machine" do
+        events = %i[start stop unmonitor restart]
+        expect(events.collect { |event| create_with(event, event.to_s).on_start_timeout }).to eq(events)
+      end
+
+      it "defaults to start" do
+        expect(create("web", proc { self.start_command = "run" }).on_start_timeout).to be(:start)
+      end
+
+      it "rejects an event the state machine doesn't have" do
+        expect_config_error("Config Error: on_start_timeout for 'web' must be one of :start, :stop, :unmonitor, :restart, not :tick") do
+          create_with(:tick)
+        end
+      end
+
+      it "rejects a String" do
+        expect_config_error(/must be one of .*, not "unmonitor"\z/) { create_with("unmonitor") }
+      end
+
+      it "rejects nil" do
+        expect_config_error(/must be one of .*, not nil\z/) { create_with(nil) }
+      end
+    end
+
     describe "stop_signals" do
       def create_with_signals(signals, grace_time)
         create("web", proc do

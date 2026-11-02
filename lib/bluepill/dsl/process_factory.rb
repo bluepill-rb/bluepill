@@ -104,6 +104,7 @@ module Bluepill
       validate_required_attributes!(process)
       validate_unique_pid_file!(process)
       validate_stop_signals!(process)
+      validate_on_start_timeout!(process)
     end
 
     # Fail if another process in the group has the same name
@@ -201,6 +202,23 @@ module Bluepill
       return unless stop_grace_time.nil? || stop_grace_time <= delays.sum
 
       config_error!("Config Error: Stop_grace_time should be greater than the sum of stop_signals delays!")
+    end
+
+    # Fail unless on_start_timeout is an event of the state machine
+    #
+    # @param [ProcessProxy] process the process's proxy
+    #
+    # @return [void]
+    #
+    # @api private
+    def validate_on_start_timeout!(process)
+      return unless process.attributes.key?(:on_start_timeout)
+
+      events = Process::StateMachine::TRANSITIONS.keys
+      event = process.on_start_timeout
+      return if events.include?(event)
+
+      config_error!("Config Error: on_start_timeout for '#{process.name}' must be one of #{events.collect(&:inspect).join(", ")}, not #{event.inspect}")
     end
 
     # Warn when bluepill can't find the process's pid

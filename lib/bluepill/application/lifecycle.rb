@@ -117,7 +117,7 @@ module Bluepill
         Signal.trap("INT", &terminator)
 
         Signal.trap("HUP") do
-          logger.reopen if logger
+          logger&.reopen
         end
       end
 

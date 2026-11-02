@@ -79,7 +79,7 @@ module Bluepill
         result = System.execute_blocking(cmd, options)
         # The exit code is nil when a signal killed the command
         exit_code = result.fetch(:exit_code)
-        return if exit_code && exit_code.zero?
+        return if exit_code&.zero?
 
         logger.warning "#{description} command execution returned non-zero exit code:"
         logger.warning result.inspect

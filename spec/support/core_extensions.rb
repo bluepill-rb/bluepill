@@ -26,7 +26,7 @@ Dir[File.join(lib, "bluepill", "**", "*.rb")].sort.each { |file| require file }
 
 def bluepill_method?(mod, name, lib)
   location = mod.instance_method(name).source_location
-  location && location.first.start_with?(lib)
+  location&.first&.start_with?(lib)
 end
 
 added = []

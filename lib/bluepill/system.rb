@@ -152,7 +152,7 @@ module Bluepill
     # @api private
     def self.command(pid)
       row = ps_axu.row(pid)
-      row.fetch(PsTable::COMMAND) if row
+      row&.fetch(PsTable::COMMAND)
     end
 
     # Delete a file if it exists

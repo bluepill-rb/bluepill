@@ -216,7 +216,7 @@ module Bluepill
     def self.journal_entries(filename)
       File.readlines(filename).collect do |line|
         id, started = line.split
-        [id.to_i, started && started.to_i]
+        [id.to_i, started&.to_i]
       end
     end
 

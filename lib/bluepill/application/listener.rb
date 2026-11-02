@@ -19,7 +19,7 @@ module Bluepill
       # @api private
       def start_listener
         previous_thread = @listener_thread
-        previous_thread.kill if previous_thread
+        previous_thread&.kill
         @listener_thread = Thread.new do
           loop do
             answer_next_client
@@ -115,7 +115,7 @@ module Bluepill
       #
       # @api private
       def close_client(client)
-        client.close if client
+        client&.close
       rescue IOError
         # closed stream
       end

@@ -929,6 +929,10 @@ module Bluepill
 
     def self.call_as_daemon: (^() -> void block, ?String? name) -> Integer
 
+    def self.read_daemon_pid: (Integer intermediate, IO reader, IO writer) -> Integer
+
+    def self.run_daemon: (^() -> void block, String? name, IO writer) -> bot
+
     def self.daemonize: () -> Integer
 
     def self.detach: () -> Integer
@@ -937,7 +941,11 @@ module Bluepill
 
     def self.close_io: () -> void
 
+    def self.close_fds: () -> void
+
     def self.redirect_io: () -> void
+
+    def self.quietly: () { () -> void } -> void
   end
 
   # Memoizes ps output for a tick, and runs commands as daemons or until

@@ -75,23 +75,49 @@ module Bluepill
       rd, wr = IO.pipe
 
       intermediate = safefork
-      if intermediate
-        wr.close
-        pid = rd.read.to_i
-        rd.close
-        ::Process.waitpid(intermediate)
-        return pid
-      end
+      return read_daemon_pid(intermediate, rd, wr) if intermediate
 
       rd.close
+      run_daemon(block, name, wr)
+    end
+
+    # Read the daemon's pid, and reap the intermediate process that forked it
+    #
+    # @param intermediate [Integer] the intermediate process's pid
+    # @param reader [IO] the end of the pipe that the daemon writes its pid to
+    # @param writer [IO] the other end, which only the daemon uses
+    # @return [Integer] the daemon's pid, or 0 if it didn't report one
+    #
+    # @api private
+    def self.read_daemon_pid(intermediate, reader, writer)
+      writer.close
+      pid = reader.read.to_i
+      reader.close
+      ::Process.waitpid(intermediate)
+      pid
+    end
+
+    # Fork the daemon from the intermediate process, and run the block in it
+    #
+    # The intermediate process starts a new session and exits once it has
+    # forked. The daemon reports its pid, becomes a daemon, and runs the
+    # block.
+    #
+    # @param block [Proc] what the daemon runs
+    # @param name [String, nil] the daemon's process title
+    # @param writer [IO] where the daemon writes its pid
+    # @return [void] it never returns, since both processes exit
+    #
+    # @api private
+    def self.run_daemon(block, name, writer)
       detach
       if safefork
-        wr.close
+        writer.close
         ::Process.exit!(true)
       end
 
-      wr.write(::Process.pid)
-      wr.close
+      writer.write(::Process.pid)
+      writer.close
       become_daemon(name)
       block.call
       ::Process.exit!(true)
@@ -163,6 +189,15 @@ module Bluepill
       end
 
       # And the file descriptors that no IO object holds
+      close_fds
+    end
+
+    # Close the file descriptors above the standard streams' up to MAX_FD
+    #
+    # @return [void]
+    #
+    # @api private
+    def self.close_fds
       (3..MAX_FD).each do |fd|
         begin
           IO.for_fd(fd).close
@@ -178,20 +213,22 @@ module Bluepill
     #
     # @api private
     def self.redirect_io
-      [STDIN, STDOUT].each do |io|
-        begin
-          io.reopen(File::NULL)
-        rescue
-          nil
-        end
-      end
-
-      begin
-        STDERR.reopen(STDOUT)
-      rescue
-        nil
-      end
+      quietly { STDIN.reopen(File::NULL) }
+      quietly { STDOUT.reopen(File::NULL) }
+      quietly { STDERR.reopen(STDOUT) }
       STDERR.sync = true
+    end
+
+    # Run a block, and carry on if it raises
+    #
+    # @yield what to try, such as reopening a standard stream
+    # @return [void]
+    #
+    # @api private
+    def self.quietly
+      yield
+    rescue
+      nil
     end
   end
 end

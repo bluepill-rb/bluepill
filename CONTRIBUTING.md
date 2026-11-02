@@ -5,6 +5,17 @@ To ease development and troubleshooting, a simple vagrant environment exists [he
 
 As more OS options are added, this should also simplify the steps necessary to reproduce odd issues.
 
+Running from a checkout
+-----------------------
+
+To run bluepill with the code in your checkout instead of an installed gem:
+
+    bundle exec bin/bluepill --no-privileged load path/to/app.pill
+
+The daemon it starts runs the checkout's code too. Drop `--no-privileged` when you run it as root. `spec/smoke.sh` runs bluepill this way for real, as a daemon and in the foreground, and CI runs it on every Ruby:
+
+    bash spec/smoke.sh
+
 Type checking
 -------------
 

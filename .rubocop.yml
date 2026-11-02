@@ -85,10 +85,6 @@ Layout/SpaceInsideHashLiteralBraces:
 Layout/LeadingCommentSpace:
   AllowSteepAnnotation: true
 
-Naming/FileName:
-  Exclude:
-    - local-bluepill
-
 Metrics/BlockLength:
   Exclude:
     - bin/bluepill

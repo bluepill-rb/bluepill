@@ -1,4 +1,5 @@
 require "bluepill/process_commands/hooks"
+require "bluepill/process_commands/stop_signals"
 
 module Bluepill
   # Starts, stops and restarts a Process with its configured commands
@@ -6,6 +7,7 @@ module Bluepill
   # @api private
   module ProcessCommands
     include Hooks
+    include StopSignals
 
     # Start the process with its start command
     #
@@ -74,9 +76,7 @@ module Bluepill
         end
         cleanup_process
       elsif stop_signals
-        # issue stop signals with configurable delay between each
-        logger.warning "Sending stop signals to #{actual_pid}"
-        @threads << Thread.new(stop_signals.clone) { |signals| send_stop_signals(signals) }
+        send_stop_signals_in_background(stop_signals)
       else
         logger.warning "Executing default stop command. Sending TERM signal to #{actual_pid}"
         signal_process("TERM")
@@ -202,63 +202,6 @@ module Bluepill
 
       logger.warning "#{description} command execution returned non-zero exit code:"
       logger.warning result.inspect
-    end
-
-    # Send stop signals, with their delays, until the process stops
-    #
-    # Sends the first signal, then each later one after its delay, as long as
-    # the process is still running. Then gives the last signal the rest of
-    # stop_grace_time to work before cleaning up.
-    #
-    # @param [Array<Symbol, Integer>] signals signals with the delays between
-    #
-    # @return [void]
-    #
-    # @api private
-    def send_stop_signals(signals)
-      remaining = stop_grace_time
-      signal = signals.shift
-      logger.info "Sending signal #{signal} to #{actual_pid}"
-      signal_process(signal) # send first signal
-
-      until signals.empty?
-        # we already checked to make sure signals had an odd number of items
-        delay = signals.shift #: Integer
-        signal = signals.shift
-        remaining -= delay
-
-        logger.debug "Sleeping for #{delay} seconds"
-        # Kernel.sleep, not sleep, so the specs can stand in for the clock
-        Kernel.sleep(delay)
-        # break unless signal_process(0) #break unless the process can be reached
-        unless signal_process(0)
-          logger.debug "Process has terminated."
-          return cleanup_process
-        end
-        logger.info "Sending signal #{signal} to #{actual_pid}"
-        signal_process(signal)
-      end
-      wait_for_stop(remaining)
-      cleanup_process
-    end
-
-    # Wait for the process to exit, checking once a second
-    #
-    # It stops 2 seconds short of the grace time: ticks resume up to a second
-    # early (they count whole seconds) and can kill this thread, and the
-    # cleanup itself takes up to another second.
-    #
-    # @param [Integer, Float] seconds the grace time that's left
-    #
-    # @return [void]
-    #
-    # @api private
-    def wait_for_stop(seconds)
-      (seconds - 2).ceil.times do
-        break unless signal_process(0)
-
-        Kernel.sleep(1)
-      end
     end
   end
 end

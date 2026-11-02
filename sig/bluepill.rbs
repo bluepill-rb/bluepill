@@ -272,7 +272,7 @@ module Bluepill
 
   # Runs commands for a Process, which is the only class that includes it
   module ProcessCommands : _Host
-    # What ProcessCommands and the Hooks it includes use from Process
+    # What ProcessCommands, and the modules it includes, use from Process
     interface _Host
       include Hooks::_Host
 
@@ -305,6 +305,7 @@ module Bluepill
     end
 
     include Hooks
+    include StopSignals
 
     @threads: Array[Thread]
     @stopping_pid: Integer?
@@ -325,8 +326,30 @@ module Bluepill
     def with_timeout: [T] (seconds secs, String | Symbol next_state) { (Numeric secs) -> T } -> (T | bool)
 
     def run_command: (String cmd, String description, ?System::command_options options) -> void
+  end
+
+  # Stops a Process with its stop_signals, with their delays
+  module ProcessCommands::StopSignals : ProcessCommands::StopSignals::_Host
+    # What StopSignals uses from Process
+    interface _Host
+      %a{pure} def logger: () -> Logger
+      %a{pure} def stop_grace_time: () -> seconds
+      def actual_pid: () -> Integer?
+      def signal_process: (Integer | String | Symbol code) -> bool
+      def cleanup_process: () -> void
+    end
+
+    @threads: Array[Thread]
+
+    def send_stop_signals_in_background: (Array[Symbol | Integer] signals) -> Array[Thread]
 
     def send_stop_signals: (Array[Symbol | Integer] signals) -> void
+
+    def send_later_stop_signals: (Array[Symbol | Integer] signals) -> seconds?
+
+    def send_stop_signal: (Symbol | Integer signal) -> bool
+
+    def running_after?: (Integer delay) -> bool
 
     def wait_for_stop: (seconds seconds) -> void
   end

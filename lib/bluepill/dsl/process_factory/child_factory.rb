@@ -75,6 +75,7 @@ module Bluepill
           raise ConfigError, "Config Error: You must specify a stop_command for the children of '#{parent_name}'"
         end
 
+        child.validate_privileges!
         child.to_process
       end
     end

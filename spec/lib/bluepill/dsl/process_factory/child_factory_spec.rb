@@ -40,6 +40,14 @@ describe Bluepill::ProcessFactory::ChildFactory do
       expect(seen).to eq([attributes.except(:working_dir)])
     end
 
+    it "rejects the parent's user and groups on a Ruby that can't fork, as root" do
+      allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(false)
+      allow(::Process::Sys).to receive(:geteuid).and_return(0)
+      expect { described_class.new("web", attributes, halt) }.to raise_error(
+        Bluepill::ConfigError, /process '<child of web>' sets uid, gid, supplementary_groups, but bluepill can't/
+      )
+    end
+
     it "runs the block once, for a child without a pid" do
       runs = []
       described_class.new("web", attributes, proc { (runs << [name, actual_pid]) && self.stop_command = "halt" })

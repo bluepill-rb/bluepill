@@ -50,6 +50,58 @@ describe Bluepill::System do
       allow(Process).to receive(:kill).with(0, nil).and_raise(TypeError)
       expect(described_class.pid_alive?(nil)).to be false
     end
+
+    context "with a spawned process that exited" do
+      # Spawn a process that exits at once, and wait until it's a zombie
+      def exited_child
+        pid = Process.spawn("true")
+        500.times { `ps -o stat= -p #{pid}`.start_with?("Z") ? break : sleep(0.01) }
+        pid
+      end
+
+      it "is false, once it collects the zombie's exit status, on a Ruby that can't fork" do
+        allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(false)
+        expect(described_class.pid_alive?(exited_child)).to be false
+      end
+
+      it "is true for the zombie without collecting it" do
+        allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(true)
+        pid = exited_child
+        expect(described_class.pid_alive?(pid)).to be true
+      ensure
+        Process.wait(pid) if pid
+      end
+    end
+  end
+
+  describe ".reap" do
+    before { allow(Process).to receive(:wait).and_call_original }
+
+    # Reap the pid on a Ruby that can or can't fork
+    def reap(pid, can_fork: false)
+      allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(can_fork)
+      described_class.reap(pid)
+    end
+
+    it "collects the exit status without waiting for a process that hasn't exited" do
+      allow(Process).to receive(:wait).with(555, Process::WNOHANG).and_return(nil)
+      reap(555)
+      expect(Process).to have_received(:wait).with(555, Process::WNOHANG)
+    end
+
+    it "ignores a process that isn't bluepill's child" do
+      expect { reap(1) }.not_to raise_error
+    end
+
+    it "ignores no pid" do
+      reap(nil)
+      expect(Process).not_to have_received(:wait)
+    end
+
+    it "collects nothing on a Ruby that forks, whose daemons init adopts" do
+      reap(555, can_fork: true)
+      expect(Process).not_to have_received(:wait)
+    end
   end
 
   describe ".started_at" do

@@ -47,6 +47,8 @@ module Bluepill
         # could include bluepill itself, so only signal a real pid
         raise "invalid pid #{pid}" unless pid > 0
 
+        # A spawned daemon that exited is a zombie until it's collected
+        System.reap(pid)
         ::Process.kill(code, pid)
         true
       rescue => e

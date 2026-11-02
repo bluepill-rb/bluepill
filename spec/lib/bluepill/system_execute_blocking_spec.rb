@@ -9,6 +9,34 @@ describe Bluepill::System, ".execute_blocking" do
 
   def opts(**options) = Bluepill::System::CommandOptions.new(**options)
 
+  # These run the forking path, which JRuby, which can't fork, never takes
+  before { allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(true) }
+
+  context "when this Ruby can't fork" do
+    let(:result) { Bluepill::System::CommandResult.new(exit_code: 0) }
+
+    before do
+      allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(false)
+      allow(described_class).to receive(:spawn_blocking).and_return(result)
+      allow(Bluepill::Daemonize).to receive(:safefork)
+    end
+
+    it "spawns the command instead" do
+      options = opts(timeout: 2)
+      described_class.execute_blocking("cmd", options)
+      expect(described_class).to have_received(:spawn_blocking).with("cmd", options)
+    end
+
+    it "returns what spawning it returned" do
+      expect(described_class.execute_blocking("cmd")).to be(result)
+    end
+
+    it "doesn't fork" do
+      described_class.execute_blocking("cmd")
+      expect(Bluepill::Daemonize).not_to have_received(:safefork)
+    end
+  end
+
   context "when in the parent" do
     let(:waiter) { instance_double(Thread, join: nil) }
 

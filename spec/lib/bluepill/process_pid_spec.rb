@@ -47,6 +47,26 @@ describe Bluepill::Process do
     end
   end
 
+  describe "#signal_process" do
+    before { process.actual_pid = 5 }
+
+    it "collects a spawned daemon's exit status before signaling it" do
+      calls = []
+      allow(Bluepill::System).to receive(:reap) { |pid| calls << [:reap, pid] }
+      allow(::Process).to receive(:kill) { |code, pid| calls << [:kill, code, pid] }
+      process.signal_process(0)
+      expect(calls).to eq([[:reap, 5], [:kill, 0, 5]])
+    end
+
+    it "sees that a spawned daemon that exited isn't running, on a Ruby that can't fork" do
+      allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(false)
+      allow(::Process).to receive(:kill).and_call_original
+      pid = process.actual_pid = Process.spawn("true")
+      500.times { `ps -o stat= -p #{pid}`.start_with?("Z") ? break : sleep(0.01) }
+      expect(process.signal_process(0)).to be false
+    end
+  end
+
   describe "#actual_pid" do
     it "uses the pid command when configured" do
       process.pid_command = "echo 123"

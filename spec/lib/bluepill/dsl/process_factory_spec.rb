@@ -139,6 +139,14 @@ describe Bluepill::ProcessFactory do
     end
 
     describe "validation" do
+      it "rejects a user that a Ruby that can't fork can't switch to, as root" do
+        allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(false)
+        allow(::Process::Sys).to receive(:geteuid).and_return(0)
+        expect_config_error(/process 'web' sets uid, but bluepill can't run commands as another user/) do
+          create("web", proc { self.start_command = "run" }, uid: "user")
+        end
+      end
+
       it "rejects duplicate process names in a group" do
         create("web", proc { self.start_command = "run" }, group: "servers")
         expect_config_error("Config Error: You have two entries for the process name 'web' in the group 'servers'\n") do

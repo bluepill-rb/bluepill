@@ -19,6 +19,7 @@ describe Bluepill::System, ".daemonize" do
   end
 
   before do
+    allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(true)
     allow(IO).to receive(:pipe).and_return([rd, wr])
   end
 

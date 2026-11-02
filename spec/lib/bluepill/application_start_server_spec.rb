@@ -184,7 +184,7 @@ describe Bluepill::Application do
 
     it "daemonizes and runs the application" do
       start_server
-      expect(calls).to eq(startup_calls)
+      expect(calls).to eq(startup_calls - [[:setpgid, 0, 0]])
     end
 
     it "names its process after the application" do
@@ -213,9 +213,15 @@ describe Bluepill::Application do
     context "when in the foreground" do
       let(:app) { described_class.new("test", base_dir:, foreground: true) }
 
-      it "does not daemonize" do
+      it "leads a process group of its own instead of daemonizing" do
         start_server
         expect(calls).to eq(startup_calls - [[:daemonize]])
+      end
+
+      it "ignores being unable to become a process group leader" do
+        allow(::Process).to receive(:setpgid).and_raise(Errno::EPERM)
+        start_server
+        expect(Bluepill::System).to have_received(:reset_data)
       end
     end
 
@@ -224,12 +230,6 @@ describe Bluepill::Application do
       allow(FileUtils).to receive(:chmod)
       start_server
       expect(calls.first).to eq([:mkdir_p, File.join(base_dir, "pids", "test")])
-    end
-
-    it "ignores being unable to become a process group leader" do
-      allow(::Process).to receive(:setpgid).and_raise(Errno::EPERM)
-      start_server
-      expect(Bluepill::System).to have_received(:reset_data)
     end
   end
 end

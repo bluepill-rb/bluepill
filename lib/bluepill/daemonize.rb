@@ -27,6 +27,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
+require "rbconfig"
+
 module Bluepill
   # Turn the bluepill daemon, or a block, into a daemon process
   #
@@ -34,6 +36,9 @@ module Bluepill
   # controlling terminal and init adopts it. It also leaves the directory
   # it started in, closes the files it inherited, and points its standard
   # streams at /dev/null.
+  #
+  # A Ruby that can't fork, such as JRuby, starts a new bluepill to be the
+  # daemon instead, which starts the new session itself.
   #
   # @api private
   module Daemonize
@@ -44,6 +49,20 @@ module Bluepill
 
     # The highest file descriptor that close_io closes
     MAX_FD = 8191
+
+    # Set in the environment of the bluepill that a bluepill that can't
+    # fork starts to be its daemon
+    DAEMON_ENV = "BLUEPILL_DAEMON"
+
+    # Return whether this Ruby can fork
+    #
+    # JRuby can't, since the JVM runs threads of its own that a fork would
+    # leave behind. Bluepill spawns its commands there instead.
+    #
+    # @return [Boolean]
+    #
+    # @api private
+    def self.can_fork? = ::Process.respond_to?(:fork)
 
     # Fork, retrying every 5 seconds while the system is out of processes
     #
@@ -132,6 +151,8 @@ module Bluepill
     #
     # @api private
     def self.daemonize
+      return daemonize_without_fork unless can_fork?
+
       exit if safefork
 
       session = detach
@@ -139,6 +160,37 @@ module Bluepill
 
       become_daemon
       session
+    end
+
+    # Turn the calling process into a daemon, in a Ruby that can't fork
+    #
+    # The first time, it starts a new bluepill that runs the same pill file
+    # with DAEMON_ENV set, and exits, so `bluepill load` returns. In that
+    # bluepill, which is new, so it inherited no files to close and its
+    # standard streams are /dev/null already, it starts a new session and
+    # leaves the directory it started in.
+    #
+    # @return [Integer] the daemon's session id
+    #
+    # @api private
+    def self.daemonize_without_fork
+      start_daemon_bluepill unless ENV.delete(DAEMON_ENV)
+
+      session = detach
+      Dir.chdir("/")
+      session
+    end
+
+    # Start a bluepill that runs the same pill file to be the daemon, and exit
+    #
+    # @return [void] it never returns, since it exits
+    #
+    # @api private
+    def self.start_daemon_bluepill
+      dir = __dir__ #: String
+      args = ["-I#{File.expand_path("..", dir)}", "-rbluepill", File.expand_path($PROGRAM_NAME), *ARGV]
+      ::Process.spawn({DAEMON_ENV => "1"}, RbConfig.ruby, *args, in: File::NULL, out: File::NULL, err: File::NULL)
+      exit
     end
 
     # Start a new session, which leaves the controlling terminal

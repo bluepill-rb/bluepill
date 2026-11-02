@@ -6,6 +6,7 @@ require "bluepill/daemonize"
 require "bluepill/system/command_options"
 require "bluepill/system/command_result"
 require "bluepill/system/command_setup"
+require "bluepill/system/command_spawn"
 require "bluepill/system/daemon"
 
 module Bluepill
@@ -18,12 +19,14 @@ module Bluepill
     # @api private
     module Commands
       include CommandSetup
+      include CommandSpawn
 
       # Run a command until it finishes, and return what it printed
       #
       # With a timeout, the command runs in a process group of its own, and
       # if it hasn't finished in time, that whole group is killed, so a hung
-      # command and anything it started don't keep running.
+      # command and anything it started don't keep running. A Ruby that
+      # can't fork spawns the command instead.
       #
       # @param [String] cmd the command, split into words without a shell
       # @param [CommandOptions] options its uid, gid, supplementary_groups,
@@ -35,6 +38,8 @@ module Bluepill
       #
       # @api private
       def execute_blocking(cmd, options = CommandOptions.new)
+        return spawn_blocking(cmd, options) unless Daemonize.can_fork?
+
         rd, wr = IO.pipe
 
         child = Daemonize.safefork
@@ -93,27 +98,6 @@ module Bluepill
         reader.read
       ensure
         reader.close
-      end
-
-      # Kill a command's process group, once it has run past its timeout
-      #
-      # @param [Integer] child the pid of the group's leader, which runs the
-      #   command
-      # @param [Numeric, ActiveSupport::Duration] timeout the seconds it was given
-      # @param [String] cmd the command, for the error
-      #
-      # @return [void] it never returns
-      #
-      # @raise [Timeout::Error] always
-      #
-      # @api private
-      def kill_group_after(child, timeout, cmd)
-        begin
-          ::Process.kill("KILL", -child)
-        rescue Errno::ESRCH
-          nil # it finished just now
-        end
-        raise Timeout::Error, "#{cmd} took longer than #{timeout} seconds"
       end
 
       # Run a command in a grandchild, report its result, and exit

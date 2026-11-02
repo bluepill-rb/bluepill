@@ -13,8 +13,9 @@ module Bluepill
       # Start the daemon
       #
       # It creates the pids directory, stops a previous daemon for the
-      # application, clears journal locks it left behind, daemonizes unless
-      # it runs in the foreground, traps signals, opens the socket, and runs
+      # application, clears journal locks it left behind, daemonizes, or in
+      # the foreground leads a process group of its own, traps signals,
+      # opens the socket, and runs
       # until a signal stops it. Processes that are already running, from
       # their pid files, are monitored again, not restarted, so bluepill can
       # be upgraded without restarting them.
@@ -30,9 +31,10 @@ module Bluepill
         setup_pids_dir
         kill_previous_bluepill
         ProcessJournal.clear_all_atomic_fs_locks
-        become_process_group_leader
+        # Daemonizing starts a new session, which has a process group of its
+        # own, and a process that leads a process group already can't
+        foreground? ? become_process_group_leader : Daemonize.daemonize
         # Trapped after daemonizing, which ignores HUP
-        Daemonize.daemonize unless foreground?
         setup_signal_traps
         logger.reopen
 

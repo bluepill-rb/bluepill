@@ -2,6 +2,7 @@
 
 require "bluepill/dsl/attributes"
 require "bluepill/process/attributes"
+require "bluepill/daemonize"
 
 module Bluepill
   # The self of a process block in a config file
@@ -24,6 +25,9 @@ module Bluepill
 
     # monitor_children sets the two attributes it leaves out
     attribute(*(Process::Attributes::CONFIGURABLE_ATTRIBUTES - %i[monitor_children child_process_factory]), :group)
+
+    # The attributes that switch the user or groups that commands run as
+    PRIVILEGE_ATTRIBUTES = %i[uid gid supplementary_groups].freeze
 
     # Return the process's name
     #
@@ -139,6 +143,27 @@ module Bluepill
     # @api private
     def to_process(**options)
       Process.new(@name, @checks, actual_pid: @actual_pid, **attributes.except(:group), **options)
+    end
+
+    # Fail if the process sets a user or groups that bluepill can't switch to
+    #
+    # A Ruby that can't fork, such as JRuby, spawns commands, which can't
+    # switch users or groups. Bluepill only switches when it runs as root,
+    # so they fail the config only then.
+    #
+    # @return [void]
+    #
+    # @raise [ConfigError] if it sets uid, gid or supplementary_groups
+    #
+    # @api private
+    def validate_privileges!
+      return if Daemonize.can_fork? || !::Process::Sys.geteuid.zero?
+
+      set = PRIVILEGE_ATTRIBUTES.select { |name| attributes[name] }
+      return if set.empty?
+
+      raise ConfigError, "Config Error: #{attribute_owner} sets #{set.join(", ")}, but bluepill " \
+                         "can't run commands as another user or group on #{RUBY_ENGINE}, which can't fork"
     end
 
     # Name the process, for an unknown attribute's error

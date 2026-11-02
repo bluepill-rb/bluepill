@@ -20,6 +20,20 @@ describe Bluepill::Daemonize do
     allow(Signal).to(receive(:trap)) { |*args| events << [:trap, *args] }
   end
 
+  describe ".can_fork?" do
+    before { allow(Process).to receive(:respond_to?).and_call_original }
+
+    it "is true when Process can fork" do
+      allow(Process).to receive(:respond_to?).with(:fork).and_return(true)
+      expect(described_class.can_fork?).to be(true)
+    end
+
+    it "is false when it can't, as on JRuby" do
+      allow(Process).to receive(:respond_to?).with(:fork).and_return(false)
+      expect(described_class.can_fork?).to be(false)
+    end
+  end
+
   describe ".safefork" do
     it "returns the child pid in the parent" do
       allow(described_class).to receive(:fork).and_return(123)
@@ -126,6 +140,7 @@ describe Bluepill::Daemonize do
 
   describe ".daemonize" do
     before do
+      allow(described_class).to receive(:can_fork?).and_return(true)
       allow(described_class).to(receive(:become_daemon)) { |*args| events << [:become_daemon, *args] }
       allow(described_class).to(receive(:exit)) do |*args|
         events << [:exit, *args]
@@ -161,6 +176,92 @@ describe Bluepill::Daemonize do
     it "returns the daemon's session id" do
       allow(described_class).to receive(:safefork).and_return(nil, nil)
       expect(described_class.daemonize).to eq(5)
+    end
+
+    context "when it can't fork" do
+      before do
+        allow(described_class).to receive_messages(can_fork?: false, daemonize_without_fork: 9)
+        allow(described_class).to receive(:safefork)
+      end
+
+      it "daemonizes without forking" do
+        expect(described_class.daemonize).to eq(9)
+      end
+
+      it "doesn't fork" do
+        described_class.daemonize
+        expect(described_class).not_to have_received(:safefork)
+      end
+    end
+  end
+
+  describe ".daemonize_without_fork" do
+    around do |example|
+      daemon = ENV.delete("BLUEPILL_DAEMON")
+      example.run
+    ensure
+      daemon ? ENV["BLUEPILL_DAEMON"] = daemon : ENV.delete("BLUEPILL_DAEMON")
+    end
+
+    before do
+      allow(described_class).to(receive(:start_daemon_bluepill)) { events << [:start_daemon_bluepill] }
+      allow(Dir).to(receive(:chdir)) { |dir| events << [:chdir, dir] }
+    end
+
+    it "starts a bluepill to be the daemon" do
+      described_class.daemonize_without_fork
+      expect(events.first).to eq([:start_daemon_bluepill])
+    end
+
+    context "when in the bluepill it started" do
+      before { ENV["BLUEPILL_DAEMON"] = "1" }
+
+      it "starts a session, ignores hangups, and leaves its directory" do
+        described_class.daemonize_without_fork
+        expect(events).to eq([[:setsid], [:trap, "SIGHUP", "IGNORE"], [:chdir, "/"]])
+      end
+
+      it "takes the variable out of its environment, so its commands don't get it" do
+        described_class.daemonize_without_fork
+        expect(ENV).not_to have_key("BLUEPILL_DAEMON")
+      end
+
+      it "returns the daemon's session id" do
+        expect(described_class.daemonize_without_fork).to eq(5)
+      end
+    end
+  end
+
+  describe ".start_daemon_bluepill" do
+    around do |example|
+      title = $0
+      $0 = "app.pill"
+      example.run
+    ensure
+      $0 = title
+    end
+
+    before do
+      stub_const("ARGV", ["--flag"])
+      allow(Process).to(receive(:spawn)) { |*args, **options| events << [:spawn, *args, options] }
+      allow(described_class).to(receive(:exit)) do
+        events << [:exit]
+        raise SystemExit
+      end
+    end
+
+    # Start the daemon's bluepill, and carry on past the exit
+    def start_daemon_bluepill
+      described_class.start_daemon_bluepill
+    rescue SystemExit
+      nil
+    end
+
+    it "spawns a bluepill that runs the pill file, marked as the daemon, and then exits" do
+      lib = File.expand_path("../../../lib", __dir__)
+      start_daemon_bluepill
+      expect(events).to eq([[:spawn, {"BLUEPILL_DAEMON" => "1"}, RbConfig.ruby, "-I#{lib}", "-rbluepill",
+        File.expand_path("app.pill"), "--flag", {in: File::NULL, out: File::NULL, err: File::NULL}], [:exit]])
     end
   end
 

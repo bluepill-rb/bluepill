@@ -142,6 +142,10 @@ module Bluepill
     include DSL::Attributes
     extend DSL::Attributes::ClassMethods
 
+    PRIVILEGE_ATTRIBUTES: Array[Symbol]
+
+    def validate_privileges!: () -> void
+
     attr_reader name: String
     attr_reader child_process_block: process_block?
     attr_reader actual_pid: Integer?

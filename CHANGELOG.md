@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Breaking:** support for Ruby 3.0 and 3.1, and for JRuby 9.4, which runs Ruby 3.1 code. Bluepill 0.3.2 needs Ruby 3.2 or newer, or JRuby 10.0 or newer, which needs Java 21. Bluepill 0.3.0 still runs on them.
 
+### Fixed
+
+- Bluepill runs on JRuby, in the foreground and as a daemon. It forked to start every process and command, which the JVM can't do, so on JRuby it started none. On JRuby it now spawns them, and starts a new bluepill to be the daemon. A process that bluepill starts there runs in a process group of its own, as a forked one's new session does, and stays bluepill's child, which collects its exit status. Spawned commands can't switch to another user, so on JRuby a config that sets `uid`, `gid` or `supplementary_groups` fails to load when bluepill runs as root. CRuby runs bluepill as before.
+
 ## [0.3.0] - 2026-11-02
 
 ### Upgrading from 0.2

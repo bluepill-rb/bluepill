@@ -109,6 +109,7 @@ module Bluepill
       validate_unique_pid_file!(process)
       validate_stop_signals!(process)
       validate_on_start_timeout!(process)
+      process.validate_privileges!
     end
 
     # Fail if another process in the group has the same name

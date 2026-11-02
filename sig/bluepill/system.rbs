@@ -6,6 +6,10 @@ module Bluepill
 
     MAX_FD: Integer
 
+    DAEMON_ENV: String
+
+    def self.can_fork?: () -> bool
+
     def self.safefork: () -> Integer?
 
     def self.call_as_daemon: (^() -> void block, ?String? name) -> Integer
@@ -15,6 +19,10 @@ module Bluepill
     def self.run_daemon: (^() -> void block, String? name, IO writer) -> bot
 
     def self.daemonize: () -> Integer
+
+    def self.daemonize_without_fork: () -> Integer
+
+    def self.start_daemon_bluepill: () -> bot
 
     def self.detach: () -> Integer
 
@@ -152,6 +160,8 @@ module Bluepill
     module Usage : Ps
       def pid_alive?: (Integer pid) -> bool
 
+      def reap: (Integer? pid) -> void
+
       def started_at: (Integer pid) -> Integer?
 
       def boot_time: () -> Integer?
@@ -187,12 +197,48 @@ module Bluepill
       def switch_to_user: (Etc::Passwd user) -> void
     end
 
+    # Starts commands without forking, in a Ruby that can't fork
+    module CommandSpawn
+      EXIT_POLL_INTERVAL: Float
+
+      def spawn_command: (String cmd, CommandOptions options, ?chdir: String?, **untyped redirects) -> Integer
+
+      def spawn_blocking: (String cmd, CommandOptions options) -> CommandResult
+
+      def run_spawned: (String cmd, CommandOptions options, Array[IO] readers, [IO, IO] writers) -> CommandResult
+
+      def spawn_blocking_command: (String cmd, CommandOptions options, IO out, IO err) -> Integer
+
+      def wait_for_spawned: (String cmd, seconds? timeout, Integer pid, Array[IO] pipes) -> CommandResult
+
+      def wait_for_exit: (Integer pid, seconds? timeout) -> Process::Status?
+
+      def kill_spawned_after: (Integer pid, seconds? timeout, String cmd) -> bot
+
+      def kill_group_after: (Integer child, seconds? timeout, String cmd) -> bot
+
+      def monotonic_now: () -> Float
+
+      def read_in_background: (IO reader) -> Thread
+
+      def spawn_environment: (CommandOptions options) -> Hash[String, String]
+    end
+
     # Runs commands in the background, as daemons
     module Daemon
       include CommandSetup
+      include CommandSpawn
 
       # Returns the daemon's pid
       def daemonize: (String cmd, ?CommandOptions options, pid_file: String, logger: Logger) -> Integer?
+
+      def fork_daemon: (String cmd, CommandOptions options, pid_file: String, logger: Logger) -> Integer?
+
+      def spawn_daemon: (String cmd, CommandOptions options, pid_file: String, logger: Logger) -> Integer?
+
+      def daemon_streams: (CommandOptions options) -> Hash[Symbol, untyped]
+
+      def daemon_stderr: (String? out, String? err) -> untyped
 
       def read_daemon_pid: (IO reader, IO writer) -> Integer?
 
@@ -208,14 +254,13 @@ module Bluepill
     # Runs commands until they finish
     module Commands
       include CommandSetup
+      include CommandSpawn
 
       def execute_blocking: (String cmd, ?CommandOptions options) -> CommandResult
 
       def start_blocking_child: (String cmd, CommandOptions options, IO reader, IO result_pipe) -> bot
 
       def read_blocking_status: (String cmd, seconds? timeout, Integer child, IO reader) -> String
-
-      def kill_group_after: (Integer child, seconds? timeout, String cmd) -> bot
 
       def run_blocking_child: (String cmd, CommandOptions options, IO result_pipe) -> bot
 

@@ -4,6 +4,7 @@ require "shellwords"
 require "bluepill/daemonize"
 require "bluepill/system/command_options"
 require "bluepill/system/command_setup"
+require "bluepill/system/command_spawn"
 
 module Bluepill
   module System
@@ -19,12 +20,14 @@ module Bluepill
     # @api private
     module Daemon
       include CommandSetup
+      include CommandSpawn
 
       # Start a command as a daemon, and write its pid file
       #
       # It forks a child that drops privileges, sets up the environment and
       # standard streams, and daemonizes the command. The child tells the
-      # parent the daemon's pid over a pipe.
+      # parent the daemon's pid over a pipe. A Ruby that can't fork spawns
+      # the command instead.
       #
       # @param [String] cmd the command, split into words without a shell
       # @param [CommandOptions] options its uid, gid, supplementary_groups,
@@ -36,6 +39,19 @@ module Bluepill
       #
       # @api private
       def daemonize(cmd, options = CommandOptions.new, pid_file:, logger:)
+        return fork_daemon(cmd, options, pid_file:, logger:) if Daemonize.can_fork?
+
+        spawn_daemon(cmd, options, pid_file:, logger:)
+      end
+
+      # Start a command as a daemon by forking, and write its pid file
+      #
+      # @param (see #daemonize)
+      #
+      # @return [Integer, nil] the daemon's pid, or nil if it didn't start
+      #
+      # @api private
+      def fork_daemon(cmd, options, pid_file:, logger:)
         rd, wr = IO.pipe
 
         child = Daemonize.safefork
@@ -51,6 +67,67 @@ module Bluepill
           drop_privileges(options.uid, options.gid, options.supplementary_groups)
           start_daemon(cmd, options, wr, pid_file:, logger:)
         end
+      end
+
+      # Start a command as a daemon without forking, and write its pid file
+      #
+      # The command runs in a process group of its own, as a forked daemon's
+      # new session does, so killing what's left in it never kills bluepill.
+      # It stays bluepill's child, and pid_alive? collects its exit status.
+      #
+      # @param [String] cmd the command, split into words without a shell
+      # @param [CommandOptions] options its working_dir, environment, stdin,
+      #   stdout and stderr
+      # @param [String] pid_file where to write the daemon's pid
+      # @param [Logger] logger where to log why it didn't start
+      #
+      # @return [Integer, nil] the daemon's pid, or nil if it didn't start
+      #
+      # @api private
+      def spawn_daemon(cmd, options, pid_file:, logger:)
+        return unless can_write_pid_file(pid_file, logger)
+
+        pid = spawn_command(cmd, options, chdir: "/", pgroup: true, **daemon_streams(options))
+        File.write(pid_file, pid.to_s)
+        pid
+      rescue SystemCallError => e
+        logger.warning(format("%s - %s", e.class, e))
+        nil
+      end
+
+      # Return where a spawned daemon's standard streams go
+      #
+      # They're /dev/null unless the options name files. Output and error
+      # share one file when they name the same one, and are appended to.
+      #
+      # @param [CommandOptions] options its stdin, stdout and stderr
+      #
+      # @return [Hash{Symbol => Object}] Process.spawn's in, out and err
+      #
+      # @api private
+      def daemon_streams(options)
+        out = options.stdout
+        {
+          in: options.stdin || File::NULL,
+          out: out ? [out, APPEND_MODE] : File::NULL,
+          err: daemon_stderr(out, options.stderr)
+        }
+      end
+
+      # Return where a spawned daemon's standard error goes
+      #
+      # @param [String, nil] out the file for standard output
+      # @param [String, nil] err the file for standard error
+      #
+      # @return [Object] Process.spawn's err: standard output when they're
+      #   the same file, the file, or /dev/null
+      #
+      # @api private
+      def daemon_stderr(out, err)
+        return File::NULL unless err
+        return [:child, :out] if err.eql?(out)
+
+        [err, APPEND_MODE]
       end
 
       # Read the daemon's pid from the child that started it, in the parent

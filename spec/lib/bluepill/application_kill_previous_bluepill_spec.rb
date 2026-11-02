@@ -155,14 +155,11 @@ describe Bluepill::Application do
         end
       end
 
-      it "says so, and does not exit" do
-        expect { kill_previous_bluepill }.to output(
-          "Encountered error trying to kill previous bluepill:\nErrno::ESRCH: #{Errno::ESRCH.new.message}\n"
-        ).to_stderr
+      it "says nothing, and does not exit" do
+        expect { kill_previous_bluepill }.not_to output.to_stderr
       end
 
       it "carries on without waiting" do
-        allow($stderr).to receive(:puts)
         kill_previous_bluepill
         expect(calls).to eq([[:kill, 0, 1234]])
       end

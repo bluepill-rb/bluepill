@@ -29,7 +29,7 @@ module Bluepill
       # It exits with status 4 if signaling it fails, unless it's gone.
       #
       # @return [Integer, nil] the previous daemon's pid, or nil if it
-      #   interrupted none
+      #   interrupted none, such as when it has just exited
       #
       # @api private
       def interrupt_previous_bluepill
@@ -40,10 +40,12 @@ module Bluepill
         puts "Killing previous bluepilld[#{previous_pid}]"
         ::Process.kill(2, previous_pid)
         previous_pid
+      rescue Errno::ESRCH
+        # It exited after previous_bluepill_pid saw it alive, so there's
+        # nothing to wait for
       rescue => e
-        $stderr.puts "Encountered error trying to kill previous bluepill:"
-        $stderr.puts "#{e.class}: #{e}"
-        exit(4) unless e.instance_of?(Errno::ESRCH)
+        $stderr.puts "Encountered error trying to kill previous bluepill:\n#{e.class}: #{e}"
+        exit(4)
       end
 
       # Return the pid of a previous daemon that's still running

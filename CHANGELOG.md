@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-11-01
+
 ### Removed
 
 - `ProcessJournal.kill_all_from_all_journals`, which was meant to kill every journaled process when bluepill started or quit, but looked in the wrong directory and never found any ([#59](https://github.com/bluepill-rb/bluepill/issues/59)). Bluepill still kills what a process's journal lists before it starts that process, and `bluepill load` keeps monitoring the processes that are already running instead of restarting them.
@@ -756,7 +758,8 @@ Initial release.
 - Added the `bluepill` CLI with the `load`, `status`, `start`, `stop`, `restart`, `unmonitor`, `quit` and `log` commands.
 - Added syslog logging.
 
-[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.1.4...HEAD
+[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/bluepill-rb/bluepill/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/bluepill-rb/bluepill/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/bluepill-rb/bluepill/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/bluepill-rb/bluepill/compare/v0.1.1...v0.1.2

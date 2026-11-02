@@ -27,6 +27,7 @@ describe Bluepill::Logger do
     end
 
     it 'should explain how to fix a missing syslog library' do
+      hide_const('Syslog')
       allow_any_instance_of(Bluepill::Logger).to receive(:require).with('syslog').and_raise(LoadError)
       expect { Bluepill::Logger.new }.to raise_error(LoadError, /add gem 'syslog' to your Gemfile or set log_file/)
     end
@@ -222,6 +223,12 @@ describe Bluepill::Logger do
       allow(Syslog).to receive(:opened?).and_return(false, true)
       expect(Syslog).to receive(:close).once
       expect(Syslog).to receive(:open).with('bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6).twice.and_return(double('syslog'))
+      Bluepill::Logger.new.reopen
+    end
+
+    it 'should not require syslog again once it is loaded' do
+      allow(Syslog).to receive(:open).and_return(double('syslog'))
+      expect_any_instance_of(Bluepill::Logger).not_to receive(:require)
       Bluepill::Logger.new.reopen
     end
 

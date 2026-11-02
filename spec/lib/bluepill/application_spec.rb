@@ -355,6 +355,7 @@ describe Bluepill::Application do
         expect(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks).ordered
         expect(::Process).to receive(:setpgid).with(0, 0).ordered
         expect(Bluepill::Daemonize).to receive(:daemonize).ordered
+        expect(app).to receive(:setup_signal_traps).ordered
         expect(logger).to receive(:reopen).ordered
         expect(group).to receive(:determine_initial_state).ordered
         expect(Bluepill::Socket).to receive(:server).with(base_dir, 'test').ordered
@@ -374,8 +375,9 @@ describe Bluepill::Application do
       context 'in the foreground' do
         let(:foreground) { true }
 
-        it 'does not daemonize' do
+        it 'does not daemonize, or trap signals again' do
           expect(Bluepill::Daemonize).not_to receive(:daemonize)
+          expect(app).not_to receive(:setup_signal_traps)
           expect(app).to receive(:run)
           app.send(:start_server)
         end

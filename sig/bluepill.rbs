@@ -557,7 +557,7 @@ module Bluepill
 
     def create_logger: () -> (Object & _Backend)
 
-    def require_syslog: () -> bool
+    def require_syslog: () -> void
   end
 
   # A value a ConditionWatch got, and whether it passed the check

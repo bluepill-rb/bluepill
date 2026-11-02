@@ -342,7 +342,11 @@ module Bluepill
       rescue Errno::EPERM
       end
 
-      Daemonize.daemonize unless foreground?
+      unless foreground?
+        Daemonize.daemonize
+        # Daemonizing ignores HUP, so trap it again to reopen the log on HUP
+        setup_signal_traps
+      end
 
       logger.reopen
 

@@ -4,7 +4,7 @@ describe Bluepill::Process::Watches do
   let(:logger) { instance_double(Bluepill::Logger, info: nil) }
 
   # A watch that's due unless told otherwise, and fires the given events
-  def watch_double(name, events, due: true)
+  def watch_double(name, events, due = true)
     instance_double(Bluepill::ConditionWatch, name.to_s, name: name, due?: due, run: events, to_s: "#{name}: [1, 2]")
   end
 
@@ -110,7 +110,7 @@ describe Bluepill::Process::Watches do
     end
 
     context "with no watch due" do
-      let(:idle) { watch_double(:idle, [:restart], due: false) }
+      let(:idle) { watch_double(:idle, [:restart], false) }
 
       before do
         allow(Thread).to receive(:new).and_call_original

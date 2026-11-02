@@ -12,7 +12,7 @@ describe Bluepill::System::PsTable do
   end
 
   it "numbers its columns in the order ps prints them" do
-    columns = %i[PID PPID PCPU RSS ETIME COMMAND].collect { |name| described_class.const_get(name) }
+    columns = [:PID, :PPID, :PCPU, :RSS, :ETIME, :COMMAND].collect { |name| described_class.const_get(name) }
     expect(columns).to eql [0, 1, 2, 3, 4, 5]
   end
 

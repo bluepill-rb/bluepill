@@ -6,7 +6,7 @@ describe Bluepill::Process do
   include_context "with a process"
 
   describe "#refresh_children!" do
-    let(:factory) { instance_double(Bluepill::ProcessFactory, "factory") }
+    let(:factory) { instance_double(Bluepill::ProcessFactory::ChildFactory, "factory") }
     let(:child_logger) { instance_double(Bluepill::Logger, "child logger") }
 
     before do

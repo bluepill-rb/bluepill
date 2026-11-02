@@ -43,7 +43,7 @@ module Bluepill
       def add_children(child_pids)
         # Construct a new process wrapper for each new found children
         # monitor_children sets the factory
-        factory = child_process_factory #: ProcessFactory
+        factory = child_process_factory #: ProcessFactory::ChildFactory
         child_pids.each do |child_pid|
           @children << new_child(factory, child_pid)
         end
@@ -54,7 +54,7 @@ module Bluepill
       # A process that bluepill daemonizes also has the child's pid added to
       # its journal.
       #
-      # @param [ProcessFactory] factory the factory monitor_children set
+      # @param [ProcessFactory::ChildFactory] factory the factory monitor_children set
       # @param [Integer] child_pid the child's pid
       #
       # @return [Process] the child's process wrapper

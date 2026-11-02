@@ -53,7 +53,7 @@ module Bluepill
 
     def logger=: (Logger logger) -> void
 
-    def dispatch!: (Symbol | String event, ?String? reason) -> bool
+    def dispatch!: (Symbol event, ?String? reason) -> bool
 
     def add_checks: (checks checks, Logger logger) -> void
 
@@ -202,7 +202,7 @@ module Bluepill
       %a{pure} def logger: () -> Logger
       %a{pure} def triggers: () -> Process::Triggers
       def process_running?: (?bool force) -> bool
-      def dispatch!: (Symbol | String event, ?String? reason) -> bool
+      def dispatch!: (Symbol event, ?String? reason) -> bool
       def stop_process: () -> Integer
       def restart_process: () -> Integer
     end

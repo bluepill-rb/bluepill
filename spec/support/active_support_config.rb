@@ -47,7 +47,7 @@ process, = factory.create_process("active_support", "/tmp")
 process.logger = logger
 process.skip_ticks_for(process.start_grace_time)
 check("a grace time skips ticks") { process.skip_ticks_until - Bluepill::Clock.now >= 1 }
-check("a timeout of a few seconds") { process.with_timeout(2.seconds, "start") { :done }.equal?(:done) }
+check("a timeout of a few seconds") { process.with_timeout(2.seconds, :start) { :done }.equal?(:done) }
 
 # Flapping within 30 seconds, retrying in 7
 flapping = Bluepill::Triggers::Flapping.new(process, times: 2, within: 30.seconds, retry_in: 7.seconds, logger: logger)

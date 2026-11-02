@@ -319,12 +319,12 @@ describe Bluepill::Process do
       end
     end
 
-    context "with an event given as a string" do
+    context "with an event, one at a time" do
       let(:mutex) { process.instance_variable_get(:@event_mutex) }
 
       before do
         allow(mutex).to receive(:synchronize).and_call_original
-        process.dispatch!("start")
+        process.dispatch!(:start)
       end
 
       it "handles one event at a time" do

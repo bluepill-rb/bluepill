@@ -13,7 +13,7 @@ module Bluepill
       %a{pure} def start_grace_time: () -> seconds
       %a{pure} def stop_grace_time: () -> seconds
       %a{pure} def restart_grace_time: () -> seconds
-      %a{pure} def on_start_timeout: () -> (String | Symbol)
+      %a{pure} def on_start_timeout: () -> Symbol
       %a{pure} def monitor_children: () -> bool
       %a{pure} def uid: () -> String?
       %a{pure} def gid: () -> String?
@@ -32,7 +32,7 @@ module Bluepill
       def clear_pid: () -> void
       def skip_ticks_for: (seconds seconds) -> Integer
       def journal: () -> ProcessJournal::Journal
-      def dispatch!: (Symbol | String event, ?String? reason) -> bool
+      def dispatch!: (Symbol event, ?String? reason) -> bool
     end
 
     include Execution
@@ -104,7 +104,7 @@ module Bluepill
       %a{pure} def stderr: () -> String?
       %a{pure} def supplementary_groups: () -> Array[String]?
       def actual_pid: () -> Integer?
-      def dispatch!: (Symbol | String event, ?String? reason) -> bool
+      def dispatch!: (Symbol event, ?String? reason) -> bool
     end
 
     def prepare_command: (String command) -> String
@@ -114,8 +114,7 @@ module Bluepill
     def command_options: () -> System::CommandOptions
 
     # Runs the block, and dispatches next_state if it takes longer than secs
-    # It takes a String until on_start_timeout is always a Symbol
-    def with_timeout: [T] (seconds secs, Symbol | String next_state) { (Numeric secs) -> T } -> (T | bool)
+    def with_timeout: [T] (seconds secs, Symbol next_state) { (Numeric secs) -> T } -> (T | bool)
 
     def run_command: (String cmd, String description, ?System::CommandOptions options) -> void
   end
@@ -217,7 +216,7 @@ module Bluepill
       %a{pure} def name: () -> String
       %a{pure} def logger: () -> Logger
       %a{pure} def monitor_children: () -> bool
-      %a{pure} def child_process_factory: () -> ProcessFactory?
+      %a{pure} def child_process_factory: () -> ProcessFactory::ChildFactory?
       def daemonize?: () -> bool
       def actual_pid: () -> Integer?
       def journal: () -> ProcessJournal::Journal
@@ -231,6 +230,6 @@ module Bluepill
 
     def add_children: (Array[Integer] child_pids) -> void
 
-    def new_child: (ProcessFactory factory, Integer child_pid) -> Process
+    def new_child: (ProcessFactory::ChildFactory factory, Integer child_pid) -> Process
   end
 end

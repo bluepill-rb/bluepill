@@ -197,7 +197,7 @@ module Bluepill
 
     # Record an event and fire it on the state machine
     #
-    # @param [Symbol, String] event the event, one of
+    # @param [Symbol] event the event, one of
     #   StateMachine::TRANSITIONS, such as :start or :restart
     # @param [String, nil] reason why, for the process's event history
     #
@@ -213,8 +213,7 @@ module Bluepill
         # The reason, for notify_command
         @transition_reason = reason
         begin
-          # to_sym, until every caller gives a Symbol
-          fire_event(event.to_sym)
+          fire_event(event)
         ensure
           @transition_reason = nil
         end

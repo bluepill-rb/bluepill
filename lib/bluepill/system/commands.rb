@@ -30,43 +30,79 @@ module Bluepill
         # we don't want to create zombies, so detach ourselves from the child exit status
         ::Process.detach(child)
 
-        # parent
-        wr.close
-
-        daemon_id = rd.read.to_i
-        rd.close
-
-        daemon_id if daemon_id > 0
+        read_daemon_pid(rd, wr)
       else
         # child
         rd.close
 
         drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
+        start_daemon(cmd, options, wr)
+      end
+    end
 
-        # Processes that bluepill daemonizes always have a pid file and a logger
-        pid_file = options[:pid_file] #: String
-        logger = options[:logger] #: Logger
+    # Read the daemon's pid from the child that started it, in the parent
+    #
+    # @param [IO] reader the end of the pipe that the child writes the pid to
+    # @param [IO] writer the other end, which only the child uses
+    #
+    # @return [Integer, nil] the daemon's pid, or nil if it didn't start
+    #
+    # @api private
+    def self.read_daemon_pid(reader, writer)
+      # parent
+      writer.close
 
-        # if we cannot write the pid file as the provided user, err out
-        exit unless can_write_pid_file(pid_file, logger)
+      daemon_id = reader.read.to_i
+      reader.close
 
-        to_daemonize = lambda do
-          setup_command_environment(options)
-          redirect_io(options[:stdin], options[:stdout], options[:stderr])
+      daemon_id if daemon_id > 0
+    end
 
-          Kernel.exec(*Shellwords.shellwords(cmd))
-          exit
-        end
+    # Daemonize the command, write its pid file, and tell the parent its pid
+    #
+    # It runs in the child, once it has dropped privileges.
+    #
+    # @param [String] cmd the command
+    # @param [Hash{Symbol => Object}] options as for daemonize
+    # @param [IO] pid_pipe where to write the daemon's pid for the parent
+    #
+    # @return [void] it never returns, since it exits the child
+    #
+    # @api private
+    def self.start_daemon(cmd, options, pid_pipe)
+      # Processes that bluepill daemonizes always have a pid file and a logger
+      pid_file = options[:pid_file] #: String
+      logger = options[:logger] #: Logger
 
-        daemon_id = Daemonize.call_as_daemon(to_daemonize, cmd)
+      # if we cannot write the pid file as the provided user, err out
+      exit unless can_write_pid_file(pid_file, logger)
 
-        # call_as_daemon returns 0 when the daemon fails to report its pid
-        File.write(pid_file, daemon_id.to_s) if daemon_id > 0
+      daemon_id = Daemonize.call_as_daemon(daemon_command(cmd, options), cmd)
 
-        wr.write daemon_id
-        wr.close
+      # call_as_daemon returns 0 when the daemon fails to report its pid
+      File.write(pid_file, daemon_id.to_s) if daemon_id > 0
 
-        ::Process.exit!(true)
+      pid_pipe.write daemon_id
+      pid_pipe.close
+
+      ::Process.exit!(true)
+    end
+
+    # Return what the daemon runs: the command, in its environment
+    #
+    # @param [String] cmd the command
+    # @param [Hash{Symbol => Object}] options as for daemonize
+    #
+    # @return [Proc] a block that execs the command
+    #
+    # @api private
+    def self.daemon_command(cmd, options)
+      lambda do
+        setup_command_environment(options)
+        redirect_io(options[:stdin], options[:stdout], options[:stderr])
+
+        Kernel.exec(*Shellwords.shellwords(cmd))
+        exit
       end
     end
 

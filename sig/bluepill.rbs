@@ -1017,6 +1017,12 @@ module Bluepill
     # Returns the daemon's pid
     def self.daemonize: (String cmd, ?command_options options) -> Integer?
 
+    def self.read_daemon_pid: (IO reader, IO writer) -> Integer?
+
+    def self.start_daemon: (String cmd, command_options options, IO pid_pipe) -> bot
+
+    def self.daemon_command: (String cmd, command_options options) -> ^() -> void
+
     def self.execute_blocking: (String cmd, ?command_options options) -> blocking_result
 
     def self.kill_group_after: (Integer child, seconds? timeout, String cmd) -> bot

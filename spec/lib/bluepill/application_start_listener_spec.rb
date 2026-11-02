@@ -72,7 +72,7 @@ describe Bluepill::Application do
       end
 
       it "answers with the marshaled response" do
-        expect(client).to have_received(:write).with(Marshal.dump(["web:a"]))
+        expect(client).to have_received(:write).with(marshaled(["web:a"]))
       end
 
       it "closes the client" do

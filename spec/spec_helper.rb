@@ -64,3 +64,15 @@ module Process
     end
   end
 end
+
+# Match an argument that Marshal.load turns back into the object. With
+# JRUBY_OPTS=--debug, JRuby 9.1 to 9.3 give each frozen string literal
+# an instance variable that says where it was made, and marshal it, so
+# the bytes of two dumps of equal objects can differ.
+module MarshaledMatcher
+  def marshaled(object)
+    satisfy("marshal #{object.inspect}") { |data| Marshal.load(data) == object }
+  end
+end
+
+RSpec.configure { |config| config.include(MarshaledMatcher) }

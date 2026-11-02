@@ -32,7 +32,7 @@ end
 group :test do
   # The specs check that configs written with ActiveSupport's durations
   # and sizes still work. ActiveSupport 5 needs Ruby 2.2.2.
-  gem "activesupport", RUBY_VERSION < "2.2.2" ? "~> 4.2" : ">= 3.2"
+  gem "activesupport", (RUBY_VERSION < "2.2.2") ? "~> 4.2" : ">= 3.2"
   gem "rspec", ">= 3"
   if RUBY_VERSION >= "2.7"
     # Standard needs RuboCop 1.91

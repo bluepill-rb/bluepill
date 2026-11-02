@@ -240,3 +240,8 @@ Layout/ExtraSpacing:
 Style/HashSyntax:
   EnforcedStyle: ruby19_no_mixed_keys
   EnforcedShorthandSyntax: either
+
+# Parentheses around a complex ternary condition, as Standard wants
+Style/TernaryParentheses:
+  EnforcedStyle: require_parentheses_when_complex
+  AllowSafeAssignment: true

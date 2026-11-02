@@ -197,7 +197,7 @@ module Bluepill
       # An empty or garbled pid file reads as 0, and signaling pid 0 would
       # hit the CLI's own process group
       pid = File.read(pid_file).to_i
-      pid > 0 ? pid : false
+      (pid > 0) ? pid : false
     end
 
     # Create the sockets and pids directories

@@ -104,7 +104,7 @@ describe Bluepill::Process do
 
   # The callbacks a tick runs, in order. It runs the watches once it's up.
   def tick_callbacks(from, to)
-    to == "up" ? callbacks(from, to) << [:run_watches, "up"] : callbacks(from, to)
+    (to == "up") ? callbacks(from, to) << [:run_watches, "up"] : callbacks(from, to)
   end
 
   # The message of what the block raises, or nil if it raises nothing

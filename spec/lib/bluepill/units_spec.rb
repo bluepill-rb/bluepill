@@ -3,7 +3,7 @@
 describe Bluepill::Units do
   # The module's own method, whatever Numeric has, such as ActiveSupport's
   def units(number, method)
-    described_class.instance_method(method).bind(number).call
+    described_class.instance_method(method).bind_call(number)
   end
 
   {

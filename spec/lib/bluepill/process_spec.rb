@@ -984,7 +984,7 @@ describe Bluepill::Process do
   end
 
   describe '#with_timeout' do
-    let(:block) { proc { nil } }
+    let(:block) { proc {} }
 
     it 'returns the result of the block' do
       expect(subject.with_timeout(3, 'state_override') { :done }).to eq :done

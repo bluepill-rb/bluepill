@@ -327,6 +327,12 @@ end
 
 Note `{{PID}}` will be substituted for the pid of process in both the stop and restart commands.
 
+### Durations and sizes
+
+`10.seconds` and `100.megabytes` are plain numbers of seconds and bytes, so `every: 10.seconds` and `every: 10` mean the same thing. To make them work, bluepill adds `seconds`, `minutes`, `hours`, `days`, `kilobytes`, `megabytes`, and `gigabytes`, and their singular forms such as `1.minute`, to Ruby's `Numeric`. It's the only change bluepill makes to Ruby's own classes, and it applies to all the code that a pill file loads, not just the pill file.
+
+If a pill file loads ActiveSupport, for example by loading a Rails app, ActiveSupport's versions of these methods win, whichever loads first. Bluepill accepts ActiveSupport's durations too.
+
 ### Custom checks
 
 A check is a class in `Bluepill::ProcessConditions`, named after the check in camel case, so `checks :log_size` uses `LogSize`. Define it in the config file, before the application. It gets the check's options, except `every`, `times`, `fires`, and `include_children`, which bluepill handles. `run` reads a value, and `check` returns whether the value is fine:

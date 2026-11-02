@@ -1,0 +1,50 @@
+# Prints what loading bluepill adds to Ruby's own classes and modules, one
+# line each: the bluepill modules it mixes into them, and the methods it
+# defines on them in its own files. Run by spec/core_extensions_spec.rb.
+lib = File.expand_path('../../lib', File.dirname(__FILE__))
+
+# Ruby's own classes and modules, before bluepill loads, skipping
+# constants that would warn or load something when read
+verbose = $VERBOSE
+$VERBOSE = nil
+core = Object.constants.reject { |name| Object.autoload?(name) }.collect do |name|
+  begin
+    Object.const_get(name)
+  rescue NameError, LoadError
+    nil
+  end
+end
+# Under Bundler, the gemspec has defined Bluepill already
+core = core.select { |mod| mod.is_a?(Module) && !mod.name.to_s.start_with?('Bluepill') }.uniq
+$VERBOSE = verbose
+
+ancestors = {}
+core.each do |mod|
+  ancestors[mod] = mod.ancestors
+  ancestors[mod.singleton_class] = mod.singleton_class.ancestors
+end
+
+$LOAD_PATH.unshift(lib)
+require 'bluepill'
+Dir[File.join(lib, 'bluepill', '**', '*.rb')].sort.each { |file| require file }
+
+def bluepill_method?(mod, name, lib)
+  location = mod.instance_method(name).source_location
+  location && location.first.start_with?(lib)
+end
+
+added = []
+ancestors.each do |mod, before|
+  (mod.ancestors - before).each do |included|
+    next unless included.name.to_s.start_with?('Bluepill')
+    # Integer and Float get Numeric's modules too, but not from bluepill
+    next if mod.is_a?(Class) && mod.superclass && mod.superclass.ancestors.include?(included)
+
+    added << "#{mod.inspect} includes #{included.inspect}"
+  end
+  (mod.instance_methods(false) + mod.private_instance_methods(false)).each do |name|
+    added << "#{mod.inspect}##{name}" if bluepill_method?(mod, name, lib)
+  end
+end
+
+puts added.sort

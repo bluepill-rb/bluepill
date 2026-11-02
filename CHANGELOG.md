@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-02
+
 ### Upgrading from 0.2
 
 Most pill files work with 0.3.0 unchanged. Upgrade to 0.2.9 first, and run `bluepill load`: it warns, with a `DEPRECATION:` line, about each of these that it can find in your pill file and your custom checks and triggers, and a pill file that loads without any works with 0.3.0. Check these before you upgrade:
@@ -990,7 +992,8 @@ Initial release.
 - Added the `bluepill` CLI with the `load`, `status`, `start`, `stop`, `restart`, `unmonitor`, `quit` and `log` commands.
 - Added syslog logging.
 
-[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.2.7...HEAD
+[unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/bluepill-rb/bluepill/compare/v0.2.9...v0.3.0
 [0.2.9]: https://github.com/bluepill-rb/bluepill/compare/v0.2.7...v0.2.9
 [0.2.7]: https://github.com/bluepill-rb/bluepill/compare/v0.2.5...v0.2.7
 [0.2.5]: https://github.com/bluepill-rb/bluepill/compare/v0.2.3...v0.2.5

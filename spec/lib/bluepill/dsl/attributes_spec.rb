@@ -51,7 +51,7 @@ describe Bluepill::DSL::Attributes do
   end
 
   describe "#evaluate" do
-    def evaluate(&block) = proxy.evaluate(&block)
+    def evaluate(&) = proxy.evaluate(&)
 
     it "runs the block with self set to the proxy, and returns what it returns" do
       expect(evaluate { self }).to be(proxy)

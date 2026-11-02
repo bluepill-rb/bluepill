@@ -18,8 +18,6 @@ jobs:
       fail-fast: false
       matrix:
         ruby:
-          - '3.2'
-          - '3.3'
           - '3.4'
           - '4.0'
           - jruby-10.0
@@ -42,9 +40,9 @@ jobs:
       # specs can't, since they stub forking and spawning
       - name: Smoke test
         run: bash spec/smoke.sh
-      # The Gemfile only installs Steep on Ruby 3.3 and newer
+      # The Gemfile only installs Steep on CRuby
       - name: Type check with Steep
-        if: contains(fromJSON('["3.3", "3.4", "4.0"]'), matrix.ruby)
+        if: contains(fromJSON('["3.4", "4.0"]'), matrix.ruby)
         run: bundle exec rake steep
       - name: Upload coverage to Coveralls
         if: matrix.ruby == '4.0'

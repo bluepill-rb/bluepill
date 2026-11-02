@@ -511,7 +511,7 @@ Note that You must define only one application per config when using foreground 
 This library aims to support and is [tested against][ci] the following Ruby
 implementations:
 
-* Ruby 3.2 through 3.4
+* Ruby 3.4
 * Ruby 4.0
 * JRuby 10.0 and 10.1, without `uid`, `gid` and `supplementary_groups`
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Breaking:** support for Ruby 3.2 and 3.3. Bluepill 0.3.4 needs Ruby 3.4 or newer, or JRuby 10.0 or newer, which runs Ruby 3.4 code. Bluepill 0.3.2 still runs on them.
+
 ### Fixed
 
 - A tick of an up process is as fast as in 0.3.0 again. Bluepill 0.3.2 checked whether Ruby can fork each time it signaled a process, which made a tick 5% to 8% slower.

@@ -16,8 +16,8 @@ describe Bluepill::ProcessFactory do
   end
 
   # Expect the block to fail with a config error with the message
-  def expect_config_error(message, &block)
-    expect(&block).to raise_error(Bluepill::ConfigError, message.is_a?(String) ? message.chomp : message)
+  def expect_config_error(message, &)
+    expect(&).to raise_error(Bluepill::ConfigError, message.is_a?(String) ? message.chomp : message)
   end
 
   describe "#create_process" do

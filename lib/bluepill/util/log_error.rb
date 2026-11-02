@@ -10,7 +10,7 @@ module Bluepill
     # @example
     #   Bluepill::Util.log_error(logger, "mem_usage check failed", error)
     #   # mem_usage check failed: RuntimeError: boom
-    #   # /path/to/check.rb:12:in `run'
+    #   # /path/to/check.rb:12:in 'MyCheck#run'
     #
     # @param [Logger] logger the logger to write to
     # @param [String] summary what failed, which the error's class and

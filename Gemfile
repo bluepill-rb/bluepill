@@ -6,13 +6,12 @@ source "https://rubygems.org"
 gemspec
 
 gem "rake"
-gem "syslog" if RUBY_VERSION >= "3.4"
+gem "syslog"
 
 # Duel, with its plugin that counts the objects a benchmark leaves alive,
-# and StackProf for its profiles of regressions, need Ruby 3.4 or newer on
-# MRI
+# and StackProf for its profiles of regressions, need CRuby
 group :development do
-  if RUBY_VERSION >= "3.4" && RUBY_ENGINE == "ruby"
+  if RUBY_ENGINE == "ruby"
     gem "duel", require: false
     gem "duel-retained", require: false
     gem "stackprof", require: false
@@ -37,10 +36,10 @@ group :test do
   gem "simplecov", ">= 1"
   gem "standard", ">= 1.57", require: false
   gem "standard-performance", require: false
-  gem "steep", "~> 2.1", require: false if RUBY_VERSION >= "3.3" && RUBY_ENGINE == "ruby"
-  # Mutant needs Ruby 3.3 or newer and doesn't support JRuby
-  if RUBY_VERSION >= "3.3" && RUBY_ENGINE == "ruby"
+  # Steep and Mutant don't support JRuby
+  if RUBY_ENGINE == "ruby"
     gem "mutant", "~> 0.17", require: false
     gem "mutant-rspec", "~> 0.17", require: false
+    gem "steep", "~> 2.1", require: false
   end
 end

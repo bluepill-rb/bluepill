@@ -1,15 +1,15 @@
 # What a process's state machine does, for every state and event: where
 # each event moves it, which callbacks run and in what order, and what
 # halting or raising in a callback does
-describe Bluepill::Process do
-  states = %w[unmonitored up down starting stopping restarting]
+PROCESS_STATES = %w[unmonitored up down starting stopping restarting].freeze
 
+describe Bluepill::Process do
   # Where each event goes from each state. A tick goes to the first state
   # when the process is running, and the second when it isn't.
   targets = {
     start: {'unmonitored' => 'starting', 'down' => 'starting'},
     stop: {'up' => 'stopping'},
-    unmonitor: Hash[states.collect { |state| [state, 'unmonitored'] }],
+    unmonitor: Hash[PROCESS_STATES.collect { |state| [state, 'unmonitored'] }],
     restart: {'up' => 'restarting', 'down' => 'restarting'},
   }
   ticks = {
@@ -59,19 +59,18 @@ describe Bluepill::Process do
     expect(process).to be_unmonitored
   end
 
-  states.each do |state|
+  PROCESS_STATES.each do |state|
     it "answers the predicates in #{state}" do
       process.state = state
       expect(process.state).to eq(state)
-      states.each do |other|
+      PROCESS_STATES.each do |other|
         expect(process.public_send("#{other}?")).to be(other == state)
       end
     end
   end
 
   targets.each do |event, from_states|
-    states.each do |from|
-      to = from_states[from]
+    PROCESS_STATES.collect { |from| [from, from_states[from]] }.each do |from, to|
       if to
         it "goes from #{from} to #{to} on #{event}" do
           process.state = from

@@ -35,7 +35,10 @@ unless ENV['MUTANT']
   end
 end
 
-$LOAD_PATH.unshift(File.expand_path('../lib', File.dirname(__FILE__)))
+# The checkout's root, for specs that read its files
+BLUEPILL_ROOT = File.expand_path('..', File.dirname(__FILE__))
+
+$LOAD_PATH.unshift(File.join(BLUEPILL_ROOT, 'lib'))
 
 # Bundler loads the gemspec, which requires bluepill/version, before
 # SimpleCov starts. Load it again so its coverage is recorded.

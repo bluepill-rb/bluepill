@@ -1,6 +1,6 @@
 describe Bluepill::Daemonize do
   # Stands in for Process.exit!, which would end the spec run
-  exited = Class.new(StandardError)
+  let(:exited) { Class.new(StandardError) }
 
   let(:rd) { double('rd', close: nil, read: '') }
   let(:wr) { double('wr', close: nil, write: nil) }

@@ -7,6 +7,7 @@ require "bluepill/process/children"
 require "bluepill/process/transition"
 require "bluepill/process/state_machine"
 require "bluepill/process/checks"
+require "bluepill/process/user_commands"
 
 module Bluepill
   # A process that bluepill monitors
@@ -23,6 +24,7 @@ module Bluepill
     include Children
     include StateMachine
     include Checks
+    include UserCommands
 
     # Return the process's name, which commands and logs use
     #
@@ -240,37 +242,6 @@ module Bluepill
     # @api private
     def add_trigger(name, options)
       triggers << Trigger[name].new(self, options.merge(logger: logger))
-    end
-
-    # Carry out a command from the command line
-    #
-    # @param [String] cmd start, stop, restart or unmonitor
-    #
-    # @return [void]
-    #
-    # @api private
-    def handle_user_command(cmd)
-      case cmd
-      when "start"
-        if process_running?(true)
-          logger.warning("Refusing to re-run start command on an already running process.")
-        else
-          dispatch!(:start, "user initiated")
-        end
-      when "stop"
-        stop_process
-        dispatch!(:unmonitor, "user initiated")
-      when "restart"
-        # Through the state machine, like a check's restart, so the process
-        # shows as restarting and post_start_command runs once it's up. A
-        # state restart can't leave, such as unmonitored, restarts it directly.
-        restart_process unless dispatch!(:restart, "user initiated")
-      when "unmonitor"
-        # When the user issues an unmonitor cmd, reset any triggers so that
-        # scheduled events gets cleared
-        triggers.each(&:reset!)
-        dispatch!(:unmonitor, "user initiated")
-      end
     end
 
     # Kill the threads the process's commands left running

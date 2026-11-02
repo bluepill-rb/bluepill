@@ -1025,11 +1025,23 @@ module Bluepill
 
     def self.execute_blocking: (String cmd, ?command_options options) -> blocking_result
 
+    def self.start_blocking_child: (String cmd, command_options options, IO reader, IO result_pipe) -> bot
+
+    def self.read_blocking_status: (String cmd, seconds? timeout, Integer child, IO reader) -> String
+
     def self.kill_group_after: (Integer child, seconds? timeout, String cmd) -> bot
 
     def self.run_blocking_child: (String cmd, command_options options, IO result_pipe) -> bot
 
+    def self.collect_blocking_result: (Integer pid, IO cmd_out_read, IO cmd_err_read) -> blocking_result
+
+    def self.report_blocking_result: (IO result_pipe, blocking_result result) -> bot
+
     def self.exec_blocking_grandchild: (String cmd, command_options options, grandchild_pipes pipes) -> bot
+
+    def self.reopen_on_pipe: (IO stream, [IO, IO] pipe) -> void
+
+    def self.report_grandchild_error: (Exception error, grandchild_pipes pipes) -> bot
 
     def self.setup_command_environment: (command_options options) -> void
 

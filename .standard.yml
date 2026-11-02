@@ -1,0 +1,11 @@
+# Standard's configuration: https://github.com/standardrb/standard
+#
+# The gem still supports Ruby 1.9.3, so leave out the rules that need a
+# newer Ruby
+ruby_version: 1.9
+
+ignore:
+  # Writing to $stderr keeps errors visible under ruby -W0, which silences
+  # warn, and lets the specs capture them
+  - '**/*':
+      - Style/StderrPuts

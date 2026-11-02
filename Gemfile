@@ -35,9 +35,15 @@ group :test do
   gem 'activesupport', RUBY_VERSION < '2.2.2' ? '~> 4.2' : '>= 3.2'
   gem 'rspec', '>= 3'
   if RUBY_VERSION >= '2.7'
-    gem 'rubocop', '~> 1.92'
+    # Standard needs RuboCop 1.91
+    gem 'rubocop', '~> 1.91'
     gem 'rubocop-rake'
     gem 'rubocop-rspec'
+  end
+  # Standard, and its performance rules, need Ruby 3.0 or newer
+  if RUBY_VERSION >= '3.0'
+    gem 'standard', '>= 1.57', require: false
+    gem 'standard-performance', require: false
   end
   gem 'simplecov', '>= 0.4'
   gem 'steep', '~> 2.1', require: false if RUBY_VERSION >= '3.3' && RUBY_ENGINE == 'ruby'

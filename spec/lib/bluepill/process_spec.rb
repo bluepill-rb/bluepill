@@ -28,7 +28,7 @@ describe Bluepill::Process do
         :post_start_command, :pre_stop_command, :post_stop_command, :notify_command,
         :app_name, :group_name
       ].each do |attr|
-        describe attr do
+        describe "##{attr}" do
           subject { super().send(attr) }
           it { should be_nil }
         end
@@ -80,7 +80,7 @@ describe Bluepill::Process do
       end
 
       [:group_start_noblock, :group_stop_noblock, :group_restart_noblock, :group_unmonitor_noblock].each do |attr|
-        describe attr do
+        describe "##{attr}" do
           subject { super().send(attr) }
           it { should be true }
         end

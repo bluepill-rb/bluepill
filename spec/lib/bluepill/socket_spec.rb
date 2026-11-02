@@ -3,13 +3,13 @@ describe Bluepill::Socket do
   let(:socket_path) { '/var/run/bluepill/socks/app.sock' }
   let(:socket) { double('socket', puts: nil) }
 
-  describe :socket_path do
+  describe '.socket_path' do
     it 'should be in the socks directory of the base directory' do
       expect(Bluepill::Socket.socket_path(base_dir, 'app')).to eq(socket_path)
     end
   end
 
-  describe :client do
+  describe '.client' do
     it 'should open a UNIX socket and yield it' do
       expect(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
       yielded = nil
@@ -18,7 +18,7 @@ describe Bluepill::Socket do
     end
   end
 
-  describe :client_command do
+  describe '.client_command' do
     before(:each) do
       allow(Timeout).to receive(:timeout).with(Bluepill::Socket::TIMEOUT).and_yield
       allow(Bluepill::Socket).to receive(:puts)
@@ -61,7 +61,7 @@ describe Bluepill::Socket do
     end
   end
 
-  describe :server do
+  describe '.server' do
     let(:server) { double('server') }
 
     it 'should open a UNIX server socket' do

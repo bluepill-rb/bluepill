@@ -23,7 +23,7 @@ describe Bluepill::System do
     }
   end
 
-  describe :pid_alive? do
+  describe '.pid_alive?' do
     it 'should be true if process responds to zero signal' do
       expect(Process).to receive(:kill).with(0, 555).and_return(1)
       expect(Bluepill::System.pid_alive?(555)).to be true
@@ -45,7 +45,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :started_at do
+  describe '.started_at' do
     before { allow(Time).to receive(:now).and_return(Time.at(1_000_000)) }
 
     it "subtracts the process's elapsed time from now" do
@@ -87,14 +87,14 @@ describe Bluepill::System do
     end
   end
 
-  describe :boot_time do
+  describe '.boot_time' do
     it 'is when pid 1 started' do
       expect(Bluepill::System).to receive(:started_at).with(1).and_return(42)
       expect(Bluepill::System.boot_time).to eq 42
     end
   end
 
-  describe :cpu_usage do
+  describe '.cpu_usage' do
     before(:each) { stub_ps(ps) }
 
     it 'should be nil for an unknown pid' do
@@ -115,7 +115,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :memory_usage do
+  describe '.memory_usage' do
     before(:each) { stub_ps(ps) }
 
     it 'should be nil for an unknown pid' do
@@ -141,7 +141,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :running_time do
+  describe '.running_time' do
     before(:each) { stub_ps(ps) }
 
     it 'should be nil for an unknown pid' do
@@ -153,7 +153,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :command do
+  describe '.command' do
     before(:each) { stub_ps(ps) }
 
     it 'should be nil for an unknown pid' do
@@ -165,7 +165,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :get_children do
+  describe '.get_children' do
     before(:each) { stub_ps(ps) }
 
     it 'should return all descendants' do
@@ -199,7 +199,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :daemonize do
+  describe '.daemonize' do
     let(:rd) { double('rd', close: nil) }
     let(:wr) { double('wr', close: nil, write: nil) }
     let(:logger) { double('logger') }
@@ -330,7 +330,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :delete_if_exists do
+  describe '.delete_if_exists' do
     it 'should do nothing for a nil filename' do
       expect(File).not_to receive(:unlink)
       Bluepill::System.delete_if_exists(nil)
@@ -365,7 +365,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :execute_blocking do
+  describe '.execute_blocking' do
     let(:rd) { double('rd', close: nil) }
     let(:wr) { double('wr', close: nil, write: nil) }
 
@@ -549,7 +549,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :store do
+  describe '.store' do
     it 'should be Hash' do
       expect(Bluepill::System.store).to be_kind_of(Hash)
     end
@@ -564,7 +564,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :reset_data do
+  describe '.reset_data' do
     it 'should clear the #store' do
       Bluepill::System.store[:anotherkey] = 'Lorem ipsum dolor sit amet.'
       Bluepill::System.reset_data
@@ -577,7 +577,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :ps_axu do
+  describe '.ps_axu' do
     let(:output) do
       [
         '  PID  PPID  %CPU    RSS     ELAPSED ARGS',
@@ -617,7 +617,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :parse_etime do
+  describe '.parse_etime' do
     it 'should parse etime format' do
       expect(Bluepill::System.parse_elapsed_time('400-00:04:01')).to be_equal(34_560_241)
       expect(Bluepill::System.parse_elapsed_time('02:04:02')).to be_equal(7442)
@@ -630,7 +630,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :drop_privileges do
+  describe '.drop_privileges' do
     let(:home) { ENV.fetch('HOME', nil) }
 
     before(:each) do
@@ -717,7 +717,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :can_write_pid_file do
+  describe '.can_write_pid_file' do
     let(:logger) { double('logger') }
 
     it 'should be true if the pid file can be written' do
@@ -743,7 +743,7 @@ describe Bluepill::System do
     end
   end
 
-  describe :redirect_io do
+  describe '.redirect_io' do
     before(:each) do
       allow($stdin).to receive(:reopen)
       allow($stdout).to receive(:reopen)

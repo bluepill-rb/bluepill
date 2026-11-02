@@ -237,6 +237,10 @@ module Bluepill
 
     # Add a trigger to notify of the process's transitions
     #
+    # The trigger gets its options as keyword arguments, which an
+    # initialize that takes an options Hash gets as the Hash, so a custom
+    # trigger can take them either way, as bluepill 0.3.0's need keywords.
+    #
     # @param [Symbol] name the trigger's name, such as :flapping
     # @param [Hash{Symbol => Object}] options the trigger's options
     #
@@ -244,7 +248,8 @@ module Bluepill
     #
     # @api private
     def add_trigger(name, options)
-      triggers << Trigger[name].new(self, options.merge(logger: logger))
+      trigger = Trigger[name] #: untyped
+      triggers << trigger.new(self, **options, logger: logger)
     end
 
     # Run every watch that's due, and dispatch the events they fire

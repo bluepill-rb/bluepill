@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - The `http` check's `verify_ssl:` option. Set it to true to verify an https server's certificate, which bluepill 0.3.0 does by default. It's off by default in 0.2.9, so a check of a server with a self-signed certificate keeps passing.
+- A custom check or trigger gets its options as keyword arguments, so one can name them, as in `def initialize(path:, below:, **options)` and `super(**options)`, as bluepill 0.3.0 needs. One that takes them as a Hash, as in `def initialize(options = {})`, still gets the Hash.
 
 ### Deprecated
 

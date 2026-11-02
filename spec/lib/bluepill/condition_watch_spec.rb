@@ -35,6 +35,18 @@ describe Bluepill::ConditionWatch do
     end)
   end
 
+  # A condition that takes its options as keywords, as bluepill 0.3.0's do
+  def keyword_condition
+    stub_const("Bluepill::ProcessConditions::KeywordCheck", Class.new(Bluepill::ProcessConditions::ProcessCondition) do
+      attr_reader :below
+
+      define_method(:initialize) do |below:, **options|
+        super(**options)
+        @below = below
+      end
+    end)
+  end
+
   # Record a copy of the options each CpuUsage is made with, since the
   # condition takes its logger out of them
   def record_cpu_usage_options(received)
@@ -58,6 +70,12 @@ describe Bluepill::ConditionWatch do
       end)
       w = described_class.new(:no_super_check, logger: logger, every: 10)
       expect(w.instance_variable_get(:@process_condition).logger).to equal(logger)
+    end
+
+    it "gives a condition that takes keywords its options and logger, as bluepill 0.3.0 does" do
+      keyword_condition
+      condition = described_class.new(:keyword_check, logger: logger, every: 10, below: 5).instance_variable_get(:@process_condition)
+      expect([condition.below, condition.logger]).to eq([5, logger])
     end
 
     it "exposes its name and logger" do

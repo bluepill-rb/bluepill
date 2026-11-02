@@ -91,7 +91,9 @@ module Bluepill
     #
     # The condition gets the logger while it's created, so its own
     # initialize can log, and again after, in case that initialize doesn't
-    # call super.
+    # call super. It gets its options as keyword arguments, which an
+    # initialize that takes an options Hash gets as the Hash, so a custom
+    # check can take them either way, as bluepill 0.3.0's need keywords.
     #
     # @param [Hash{Symbol => Object}] options the options the watch was
     #   created with, which stay as they are
@@ -102,7 +104,8 @@ module Bluepill
     def create_condition(options)
       condition_options = options.reject { |key, _| WATCH_KEYS.include?(key) }
       condition_options[:logger] = @logger
-      @process_condition = ProcessConditions[@name].new(condition_options)
+      condition = ProcessConditions[@name] #: untyped
+      @process_condition = condition.new(**condition_options)
       self.logger = @logger
     end
 

@@ -337,16 +337,16 @@ If a pill file loads ActiveSupport, for example by loading a Rails app, ActiveSu
 
 ### Custom checks
 
-A check is a class in `Bluepill::ProcessConditions`, named after the check in camel case, so `checks :log_size` uses `LogSize`. Define it in the config file, before the application. It gets the check's options, except `every`, `times`, `fires`, and `include_children`, which bluepill handles. `run` reads a value, and `check?` returns whether the value is fine:
+A check is a class in `Bluepill::ProcessConditions`, named after the check in camel case, so `checks :log_size` uses `LogSize`. Define it in the config file, before the application. It gets the check's options as keyword arguments, except `every`, `times`, `fires`, and `include_children`, which bluepill handles. `run` reads a value, and `check?` returns whether the value is fine:
 
 ```ruby
 module Bluepill
   module ProcessConditions
     class LogSize < ProcessCondition
-      def initialize(options = {})
-        super
-        @path = options.fetch(:path)
-        @below = options.fetch(:below)
+      def initialize(path:, below:, **options)
+        super(**options)
+        @path = path
+        @below = below
       end
 
       def run(_pid, _include_children)
@@ -370,7 +370,9 @@ Bluepill.application("app_name") do |app|
 end
 ```
 
-`logger` writes to bluepill's log, with the app's and the process's names, like the built-in checks. It's set once `super` returns, so call `super` first in `initialize`. A check written for bluepill 0.1, which defines `check` instead of `check?`, still works.
+`logger` writes to bluepill's log, with the app's and the process's names, like the built-in checks. It's set once `super` returns, so call `super` first in `initialize`.
+
+A check whose `initialize` takes the options as a Hash, `def initialize(options = {})`, and one written for bluepill 0.1, which defines `check` instead of `check?`, still work, but bluepill 0.3.0 needs keywords and `check?`, so `bluepill load` warns about them. The keywords and `check?` work in 0.2.9 too.
 
 ### Commands Don't Run in a Shell
 

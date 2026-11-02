@@ -19,6 +19,23 @@ describe Bluepill::Process do
     allow(Bluepill::System).to receive(:delete_if_exists)
   end
 
+  # A trigger that takes its options as keywords, as bluepill 0.3.0's do,
+  # which Trigger[:keyword_trigger] finds
+  def keyword_trigger
+    # Trigger.inherited can't register a class without a name
+    allow(Bluepill::Trigger).to receive(:inherited)
+    klass = stub_const("Bluepill::Triggers::KeywordTrigger", Class.new(Bluepill::Trigger) do
+      attr_reader :within
+
+      define_method(:initialize) do |process, within:, **options|
+        super(process, **options)
+        @within = within
+      end
+    end)
+    allow(Bluepill::Trigger).to receive(:[]).and_call_original
+    allow(Bluepill::Trigger).to receive(:[]).with(:keyword_trigger).and_return(klass)
+  end
+
   def watch_double(name, events)
     instance_double(Bluepill::ConditionWatch, name.to_s, :name => name, :due? => true, :run => events, :to_s => name.to_s, :clear_history! => nil, :logger= => nil)
   end
@@ -179,6 +196,12 @@ describe Bluepill::Process do
         process.logger = new_logger
         expect([process, process.watches.first, process.triggers.first].collect(&:logger)).to all(be new_logger)
       end
+    end
+
+    it "gives a trigger that takes keywords its options and logger, as bluepill 0.3.0 does" do
+      keyword_trigger
+      trigger = described_class.new(:proc_name, {keyword_trigger: {within: 5}}, logger: logger).triggers.first
+      expect([trigger.within, trigger.logger]).to eq([5, logger])
     end
 
     it "accepts an actual pid" do

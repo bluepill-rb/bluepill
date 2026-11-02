@@ -199,7 +199,8 @@ end
 
 These only apply when bluepill runs as root. Every command a process runs, such as its `start_command`, `stop_command` and `pre_start_command`, runs as its user and groups, and so do the commands of its children with `monitor_children`.
 
-On JRuby, bluepill can't run commands as another user or group, since the JVM can't fork, so a config that sets `uid`, `gid` or `supplementary_groups` fails to load when bluepill runs as root. Run it on CRuby to use them.
+> [!WARNING]
+> On JRuby, bluepill can't run commands as another user or group, since the JVM can't fork, so a config that sets `uid`, `gid` or `supplementary_groups` fails to load when bluepill runs as root. Run it on CRuby to use them.
 
 To track resources of child processes, use `:include_children`:
 ```ruby

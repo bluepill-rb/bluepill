@@ -219,7 +219,11 @@ To check for flapping:
 process.checks :flapping, times: 2, within: 30.seconds, retry_in: 7.seconds
 ```
 
-To check that a URL answers, use `process.checks :http, url: "http://localhost:4567/", kind: :success, pattern: /html/, timeout: 3.seconds`. For an `https` URL, bluepill verifies the server's certificate. For a server with a self-signed certificate, add `verify_ssl: false`.
+To check that a URL answers, use `process.checks :http, url: "http://localhost:4567/", kind: :success, pattern: /html/, timeout: 3.seconds`. For an `https` URL, bluepill verifies the server's certificate.
+
+> [!CAUTION]
+> For a server with a self-signed certificate, add `verify_ssl: false`. It turns off certificate verification, so bluepill accepts a certificate from anyone. Use it only for a server you trust, on a network you trust.
+
 
 To set the working directory to `cd` into when starting the command:
 

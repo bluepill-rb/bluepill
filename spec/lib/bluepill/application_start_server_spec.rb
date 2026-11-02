@@ -37,19 +37,33 @@ describe Bluepill::Application do
     # A previous bluepill's pid file, which kill_previous_bluepill reads
     File.write(pid_file, "4321")
     record(Bluepill::System, :pid_alive?, false)
+    record_startup_steps
+    # After creating the app, which traps signals too
+    allow(Signal).to receive(:trap) { |signal| calls << [:trap, signal] }
+    stub_listener_and_socket
+    stop_after_first_tick
+  end
+
+  # Record the steps of starting the server that return nothing
+  def record_startup_steps
     [
       [Bluepill::ProcessJournal, :clear_all_atomic_fs_locks], [::Process, :setpgid], [Bluepill::Daemonize, :daemonize],
       [logger, :reopen], [group, :determine_initial_state], [Bluepill::System, :reset_data], [group, :tick]
     ].each { |object, method| record(object, method) }
-    # After creating the app, which traps signals too
-    allow(Signal).to receive(:trap) { |signal| calls << [:trap, signal] }
+  end
+
+  # Record the listener and the socket, without starting or opening them
+  def stub_listener_and_socket
     # Don't run the listener
     allow(Thread).to receive(:new) { calls << [:thread] }
     allow(Bluepill::Socket).to receive(:server) do |*args|
       calls << [:server, *args]
       instance_double(UNIXServer)
     end
-    # End the run loop after its first tick
+  end
+
+  # End the run loop after its first tick
+  def stop_after_first_tick
     allow(Kernel).to receive(:sleep) do |seconds|
       calls << [:sleep, seconds]
       raise Interrupt

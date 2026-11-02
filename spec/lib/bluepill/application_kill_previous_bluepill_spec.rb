@@ -46,6 +46,11 @@ describe Bluepill::Application do
     def previous_bluepill_running
       write_pid
       allow(Bluepill::System).to receive(:pid_alive?).with(1234).and_return(true)
+      record_signals_and_sleeps
+    end
+
+    # Record each signal and sleep, with what had been printed by then
+    def record_signals_and_sleeps
       allow(::Process).to receive(:kill) { |signal, pid| calls << [:kill, signal, pid, printed] }
       allow(Kernel).to receive(:sleep) { |seconds| calls << [:sleep, seconds, printed] }
     end

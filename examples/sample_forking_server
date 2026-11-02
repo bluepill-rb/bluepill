@@ -21,27 +21,43 @@ acceptor.listen(10)
 
 def start_worker(acceptor, port)
   fork do
-    trap("QUIT") do
-      $0 = "forking_server worker: QUIT received, shutting down gracefully"
-      sleep 5
-      exit
-    end
-    trap("INT") { exit }
-
+    trap_worker_signals
     $0 = "forking_server worker"
     puts "worker #{Process.pid} accepting on localhost:#{port}"
-    memory = []
-    loop do
-      socket, = acceptor.accept
-      socket.write "worker #{Process.pid} echo> "
-      socket.flush
-      message = socket.gets.to_s
-      socket.write message
-      socket.close
-      puts "worker #{Process.pid} echoed #{message.strip.inspect}"
-      memory << ("*" * (10 * 1024 * 1024))
-    end
+    serve(acceptor)
   end
+end
+
+# A worker shuts down gracefully on QUIT, which sample_app.rb's stop_command
+# sends, and at once on INT
+def trap_worker_signals
+  trap("QUIT") do
+    $0 = "forking_server worker: QUIT received, shutting down gracefully"
+    sleep 5
+    exit
+  end
+  trap("INT") { exit }
+end
+
+# Echo every request, holding on to 10 MB more memory after each
+def serve(acceptor)
+  memory = []
+  loop do
+    socket, = acceptor.accept
+    message = echo(socket)
+    puts "worker #{Process.pid} echoed #{message.strip.inspect}"
+    memory << ("*" * (10 * 1024 * 1024))
+  end
+end
+
+# Echo a line back to the client, and return it
+def echo(socket)
+  socket.write "worker #{Process.pid} echo> "
+  socket.flush
+  message = socket.gets.to_s
+  socket.write message
+  socket.close
+  message
 end
 
 $0 = "forking_server master"

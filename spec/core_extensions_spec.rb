@@ -10,7 +10,8 @@ describe "Loading bluepill's changes to Ruby's own classes" do
   it 'only adds the units to Numeric' do
     script = File.join(root, 'spec', 'support', 'core_extensions.rb')
     ruby = File.join(RbConfig::CONFIG['bindir'], RbConfig::CONFIG['ruby_install_name'])
-    output = IO.popen([ruby, script, {err: [:child, :out]}], &:read)
+    # Only stdout, since older JRubies print JVM warnings on stderr
+    output = IO.popen([ruby, script], &:read)
     expect(output).to eq("Numeric includes Bluepill::Units\n")
     expect($?).to be_success
   end

@@ -3,20 +3,16 @@
 # defines on them in its own files. Run by spec/core_extensions_spec.rb.
 lib = File.expand_path('../../lib', File.dirname(__FILE__))
 
-# Ruby's own classes and modules, before bluepill loads, skipping
-# constants that would warn or load something when read
-verbose = $VERBOSE
-$VERBOSE = nil
-core = Object.constants.reject { |name| Object.autoload?(name) }.collect do |name|
-  begin
-    Object.const_get(name)
-  rescue NameError, LoadError
-    nil
-  end
-end
-# Under Bundler, the gemspec has defined Bluepill already
-core = core.select { |mod| mod.is_a?(Module) && !mod.name.to_s.start_with?('Bluepill') }.uniq
-$VERBOSE = verbose
+# Ruby's own classes and modules, in every Ruby and JRuby bluepill supports.
+# (Walking every constant instead trips over JRuby's Java packages.)
+core = [
+  BasicObject, Object, Kernel, Module, Class, Comparable, Enumerable,
+  NilClass, TrueClass, FalseClass, Numeric, Integer, Float, Rational, Complex,
+  String, Symbol, Array, Hash, Range, Regexp, MatchData, Struct, Enumerator,
+  Proc, Method, UnboundMethod, Time, Random, IO, File, Dir, Process, Signal,
+  Thread, Mutex, Exception, StandardError, Encoding, Math, Marshal, GC,
+  ObjectSpace
+]
 
 ancestors = {}
 core.each do |mod|

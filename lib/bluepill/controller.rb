@@ -9,6 +9,14 @@ module Bluepill
   #
   # @api private
   class Controller
+    # What the CLI says when the daemon runs another version of bluepill
+    OUT_OF_DATE = 'The running version of your daemon seems to be out of date.'.freeze
+
+    # What the CLI says to a daemon from before 0.1.7, which can't say
+    # which version it runs
+    UNKNOWN_VERSION = 'The running daemon is older than bluepill 0.1.7, so the CLI cannot check its version. ' \
+                      'Run bluepill load again to replace it.'.freeze
+
     attr_accessor :base_dir, :log_file, :sockets_dir, :pids_dir
 
     # @!attribute [rw] base_dir
@@ -213,6 +221,12 @@ module Bluepill
 
     # Abort unless an application's daemon runs this version of bluepill
     #
+    # A daemon answers with its version as a String. One from before 0.1.7
+    # answers with its Version module, which Marshal loads as the CLI's own,
+    # so it can't say which version it runs. The CLI warns about it and goes
+    # on, as it did before, so upgrading the gem doesn't stop the CLI from
+    # working with the daemon that's running.
+    #
     # @param [String] application the application's name
     #
     # @return [void]
@@ -220,9 +234,15 @@ module Bluepill
     # @api private
     def verify_version!(application)
       version = Socket.client_command(base_dir, application, 'version')
-      abort("The running version of your daemon seems to be out of date.\nDaemon Version: #{version}, CLI Version: #{Version}") unless version.equal?(Version)
+      return if Version.to_s.eql?(version)
+
+      if version.instance_of?(String)
+        abort("#{OUT_OF_DATE}\nDaemon Version: #{version}, CLI Version: #{Version}")
+      else
+        $stderr.puts(UNKNOWN_VERSION)
+      end
     rescue ArgumentError
-      abort('The running version of your daemon seems to be out of date.')
+      abort(OUT_OF_DATE)
     end
   end
 end

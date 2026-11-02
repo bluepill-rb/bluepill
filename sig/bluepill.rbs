@@ -99,7 +99,8 @@ module Bluepill
 
     def add_process: (Process process, ?_ToS? group_name) -> Array[Process]
 
-    def version: () -> singleton(Version)
+    # The version as a String, which Marshal sends whole
+    def version: () -> String
 
     # Ruby's protected methods are private in RBS
 
@@ -130,6 +131,10 @@ module Bluepill
 
   # Runs the bluepill commands, and sends them to the daemon over its socket
   class Controller
+    OUT_OF_DATE: String
+
+    UNKNOWN_VERSION: String
+
     attr_accessor base_dir: String
     attr_accessor log_file: String?
     attr_accessor sockets_dir: String

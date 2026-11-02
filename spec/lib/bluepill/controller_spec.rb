@@ -12,7 +12,7 @@ describe Bluepill::Controller do
 
   def stub_daemon(command, response)
     allow(Bluepill::Socket).to receive(:client_command).
-      with(base_dir, 'app', 'version').and_return(Bluepill::Version)
+      with(base_dir, 'app', 'version').and_return(Bluepill::Version.to_s)
     allow(Bluepill::Socket).to receive(:client_command).
       with(base_dir, 'app', command).and_return(response)
   end
@@ -219,6 +219,25 @@ describe Bluepill::Controller do
       expect(controller).to receive(:abort).
         with("The running version of your daemon seems to be out of date.\nDaemon Version: 0.0.1, CLI Version: #{Bluepill::Version}")
       expect(controller.send_to_daemon('app', :status)).to eq('up')
+    end
+
+    it 'goes on when the daemon runs the same version' do
+      stub_daemon('status', 'up')
+      # What the daemon sends, through Marshal, without stubbing the version
+      allow(Bluepill::Socket).to receive(:client_command).
+        with(base_dir, 'app', 'version').and_return(Marshal.load(Marshal.dump(Bluepill::Application.allocate.version)))
+      expect(controller).not_to receive(:abort)
+      expect { expect(controller.send_to_daemon('app', :status)).to eq('up') }.not_to output.to_stderr
+    end
+
+    it 'warns and goes on when a daemon from before 0.1.7 answers with its Version module' do
+      stub_daemon('status', 'up')
+      allow(Bluepill::Socket).to receive(:client_command).
+        with(base_dir, 'app', 'version').and_return(Marshal.load(Marshal.dump(Bluepill::Version)))
+      expect(controller).not_to receive(:abort)
+      expect { expect(controller.send_to_daemon('app', :status)).to eq('up') }.
+        to output('The running daemon is older than bluepill 0.1.7, so the CLI cannot check its version. ' \
+                  "Run bluepill load again to replace it.\n").to_stderr
     end
 
     it 'aborts when the daemon does not understand the version command' do

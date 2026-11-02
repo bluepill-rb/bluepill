@@ -222,8 +222,8 @@ describe Bluepill::Application do
     end
 
     describe '#version' do
-      it 'is the bluepill version' do
-        expect(app.version).to eq(Bluepill::Version)
+      it 'is the bluepill version, as a String' do
+        expect(app.version).to eql(Bluepill::Version.to_s)
       end
     end
 
@@ -511,7 +511,7 @@ describe Bluepill::Application do
       end
 
       it 'answers the version command' do
-        expect(answer("version\n")).to eq(Bluepill::Version)
+        expect(answer("version\n")).to eql(Bluepill::Version.to_s)
       end
 
       it 'answers the log_file command' do

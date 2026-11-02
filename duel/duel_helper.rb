@@ -11,26 +11,7 @@
 # make up the rest. Seeded, so every worker gets the same listing.
 def ps_listing(processes, workers: 0, grandchildren: 0)
   @ps_listings ||= {}
-  @ps_listings[[processes, workers, grandchildren]] ||= begin
-    random = Random.new(42)
-    rows = [[1, 0, "0.0", 11_204, "45-02:13:07", "/sbin/init"]]
-    rows << [PsListing::MASTER, 1, "0.4", 98_816, "12-04:31:55", "unicorn master -c /srv/app/config/unicorn.rb -E production -D"]
-    worker_pids = Array.new(workers) { |i| PsListing::MASTER + 1 + i }
-    worker_pids.each_with_index do |pid, i|
-      rows << [pid, PsListing::MASTER, format("%.1f", random.rand(40.0)), 180_000 + random.rand(60_000), "03:12:09", "unicorn worker[#{i}] -c /srv/app/config/unicorn.rb -E production -D"]
-    end
-    grandchildren.times do |i|
-      rows << [PsListing::MASTER + 1000 + i, worker_pids.fetch(i % workers), "0.0", 2_048, "00:41", "sh -c convert /tmp/upload#{i}.png"]
-    end
-    pid = 100
-    while rows.length < processes
-      program = PsListing::PROGRAMS.fetch(random.rand(PsListing::PROGRAMS.length))
-      rows << [pid, 1, format("%.1f", random.rand(5.0)), random.rand(400_000), PsListing::ELAPSED.fetch(random.rand(PsListing::ELAPSED.length)), program]
-      pid += 1 + random.rand(7)
-    end
-    lines = rows.collect { |row| format("%7d %7d %5s %8d %12s %s", *row) }
-    "    PID    PPID  %CPU      RSS      ELAPSED COMMAND\n#{lines.join("\n")}\n"
-  end
+  @ps_listings[[processes, workers, grandchildren]] ||= PsListing.listing(processes, workers, grandchildren)
 end
 
 module PsListing
@@ -50,8 +31,51 @@ module PsListing
   ].freeze
   ELAPSED = %w[00:03 12:41 03:12:09 1-07:22:41 45-02:13:07].freeze
 
+  HEADER = "    PID    PPID  %CPU      RSS      ELAPSED COMMAND\n"
+  # The rows every listing starts with
+  INIT_AND_MASTER = [
+    [1, 0, "0.0", 11_204, "45-02:13:07", "/sbin/init"],
+    [MASTER, 1, "0.4", 98_816, "12-04:31:55", "unicorn master -c /srv/app/config/unicorn.rb -E production -D"]
+  ].freeze
+
   class << self
     attr_accessor :output
+
+    # The listing ps_listing returns, made afresh
+    def listing(processes, workers, grandchildren)
+      random = Random.new(42)
+      worker_pids = Array.new(workers) { |i| MASTER + 1 + i }
+      rows = INIT_AND_MASTER + worker_rows(worker_pids, random) + grandchild_rows(worker_pids, grandchildren)
+      rows += other_rows(processes - rows.length, random)
+      lines = rows.collect { |row| format("%7d %7d %5s %8d %12s %s", *row) }
+      "#{HEADER}#{lines.join("\n")}\n"
+    end
+
+    # The master's workers, each with some of the CPU and memory
+    def worker_rows(worker_pids, random)
+      worker_pids.each_with_index.collect do |pid, i|
+        [pid, MASTER, format("%.1f", random.rand(40.0)), 180_000 + random.rand(60_000), "03:12:09", "unicorn worker[#{i}] -c /srv/app/config/unicorn.rb -E production -D"]
+      end
+    end
+
+    # The workers' children, spread across the workers in turn
+    def grandchild_rows(worker_pids, grandchildren)
+      Array.new(grandchildren) do |i|
+        [MASTER + 1000 + i, worker_pids.fetch(i % worker_pids.length), "0.0", 2_048, "00:41", "sh -c convert /tmp/upload#{i}.png"]
+      end
+    end
+
+    # The given number of other processes, children of init, with pids
+    # from 100 up and gaps between them
+    def other_rows(count, random)
+      pid = 100
+      Array.new([count, 0].max) do
+        program = PROGRAMS.fetch(random.rand(PROGRAMS.length))
+        row = [pid, 1, format("%.1f", random.rand(5.0)), random.rand(400_000), ELAPSED.fetch(random.rand(ELAPSED.length)), program]
+        pid += 1 + random.rand(7)
+        row
+      end
+    end
   end
 end
 

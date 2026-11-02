@@ -34,7 +34,7 @@ group :test do
   gem "rubocop", "~> 1.91"
   gem "rubocop-rake"
   gem "rubocop-rspec"
-  gem "simplecov", ">= 0.4"
+  gem "simplecov", ">= 1"
   gem "standard", ">= 1.57", require: false
   gem "standard-performance", require: false
   gem "steep", "~> 2.1", require: false if RUBY_VERSION >= "3.3" && RUBY_ENGINE == "ruby"

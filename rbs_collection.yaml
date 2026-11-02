@@ -10,6 +10,7 @@ sources:
 path: .gem_rbs_collection
 
 gems:
+  - name: did_you_mean
   - name: etc
   - name: fileutils
   - name: logger
@@ -28,11 +29,15 @@ gems:
     ignore: true
   - name: diff-lcs
     ignore: true
+  - name: lint_roller
+    ignore: true
   - name: maruku
     ignore: true
   - name: prism
     ignore: true
   - name: rake
+    ignore: true
+  - name: regexp_parser
     ignore: true
   - name: rspec
     ignore: true

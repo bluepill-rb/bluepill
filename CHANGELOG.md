@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The attribute that a config error suggests for a misspelled one now comes from Ruby's `did_you_mean`, as a misspelled method's does, so it also suggests one for a short name, such as `uid` for `ui`.
+
 ### Removed
 
 - **Breaking:** support for Ruby 2.5 and 2.6, and for JRuby 9.2 and 9.3, which run Ruby 2.5 and 2.6 code. Bluepill 0.2.7 needs Ruby 2.7 or newer, or JRuby 9.4 or newer. Bluepill 0.2.5 still runs on them.

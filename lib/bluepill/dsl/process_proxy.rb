@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "bluepill/util/levenshtein"
+require "did_you_mean"
 
 module Bluepill
   # The self of a process block in a config file
@@ -230,10 +230,8 @@ module Bluepill
 
     # Return the attribute a process has that's closest to a misspelled one
     #
-    # The closest is the one the fewest edits away, if that's at most a
-    # third of the misspelled name's length. Ruby's did_you_mean would do,
-    # but Bundler leaves it out on Rubies before 2.7, so bluepill compares
-    # the names itself and suggests the same attribute on every Ruby.
+    # Ruby's did_you_mean picks it, as it picks a method for a misspelled
+    # one.
     #
     # @param [Symbol] key the misspelled attribute
     #
@@ -241,11 +239,8 @@ module Bluepill
     #
     # @api private
     def suggest(key)
-      word = key.to_s
-      distances = self.class.attribute_names.collect { |name| [Util.levenshtein_distance(word, name.to_s), name.to_s] } #: Array[[Integer, String]]
-      closest = distances.min #: [Integer, String]
-      distance, name = closest
-      name if distance <= word.length / 3
+      names = self.class.attribute_names.collect(&:to_s)
+      DidYouMean::SpellChecker.new(dictionary: names).correct(key).first
     end
   end
 end

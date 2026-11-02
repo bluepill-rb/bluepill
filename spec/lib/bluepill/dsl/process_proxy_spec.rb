@@ -132,10 +132,10 @@ describe Bluepill::ProcessProxy do
       expect(proxy.send(:suggest, :start_comand)).to eq("start_command")
     end
 
-    it "suggests an attribute at most a third of the name away" do
+    it "suggests an attribute for a short misspelling too" do
       proxy = described_class.new("web", {}, proc {})
       suggestions = %i[auto_srt uidx gids ui].collect { |name| proxy.send(:suggest, name) }
-      expect(suggestions).to eq(["auto_start", "uid", "gid", nil])
+      expect(suggestions).to eq(%w[auto_start uid gid uid])
     end
 
     it "suggests the first in order among attributes as close as each other" do

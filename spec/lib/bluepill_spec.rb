@@ -52,24 +52,53 @@ describe Bluepill do
 
     it "evaluates a block without arguments in the context of the app proxy" do
       context = nil
-      described_class.application(:app_name, options) { context = self }
+      described_class.application(:app_name, **options) { context = self }
       expect(context).to be_a(Bluepill::AppProxy).and have_attributes(app: app)
     end
 
     it "loads the app after a block without arguments" do
-      described_class.application(:app_name, options) { nil }
+      described_class.application(:app_name, **options) { nil }
       expect(app).to have_received(:load)
     end
 
     it "yields the app proxy to a block with one argument" do
       yielded = nil
-      described_class.application(:app_name, options) { |a| yielded = a }
+      described_class.application(:app_name, **options) { |a| yielded = a }
       expect(yielded).to be_a(Bluepill::AppProxy).and have_attributes(app: app)
     end
 
     it "loads the app after a block with one argument" do
-      described_class.application(:app_name, options) { |_app| nil }
+      described_class.application(:app_name, **options) { |_app| nil }
       expect(app).to have_received(:load)
+    end
+
+    it "checks the Ruby that runs it" do
+      described_class.application(:app_name, **options) { nil }
+      expect(Bluepill::Deprecation).to have_received(:check_ruby)
+    end
+
+    it "warns about options passed as a Hash, without **" do
+      expect { described_class.application(:app_name, options) { nil } }.to output(
+        "DEPRECATION: bluepill 0.3.0 takes the options of Bluepill.application \"app_name\" only as keyword arguments, " \
+        "so options kept in a Hash fail unless they're passed with **. Write Bluepill.application \"app_name\", **options, which 0.2 takes too.\n"
+      ).to_stderr
+    end
+
+    it "warns about an option that 0.3.0 rejects" do
+      allow(Bluepill::Application).to receive(:new).with("app_name", {log_flie: "a.log"}).and_return(app)
+      expect { described_class.application(:app_name, log_flie: "a.log") { nil } }.to output(
+        "DEPRECATION: bluepill 0.3.0 rejects the application option log_flie:, which 0.2 ignores. Remove it, or fix its name.\n"
+      ).to_stderr
+    end
+
+    it "says nothing about the options that 0.3.0 takes" do
+      all = {foreground: true, log_file: "a.log", log_level: :info, base_dir: "/tmp", kill_timeout: 5}
+      allow(Bluepill::Application).to receive(:new).and_return(app)
+      expect { described_class.application(:app_name, **all) { nil } }.not_to output.to_stderr
+    end
+
+    it "raises for more than one Hash, as before" do
+      expect { described_class.application(:app_name, {}, {}) { nil } }.to raise_error(ArgumentError)
     end
 
     it "defaults to no options" do

@@ -2,6 +2,7 @@ module Bluepill
   # self in an application block
   class AppProxy
     APP_ATTRIBUTES: Array[Symbol]
+    NO_OPTIONS: Hash[Symbol, untyped]
 
     attr_accessor working_dir: String?
     attr_accessor uid: String?
@@ -14,7 +15,7 @@ module Bluepill
 
     @registry: ProcessFactory::Registry
 
-    def initialize: (_ToS app_name, Hash[Symbol, untyped] options) -> void
+    def initialize: (_ToS app_name, ?Hash[Symbol, untyped] options) -> void
 
     # The block runs with self set to the ProcessProxy, and also gets it as
     # an argument
@@ -108,7 +109,7 @@ module Bluepill
 
     def self.attribute_names: () -> Array[Symbol]
 
-    def checks: (Symbol name, ?Hash[Symbol, untyped] options) -> Hash[Symbol, untyped]
+    def checks: (Symbol name, *Hash[Symbol, untyped] args) -> Hash[Symbol, untyped]
 
     # The block configures the children like a process block
     def monitor_children: () ?{ (ProcessProxy child) [self: ProcessProxy] -> void } -> process_block?

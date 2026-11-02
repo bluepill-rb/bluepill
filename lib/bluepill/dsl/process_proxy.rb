@@ -143,16 +143,23 @@ module Bluepill
     #   process.checks :flapping, times: 2, within: 30.seconds, retry_in: 7.seconds
     #
     # @param [Symbol] name the check's name, such as :mem_usage
-    # @param [Hash{Symbol => Object}] options the check's options, such as
-    #   :every, :below and :times
+    # @param [Array(Hash{Symbol => Object})] args the check's options, such
+    #   as :every, :below and :times, as keyword arguments
     #
     # @return [Hash{Symbol => Object}] the options
     #
+    # @raise [ArgumentError] for more than one Hash of options
+    #
     # @api public
-    def checks(name, options = {})
+    def checks(name, *args)
+      raise ArgumentError, "wrong number of arguments (given #{args.size + 1}, expected 1..2)" if args.size > 1
+
+      Deprecation.check_keywords(args, "process.checks #{name.inspect}")
       Deprecation.check_duplicate_check(@name, name) if @watches.key?(name)
-      @watches[name] = options
+      @watches[name] = args.fetch(0) { {} }
     end
+    # Mark a Hash passed as keywords, so a Hash passed without ** can warn
+    ruby2_keywords(:checks)
 
     # Monitor the process's children too
     #

@@ -170,6 +170,30 @@ describe Bluepill::ProcessProxy do
       end)
       expect(proxy.watches).to eq(cpu_usage: {every: 10, below: 5}, always_true: {})
     end
+
+    it "records the options of a Hash passed without **" do
+      options = {below: 5}
+      allow($stderr).to receive(:puts)
+      proxy = described_class.new("web", {}, proc { checks :cpu_usage, options })
+      expect(proxy.watches).to eq(cpu_usage: {below: 5})
+    end
+
+    it "warns about options passed as a Hash, without **" do
+      options = {below: 5}
+      expect { described_class.new("web", {}, proc { checks :cpu_usage, options }) }.to output(
+        "DEPRECATION: bluepill 0.3.0 takes the options of process.checks :cpu_usage only as keyword arguments, " \
+        "so options kept in a Hash fail unless they're passed with **. Write process.checks :cpu_usage, **options, which 0.2 takes too.\n"
+      ).to_stderr
+    end
+
+    it "says nothing about options passed with **" do
+      options = {below: 5}
+      expect { described_class.new("web", {}, proc { checks :cpu_usage, **options }) }.not_to output.to_stderr
+    end
+
+    it "raises for more than one Hash, as before" do
+      expect { described_class.new("web", {}, proc { checks :cpu_usage, {}, {} }) }.to raise_error(ArgumentError)
+    end
   end
 
   describe "#monitor_children" do
@@ -183,7 +207,7 @@ describe Bluepill::ProcessProxy do
   describe "#to_process" do
     let(:proxy) do
       described_class.new("web", {}, proc do
-        start_command "run"
+        self.start_command = "run"
         checks :always_true, every: 10
       end)
     end

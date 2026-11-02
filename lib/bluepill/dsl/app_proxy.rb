@@ -18,6 +18,13 @@ module Bluepill
     # process sets its own
     APP_ATTRIBUTES = %i[working_dir uid gid supplementary_groups environment auto_start notify_command].freeze
 
+    no_options = {} #: Hash[Symbol, untyped]
+
+    # The options of an application that has none, made once
+    #
+    # @api private
+    NO_OPTIONS = no_options.freeze
+
     # The directory that the application's processes start in
     #
     # @example
@@ -110,7 +117,7 @@ module Bluepill
     # @return [void]
     #
     # @api private
-    def initialize(app_name, options)
+    def initialize(app_name, options = NO_OPTIONS)
       @app = Application.new(app_name.to_s, options)
       @registry = ProcessFactory::Registry.new
     end

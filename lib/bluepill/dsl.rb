@@ -16,8 +16,8 @@ module Bluepill
   #   end
   #
   # @param [#to_s] app_name the application's name
-  # @param [Hash{Symbol => Object}] options the application's options, such
-  #   as :log_file, :foreground and :base_dir
+  # @param [Array(Hash{Symbol => Object})] args the application's options,
+  #   such as :log_file, :foreground and :base_dir, as keyword arguments
   #
   # @yield [app] describes the application's processes
   # @yieldparam [AppProxy] app the application's proxy, which is also self
@@ -25,12 +25,23 @@ module Bluepill
   #
   # @return [void]
   #
+  # @raise [ArgumentError] for more than one Hash of options
+  #
   # @api public
-  def self.application(app_name, options = {}, &block)
-    app_proxy = AppProxy.new(app_name, options)
+  def self.application(app_name, *args, &block)
+    raise ArgumentError, "wrong number of arguments (given #{args.size + 1}, expected 1..2)" if args.size > 1
+
+    app_proxy = AppProxy.new(app_name, args.fetch(0, AppProxy::NO_OPTIONS))
     Deprecation.check_ruby
+    Deprecation.check_keywords(args, "Bluepill.application #{app_name.to_s.inspect}")
+    Deprecation.check_application_options(args.fetch(0, AppProxy::NO_OPTIONS))
     # instance_eval also passes the proxy to a block that takes an argument
     app_proxy.instance_eval(&block)
     app_proxy.app.load
+  end
+
+  class << self
+    # Mark a Hash passed as keywords, so a Hash passed without ** can warn
+    ruby2_keywords(:application)
   end
 end

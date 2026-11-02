@@ -46,6 +46,46 @@ module Bluepill
                                                     "as for process '#{process_name}'. Give it a block that sets the children's stop_command.")
     end
 
+    # The options that 0.3.0's Bluepill.application takes
+    APPLICATION_OPTIONS = %i[foreground log_file log_level base_dir kill_timeout].freeze
+
+    # Warn about options passed as a Hash, without **
+    #
+    # Bluepill 0.3.0 takes the options of Bluepill.application and checks
+    # as keyword arguments, and Ruby 3 keeps a Hash passed without ** as a
+    # positional argument, which fails. Ruby marks a Hash that a
+    # ruby2_keywords method got as keywords, so the others are the ones
+    # passed without **.
+    #
+    # @param [Array<Object>] args the arguments after the name
+    # @param [String] call the call, as the message shows it, such as
+    #   "process.checks :mem_usage"
+    #
+    # @return [void]
+    #
+    # @api private
+    def self.check_keywords(args, call)
+      options = args.last
+      return unless options.is_a?(Hash) && !Hash.ruby2_keywords_hash?(options)
+
+      warn([:keywords, call.split.first], "bluepill 0.3.0 takes the options of #{call} only as keyword arguments, " \
+                                          "so options kept in a Hash fail unless they're passed with **. Write #{call}, **options, which 0.2 takes too.")
+    end
+
+    # Warn about an application option that 0.3.0 rejects
+    #
+    # @param [Hash{Symbol => Object}] options the application's options
+    #
+    # @return [void]
+    #
+    # @api private
+    def self.check_application_options(options)
+      (options.keys - APPLICATION_OPTIONS).each do |option|
+        warn([:application_option, option], "bluepill 0.3.0 rejects the application option #{option}:, which 0.2 ignores. " \
+                                            "Remove it, or fix its name.")
+      end
+    end
+
     # Warn about a second check of the same name in a process
     #
     # Bluepill 0.2 keeps only the last of them, and 0.3.0 runs them all.

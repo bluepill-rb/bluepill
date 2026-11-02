@@ -51,6 +51,13 @@ module Bluepill
 
     def self.check_monitor_children: (String process_name, Proc? block) -> void
 
+    APPLICATION_OPTIONS: Array[Symbol]
+
+    # Warns about options passed as a Hash, without **
+    def self.check_keywords: (Array[untyped] args, String call) -> void
+
+    def self.check_application_options: (Hash[Symbol, untyped] options) -> void
+
     def self.check_duplicate_check: (String process_name, Symbol name) -> void
 
     EVENTS: Array[Symbol]

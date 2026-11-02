@@ -376,7 +376,7 @@ Bluepill.application("app_name") do |app|
 end
 ```
 
-`logger` writes to bluepill's log, with the app's and the process's names, like the built-in checks. It's set once `super` returns, so call `super` first in `initialize`.
+`logger` writes to bluepill's log, with the app's and the process's names, like the built-in checks. The check gets it through the `logger:` keyword, which `super` stores, so call `super` first in `initialize`: a check that doesn't call `super` has no logger.
 
 If `run`, `check?` or `format_value` raises, bluepill logs the error with its backtrace and skips the check until its next interval. It doesn't count toward `times`, and bluepill keeps monitoring. A check class must define both `run` and `check?`, or the pill file fails to load.
 

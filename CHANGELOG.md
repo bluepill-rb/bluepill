@@ -21,6 +21,7 @@ Most pill files work with 0.3.0 unchanged. Check these before you upgrade:
 - **Set attributes with `=`.** `process.daemonize!` and `process.start_command "cmd"` no longer work. Write `process.daemonize = true` and `process.start_command = "cmd"`.
 - **`on_start_timeout` and `fires:` take Symbols**, such as `process.on_start_timeout = :unmonitor` or `fires: :stop`, from `:start`, `:stop`, `:unmonitor` and `:restart`.
 - **A custom check that subclasses `MemUsage` gets bytes.** Its `run`, `check?` and `format_value` see the memory usage in bytes, where they saw kilobytes.
+- **Call `super` first in a custom check's `initialize`.** A check gets its logger only through the `logger:` keyword, which `super` stores, so one that doesn't call `super` has no logger. Don't set a check's or trigger's `logger` yourself: the writer is gone.
 - **Upgrade the daemon along with the CLI.** A 0.3.0 `bluepill` command says a 0.2 daemon is out of date, so run `bluepill load` again after upgrading. Bluepill monitors the running processes again without restarting them.
 
 ### Added
@@ -53,6 +54,9 @@ Most pill files work with 0.3.0 unchanged. Check these before you upgrade:
 - **Breaking:** each process reaches its pid and process group journals through `ProcessJournal.for(name)`, and a journal lock held too long raises `ProcessJournal::LockTimeoutError`.
 - **Breaking:** the ps table is kept in `System`'s own state, and `System.store` is gone.
 - Checking a process's CPU takes 8% fewer instructions.
+- A process gets its logger, prefixed with the names of its app, its group and itself, when it's made, and passes it to its watches, checks and triggers as they're made, instead of being handed a new logger when it joins its group.
+- A process's `stop_signals` is parsed and checked once, when the pill file loads, into a `Bluepill::Process::StopSignals`.
+- **Breaking:** `Process#stop_signals` returns a `Bluepill::Process::StopSignals` instead of an Array (`to_a` gives the Array), and `Process#stop_signals=` raises `Bluepill::ConfigError` for a malformed Array, a monitored child's too.
 
 ### Removed
 
@@ -60,6 +64,7 @@ Most pill files work with 0.3.0 unchanged. Check these before you upgrade:
 - **Breaking:** support for Ruby 2.7. Bluepill 0.3.0 needs Ruby 3.0 or newer, or JRuby 9.4 or newer. Bluepill 0.2.7 still runs on Ruby 2.7.
 - **Breaking:** the undocumented `name!` and `name value` forms of setting a process attribute.
 - **Breaking:** setting `monitor_children` or `child_process_factory` in a process block. Use `monitor_children` with a block.
+- **Breaking:** the `logger=` writers of `Process`, `Process::Watches`, `Process::Triggers`, `ConditionWatch`, `ProcessConditions::ProcessCondition` and `Trigger`. A custom check or trigger gets its logger only through the `logger:` keyword.
 - **Breaking:** `Process#start`, `#stop`, `#restart` and `#unmonitor` (use `dispatch!`), `Trigger.[]` and `ProcessConditions.[]` (use `CheckRegistry.fetch`), `Group#process_logger`, and `ConditionWatch::HistoryValue#critical` (now `passed`).
 
 ### Fixed

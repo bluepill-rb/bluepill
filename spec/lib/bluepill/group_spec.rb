@@ -53,6 +53,25 @@ describe Bluepill::Group do
         group.tick
         expect(calls).to eq([[:tick, "first"], [:tick, "second"]])
       end
+
+      # A real process whose state machine raises, or records its events
+      def real_process(name, broken)
+        process = Bluepill::Process.new(name, [])
+        if broken
+          allow(process).to receive(:fire_event).and_raise("boom")
+        else
+          allow(process).to receive(:fire_event) { |event| calls << [event, name] }
+        end
+        process
+      end
+
+      it "ticks the other processes when one raises" do
+        group = described_class.new("web", logger: instance_double(Bluepill::Logger).as_null_object)
+        group.add_process(real_process("broken", true))
+        group.add_process(real_process("healthy", false))
+        group.tick
+        expect(calls).to eq([[:tick, "healthy"]])
+      end
     end
 
     describe "#determine_initial_state" do

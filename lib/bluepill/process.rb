@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "bluepill/system"
+require "bluepill/util/log_error"
 require "bluepill/process_journal"
 require "bluepill/process_commands"
 require "bluepill/process/attributes"
@@ -141,28 +142,39 @@ module Bluepill
     # Unless ticks are being skipped, fire the state machine's tick event, and
     # then, for a process that's up, run its watches and tick its children.
     #
+    # An error, such as one a trigger raised, is logged with its backtrace,
+    # and the process ticks again next time, so one broken check or trigger
+    # doesn't stop the daemon.
+    #
     # @return [void]
     #
     # @api private
     def tick
       return if skipping_ticks?
 
-      self.skip_ticks_until = nil
-
+      @skip_ticks_until = nil
       # clear the memoization per tick
       @process_running = nil
-
       # Deal with thread cleanup here since the stopping state isn't used
       clean_threads if unmonitored?
-
       fire_event(:tick)
-
       return unless up?
 
       run_watches
+      tick_children if monitor_children?
+    rescue => e
+      Util.log_error(logger, "tick failed", e)
+    end
 
-      return unless monitor_children?
-
+    # Find the process's children, and tick each of them
+    #
+    # Each child's tick logs its own errors, so one that fails doesn't keep
+    # the others from ticking.
+    #
+    # @return [void]
+    #
+    # @api private
+    def tick_children
       refresh_children!
       children.each(&:tick)
     end

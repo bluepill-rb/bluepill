@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "bluepill/util/log_error"
+
 module Bluepill
   # Reacts to a process's state transitions, as one of a process's checks
   #
@@ -146,8 +148,7 @@ module Bluepill
         scheduled_events.delete_if { |_, t| t.equal?(Thread.current) }
       end
     rescue => e
-      logger.err(e)
-      logger.err(e.backtrace.to_a.join("\n"))
+      Util.log_error(logger, "#{@reason} failed to dispatch #{event}", e)
     end
 
     # Cancel every scheduled event, killing its thread

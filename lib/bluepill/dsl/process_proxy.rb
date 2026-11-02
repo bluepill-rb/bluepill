@@ -91,7 +91,9 @@ module Bluepill
         unknown_attribute!(key)
       elsif !reader
         @attributes[key] = bang || value
-      else
+      # The same as the first branch, but it has to come after the checks
+      # between them, which a call with the wrong arguments must not reach
+      else # rubocop:disable Lint/DuplicateBranch
         super
       end
     end

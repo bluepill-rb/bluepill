@@ -3,7 +3,7 @@
 describe Bluepill::Clock do
   describe ".now" do
     it "reads the monotonic clock in whole seconds" do
-      allow(Process).to receive(:clock_gettime).with(Process::CLOCK_MONOTONIC).and_return(42.9)
+      allow(Process).to receive(:clock_gettime).with(Process::CLOCK_MONOTONIC, :second).and_return(42)
       expect(described_class.now).to be(42)
     end
 

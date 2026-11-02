@@ -13,15 +13,13 @@ module Bluepill
     # Return the monotonic clock's time, in whole seconds
     #
     # It counts from an arbitrary point, such as when the machine booted, so
-    # a reading only means something next to another one. JRuby 9.0 has no
-    # :second unit, so it reads the clock in seconds, as a Float, and drops
-    # the fraction.
+    # a reading only means something next to another one.
     #
     # @return [Integer]
     #
     # @api private
     def self.now
-      Integer(::Process.clock_gettime(::Process::CLOCK_MONOTONIC))
+      ::Process.clock_gettime(::Process::CLOCK_MONOTONIC, :second)
     end
   end
 end

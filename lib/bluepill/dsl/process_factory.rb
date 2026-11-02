@@ -1,3 +1,5 @@
+require "bluepill/dsl/process_factory/children"
+
 module Bluepill
   # Create the processes that a config file describes, and check them
   #
@@ -8,6 +10,8 @@ module Bluepill
   #
   # @api private
   class ProcessFactory
+    include Children
+
     # Return the attributes that each process starts with
     #
     # @return [Hash{Symbol => Object}] the attributes
@@ -53,36 +57,6 @@ module Bluepill
       validate_process! process
       warn_unless_pid_known(process, default_pid_file)
       process.to_process
-    end
-
-    # Create the process of a child that bluepill found
-    #
-    # The child gets its parent's grace times, the parent's user and groups,
-    # so its commands run as the parent's do, and its state from whether
-    # it's running.
-    #
-    # @param [String] name the child's name
-    # @param [Integer] pid the child's pid
-    # @param [Logger] logger the child's logger
-    #
-    # @return [Process] the child's process
-    #
-    # @api private
-    def create_child_process(name, pid, logger)
-      attributes = {} #: Hash[Symbol, untyped]
-      # A grace time the parent leaves unset keeps the Process default
-      [:start_grace_time, :stop_grace_time, :restart_grace_time, :uid, :gid, :supplementary_groups].each do |a|
-        attributes[a] = @attributes.fetch(a) if @attributes.key?(a)
-      end
-      attributes[:actual_pid] = pid
-      attributes[:logger] = logger
-
-      child = ProcessProxy.new(name, attributes, @process_block)
-      validate_child_process! child
-      process = child.to_process
-
-      process.determine_initial_state
-      process
     end
 
     protected
@@ -245,21 +219,6 @@ module Bluepill
     # @api private
     def config_error!(message)
       $stderr.puts message
-      exit(6)
-    end
-
-    # Exit unless a monitored child has a stop_command
-    #
-    # @param [ProcessProxy] child the child's proxy
-    #
-    # @return [void]
-    #
-    # @api private
-    def validate_child_process!(child)
-      return if child.attributes.key?(:stop_command)
-
-      $stderr.puts "Config Error: Invalid child process monitor for #{child.name}"
-      $stderr.puts "You must specify a stop command to monitor child processes."
       exit(6)
     end
   end

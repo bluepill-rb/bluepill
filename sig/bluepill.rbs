@@ -671,6 +671,8 @@ module Bluepill
 
   # Builds processes from a process block in the config
   class ProcessFactory
+    include Children
+
     @@process_keys: Hash[Array[String?], nil]
     @@pid_files: Hash[String, nil]
 
@@ -681,8 +683,6 @@ module Bluepill
     def initialize: (Hash[Symbol, untyped] attributes, process_block process_block) -> void
 
     def create_process: (String name, String pids_dir) -> Process
-
-    def create_child_process: (String name, Integer pid, Logger logger) -> Process
 
     private
 
@@ -706,7 +706,20 @@ module Bluepill
 
     def config_error!: (String message) -> bot
 
-    def validate_child_process!: (ProcessProxy child) -> void
+    # Creates the processes of a process's children, for ProcessFactory,
+    # which is the only class that includes it
+    module Children
+      @attributes: Hash[Symbol, untyped]
+      @process_block: process_block
+
+      def create_child_process: (String name, Integer pid, Logger logger) -> Process
+
+      private
+
+      def inherited_attributes: () -> Hash[Symbol, untyped]
+
+      def validate_child_process!: (ProcessProxy child) -> void
+    end
   end
 
   # self in a process block. Any attribute can be set with `name = value`,

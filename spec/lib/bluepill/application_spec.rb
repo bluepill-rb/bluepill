@@ -96,7 +96,7 @@ describe Bluepill::Application do
       context 'and foreground is false' do
         let(:options) { {base_dir: '/var/bluepill', foreground: false} }
 
-        it { is_expected.to_not be_foreground }
+        it { is_expected.not_to be_foreground }
       end
 
       it 'logs to the log file with the application name as prefix' do

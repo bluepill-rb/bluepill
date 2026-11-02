@@ -31,15 +31,7 @@ module Bluepill
       def initialize(options = {})
         super
         @uri = URI.parse(options[:url]) #: URI::HTTP
-        @kind = case options[:kind]
-        when Integer
-          Net::HTTPResponse::CODE_TO_OBJ.fetch(options.fetch(:kind).to_s)
-        when String, Symbol
-          Net.const_get("HTTP#{Util.camelize(options.fetch(:kind))}")
-        else
-          Net::HTTPSuccess
-        end
-
+        @kind = response_class(options[:kind])
         @pattern = options[:pattern]
         @open_timeout = (options[:open_timeout] || options[:timeout] || 5).to_i
         @read_timeout = (options[:read_timeout] || options[:timeout] || 5).to_i
@@ -92,6 +84,30 @@ module Bluepill
       end
 
       private
+
+      # Return the Net::HTTPResponse class of a kind of response
+      #
+      # @param [Integer, String, Symbol, nil] kind a status code, such as
+      #   200, or a Net::HTTP class name, such as :success or :ok
+      #
+      # @return [Class] the response class, Net::HTTPSuccess when there's no
+      #   kind
+      #
+      # @raise [KeyError] for a numeric kind that isn't an HTTP status
+      #
+      # @raise [NameError] for a kind that names no Net::HTTP response
+      #
+      # @api private
+      def response_class(kind)
+        case kind
+        when Integer
+          Net::HTTPResponse::CODE_TO_OBJ.fetch(kind.to_s)
+        when String, Symbol
+          Net.const_get("HTTP#{Util.camelize(kind)}")
+        else
+          Net::HTTPSuccess
+        end
+      end
 
       # Run the block, raising a refused connection as one
       #

@@ -1031,6 +1031,8 @@ module Bluepill
 
       private
 
+      def response_class: (untyped kind) -> Class
+
       def hide_net_http_bug: [T] () { () -> T } -> T
     end
 

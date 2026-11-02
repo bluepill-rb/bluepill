@@ -879,18 +879,35 @@ describe Bluepill::Process do
       expect(Bluepill::System).not_to have_received(:execute_blocking)
     end
 
-    context "with a pre start command" do
-      before { process.pre_start_command = "prepare" }
+    it "logs nothing without a pre start command" do
+      process.pre_start_process
+      expect(logger).not_to have_received(:err)
+    end
 
-      it "logs only that it runs it" do
-        warnings = record_log(:warning)
+    context "with a pre start command" do
+      before { process.pre_start_command = "prepare {{PID}}" }
+
+      it "logs that it runs it, with no pid" do
         process.pre_start_process
-        expect(warnings).to eq ["Executing pre start command: prepare"]
+        expect(logger).to have_received(:info).with("Executing pre start command: prepare ")
       end
 
-      it "runs it with the process options" do
+      it "runs it as a hook, with the process options and hook_timeout" do
         process.pre_start_process
-        expect(Bluepill::System).to have_received(:execute_blocking).with("prepare", process.system_command_options)
+        expect(Bluepill::System).to have_received(:execute_blocking)
+          .with("prepare ", process.hook_options({}))
+      end
+
+      it "logs one that runs longer than hook_timeout, and returns" do
+        allow(Bluepill::System).to receive(:execute_blocking).and_raise(Timeout::Error)
+        process.pre_start_process
+        expect(logger).to have_received(:warning).with("Pre start command took longer than 30 seconds: prepare {{PID}}")
+      end
+
+      it "logs one that fails, and returns" do
+        allow(Bluepill::System).to receive(:execute_blocking).and_raise(Errno::ENOENT)
+        process.pre_start_process
+        expect(logger).to have_received(:err).with("Pre start command failed: No such file or directory")
       end
 
       it "warns on a non-zero exit code" do

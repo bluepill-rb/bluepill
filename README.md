@@ -249,7 +249,7 @@ Bluepill.application("app_name") do |app|
 end
 ```
 
-Bluepill waits for the `pre_start_command` to finish, and logs a warning if it exits with a non-zero status, but starts the process either way. It runs in the same `working_dir`, with the same `environment`, `uid`, and `gid`, as the process.
+Bluepill waits for the `pre_start_command` to finish, for up to `hook_timeout` (30 seconds by default), and then starts the process either way. It logs a `pre_start_command` that exits with a non-zero status, fails to run, or runs too long, and kills one that runs too long, with anything it started. It runs in the same `working_dir`, with the same `environment`, `uid`, and `gid`, as the process.
 
 Bluepill has four more hooks, named after systemd's `ExecStartPost`, `ExecStop`, and `ExecStopPost`:
 

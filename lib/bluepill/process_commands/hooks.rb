@@ -3,25 +3,22 @@ module Bluepill
     # Runs the commands a Process has around its starts and stops, and on
     # each change of state
     #
-    # pre_start_command runs like the start command. The others are hooks:
-    # they run for up to hook_timeout, and one that fails or times out is
+    # Each runs for up to hook_timeout, and one that fails or times out is
     # only logged.
     #
     # @api private
     module Hooks
-      # Run the pre_start_command, if there is one
+      # Run the pre_start_command, if there is one, and wait for it
       #
-      # It runs like the start command, not as a hook, so it has no
-      # hook_timeout, and an error it raises stops the start.
+      # The start waits for up to hook_timeout, and goes ahead either way.
+      # The process has no pid yet, so <tt>{{PID}}</tt> becomes nothing.
       #
       # @return [void]
       #
       # @api private
       def pre_start_process
-        return unless pre_start_command
-
-        logger.warning "Executing pre start command: #{pre_start_command}"
-        run_command(pre_start_command, "Pre start")
+        command = pre_start_command
+        run_hook(command, "Pre start", nil) if command
       end
 
       # Run the pre_stop_command, if there is one, and wait for it

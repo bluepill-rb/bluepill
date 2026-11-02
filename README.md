@@ -17,7 +17,7 @@ Bluepill is a simple process monitoring tool written in Ruby.
 [coveralls]: https://coveralls.io/github/bluepill-rb/bluepill?branch=master
 
 ## Installation
-It&apos;s hosted on [rubygems.org][gem].
+It's hosted on [rubygems.org][gem].
 
     sudo gem install bluepill
 
@@ -28,7 +28,7 @@ In order to take advantage of logging with syslog, you also need to setup your s
 > [!IMPORTANT]
 > Bluepill logs to syslog by default, which on Ruby 3.4 and newer needs the `syslog` gem (`sudo gem install syslog`), since Ruby no longer includes it. Or have bluepill write to a log file instead (see [Logging](#logging)).
 
-You&apos;ll also want to add _/var/log/bluepill.log_ to _/etc/logrotate.d/syslog_ so that it gets rotated.
+You'll also want to add _/var/log/bluepill.log_ to _/etc/logrotate.d/syslog_ so that it gets rotated.
 
 Lastly, create the _/var/run/bluepill_ directory for bluepill to store its pid and sock files.
 
@@ -59,7 +59,7 @@ Bluepill.application("app_name") do |app|
 end
 ```
 
-If you don&apos;t specify a stop command, a TERM signal will be sent by default. Similarly, the default restart action is to issue stop and then start.
+If you don't specify a stop command, a TERM signal will be sent by default. Similarly, the default restart action is to issue stop and then start.
 
 Bluepill only accepts the attributes it knows, which are the ones this README describes. A misspelled or unsupported attribute fails when the config loads, and the error names the attribute, the process, and the closest attribute bluepill knows. Bluepill prints the line of the pill file with the mistake before the error:
 
@@ -475,7 +475,7 @@ show how to run it. [examples/runit.rb](examples/runit.rb) monitors a
 service managed by runit.
 
 ### Logging
-By default, bluepill uses syslog local6 facility as described in the installation section. But if for any reason you don&apos;t want to use syslog, you can use a log file. You can do this by setting the :log\_file option in the config:
+By default, bluepill uses syslog local6 facility as described in the installation section. But if for any reason you don't want to use syslog, you can use a log file. You can do this by setting the :log\_file option in the config:
 
 ```ruby
 Bluepill.application("app_name", log_file: "/path/to/bluepill.log") do |app|

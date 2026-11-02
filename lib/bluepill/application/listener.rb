@@ -58,10 +58,10 @@ module Bluepill
         client.close_on_exec = true if client.respond_to?(:close_on_exec=)
         # The target is group:process and the process name may contain ':'
         command, *args = client.readline.strip.split(":", 3).reject(&:empty?)
-        client.write(Marshal.dump(run_command(command, args)))
+        client.write(Marshal.dump(command_result(command, args)))
       end
 
-      # Run a command while holding the daemon's lock
+      # Run a command while holding the daemon's lock, and return its result
       #
       # @param [String, nil] command the command
       # @param [Array<String>] args the group and process, for example
@@ -69,7 +69,7 @@ module Bluepill
       # @return [Object] what the command returned, or the error it raised
       #
       # @api private
-      def run_command(command, args)
+      def command_result(command, args)
         method = daemon_command(command)
         mutex { public_send(method, *args) }
       rescue => e

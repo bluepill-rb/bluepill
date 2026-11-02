@@ -80,7 +80,7 @@ module Bluepill
 
       def answer_command: (UNIXSocket client) -> void
 
-      def run_command: (String? command, Array[String] args) -> untyped
+      def command_result: (String? command, Array[String] args) -> untyped
 
       def daemon_command: (String? command) -> Symbol
 

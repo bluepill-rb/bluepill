@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::ProcessStatistics do
   subject(:stats) { described_class.new }
 

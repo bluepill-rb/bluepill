@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # What a process's state machine does, for every state and event: where
 # each event moves it, which callbacks run and in what order, and what
 # halting or raising in a callback does

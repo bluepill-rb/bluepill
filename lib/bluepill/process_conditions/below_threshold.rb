@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   module ProcessConditions
     # Checks that a value a process reads is below a limit

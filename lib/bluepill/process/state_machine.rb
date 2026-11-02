@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   class Process
     # Moves a Process between its states

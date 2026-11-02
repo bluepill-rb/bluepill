@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::AppProxy do
   subject(:proxy) { described_class.new(:app_name, {}) }
 

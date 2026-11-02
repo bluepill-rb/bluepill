@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
 # A forking echo server to try bluepill with. See sample_app.rb.
 #

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   class ProcessFactory
     # Create the processes of the children that a process's factory finds

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   # The checks a process can run, named in a config by their underscored
   # class name, such as `checks :mem_usage`

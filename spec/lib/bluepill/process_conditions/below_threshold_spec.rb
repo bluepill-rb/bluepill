@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::ProcessConditions::BelowThreshold do
   subject(:condition) { described_class.new(below: 50) }
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # RSpec names a described module with its to_s, which is the version
 describe "Bluepill::Version" do
   describe ".major" do

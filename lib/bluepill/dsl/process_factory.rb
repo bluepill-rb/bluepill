@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "bluepill/dsl/process_factory/children"
 require "bluepill/dsl/process_factory/registry"
 

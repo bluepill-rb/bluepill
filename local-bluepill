@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
+
 # Runs bin/bluepill with the code in this checkout instead of an installed gem
 
 require "rubygems"

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::ProcessConditions::MemUsage do
   subject(:condition) { described_class.new(below: 100.megabytes) }
 

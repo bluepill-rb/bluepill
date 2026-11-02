@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   class Application
     # Stop a daemon for the application that's still running, before

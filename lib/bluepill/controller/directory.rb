@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   class Controller
     # Find the daemons in the base directory, and clean up after dead ones

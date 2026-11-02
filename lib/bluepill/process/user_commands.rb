@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   class Process
     # Carries out the commands a user gives a Process from the command line

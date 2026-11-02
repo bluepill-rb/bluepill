@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "rbconfig"
 
 # Bluepill adds the units that configs use, such as 10.seconds, to Numeric.

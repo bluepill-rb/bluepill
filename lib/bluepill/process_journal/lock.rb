@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   module ProcessJournal
     # Lock a journal while bluepill reads and writes it

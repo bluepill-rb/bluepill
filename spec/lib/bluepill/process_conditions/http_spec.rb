@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::ProcessConditions::Http do
   def http(options = {})
     Bluepill::ProcessConditions::Http.new({url: "http://example.com:8080/status?full=1"}.merge(options))

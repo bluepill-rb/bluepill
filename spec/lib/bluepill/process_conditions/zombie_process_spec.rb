@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::ProcessConditions::ZombieProcess do
   subject(:condition) { described_class.new }
 

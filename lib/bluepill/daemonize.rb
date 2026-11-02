@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The parts of the daemons gem that bluepill uses, which bluepill used to
 # get from blue-daemons, a fork of it. They're adapted from daemons'
 # lib/daemons/daemonize.rb, which carries this notice:

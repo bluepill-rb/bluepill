@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "bluepill/system/ps"
 require "bluepill/system/commands"
 
@@ -19,7 +21,7 @@ module Bluepill
     # The mode that a daemon's stdout and stderr files are opened in
     #
     # @api private
-    APPEND_MODE = "a".freeze
+    APPEND_MODE = "a"
 
     # Raised when ps could not be run, so there is no data for this tick
     #

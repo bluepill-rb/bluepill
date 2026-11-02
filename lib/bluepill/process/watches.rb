@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   class Process
     # The checks that run on a Process every interval, such as its memory

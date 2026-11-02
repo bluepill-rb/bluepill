@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::ConditionWatch do
   # What the logger logs, in order
   let(:calls) { [] }

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::Socket do
   let(:base_dir) { "/var/run/bluepill" }
   let(:socket_path) { "/var/run/bluepill/socks/app.sock" }

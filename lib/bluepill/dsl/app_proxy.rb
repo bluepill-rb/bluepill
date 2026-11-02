@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   # The self of the block given to {Bluepill.application}
   #

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   class Application
     # Answer the commands that the CLI sends over the daemon's socket

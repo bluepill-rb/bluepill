@@ -20,6 +20,13 @@ AllCops:
 Style:
   Enabled: false
 
+# Frozen string literals change what a file's strings allocate, not how
+# the file looks, and Standard leaves them out, so RuboCop asks for the
+# comment in every file
+Style/FrozenStringLiteralComment:
+  Enabled: true
+  EnforcedStyle: always_true
+
 Layout:
   Enabled: false
 

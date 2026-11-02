@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Prints what loading bluepill adds to Ruby's own classes and modules, one
 # line each: the bluepill modules it mixes into them, and the methods it
 # defines on them in its own files. Run by spec/core_extensions_spec.rb.

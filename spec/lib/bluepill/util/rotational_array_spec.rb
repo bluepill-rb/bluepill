@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::Util::RotationalArray do
   subject(:array) { described_class.new(3) }
 

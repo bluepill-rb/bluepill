@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   # Write bluepill's log, to syslog or a file, with prefixes
   #

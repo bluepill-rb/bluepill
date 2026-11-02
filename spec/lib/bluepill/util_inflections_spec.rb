@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::Util do
   describe ".camelize" do
     {

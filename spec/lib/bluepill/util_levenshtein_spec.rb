@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::Util do
   describe ".levenshtein_distance" do
     it "counts the insertions, deletions and replacements between two strings" do

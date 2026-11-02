@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "rbconfig"
 
 # The configs that the README and the examples show, loaded the way bluepill

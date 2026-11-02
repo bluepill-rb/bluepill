@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # ATTENTION:
 # You must declare only one application per config when foreground mode specified
 #

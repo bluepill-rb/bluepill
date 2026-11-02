@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   # Reacts to a process's state transitions, as one of a process's checks
   #

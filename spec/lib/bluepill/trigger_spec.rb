@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::Trigger do
   subject(:trigger) { described_class.new(process, logger: logger) }
 

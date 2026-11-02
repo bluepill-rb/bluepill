@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "open3"
 
 # Splits the subjects mutant runs across CI runners (see

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   module System
     # A tick's table of processes, as ps listed them

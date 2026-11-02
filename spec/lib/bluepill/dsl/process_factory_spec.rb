@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::ProcessFactory do
   let(:registry) { Bluepill::ProcessFactory::Registry.new }
 

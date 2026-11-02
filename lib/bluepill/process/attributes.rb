@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   class Process
     # The options a config can set for a Process, and their defaults

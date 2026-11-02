@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "bluepill/system"
 require "bluepill/process_journal"
 require "bluepill/process_commands"

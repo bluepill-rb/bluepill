@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::ProcessFactory::Registry do
   subject(:registry) { described_class.new }
 

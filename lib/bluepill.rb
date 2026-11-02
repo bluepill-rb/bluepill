@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "rubygems"
 
 # A process monitor that keeps daemons running

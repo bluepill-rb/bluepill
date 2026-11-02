@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   module ProcessJournal
     # Kill what an earlier run left in a process's journals

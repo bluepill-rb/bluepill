@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::Triggers::Flapping do
   # What the trigger logs, in order
   let(:calls) { [] }

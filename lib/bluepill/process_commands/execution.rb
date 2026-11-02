@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   module ProcessCommands
     # Runs a Process's commands as its user, in its working_dir, with its

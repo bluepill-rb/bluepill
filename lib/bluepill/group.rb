@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   # The processes of an application that share a group name
   #

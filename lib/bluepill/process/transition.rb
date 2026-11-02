@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   class Process
     # A process's move from one state to another, as triggers and the

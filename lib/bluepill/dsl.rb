@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   # Load an application from a config file
   #

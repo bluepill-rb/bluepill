@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   module ProcessConditions
     # Checks whether a process is a zombie, which ps shows as <defunct>

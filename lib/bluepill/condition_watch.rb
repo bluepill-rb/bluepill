@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   # Runs a process's check every so often, and fires its events when the
   # check fails often enough

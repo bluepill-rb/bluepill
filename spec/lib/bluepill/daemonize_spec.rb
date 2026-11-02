@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::Daemonize do
   # Stands in for Process.exit!, which would end the spec run
   let(:exited) { Class.new(StandardError) }

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "bluepill/system"
 require "bluepill/process_journal/cleanup"
 require "bluepill/process_journal/lock"
@@ -66,12 +68,12 @@ module Bluepill
     # A pid journal's kind
     #
     # @api private
-    PID = Kind.new("pid".freeze, "process".freeze, "pids".freeze, 1).freeze
+    PID = Kind.new("pid", "process", "pids", 1).freeze
 
     # A process group journal's kind
     #
     # @api private
-    PGID = Kind.new("pgid".freeze, "process group".freeze, "pgids".freeze, -1).freeze
+    PGID = Kind.new("pgid", "process group", "pgids", -1).freeze
 
     class << self
       # Return the logger the journal writes to

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Mutant runs a few specs at a time, so coverage is only measured otherwise
 unless ENV["MUTANT"]
   require "simplecov"

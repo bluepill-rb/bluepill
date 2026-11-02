@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::Clock do
   describe ".now" do
     it "reads the monotonic clock in whole seconds" do

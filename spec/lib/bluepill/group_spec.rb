@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::Group do
   # What the processes, the logger and the command threads are told to do,
   # in order

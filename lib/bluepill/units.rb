@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   # The durations and sizes a config writes, such as 10.seconds and
   # 100.megabytes, as plain numbers of seconds and bytes

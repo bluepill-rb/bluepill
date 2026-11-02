@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::System::PsTable do
   subject(:table) { described_class.new(rows) }
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   class Process
     # Keeps a Process for each of a Process's children, when it monitors them

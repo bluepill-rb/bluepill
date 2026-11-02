@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "bluepill/system/ps_table"
 
 module Bluepill

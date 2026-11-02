@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   module ProcessConditions
     # Checks how long a process has been running, in seconds

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "bluepill/process_commands/execution"
 require "bluepill/process_commands/hooks"
 require "bluepill/process_commands/stop_signals"

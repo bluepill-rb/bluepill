@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   module ProcessConditions
     # A check that always passes, for testing a config: `checks :always_true`

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   module ProcessConditions
     # Checks a process's CPU usage, as a percentage

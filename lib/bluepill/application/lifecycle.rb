@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   class Application
     # Start the daemon, run it until a signal stops it, and clean up after

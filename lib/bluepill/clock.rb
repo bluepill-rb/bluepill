@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   # The clock that times ticks, checks and grace times
   #

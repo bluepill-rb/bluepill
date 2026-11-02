@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill do
   describe ".setup_bundler" do
     before do

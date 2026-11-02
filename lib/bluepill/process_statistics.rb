@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 module Bluepill
   # Keeps a process's last few events, which bluepill status shows
   #
   # @api private
   class ProcessStatistics
     # How status shows each event's time
-    STRFTIME = "%m/%d/%Y %H:%M:%S".freeze
+    STRFTIME = "%m/%d/%Y %H:%M:%S"
 
     # How many events are kept
     EVENTS_TO_PERSIST = 10

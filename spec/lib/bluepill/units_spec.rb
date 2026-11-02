@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::Units do
   # The module's own method, whatever Numeric has, such as ActiveSupport's
   def units(number, method)

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   module ProcessCommands
     # Runs the commands a Process has around its starts and stops, and on

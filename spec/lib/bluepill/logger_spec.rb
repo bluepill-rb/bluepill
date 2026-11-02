@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 require "syslog"
 require "tmpdir"
 
 # A stand-in for the syslog library, for the specs that load it
-FAKE_SYSLOG = <<-RUBY.freeze
+FAKE_SYSLOG = <<-RUBY
   module Syslog
     LOG_PID = 1
     LOG_LOCAL6 = 176

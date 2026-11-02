@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A config that loads ActiveSupport before bluepill, as one that loads a
 # Rails app does, so 10.seconds is an ActiveSupport::Duration. Run by
 # spec/configs_spec.rb, which expects it to print "ok".

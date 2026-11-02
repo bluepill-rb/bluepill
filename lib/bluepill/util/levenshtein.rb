@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   module Util
     # Return how many edits turn one string into another

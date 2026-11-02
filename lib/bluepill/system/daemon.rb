@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "shellwords"
 require "bluepill/daemonize"
 require "bluepill/system/command_setup"

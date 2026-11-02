@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::ProcessConditions do
   describe ".[]" do
     it "looks up process conditions by name" do

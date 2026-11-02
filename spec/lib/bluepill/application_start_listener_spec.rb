@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::Application do
   let(:logger) { instance_double(Bluepill::Logger) }
   let(:app) { described_class.new("test", base_dir: "/var/bluepill") }

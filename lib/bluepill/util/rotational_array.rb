@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   # Small helpers for the rest of bluepill
   #

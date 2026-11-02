@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::ProcessConditions::AlwaysTrue do
   subject(:condition) { described_class.new(below: 5) }
 

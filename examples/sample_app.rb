@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Monitors sample_forking_server, an echo server with three workers.
 #
 # Start it from the root of this repository:

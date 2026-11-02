@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   module ProcessCommands
     # Stops a Process with its stop_signals: a signal, then a delay and a

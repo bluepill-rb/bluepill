@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bluepill
   # Read the pid file of a bluepill daemon
   #

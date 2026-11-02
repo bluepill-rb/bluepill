@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::ProcessProxy do
   describe "#initialize" do
     it "evaluates a block without arguments in the context of the proxy" do

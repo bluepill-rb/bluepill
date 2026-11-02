@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Bluepill::Process::Watches do
   subject(:watches) { described_class.new }
 

@@ -21,14 +21,14 @@ module Bluepill
     def self.check_attribute(name, key)
       form = name.to_s
       if form.end_with?("!")
-        warn([:attribute_bang, key], "bluepill 0.3.0 removes process.#{form}. Write process.#{key} = true, which 0.2 takes too.")
+        warn("bluepill 0.3.0 removes process.#{form}. Write process.#{key} = true, which 0.2 takes too.")
       elsif !form.end_with?("=")
-        warn([:attribute_value, key], "bluepill 0.3.0 removes process.#{key} value. Write process.#{key} = value, which 0.2 takes too.")
+        warn("bluepill 0.3.0 removes process.#{key} value. Write process.#{key} = value, which 0.2 takes too.")
       end
       return unless CHILD_ATTRIBUTES.include?(key)
 
-      warn([:child_attribute, key], "bluepill 0.3.0 doesn't let a process block set #{key}. " \
-                                    "Call process.monitor_children with a block that configures the children, which 0.2 takes too.")
+      warn("bluepill 0.3.0 doesn't let a process block set #{key}. " \
+           "Call process.monitor_children with a block that configures the children, which 0.2 takes too.")
     end
 
     # Warn about monitor_children without a block, which 0.3.0 rejects
@@ -42,8 +42,8 @@ module Bluepill
     def self.check_monitor_children(process_name, block)
       return if block
 
-      warn([:monitor_children_block, process_name], "bluepill 0.3.0 fails the config when monitor_children has no block, " \
-                                                    "as for process '#{process_name}'. Give it a block that sets the children's stop_command.")
+      warn("bluepill 0.3.0 fails the config when monitor_children has no block, " \
+           "as for process '#{process_name}'. Give it a block that sets the children's stop_command.")
     end
 
     # Warn about a monitor_children block that sets no stop_command
@@ -58,9 +58,9 @@ module Bluepill
     def self.check_child_stop_command(parent_name, attributes)
       return if attributes.key?(:stop_command)
 
-      warn([:child_stop_command, parent_name], "bluepill 0.3.0 fails the config when a monitor_children block sets no stop_command, " \
-                                               "as for the children of '#{parent_name}', where 0.2 exits the daemon when it first finds a child. " \
-                                               "Set the children's stop_command in the block.")
+      warn("bluepill 0.3.0 fails the config when a monitor_children block sets no stop_command, " \
+           "as for the children of '#{parent_name}', where 0.2 exits the daemon when it first finds a child. " \
+           "Set the children's stop_command in the block.")
     end
 
     # Warn about a daemon older than 0.2.9, which 0.3.0's CLI refuses
@@ -76,8 +76,8 @@ module Bluepill
     def self.check_daemon_version(version)
       return if version.instance_of?(String)
 
-      warn(:daemon_version, "this daemon runs a bluepill older than 0.2.9, which the CLI of bluepill 0.3.0 says is out of date. " \
-                            "Run bluepill load again, so the daemon runs this version.")
+      warn("this daemon runs a bluepill older than 0.2.9, which the CLI of bluepill 0.3.0 says is out of date. " \
+           "Run bluepill load again, so the daemon runs this version.")
     end
 
     # The options that 0.3.0's Bluepill.application takes
@@ -102,8 +102,8 @@ module Bluepill
       options = args.last
       return unless options.is_a?(Hash) && !Hash.ruby2_keywords_hash?(options)
 
-      warn([:keywords, call.split.first], "bluepill 0.3.0 takes the options of #{call} only as keyword arguments, " \
-                                          "so options kept in a Hash fail unless they're passed with **. Write #{call}, **options, which 0.2 takes too.")
+      warn("bluepill 0.3.0 takes the options of #{call} only as keyword arguments, " \
+           "so options kept in a Hash fail unless they're passed with **. Write #{call}, **options, which 0.2 takes too.")
     end
 
     # Warn about an application option that 0.3.0 rejects
@@ -115,8 +115,8 @@ module Bluepill
     # @api private
     def self.check_application_options(options)
       (options.keys - APPLICATION_OPTIONS).each do |option|
-        warn([:application_option, option], "bluepill 0.3.0 rejects the application option #{option}:, which 0.2 ignores. " \
-                                            "Remove it, or fix its name.")
+        warn("bluepill 0.3.0 rejects the application option #{option}:, which 0.2 ignores. " \
+             "Remove it, or fix its name.")
       end
     end
 
@@ -124,15 +124,14 @@ module Bluepill
     #
     # Bluepill 0.2 keeps only the last of them, and 0.3.0 runs them all.
     #
-    # @param [String] process_name the process's name
     # @param [Symbol] name the check's name
     #
     # @return [void]
     #
     # @api private
-    def self.check_duplicate_check(process_name, name)
-      warn([:duplicate_check, name], "process '#{process_name}' has two checks #{name.inspect}. Bluepill 0.2 runs only the last, " \
-                                     "and 0.3.0 runs both. Remove the one you don't want.")
+    def self.check_duplicate_check(name)
+      warn("bluepill 0.3.0 runs every check of a process, so a process with two checks #{name.inspect} runs both, " \
+           "where 0.2 runs only the last. Remove the one you don't want.")
     end
   end
 end

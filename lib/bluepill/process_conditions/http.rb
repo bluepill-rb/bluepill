@@ -100,9 +100,9 @@ module Bluepill
       def warn_unverified(options)
         return unless @uri.scheme.eql?("https") && !options.key?(:verify_ssl)
 
-        Deprecation.warn([:verify_ssl, @uri.to_s], "bluepill 0.3.0 verifies the certificate of an https check, so the check of #{@uri} fails " \
-                                                  "if its certificate is self-signed or otherwise invalid. Add verify_ssl: true to verify it now, " \
-                                                  "or verify_ssl: false to keep checking it without verification.")
+        Deprecation.warn("bluepill 0.3.0 verifies the certificate of an https check, so the check of #{@uri} fails " \
+                         "if its certificate is self-signed or otherwise invalid. Add verify_ssl: true to verify it now, " \
+                         "or verify_ssl: false to keep checking it without verification.")
       end
 
       # Return the Net::HTTPResponse class of a kind of response

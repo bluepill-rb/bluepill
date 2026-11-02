@@ -57,8 +57,8 @@ describe Bluepill::Deprecation do
 
     it "warns about a second check of the same name" do
       expect { checks(:cpu_usage, :cpu_usage) }.to output(
-        "DEPRECATION: process 'web' has two checks :cpu_usage. Bluepill 0.2 runs only the last, " \
-        "and 0.3.0 runs both. Remove the one you don't want.\n"
+        "DEPRECATION: bluepill 0.3.0 runs every check of a process, so a process with two checks :cpu_usage runs both, " \
+        "where 0.2 runs only the last. Remove the one you don't want.\n"
       ).to_stderr
     end
 

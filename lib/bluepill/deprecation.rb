@@ -1,14 +1,17 @@
 # frozen_string_literal: true
 
+require "set"
+
 module Bluepill
   # Warn, once each, about what bluepill 0.3.0 changes
   #
   # `bluepill load` loads a pill file before the daemon detaches, so a
   # warning goes to stderr, where the user sees it, and to bluepill's log at
-  # warning, once there's a logger.
+  # warning, once there's a logger. Each warning names what it's about, so
+  # it's given once for each message.
   #
   # @example
-  #   Bluepill::Deprecation.warn(:evry, "bluepill 0.3.0 rejects the check option evry:. Remove it, or fix its name.")
+  #   Bluepill::Deprecation.warn("bluepill 0.3.0 rejects the check option evry:. Remove it, or fix its name.")
   #   # DEPRECATION: bluepill 0.3.0 rejects the check option evry:. Remove it, or fix its name.
   #
   # @api private
@@ -16,23 +19,20 @@ module Bluepill
     # The Ruby that bluepill 0.3.0 needs, or newer
     RUBY_REQUIRED = Gem::Version.new("3.0")
 
-    @warned = {} #: Hash[untyped, bool]
+    @warned = Set.new #: Set[String]
     @logger = nil #: Logger?
 
-    # Warn about a change, unless a warning of the same key was given
+    # Warn about a change, unless the same warning was given
     #
-    # @param [Object] key what the warning is about, such as
-    #   [:check_option, :mem_usage, :evry]
     # @param [String] message what changes, in which version, and what to
     #   do now
     #
     # @return [void]
     #
     # @api private
-    def self.warn(key, message)
-      return if @warned.key?(key)
+    def self.warn(message)
+      return unless @warned.add?(message)
 
-      @warned[key] = true
       line = "DEPRECATION: #{message}"
       $stderr.puts(line)
       @logger&.warning(line)
@@ -81,8 +81,8 @@ module Bluepill
     def self.check_ruby(version = RUBY_VERSION)
       return unless Gem::Version.new(version) < RUBY_REQUIRED
 
-      warn(:ruby, "bluepill 0.3.0 needs Ruby 3.0 or newer, or JRuby 9.4 or newer, and this is Ruby #{version}. " \
-                  "Upgrade Ruby before you upgrade bluepill, or stay on 0.2.9.")
+      warn("bluepill 0.3.0 needs Ruby 3.0 or newer, or JRuby 9.4 or newer, and this is Ruby #{version}. " \
+           "Upgrade Ruby before you upgrade bluepill, or stay on 0.2.9.")
     end
   end
 end

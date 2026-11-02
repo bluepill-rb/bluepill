@@ -24,9 +24,9 @@ module Bluepill
       warn_check_methods(klass, base)
       return unless klass < ProcessConditions::MemUsage
 
-      warn([:mem_usage_subclass, klass], "bluepill 0.3.0 gives a check that subclasses MemUsage the memory usage in bytes, " \
-                                         "where 0.2 gives kilobytes, so the run, check? and format_value of #{klass} " \
-                                         "get values 1024 times larger. Change them when you upgrade.")
+      warn("bluepill 0.3.0 gives a check that subclasses MemUsage the memory usage in bytes, " \
+           "where 0.2 gives kilobytes, so the run, check? and format_value of #{klass} " \
+           "get values 1024 times larger. Change them when you upgrade.")
     end
 
     # Warn about what a custom trigger's class does that 0.3.0 rejects
@@ -43,8 +43,8 @@ module Bluepill
       warn_positional_options(klass, "trigger", 1)
       return unless klass.instance_method(:notify).owner.equal?(Trigger)
 
-      warn([:trigger_methods, klass], "bluepill 0.3.0 fails the config when a trigger doesn't define notify, " \
-                                      "and #{klass} doesn't. Define it, or remove the trigger.")
+      warn("bluepill 0.3.0 fails the config when a trigger doesn't define notify, " \
+           "and #{klass} doesn't. Define it, or remove the trigger.")
     end
 
     # Warn about a check or trigger whose initialize didn't keep its logger
@@ -63,8 +63,8 @@ module Bluepill
     def self.check_logger(check, logger)
       return unless logger && check.logger.nil?
 
-      warn([:no_logger, check.class], "bluepill 0.3.0 gives #{check.class} its logger only through super, " \
-                                      "which its initialize doesn't call, so it has no logger. Call super(**options) in its initialize.")
+      warn("bluepill 0.3.0 gives #{check.class} its logger only through super, " \
+           "which its initialize doesn't call, so it has no logger. Call super(**options) in its initialize.")
     end
 
     # Warn when code outside bluepill sets a check's or trigger's logger
@@ -83,8 +83,8 @@ module Bluepill
       path = location&.path
       return if path.nil? || File.expand_path(path).start_with?(LIB_DIR)
 
-      warn([:logger_writer, check.class], "bluepill 0.3.0 removes the logger= of checks and triggers, which #{location} " \
-                                          "calls on #{check.class}. Let it get its logger from super(**options) in its initialize.")
+      warn("bluepill 0.3.0 removes the logger= of checks and triggers, which #{location} " \
+           "calls on #{check.class}. Let it get its logger from super(**options) in its initialize.")
     end
 
     # Warn about a trigger that dispatches an event that isn't a Symbol
@@ -100,8 +100,8 @@ module Bluepill
     def self.check_trigger_event(trigger, event)
       return if event.is_a?(Symbol)
 
-      warn([:trigger_event, trigger.class], "bluepill 0.3.0 takes a process's events only as Symbols, so #{trigger.class} " \
-                                            "fails when it dispatches #{event.inspect}. Dispatch #{event.to_s.to_sym.inspect}, which 0.2.9 takes too.")
+      warn("bluepill 0.3.0 takes a process's events only as Symbols, so #{trigger.class} " \
+           "fails when it dispatches #{event.inspect}. Dispatch #{event.to_s.to_sym.inspect}, which 0.2.9 takes too.")
     end
 
     # Warn about a custom initialize that takes its options by position
@@ -118,10 +118,10 @@ module Bluepill
       initialize = klass.instance_method(:initialize)
       return unless custom?(initialize) && positional_options?(initialize, positional)
 
-      warn([:positional_options, klass], "bluepill 0.3.0 passes a #{kind}'s options as keyword arguments, " \
-                                         "so the initialize of #{klass}, which takes them as a Hash, fails when it calls super. " \
-                                         "Name the options it needs, as in def initialize(path:, below:, **options), " \
-                                         "and call super(**options), which 0.2.9 takes too.")
+      warn("bluepill 0.3.0 passes a #{kind}'s options as keyword arguments, " \
+           "so the initialize of #{klass}, which takes them as a Hash, fails when it calls super. " \
+           "Name the options it needs, as in def initialize(path:, below:, **options), " \
+           "and call super(**options), which 0.2.9 takes too.")
     end
 
     # Warn about a custom check that defines check, or not run and check?
@@ -136,8 +136,8 @@ module Bluepill
       defines_check = !klass.instance_method(:check).owner.equal?(base)
       defines_predicate = !klass.instance_method(:check?).owner.equal?(base)
       if defines_check && !defines_predicate
-        warn([:check_method, klass], "bluepill 0.3.0 calls only check?, so #{klass}, which defines check, fails the config. " \
-                                     "Rename its check method check?, which 0.2.9 calls too.")
+        warn("bluepill 0.3.0 calls only check?, so #{klass}, which defines check, fails the config. " \
+             "Rename its check method check?, which 0.2.9 calls too.")
       end
       warn_missing_methods(klass, base, defines_check || defines_predicate)
     end
@@ -157,8 +157,8 @@ module Bluepill
       missing << "check?" unless checks
       return if missing.empty?
 
-      warn([:check_methods, klass], "bluepill 0.3.0 fails the config when a check doesn't define run and check?, " \
-                                    "and #{klass} doesn't define #{missing.join(" or ")}. Define it, or remove the check.")
+      warn("bluepill 0.3.0 fails the config when a check doesn't define run and check?, " \
+           "and #{klass} doesn't define #{missing.join(" or ")}. Define it, or remove the check.")
     end
 
     # Return whether a method is defined outside bluepill's own code

@@ -5,20 +5,21 @@ describe Bluepill::Deprecation do
 
   describe ".warn" do
     it "writes the message to stderr" do
-      expect { described_class.warn(:key, "it changes") }.to output("DEPRECATION: it changes\n").to_stderr
+      expect { described_class.warn("it changes") }.to output("DEPRECATION: it changes\n").to_stderr
     end
 
     it "warns once for each key" do
       expect do
-        2.times { described_class.warn(:key, "it changes") }
-        described_class.warn(:other, "so does this")
+        2.times { described_class.warn("it changes") }
+        described_class.warn("so does this")
+        described_class.warn("it changes")
       end.to output("DEPRECATION: it changes\nDEPRECATION: so does this\n").to_stderr
     end
 
     it "logs the message at warning when there's a logger" do
       allow($stderr).to receive(:puts)
       described_class.logger = logger
-      described_class.warn(:key, "it changes")
+      described_class.warn("it changes")
       expect(logger).to have_received(:warning).with("DEPRECATION: it changes")
     end
   end
@@ -34,12 +35,12 @@ describe Bluepill::Deprecation do
     before do
       allow($stderr).to receive(:puts)
       described_class.logger = logger
-      described_class.warn(:key, "it changes")
+      described_class.warn("it changes")
       described_class.reset!
     end
 
     it "forgets the warnings given" do
-      expect { described_class.warn(:key, "it changes") }.to output("DEPRECATION: it changes\n").to_stderr
+      expect { described_class.warn("it changes") }.to output("DEPRECATION: it changes\n").to_stderr
     end
 
     it "forgets the logger" do

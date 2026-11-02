@@ -155,7 +155,7 @@ module Bluepill
       raise ArgumentError, "wrong number of arguments (given #{args.size + 1}, expected 1..2)" if args.size > 1
 
       Deprecation.check_keywords(args, "process.checks #{name.inspect}")
-      Deprecation.check_duplicate_check(@name, name) if @watches.key?(name)
+      Deprecation.check_duplicate_check(name) if @watches.key?(name)
       @watches[name] = args.fetch(0) { {} }
     end
     # Mark a Hash passed as keywords, so a Hash passed without ** can warn

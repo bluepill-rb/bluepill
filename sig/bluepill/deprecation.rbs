@@ -3,11 +3,11 @@ module Bluepill
   module Deprecation
     RUBY_REQUIRED: Gem::Version
 
-    self.@warned: Hash[untyped, bool]
+    self.@warned: Set[String]
     self.@logger: Logger?
 
-    # Warns about a change, unless a warning of the same key was given
-    def self.warn: (untyped key, String message) -> void
+    # Warns about a change, unless the same warning was given
+    def self.warn: (String message) -> void
 
     def self.logger: () -> Logger?
 
@@ -62,7 +62,7 @@ module Bluepill
 
     def self.check_application_options: (Hash[Symbol, untyped] options) -> void
 
-    def self.check_duplicate_check: (String process_name, Symbol name) -> void
+    def self.check_duplicate_check: (Symbol name) -> void
 
     EVENTS: Array[Symbol]
     EVENTS_LIST: String

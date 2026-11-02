@@ -72,8 +72,8 @@ module Bluepill
     # @api private
     def self.warn_unknown_options(check, unknown)
       unknown.each do |option|
-        warn([:check_option, check, option], "bluepill 0.3.0 rejects the option #{option}: of checks #{check.inspect}, which 0.2 ignores. " \
-                                             "Remove it, or fix its name.")
+        warn("bluepill 0.3.0 rejects the option #{option}: of checks #{check.inspect}, which 0.2 ignores. " \
+             "Remove it, or fix its name.")
       end
     end
 
@@ -87,8 +87,8 @@ module Bluepill
     # @api private
     def self.warn_missing_options(check, missing)
       missing.each do |option|
-        warn([:missing_option, check, option], "bluepill 0.3.0 fails the config when checks #{check.inspect} has no #{option}: option, " \
-                                               "which it needs to check anything in 0.2 too. Add it.")
+        warn("bluepill 0.3.0 fails the config when checks #{check.inspect} has no #{option}: option, " \
+             "which it needs to check anything in 0.2 too. Add it.")
       end
     end
 
@@ -118,8 +118,8 @@ module Bluepill
       unknown = events - EVENTS
       return if unknown.empty?
 
-      warn([:fires, name, unknown], "bluepill 0.3.0 takes fires: only as #{EVENTS_LIST}, so fires: #{unknown.collect(&:inspect).join(", ")} " \
-                                    "of checks #{name.to_sym.inspect} fails the config. Use the Symbols, such as fires: :stop.")
+      warn("bluepill 0.3.0 takes fires: only as #{EVENTS_LIST}, so fires: #{unknown.collect(&:inspect).join(", ")} " \
+           "of checks #{name.to_sym.inspect} fails the config. Use the Symbols, such as fires: :stop.")
     end
 
     # Warn about a process's on_start_timeout that 0.3.0 rejects
@@ -136,8 +136,8 @@ module Bluepill
       event = attributes.fetch(:on_start_timeout)
       return if EVENTS.include?(event)
 
-      warn([:on_start_timeout, event], "bluepill 0.3.0 takes on_start_timeout only as #{EVENTS_LIST}, so process '#{process_name}''s " \
-                                       "on_start_timeout of #{event.inspect} fails the config. Use the Symbols, such as on_start_timeout = :unmonitor.")
+      warn("bluepill 0.3.0 takes on_start_timeout only as #{EVENTS_LIST}, so process '#{process_name}''s " \
+           "on_start_timeout of #{event.inspect} fails the config. Use the Symbols, such as on_start_timeout = :unmonitor.")
     end
   end
 end

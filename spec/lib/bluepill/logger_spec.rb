@@ -2,6 +2,15 @@ require 'syslog'
 require 'tmpdir'
 
 describe Bluepill::Logger do
+  # A logger that the block can stub before it initializes, such as its
+  # require
+  def logger_with(options = {})
+    logger = described_class.allocate
+    yield logger
+    logger.send(:initialize, options)
+    logger
+  end
+
   around do |example|
     Dir.mktmpdir do |dir|
       @log_file = File.join(dir, 'bluepill.log')
@@ -28,13 +37,14 @@ describe Bluepill::Logger do
 
     it 'explains how to fix a missing syslog library' do
       hide_const('Syslog')
-      allow_any_instance_of(described_class).to receive(:require).with('syslog').and_raise(LoadError)
-      expect { described_class.new }.to raise_error(LoadError, /add gem 'syslog' to your Gemfile or set log_file/)
+      expect do
+        logger_with { |logger| allow(logger).to receive(:require).with('syslog').and_raise(LoadError) }
+      end.to raise_error(LoadError, /add gem 'syslog' to your Gemfile or set log_file/)
     end
 
     it 'does not load syslog when logging to a log file' do
-      expect_any_instance_of(described_class).not_to receive(:require)
-      described_class.new(log_file: @log_file)
+      logger = logger_with(log_file: @log_file) { |l| allow(l).to receive(:require) }
+      expect(logger).not_to have_received(:require)
     end
 
     it 'logs to a log file' do
@@ -228,8 +238,9 @@ describe Bluepill::Logger do
 
     it 'does not require syslog again once it is loaded' do
       allow(Syslog).to receive(:open).and_return(double('syslog'))
-      expect_any_instance_of(described_class).not_to receive(:require)
-      described_class.new.reopen
+      logger = logger_with { |l| allow(l).to receive(:require) }
+      logger.reopen
+      expect(logger).not_to have_received(:require)
     end
 
     it 'reopens the parent logger of a prefixed logger' do

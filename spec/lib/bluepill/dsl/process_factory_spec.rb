@@ -68,9 +68,10 @@ describe Bluepill::ProcessFactory do
       expect(process.monitor_children).to be true
       expect(process.child_process_factory).to be_a(described_class)
       expect(process.child_process_factory.attributes).not_to have_key(:child_process_block)
-      expect_any_instance_of(Bluepill::Process).to receive(:determine_initial_state)
+      allow(::Process).to receive(:kill).with(0, 123).and_return(1)
       child = process.child_process_factory.create_child_process('child', 123, instance_double(Bluepill::Logger))
       expect(child.stop_command).to eq('halt')
+      expect(child.state).to eq('up')
     end
 
     it 'does not create a child process factory when monitor_children is false' do
@@ -266,11 +267,12 @@ describe Bluepill::ProcessFactory do
     let(:attributes) { {start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 5, uid: 'user', gid: 'staff', supplementary_groups: ['rvm'], working_dir: '/srv'} }
 
     it 'creates a child process with the grace times, user and groups of its parent' do
-      expect_any_instance_of(Bluepill::Process).to receive(:determine_initial_state)
+      allow(::Process).to receive(:kill).with(0, 123).and_return(1)
       factory = described_class.new(attributes, proc { stop_command 'halt' })
       child = factory.create_child_process('child', 123, logger)
 
       expect(child).to be_a(Bluepill::Process)
+      expect(child.state).to eq('up')
       expect(child.name).to eq('child')
       expect(child.actual_pid).to eq(123)
       expect(child.logger).to eq(logger)
@@ -281,7 +283,7 @@ describe Bluepill::ProcessFactory do
     end
 
     it 'gives a child the default grace times when its parent sets none' do
-      allow_any_instance_of(Bluepill::Process).to receive(:determine_initial_state)
+      allow(::Process).to receive(:kill).with(0, 123).and_return(1)
       factory = described_class.new({}, proc { stop_command 'halt' })
       child = factory.create_child_process('child', 123, logger)
       expect([child.start_grace_time, child.stop_grace_time, child.restart_grace_time]).to eq([3, 3, 3])

@@ -55,6 +55,16 @@ describe Bluepill::Process do
   # cleanups, the pid file deletions and the commands run. Signal 0 finds
   # the process running until it has been sent alive times.
   def record_calls(alive = nil)
+    calls = record_signals(alive)
+    allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal) { calls << :cleanup }
+    allow(Bluepill::System).to receive(:delete_if_exists) { calls << :unlink }
+    allow(Bluepill::System).to receive(:execute_blocking) { |command, _options| {exit_code: 0}.tap { calls << command } }
+    calls
+  end
+
+  # Record the signals sent, with their pids. Signal 0 finds the process
+  # running until it has been sent alive times.
+  def record_signals(alive)
     calls = []
     allow(::Process).to receive(:kill) do |signal, pid|
       calls << [signal, pid]
@@ -62,9 +72,6 @@ describe Bluepill::Process do
 
       1
     end
-    allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal) { calls << :cleanup }
-    allow(Bluepill::System).to receive(:delete_if_exists) { calls << :unlink }
-    allow(Bluepill::System).to receive(:execute_blocking) { |command, _options| {exit_code: 0}.tap { calls << command } }
     calls
   end
 

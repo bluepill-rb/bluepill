@@ -88,16 +88,36 @@ describe Bluepill::Process do
   # notifies nothing. Starting cleans up threads first, and restarting stops
   # and then starts.
   def callbacks(from, to)
-    expected = [[:notify_triggers, from.to_sym, to.to_sym, from == to, from]]
-    expected << [:clean_threads, from] if from == "stopping"
-    case to
-    when "starting" then expected << [:clean_threads, to] << [:start_process, to]
-    when "stopping" then expected << [:stop_process, to]
-    when "restarting" then expected << [:stop_process, to] << [:clean_threads, to] << [:start_process, to]
-    end
+    expected = before_callbacks(from, to) + command_callbacks(to)
     return expected if from == to
 
-    expected << [:record_transition, to]
+    expected + after_callbacks(from, to)
+  end
+
+  # The callbacks before a transition: the triggers hear of it, and leaving
+  # stopping cleans up threads
+  def before_callbacks(from, to)
+    expected = [[:notify_triggers, from.to_sym, to.to_sym, from == to, from]]
+    expected << [:clean_threads, from] if from == "stopping"
+    expected
+  end
+
+  # The callbacks that start, stop or restart the process for the state it
+  # reached
+  def command_callbacks(to)
+    case to
+    when "starting" then [[:clean_threads, to], [:start_process, to]]
+    when "stopping" then [[:stop_process, to]]
+    when "restarting" then [[:stop_process, to], [:clean_threads, to], [:start_process, to]]
+    else []
+    end
+  end
+
+  # The callbacks after a change of state: the watches forget it, a start
+  # or restart that came up runs post_start_command, and then
+  # notify_command runs
+  def after_callbacks(from, to)
+    expected = [[:record_transition, to]]
     expected << [:post_start_process, to] if to == "up" && %w[starting restarting].include?(from)
     expected << [:notify_transition, from, to, to]
   end

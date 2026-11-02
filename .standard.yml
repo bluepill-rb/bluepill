@@ -9,3 +9,14 @@ ignore:
   # warn, and lets the specs capture them
   - '**/*':
       - Style/StderrPuts
+  # Daemonizing and running commands reopen file descriptors 0, 1 and 2,
+  # which STDIN, STDOUT and STDERR always are. $stdout and the others can
+  # be reassigned, say to a StringIO, which reopen wouldn't detach.
+  - 'lib/bluepill/daemonize.rb':
+      - Style/GlobalStdStream
+  - 'lib/bluepill/system/commands.rb':
+      - Style/GlobalStdStream
+  - 'spec/lib/bluepill/daemonize_spec.rb':
+      - Style/GlobalStdStream
+  - 'spec/lib/bluepill/system_execute_blocking_spec.rb':
+      - Style/GlobalStdStream

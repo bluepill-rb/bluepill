@@ -90,6 +90,8 @@ Style/FormatStringToken:
 Style/StderrPuts:
   Enabled: false
 
+# Daemonizing and running commands reopen file descriptors 0, 1 and 2,
+# which STDIN, STDOUT and STDERR always are
 Style/GlobalStdStream:
   Enabled: false
 

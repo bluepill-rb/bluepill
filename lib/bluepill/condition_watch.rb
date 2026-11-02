@@ -110,9 +110,8 @@ module Bluepill
 
     # Create the check, with the options the watch doesn't take for itself
     #
-    # The condition gets the logger while it's created, so its own
-    # initialize can log, and again after, in case that initialize doesn't
-    # call super.
+    # The condition gets the watch's logger as its logger: option, so its
+    # own initialize can log once it has called super.
     #
     # @param [Hash{Symbol => Object}] options the check's own options
     #
@@ -121,22 +120,6 @@ module Bluepill
     # @api private
     def create_condition(options)
       @process_condition = CheckRegistry.fetch(@name).new(**options, logger: @logger)
-      self.logger = @logger
-    end
-
-    # Set the logger the watch and its condition write to
-    #
-    # The process sets its watches' logger again when it gets a logger of
-    # its own, such as one with its group's name.
-    #
-    # @param [Logger] logger the process's logger
-    #
-    # @return [void]
-    #
-    # @api private
-    def logger=(logger)
-      @logger = logger
-      @process_condition.logger = logger
     end
 
     # Return whether the check is due

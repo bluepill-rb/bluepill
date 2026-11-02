@@ -81,10 +81,8 @@ describe Bluepill::Process do
         expect(process.watches.first.instance_variable_get(:@every)).to eq 10
       end
 
-      it "propagates a new logger to watches and triggers" do
-        new_logger = instance_double(Bluepill::Logger).as_null_object
-        process.logger = new_logger
-        expect([process, process.watches.first, process.triggers.first].collect(&:logger)).to all(be new_logger)
+      it "keeps the logger it gives its watches and triggers" do
+        expect([process, process.watches.first, process.triggers.first].collect(&:logger)).to all(be logger)
       end
     end
 
@@ -254,7 +252,7 @@ describe Bluepill::Process do
         errors
         process.state = :up
         run_process
-        process.triggers << instance_double(Bluepill::Trigger, "trigger", :logger= => nil).tap { |t| allow(t).to receive(:notify).and_raise(error) }
+        process.triggers << instance_double(Bluepill::Trigger, "trigger").tap { |t| allow(t).to receive(:notify).and_raise(error) }
       end
 
       it "logs the error and its backtrace" do
@@ -627,7 +625,7 @@ describe Bluepill::Process do
     end
 
     context "with unmonitor" do
-      let(:trigger) { instance_double(Bluepill::Trigger, "trigger", :logger= => nil, :notify => nil, :reset! => nil) }
+      let(:trigger) { instance_double(Bluepill::Trigger, "trigger", notify: nil, reset!: nil) }
 
       before do
         process.triggers << trigger

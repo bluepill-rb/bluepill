@@ -81,7 +81,7 @@ module Bluepill
     def initialize: (Hash[Symbol, untyped] attributes, process_block process_block, ?Registry registry) -> void
 
     # The process, and the group its block set
-    def create_process: (String name, String pids_dir) -> [Process, untyped]
+    def create_process: (String name, String pids_dir, logger: Logger) -> [Process, untyped]
 
     private
 

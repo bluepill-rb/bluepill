@@ -2,13 +2,16 @@
 
 describe Bluepill::ProcessFactory do
   let(:registry) { Bluepill::ProcessFactory::Registry.new }
+  # The application's logger, whose prefixed loggers are memoized, so a
+  # spec can find the one a process got
+  let(:logger) { Bluepill::Logger.new(logger: instance_double(Bluepill::Logger::LoggerAdapter)) }
 
   # Silence the warning for processes without a known pid. The output
   # matcher swaps $stderr, so specs can still check what is written.
   before { allow($stderr).to receive(:puts) }
 
   def create(name, block, attributes = {})
-    process, = Bluepill::ProcessFactory.new(attributes, block, registry).create_process(name, "/pids")
+    process, = Bluepill::ProcessFactory.new(attributes, block, registry).create_process(name, "/pids", logger: logger)
     process
   end
 
@@ -48,24 +51,37 @@ describe Bluepill::ProcessFactory do
         self.start_command = "run"
         self.group = "servers"
       end, registry)
-      expect(factory.create_process("web", "/pids")).to match([be_a(Bluepill::Process), "servers"])
+      expect(factory.create_process("web", "/pids", logger: logger)).to match([be_a(Bluepill::Process), "servers"])
     end
 
     it "returns no group when the process has none" do
       factory = described_class.new({}, proc { self.start_command = "run" }, registry)
-      expect(factory.create_process("web", "/pids")).to match([be_a(Bluepill::Process), nil])
+      expect(factory.create_process("web", "/pids", logger: logger)).to match([be_a(Bluepill::Process), nil])
+    end
+
+    it "gives the process the app's logger, prefixed with its group's name and its own" do
+      process = create("web", proc do
+        self.start_command = "run"
+        self.group = :servers
+      end)
+      expect(process.logger).to be(logger.prefix_with("servers").prefix_with("web"))
+    end
+
+    it "gives a process without a group the app's logger, prefixed with its name" do
+      process = create("web", proc { self.start_command = "run" })
+      expect(process.logger).to be(logger.prefix_with(nil).prefix_with("web"))
     end
 
     it "leaves the factory's attributes as they were" do
       attributes = {uid: "user"}
       block = proc { |p| p.monitor_children { self.stop_command = "halt" } && p.start_command = "run" }
-      described_class.new(attributes, block, registry).create_process("web", "/pids")
+      described_class.new(attributes, block, registry).create_process("web", "/pids", logger: logger)
       expect(attributes).to eq(uid: "user")
     end
 
     it "checks each process against a registry of its own by default" do
-      described_class.new({}, proc { self.start_command = "run" }).create_process("web", "/pids")
-      expect { described_class.new({}, proc { self.start_command = "run" }).create_process("web", "/pids") }.not_to raise_error
+      described_class.new({}, proc { self.start_command = "run" }).create_process("web", "/pids", logger: logger)
+      expect { described_class.new({}, proc { self.start_command = "run" }).create_process("web", "/pids", logger: logger) }.not_to raise_error
     end
 
     context "when monitoring children" do

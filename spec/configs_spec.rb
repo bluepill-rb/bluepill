@@ -14,7 +14,7 @@ describe "The README and example configs", type: :integration do
   let(:processes) { {} }
 
   before do
-    app = instance_double(Bluepill::Application, pids_dir: "/tmp/pids", load: nil)
+    app = instance_double(Bluepill::Application, pids_dir: "/tmp/pids", logger: instance_double(Bluepill::Logger).as_null_object, load: nil)
     allow(app).to receive(:add_process) { |process, _group| processes[process.name] = process }
     allow(Bluepill::Application).to receive(:new).and_return(app)
   end

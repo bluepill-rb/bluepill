@@ -102,7 +102,10 @@ module Bluepill
     # @api private
     attr_reader :statistics
 
-    # Return the logger, prefixed with the process's name
+    # Return the logger, prefixed with the process's names
+    #
+    # The process gets it when it's made, prefixed with the names of its app,
+    # its group and itself, and gives it to its watches and triggers.
     #
     # @return [Logger]
     #
@@ -119,7 +122,8 @@ module Bluepill
     # @param [Hash{Symbol => Hash{Symbol => Object}}, Array<Array(Symbol, Hash{Symbol => Object})>]
     #   checks each check's name and options, as a Hash, or as a list of
     #   pairs, which can name a check twice
-    # @param [Logger, nil] logger the process's logger
+    # @param [Logger, nil] logger the process's logger, already prefixed with
+    #   its names, which its watches and triggers get too
     # @param [Integer, nil] actual_pid the pid of a child process that's
     #   already running
     # @param [Hash{Symbol => Object}] attributes the process's attributes,
@@ -182,19 +186,6 @@ module Bluepill
       children.each(&:tick)
     end
 
-    # Set the logger, for the process and for its watches and triggers
-    #
-    # @param [Logger] logger the logger to use
-    #
-    # @return [void]
-    #
-    # @api private
-    def logger=(logger)
-      @logger = logger
-      watches.logger = logger
-      triggers.logger = logger
-    end
-
     # Record an event and fire it on the state machine
     #
     # @param [Symbol] event the event, one of
@@ -223,7 +214,7 @@ module Bluepill
     # Set the logger, and add each check
     #
     # A check is a trigger if CheckRegistry finds a Trigger by its name, and
-    # a watch otherwise. Each gets the logger.
+    # a watch otherwise. Each gets the logger, which the process keeps.
     #
     # @param [Hash{Symbol => Hash{Symbol => Object}}, Array<Array(Symbol, Hash{Symbol => Object})>]
     #   checks each check's name and options, as a Hash, or as a list of
@@ -236,9 +227,9 @@ module Bluepill
     #
     # @api private
     def add_checks(checks, logger)
-      @watches = Watches.new
-      @triggers = Triggers.new
-      self.logger = logger
+      @logger = logger
+      @watches = Watches.new(logger: logger)
+      @triggers = Triggers.new(logger: logger)
       checks.each { |name, options| add_check(name, options) }
     end
 

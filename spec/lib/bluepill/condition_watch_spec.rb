@@ -56,12 +56,12 @@ describe Bluepill::ConditionWatch do
       expect([seen, w.instance_variable_get(:@process_condition).logger]).to eq([[logger, 5], logger])
     end
 
-    it "gives its logger to a condition whose initialize doesn't call super" do
+    it "gives the logger only through the condition's initialize, so one that doesn't call super has none" do
       stub_const("Bluepill::ProcessConditions::NoSuperCheck", Class.new(Bluepill::ProcessConditions::AlwaysTrue) do
         define_method(:initialize) { |**| nil }
       end)
       w = described_class.new(:no_super_check, logger: logger, every: 10)
-      expect(w.instance_variable_get(:@process_condition).logger).to equal(logger)
+      expect(w.instance_variable_get(:@process_condition).logger).to be_nil
     end
 
     it "exposes its name and logger" do
@@ -345,15 +345,6 @@ describe Bluepill::ConditionWatch do
       w = watch(times: [2, 3])
       w.clear_history!
       expect(run_at(w, 0, 10, 20)).to eq([[], [], [:restart]])
-    end
-  end
-
-  describe "#logger=" do
-    it "sets the logger of the watch and its condition" do
-      other = instance_double(Bluepill::Logger)
-      w = watch
-      w.logger = other
-      expect([w.logger, w.instance_variable_get(:@process_condition).logger]).to eq([other, other])
     end
   end
 end

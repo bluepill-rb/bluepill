@@ -15,12 +15,18 @@ module Bluepill
       # @api private
       attr_reader :logger
 
-      # Create an empty set of triggers
+      # Create an empty set of triggers, which write to a logger
+      #
+      # @param [Logger, nil] logger the process's logger, which each trigger
+      #   added gets too
       #
       # @return [void]
       #
       # @api private
-      def initialize = @triggers = []
+      def initialize(logger:)
+        @logger = logger
+        @triggers = []
+      end
 
       # Add a trigger of a class, for a process, with the triggers' logger
       #
@@ -53,18 +59,6 @@ module Bluepill
       #
       # @api private
       def each(&block) = @triggers.each(&block)
-
-      # Set the logger, for the triggers and for any added later
-      #
-      # @param [Logger] logger the logger to use
-      #
-      # @return [void]
-      #
-      # @api private
-      def logger=(logger)
-        @logger = logger
-        each { |trigger| trigger.logger = logger }
-      end
 
       # Tell every trigger about a transition, before it happens
       #

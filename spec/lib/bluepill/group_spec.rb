@@ -16,7 +16,7 @@ describe Bluepill::Group do
   # A process that records what it's told to do as [method, name, *args]
   def process_double(name)
     process = instance_double(Bluepill::Process, name, name: name)
-    %i[logger= tick determine_initial_state handle_user_command].each do |method|
+    %i[tick determine_initial_state handle_user_command].each do |method|
       allow(process).to receive(method) { |*args| calls << [method, name, *args] }
     end
     process
@@ -33,10 +33,11 @@ describe Bluepill::Group do
   end
 
   describe "#add_process" do
-    it "gives the process a prefixed logger and stores it" do
+    it "stores the process, after the others, and tells it nothing" do
+      first = process_double("first")
+      group.add_process(first)
       process = process_double("unicorn")
-      group.add_process(process)
-      expect([calls, group.processes]).to eq([[[:logger=, "unicorn", logger.prefix_with("unicorn")]], [process]])
+      expect([group.add_process(process), calls]).to eq([[first, process], []])
     end
   end
 
@@ -56,7 +57,7 @@ describe Bluepill::Group do
 
       # A real process whose state machine raises, or records its events
       def real_process(name, broken)
-        process = Bluepill::Process.new(name, [])
+        process = Bluepill::Process.new(name, [], logger: instance_double(Bluepill::Logger).as_null_object)
         if broken
           allow(process).to receive(:fire_event).and_raise("boom")
         else
@@ -66,7 +67,7 @@ describe Bluepill::Group do
       end
 
       it "ticks the other processes when one raises" do
-        group = described_class.new("web", logger: instance_double(Bluepill::Logger).as_null_object)
+        group = described_class.new("web")
         group.add_process(real_process("broken", true))
         group.add_process(real_process("healthy", false))
         group.tick

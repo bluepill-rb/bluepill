@@ -43,8 +43,7 @@ factory = Bluepill::ProcessFactory.new(
   },
   proc {}
 )
-process, = factory.create_process("active_support", "/tmp")
-process.logger = logger
+process, = factory.create_process("active_support", "/tmp", logger: logger)
 process.skip_ticks_for(process.start_grace_time)
 check("a grace time skips ticks") { process.skip_ticks_until - Bluepill::Clock.now >= 1 }
 check("a timeout of a few seconds") { process.with_timeout(2.seconds, :start) { :done }.equal?(:done) }

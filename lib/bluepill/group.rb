@@ -56,17 +56,17 @@ module Bluepill
       self.logger = logger
     end
 
-    # Add a process, giving it a logger prefixed with its name
+    # Add a process
+    #
+    # The process has its logger already, made when the process was, with
+    # the group's name and its own.
     #
     # @param [Process] process the process
     #
     # @return [Array<Process>] the group's processes
     #
     # @api private
-    def add_process(process)
-      process.logger = logger.prefix_with(process.name)
-      processes << process
-    end
+    def add_process(process) = processes << process
 
     # Tick every process in the group
     #

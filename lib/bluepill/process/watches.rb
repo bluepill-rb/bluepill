@@ -25,12 +25,18 @@ module Bluepill
       # @api private
       attr_reader :logger
 
-      # Create an empty set of watches
+      # Create an empty set of watches, which write to a logger
+      #
+      # @param [Logger, nil] logger the process's logger, which each watch
+      #   added gets too
       #
       # @return [void]
       #
       # @api private
-      def initialize = @watches = []
+      def initialize(logger:)
+        @logger = logger
+        @watches = []
+      end
 
       # Add a watch for a check, with the watches' logger
       #
@@ -62,18 +68,6 @@ module Bluepill
       #
       # @api private
       def each(&block) = @watches.each(&block)
-
-      # Set the logger, for the watches and for any added later
-      #
-      # @param [Logger] logger the logger to use
-      #
-      # @return [void]
-      #
-      # @api private
-      def logger=(logger)
-        @logger = logger
-        each { |watch| watch.logger = logger }
-      end
 
       # Forget what the watches have read, as when the process changes state
       #

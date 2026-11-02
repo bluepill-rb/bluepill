@@ -34,10 +34,12 @@ module Bluepill
     #
     # The process starts with the factory's attributes, and a default
     # pid_file in pids_dir unless they set one, and its block can override
-    # them.
+    # them. It gets the application's logger, prefixed with its group's
+    # name and its own, as its group's logger is with the group's name.
     #
     # @param [String] name the process's name
     # @param [String] pids_dir the directory of the default pid file
+    # @param [Logger] logger the application's logger
     #
     # @return [Array(Process, Object)] the process, and the group that its
     #   block set, or nil for none
@@ -45,13 +47,15 @@ module Bluepill
     # @raise [ConfigError] for a mistake in the process's config
     #
     # @api private
-    def create_process(name, pids_dir)
+    def create_process(name, pids_dir, logger:)
       default_pid_file = default_pid_file(name, pids_dir)
       process = ProcessProxy.new(name, {pid_file: default_pid_file}.merge(@attributes), @process_block)
 
       validate_process!(process)
       warn_unless_pid_known(process, default_pid_file)
-      [process.to_process(**children_attributes(process)), process.group]
+      group = process.group
+      process_logger = logger.prefix_with(group&.to_s).prefix_with(name)
+      [process.to_process(logger: process_logger, **children_attributes(process)), group]
     end
 
     protected

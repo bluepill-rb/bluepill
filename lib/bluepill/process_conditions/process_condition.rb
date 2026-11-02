@@ -43,7 +43,7 @@ module Bluepill
       # @return [Logger, nil] the process's logger
       #
       # @api public
-      attr_accessor :logger
+      attr_reader :logger
 
       # Create a condition with the options a config gave its check
       #

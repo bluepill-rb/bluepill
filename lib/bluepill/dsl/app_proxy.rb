@@ -146,7 +146,7 @@ module Bluepill
     # @api public
     def process(process_name, &process_block)
       process_factory = ProcessFactory.new(attributes, process_block, @registry)
-      process, group = process_factory.create_process(process_name, @app.pids_dir)
+      process, group = process_factory.create_process(process_name, @app.pids_dir, logger: @app.logger)
       @app.add_process(process, group)
     end
 

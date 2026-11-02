@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 describe Bluepill::Process::Watches do
-  subject(:watches) { described_class.new }
+  subject(:watches) { described_class.new(logger: logger) }
 
   let(:logger) { instance_double(Bluepill::Logger, info: nil) }
 
@@ -9,8 +9,6 @@ describe Bluepill::Process::Watches do
   def watch_double(name, events, due = true)
     instance_double(Bluepill::ConditionWatch, name.to_s, name: name, due?: due, run: events, to_s: "#{name}: [1, 2]")
   end
-
-  before { watches.logger = logger }
 
   describe "#add" do
     it "adds a condition watch with the check's options and the logger, and returns the watches" do
@@ -42,21 +40,9 @@ describe Bluepill::Process::Watches do
     end
   end
 
-  describe "#logger=" do
-    let(:watch) { instance_double(Bluepill::ConditionWatch, :logger= => nil) }
-    let(:new_logger) { instance_double(Bluepill::Logger) }
-
-    before do
-      watches << watch
-      watches.logger = new_logger
-    end
-
-    it "sets the logger of the watches" do
-      expect(watch).to have_received(:logger=).with(new_logger)
-    end
-
-    it "keeps the logger for the watches added later" do
-      expect(watches.logger).to be(new_logger)
+  describe "#initialize" do
+    it "has no watches, and the logger it gives the watches added" do
+      expect([watches.to_a, watches.logger]).to match([[], be(logger)])
     end
   end
 

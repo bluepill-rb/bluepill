@@ -49,7 +49,7 @@ module Bluepill
     # @return [Logger] the process's logger
     #
     # @api private
-    attr_accessor :logger
+    attr_reader :logger
 
     # Return the events the trigger scheduled, each with its thread
     #
@@ -74,7 +74,7 @@ module Bluepill
     # @api private
     def initialize(process, logger: nil)
       self.process = process
-      self.logger = logger
+      @logger = logger
       @mutex = Mutex.new
       @scheduled_events = []
       # The reason the trigger gives the process for what it dispatches,

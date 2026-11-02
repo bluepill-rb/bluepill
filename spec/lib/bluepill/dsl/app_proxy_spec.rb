@@ -3,7 +3,8 @@
 describe Bluepill::AppProxy do
   subject(:proxy) { described_class.new(:app_name) }
 
-  let(:app) { instance_double(Bluepill::Application, pids_dir: "/pids", add_process: nil) }
+  let(:logger) { Bluepill::Logger.new(logger: instance_double(Bluepill::Logger::LoggerAdapter)) }
+  let(:app) { instance_double(Bluepill::Application, pids_dir: "/pids", logger: logger, add_process: nil) }
 
   before do
     allow(Bluepill::Application).to receive(:new).with("app_name").and_return(app)
@@ -106,6 +107,14 @@ describe Bluepill::AppProxy do
       other = described_class.new(:app_name)
       other.process("web") { self.start_command = "run" }
       expect(app).to have_received(:add_process).twice
+    end
+
+    it "gives a process the app's logger, prefixed with its group's name and its own" do
+      proxy.process("web") do
+        self.start_command = "run"
+        self.group = "servers"
+      end
+      expect(app).to have_received(:add_process).with(have_attributes(logger: logger.prefix_with("servers").prefix_with("web")), "servers")
     end
 
     it "adds a process without a group" do

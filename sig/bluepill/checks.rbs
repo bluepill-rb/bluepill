@@ -52,9 +52,6 @@ module Bluepill
 
     def create_condition: (Hash[Symbol, untyped] options) -> void
 
-    # Sets the logger of the watch and its condition
-    def logger=: (Logger logger) -> void
-
     # Returns the events to fire
     def due?: (Integer tick_number) -> bool
     def run: (Integer? pid, ?Integer tick_number) -> Array[Symbol]
@@ -78,7 +75,7 @@ module Bluepill
     def self.inherited: (Class klass) -> void
 
     attr_accessor process: Process
-    attr_accessor logger: Logger
+    attr_reader logger: Logger
     attr_reader scheduled_events: Array[[Symbol, Thread]]
 
     @reason: String
@@ -132,7 +129,7 @@ module Bluepill
       def self.inherited: (Class klass) -> void
 
       # The watch's logger
-      attr_accessor logger: Logger?
+      attr_reader logger: Logger?
 
       def initialize: (?logger: Logger?) -> void
 

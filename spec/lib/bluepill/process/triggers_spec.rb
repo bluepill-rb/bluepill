@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 describe Bluepill::Process::Triggers do
-  subject(:triggers) { described_class.new }
+  subject(:triggers) { described_class.new(logger: logger) }
 
   let(:logger) { instance_double(Bluepill::Logger) }
   let(:process) { instance_double(Bluepill::Process) }
@@ -12,13 +12,11 @@ describe Bluepill::Process::Triggers do
   # A trigger that records what it's told as [method, name, *args]
   def trigger_double(name)
     trigger = instance_double(Bluepill::Trigger, name)
-    %i[notify reset! logger=].each do |method|
+    %i[notify reset!].each do |method|
       allow(trigger).to receive(method) { |*args| calls << [method, name, *args] }
     end
     trigger
   end
-
-  before { triggers.logger = logger }
 
   describe "#add" do
     it "adds a trigger of the class, for the process, with its options and the logger, and returns the triggers" do
@@ -45,20 +43,9 @@ describe Bluepill::Process::Triggers do
     end
   end
 
-  describe "#logger=" do
-    let(:new_logger) { instance_double(Bluepill::Logger) }
-
-    before do
-      triggers << trigger_double("trigger")
-      triggers.logger = new_logger
-    end
-
-    it "sets the logger of the triggers" do
-      expect(calls).to eq([[:logger=, "trigger", new_logger]])
-    end
-
-    it "keeps the logger for the triggers added later" do
-      expect(triggers.logger).to be(new_logger)
+  describe "#initialize" do
+    it "has no triggers, and the logger it gives the triggers added" do
+      expect([triggers.to_a, triggers.logger]).to match([[], be(logger)])
     end
   end
 
@@ -75,7 +62,7 @@ describe Bluepill::Process::Triggers do
     end
 
     it "goes through its triggers without each, which would cost a call on every tick" do
-      others = described_class.new << trigger_double("other")
+      others = described_class.new(logger: logger) << trigger_double("other")
       allow(others).to receive(:each).and_raise("each called")
       expect(others.notify(transition).size).to eq(1)
     end
@@ -100,9 +87,5 @@ describe Bluepill::Process::Triggers do
       %w[first second].each { |name| triggers << trigger_double(name) }
       expect([triggers.reset!, calls]).to eq([triggers.to_a, [[:reset!, "first"], [:reset!, "second"]]])
     end
-  end
-
-  it "is empty to begin with" do
-    expect(described_class.new.to_a).to eq([])
   end
 end

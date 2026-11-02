@@ -51,8 +51,6 @@ module Bluepill
 
     def tick_children: () -> void
 
-    def logger=: (Logger logger) -> void
-
     def dispatch!: (Symbol event, ?String? reason) -> bool
 
     def add_checks: (checks checks, Logger logger) -> void
@@ -152,15 +150,13 @@ module Bluepill
 
     @watches: Array[ConditionWatch]
 
-    def initialize: () -> void
+    def initialize: (logger: Logger) -> void
 
     def add: (Symbol name, **untyped options) -> Process::Watches
 
     def <<: (ConditionWatch watch) -> Process::Watches
 
     def each: () { (ConditionWatch watch) -> void } -> Array[ConditionWatch]
-
-    def logger=: (Logger logger) -> void
 
     def clear_history!: () -> void
 
@@ -180,15 +176,13 @@ module Bluepill
 
     @triggers: Array[Trigger]
 
-    def initialize: () -> void
+    def initialize: (logger: Logger) -> void
 
     def add: (Class klass, Process process, **untyped options) -> Process::Triggers
 
     def <<: (Trigger trigger) -> Process::Triggers
 
     def each: () { (Trigger trigger) -> void } -> Array[Trigger]
-
-    def logger=: (Logger logger) -> void
 
     def notify: (_Transition transition) -> Array[Trigger]
 

@@ -50,11 +50,29 @@ module Bluepill
       #
       # @api private
       def read_ps_table
-        table = {} #: ps_table
-        command = IDX_MAP.fetch(:command)
         # POSIX options, so this also works with System V ps on Solaris and SmartOS.
         # Use -A because -e shows the environment on FreeBSD and OpenBSD.
-        `ps -Ao pid,ppid,pcpu,rss,etime,args`.split("\n").each do |line|
+        parse_ps_table(`ps -Ao pid,ppid,pcpu,rss,etime,args`)
+      rescue SystemCallError => e
+        # Forking ps can fail, for example with ENOMEM or EAGAIN under memory pressure.
+        # Cache the message so ps is not run again until the next tick.
+        "Could not run ps: #{e.class}: #{e}"
+      end
+
+      # Parse what ps printed into a table
+      #
+      # @param [String] output ps's output, a line per process
+      #
+      # @return [Hash{Integer => Array<String>}] each process's ps fields, by
+      #   pid
+      #
+      # @api private
+      def parse_ps_table(output)
+        lines = output.split("\n")
+
+        table = {} #: ps_table
+        command = IDX_MAP.fetch(:command)
+        lines.each do |line|
           # Split off the fields before the command, and keep the command
           # whole, as ps printed it
           chunks = line.split(" ", command + 1)
@@ -62,10 +80,6 @@ module Bluepill
           table[chunks.fetch(IDX_MAP.fetch(:pid)).to_i] = chunks
         end
         table
-      rescue SystemCallError => e
-        # Forking ps can fail, for example with ENOMEM or EAGAIN under memory pressure.
-        # Cache the message so ps is not run again until the next tick.
-        "Could not run ps: #{e.class}: #{e}"
       end
 
       # Return the pids in this tick's ps table by their parent's pid

@@ -27,6 +27,31 @@ describe Bluepill::ProcessFactory do
   end
 
   describe '#create_process' do
+    context 'with what bluepill 0.2.0 changes' do
+      let(:pre_start_warning) do
+        'DEPRECATION: bluepill 0.2.0 kills a pre_start_command that runs longer than hook_timeout, 30 seconds by default, ' \
+          "and starts the process even when the command can't run, where 0.1 waits for it however long it takes. " \
+          "Set hook_timeout, which 0.1 ignores, if it can take longer.\n"
+      end
+
+      it 'warns once that 0.2.0 limits a pre_start_command' do
+        expect do
+          create('web', proc { start_command 'run' }, pre_start_command: 'setup', daemonize: true)
+          create('db', proc { start_command 'run' }, pre_start_command: 'setup', daemonize: true)
+        end.to output(pre_start_warning).to_stderr
+      end
+
+      it 'warns about a pre_start_command under its own key' do
+        expect(Bluepill::Deprecation).to receive(:warn).with(:pre_start_command, Bluepill::ProcessFactory::PRE_START_COMMAND)
+        create('web', proc { start_command 'run' }, pre_start_command: 'setup', daemonize: true)
+      end
+
+      it 'warns about nothing without a pre_start_command' do
+        expect(Bluepill::Deprecation).not_to receive(:warn)
+        create('web', proc { start_command 'run' }, pre_start_command: nil, pid_file: '/var/web.pid')
+      end
+    end
+
     it 'creates a process' do
       process = create('web', proc { start_command 'run' })
       expect(process).to be_a(Bluepill::Process)

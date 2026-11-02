@@ -15,6 +15,13 @@ module Bluepill
     # @api private
     attr_reader :attributes
 
+    # The warning about a pre_start_command, which bluepill 0.2.0 limits
+    #
+    # @api private
+    PRE_START_COMMAND = 'bluepill 0.2.0 kills a pre_start_command that runs longer than hook_timeout, 30 seconds by default, ' \
+                        "and starts the process even when the command can't run, where 0.1 waits for it however long it takes. " \
+                        'Set hook_timeout, which 0.1 ignores, if it can take longer.'.freeze
+
     # Only the keys matter
     @@process_keys = {} #: Hash[Array[String?], nil]
     @@pid_files = {} #: Hash[String, nil]
@@ -52,6 +59,7 @@ module Bluepill
 
       validate_process! process
       warn_unless_pid_known(process, default_pid_file)
+      warn_of_0_2_changes
       process.to_process
     end
 
@@ -209,6 +217,15 @@ module Bluepill
                 "so bluepill cannot find its pid unless start_command writes it to #{default_pid_file}. " \
                 'Set daemonize = true if start_command runs in the foreground.'
       $stderr.puts warning
+    end
+
+    # Warn about what bluepill 0.2.0 does differently with the process
+    #
+    # @return [void]
+    #
+    # @api private
+    def warn_of_0_2_changes
+      Deprecation.warn(:pre_start_command, PRE_START_COMMAND) if attributes[:pre_start_command]
     end
 
     # Print a config error and exit with status 6

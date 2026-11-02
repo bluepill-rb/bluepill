@@ -693,6 +693,8 @@ module Bluepill
 
   # Builds processes from a process block in the config
   class ProcessFactory
+    PRE_START_COMMAND: String
+
     @@process_keys: Hash[Array[String?], nil]
     @@pid_files: Hash[String, nil]
 
@@ -721,6 +723,9 @@ module Bluepill
     def validate_stop_signals!: () -> void
 
     def warn_unless_pid_known: (ProcessProxy process, String? default_pid_file) -> void
+
+    # Warns about what bluepill 0.2.0 does differently with the process
+    def warn_of_0_2_changes: () -> void
 
     def config_error!: (String message) -> bot
 

@@ -347,9 +347,13 @@ module Bluepill
     TICKS: Hash[Symbol, Array[Symbol]]
     STARTS: Array[Symbol]
 
+    STATES: Array[Symbol]
+
     TRANSITIONS: Hash[Symbol, Hash[Symbol, Symbol]]
 
-    attr_accessor state: String
+    LOOPBACKS: Hash[Symbol, Process::Transition]
+
+    attr_accessor state: Symbol
 
     def unmonitored?: () -> bool
 
@@ -422,7 +426,7 @@ module Bluepill
       def restart_process: () -> Integer
     end
 
-    def handle_user_command: (String cmd) -> void
+    def handle_user_command: (Symbol cmd) -> void
 
     def user_start: () -> void
 

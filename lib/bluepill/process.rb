@@ -126,7 +126,7 @@ module Bluepill
       @statistics = ProcessStatistics.new
       @actual_pid = options[:actual_pid]
       add_checks(checks, options[:logger])
-      @state = "unmonitored"
+      @state = :unmonitored
       configure(options)
     end
 

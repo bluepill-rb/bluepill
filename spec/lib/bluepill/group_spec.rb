@@ -82,7 +82,7 @@ describe Bluepill::Group do
 
         # What running the event's command on a process logs and calls
         def command(event, mode, name)
-          [[:debug, "Command #{event} running in #{mode} mode."], [:handle_user_command, name, event.to_s]]
+          [[:debug, "Command #{event} running in #{mode} mode."], [:handle_user_command, name, event]]
         end
 
         it "runs blocking commands one at a time" do
@@ -105,11 +105,11 @@ describe Bluepill::Group do
     end
 
     describe "#status" do
-      let(:child) { instance_double(Bluepill::Process, name: "child", state: "up") }
+      let(:child) { instance_double(Bluepill::Process, name: "child", state: :up) }
 
       before do
-        allow(processes.first).to receive_messages(actual_pid: 1, state: "up", monitor_children?: true, children: [child])
-        allow(processes.last).to receive_messages(actual_pid: 2, state: "down", monitor_children?: false)
+        allow(processes.first).to receive_messages(actual_pid: 1, state: :up, monitor_children?: true, children: [child])
+        allow(processes.last).to receive_messages(actual_pid: 2, state: :down, monitor_children?: false)
       end
 
       it "lists every process and monitored child under the group name" do

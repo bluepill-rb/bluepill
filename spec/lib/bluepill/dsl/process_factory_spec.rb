@@ -95,7 +95,7 @@ describe Bluepill::ProcessFactory do
       it "creates children from the child process block" do
         allow(::Process).to receive(:kill).with(0, 123).and_return(1)
         child = process.child_process_factory.create_child_process("child", 123, instance_double(Bluepill::Logger))
-        expect(child).to have_attributes(stop_command: "halt", state: "up")
+        expect(child).to have_attributes(stop_command: "halt", state: :up)
       end
     end
 
@@ -307,7 +307,7 @@ describe Bluepill::ProcessFactory do
 
     it "creates a child process with the grace times, user and groups of its parent" do
       expect(create_child(attributes, proc { stop_command "halt" })).to be_a(Bluepill::Process).and have_attributes(
-        state: "up", name: "child", actual_pid: 123, logger: logger, stop_command: "halt",
+        state: :up, name: "child", actual_pid: 123, logger: logger, stop_command: "halt",
         start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 5,
         uid: "user", gid: "staff", supplementary_groups: ["rvm"], working_dir: nil
       )

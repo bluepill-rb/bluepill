@@ -6,17 +6,17 @@ module Bluepill
     module UserCommands
       # Carry out a command from the command line
       #
-      # @param [String] cmd start, stop, restart or unmonitor
+      # @param [Symbol] cmd :start, :stop, :restart or :unmonitor
       #
       # @return [void]
       #
       # @api private
       def handle_user_command(cmd)
         case cmd
-        when "start" then user_start
-        when "stop" then user_stop
-        when "restart" then user_restart
-        when "unmonitor" then user_unmonitor
+        when :start then user_start
+        when :stop then user_stop
+        when :restart then user_restart
+        when :unmonitor then user_unmonitor
         end
       end
 

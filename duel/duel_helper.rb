@@ -140,6 +140,7 @@ end
 # A process that's up, with the given pid
 def up_process(name, pid)
   process = Bluepill::Process.new(name, {}, logger: process_logger, actual_pid: pid)
-  process.state = "up"
+  # The base stored its state as a String, before it was a Symbol
+  process.state = process.state.is_a?(Symbol) ? :up : "up"
   process
 end

@@ -153,10 +153,10 @@ module Bluepill
             noblock = process.group_#{event}_noblock # process.group_start_noblock
             if noblock
               self.logger.debug("Command #{event} running in non-blocking mode.") # Command start running in...
-              threads << Thread.new { process.handle_user_command("#{event}") } # handle_user_command("start")
+              threads << Thread.new { process.handle_user_command(:#{event}) } # handle_user_command(:start)
             else
               self.logger.debug("Command #{event} running in blocking mode.") # Command start running in...
-              thread = Thread.new { process.handle_user_command("#{event}") } # handle_user_command("start")
+              thread = Thread.new { process.handle_user_command(:#{event}) } # handle_user_command(:start)
               thread.join
             end
           end
@@ -205,7 +205,7 @@ module Bluepill
       lines << "#{name}:" if name
 
       processes.each do |process|
-        lines << format("%s%s(pid:%s): %s", prefix, process.name, process.actual_pid, process.state)
+        lines << "#{prefix}#{process.name}(pid:#{process.actual_pid}): #{process.state}"
         add_children_status(process.children, prefix, lines) if process.monitor_children?
       end
     end
@@ -221,7 +221,7 @@ module Bluepill
     # @api private
     def add_children_status(children, prefix, lines)
       children.each do |child|
-        lines << format("  %s%s: %s", prefix, child.name, child.state)
+        lines << "  #{prefix}#{child.name}: #{child.state}"
       end
     end
 
@@ -237,7 +237,7 @@ module Bluepill
       processes.each do |process|
         next unless process_name.eql?(process.name)
 
-        lines << format("%s(pid:%s): %s", process.name, process.actual_pid, process.state)
+        lines << "#{process.name}(pid:#{process.actual_pid}): #{process.state}"
         lines << process.statistics.to_s
       end
     end

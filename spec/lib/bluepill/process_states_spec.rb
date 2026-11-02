@@ -1,23 +1,23 @@
 # What a process's state machine does, for every state and event: where
 # each event moves it, which callbacks run and in what order, and what
 # halting or raising in a callback does
-PROCESS_STATES = %w[unmonitored up down starting stopping restarting].freeze
+PROCESS_STATES = [:unmonitored, :up, :down, :starting, :stopping, :restarting].freeze
 
 describe Bluepill::Process do
   # Where each event goes from each state. A tick goes to the first state
   # when the process is running, and the second when it isn't.
   targets = {
-    start: {"unmonitored" => "starting", "down" => "starting"},
-    stop: {"up" => "stopping"},
-    unmonitor: Hash[PROCESS_STATES.collect { |state| [state, "unmonitored"] }],
-    restart: {"up" => "restarting", "down" => "restarting"}
+    start: {unmonitored: :starting, down: :starting},
+    stop: {up: :stopping},
+    unmonitor: Hash[PROCESS_STATES.collect { |state| [state, :unmonitored] }],
+    restart: {up: :restarting, down: :restarting}
   }
   ticks = {
-    "up" => %w[up down],
-    "down" => %w[up starting],
-    "starting" => %w[up down],
-    "stopping" => %w[up down],
-    "restarting" => %w[up down]
+    up: [:up, :down],
+    down: [:up, :starting],
+    starting: [:up, :down],
+    stopping: [:up, :down],
+    restarting: [:up, :down]
   }
 
   # The process daemonizes, so starting it doesn't wait on a timeout, and it
@@ -97,8 +97,8 @@ describe Bluepill::Process do
   # The callbacks before a transition: the triggers hear of it, and leaving
   # stopping cleans up threads
   def before_callbacks(from, to)
-    expected = [[:notify_triggers, from.to_sym, to.to_sym, from == to, from]]
-    expected << [:clean_threads, from] if from == "stopping"
+    expected = [[:notify_triggers, from, to, from == to, from]]
+    expected << [:clean_threads, from] if from == :stopping
     expected
   end
 
@@ -106,9 +106,9 @@ describe Bluepill::Process do
   # reached
   def command_callbacks(to)
     case to
-    when "starting" then [[:clean_threads, to], [:start_process, to]]
-    when "stopping" then [[:stop_process, to]]
-    when "restarting" then [[:stop_process, to], [:clean_threads, to], [:start_process, to]]
+    when :starting then [[:clean_threads, to], [:start_process, to]]
+    when :stopping then [[:stop_process, to]]
+    when :restarting then [[:stop_process, to], [:clean_threads, to], [:start_process, to]]
     else []
     end
   end
@@ -118,13 +118,13 @@ describe Bluepill::Process do
   # notify_command runs
   def after_callbacks(from, to)
     expected = [[:record_transition, to]]
-    expected << [:post_start_process, to] if to == "up" && %w[starting restarting].include?(from)
-    expected << [:notify_transition, from, to, to]
+    expected << [:post_start_process, to] if to == :up && [:starting, :restarting].include?(from)
+    expected << [:notify_transition, from.to_s, to.to_s, to]
   end
 
   # The callbacks a tick runs, in order. It runs the watches once it's up.
   def tick_callbacks(from, to)
-    (to == "up") ? callbacks(from, to) << [:run_watches, "up"] : callbacks(from, to)
+    (to == :up) ? callbacks(from, to) << [:run_watches, :up] : callbacks(from, to)
   end
 
   # The message of what the block raises, or nil if it raises nothing
@@ -136,7 +136,7 @@ describe Bluepill::Process do
   end
 
   it "starts unmonitored" do
-    expect(process).to have_attributes(state: "unmonitored", unmonitored?: true)
+    expect(process).to have_attributes(state: :unmonitored, unmonitored?: true)
   end
 
   PROCESS_STATES.each do |state|
@@ -180,7 +180,7 @@ describe Bluepill::Process do
 
     it "stays unmonitored, running no transition callbacks" do
       process.tick
-      expect([process.state, calls]).to eq(["unmonitored", [[:clean_threads, "unmonitored"]]])
+      expect([process.state, calls]).to eq([:unmonitored, [[:clean_threads, :unmonitored]]])
     end
   end
 
@@ -190,28 +190,28 @@ describe Bluepill::Process do
     end
 
     it "cancels the transition and the callbacks after it" do
-      process.state = "down"
-      expect([process.start, process.state, calls]).to eq([false, "down", []])
+      process.state = :down
+      expect([process.start, process.state, calls]).to eq([false, :down, []])
     end
 
     it "cancels a tick from stopping before it cleans up threads" do
-      process.state = "stopping"
+      process.state = :stopping
       process.tick
-      expect([process.state, calls]).to eq(["stopping", []])
+      expect([process.state, calls]).to eq([:stopping, []])
     end
   end
 
   describe "a callback that raises" do
     it "leaves the state alone when it raises before the transition" do
       allow(process.triggers.first).to receive(:notify).and_raise("trigger failed")
-      process.state = "up"
-      expect([error_from { process.restart }, process.state]).to eq(["trigger failed", "up"])
+      process.state = :up
+      expect([error_from { process.restart }, process.state]).to eq(["trigger failed", :up])
     end
 
     it "keeps the new state when it raises after the transition, without recording it" do
       allow(Bluepill::System).to receive(:daemonize).and_raise("start failed")
-      expected = [[:notify_triggers, :unmonitored, :starting, false, "unmonitored"], [:clean_threads, "starting"]]
-      expect([error_from { process.start }, process.state, calls]).to eq(["start failed", "starting", expected])
+      expected = [[:notify_triggers, :unmonitored, :starting, false, :unmonitored], [:clean_threads, :starting]]
+      expect([error_from { process.start }, process.state, calls]).to eq(["start failed", :starting, expected])
     end
   end
 
@@ -219,9 +219,17 @@ describe Bluepill::Process do
     it "names its states as symbols" do
       transitions = []
       allow(process.triggers.first).to receive(:notify) { |transition| transitions << transition }
-      process.state = "up"
+      process.state = :up
       process.stop
       expect(transitions.first).to have_attributes(from_name: :up, to_name: :stopping, loopback?: false)
+    end
+
+    it "is the same frozen transition every time the state stays the same" do
+      transitions = []
+      allow(process.triggers.first).to receive(:notify) { |transition| transitions << transition }
+      process.state = :up
+      2.times { process.tick }
+      expect([transitions.uniq.size, transitions.first]).to match([1, have_attributes(from_name: :up, to_name: :up, frozen?: true)])
     end
   end
 end

@@ -37,9 +37,16 @@ module Bluepill
         restart: {up: :restarting, down: :restarting}
       }.freeze
 
-      # Return the process's state, such as "up"
+      # Every state a process can be in, since unmonitor leaves any of them
+      STATES = TRANSITIONS.fetch(:unmonitor).keys.freeze
+
+      # The transition from each state to itself, made once, so a tick that
+      # leaves the state alone makes no new object
+      LOOPBACKS = Hash[STATES.zip(STATES.collect { |state| Transition.new(state, state).freeze })].freeze
+
+      # Return the process's state, such as :up
       #
-      # @return [String]
+      # @return [Symbol]
       #
       # @api private
       attr_accessor :state
@@ -50,7 +57,7 @@ module Bluepill
       #
       # @api private
       def unmonitored?
-        state.eql?("unmonitored")
+        state.equal?(:unmonitored)
       end
 
       # Return whether the process is up
@@ -59,7 +66,7 @@ module Bluepill
       #
       # @api private
       def up?
-        state.eql?("up")
+        state.equal?(:up)
       end
 
       # Return whether the process is down
@@ -68,7 +75,7 @@ module Bluepill
       #
       # @api private
       def down?
-        state.eql?("down")
+        state.equal?(:down)
       end
 
       # Return whether the process is starting
@@ -77,7 +84,7 @@ module Bluepill
       #
       # @api private
       def starting?
-        state.eql?("starting")
+        state.equal?(:starting)
       end
 
       # Return whether the process is stopping
@@ -86,7 +93,7 @@ module Bluepill
       #
       # @api private
       def stopping?
-        state.eql?("stopping")
+        state.equal?(:stopping)
       end
 
       # Return whether the process is restarting
@@ -95,7 +102,7 @@ module Bluepill
       #
       # @api private
       def restarting?
-        state.eql?("restarting")
+        state.equal?(:restarting)
       end
 
       # Start the process, if it's unmonitored or down
@@ -146,14 +153,14 @@ module Bluepill
       #
       # @api private
       def fire_event(event)
-        from = state.to_sym
+        from = state
         to = event.equal?(:tick) ? tick_target(from) : TRANSITIONS.fetch(event)[from]
         return false unless to
 
-        transition = Transition.new(from, to)
+        transition = from.equal?(to) ? LOOPBACKS.fetch(from) : Transition.new(from, to)
         return false unless catch(:halt) { before_transition(transition) }
 
-        self.state = to.to_s
+        self.state = to
         after_transition(transition)
         true
       end
@@ -221,10 +228,10 @@ module Bluepill
       # @api private
       def determine_initial_state
         if process_running?(true)
-          self.state = "up"
+          self.state = :up
           return
         end
-        self.state = auto_start.equal?(false) ? "unmonitored" : "down" # we need to check for false value
+        self.state = auto_start.equal?(false) ? :unmonitored : :down # we need to check for false value
       end
     end
   end

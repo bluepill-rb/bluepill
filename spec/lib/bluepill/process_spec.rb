@@ -119,7 +119,7 @@ describe Bluepill::Process do
         restart_grace_time: 3,
         on_start_timeout: "start",
         environment: {},
-        state: "unmonitored",
+        state: :unmonitored,
         group_start_noblock: true,
         group_stop_noblock: true,
         group_restart_noblock: true,
@@ -210,7 +210,7 @@ describe Bluepill::Process do
 
     context "when the process stopped since it was last found running" do
       before do
-        process.state = "up"
+        process.state = :up
         run_process
         process.process_running = true
         allow(::Process).to receive(:kill).with(0, 5).and_raise(Errno::ESRCH)
@@ -247,7 +247,7 @@ describe Bluepill::Process do
     end
 
     it "leaves threads alone when the process is monitored" do
-      process.state = "up"
+      process.state = :up
       run_process
       thread
       process.tick
@@ -256,7 +256,7 @@ describe Bluepill::Process do
 
     context "when down and not running" do
       before do
-        process.state = "down"
+        process.state = :down
         process.start_command = "start-cmd"
         process.tick
       end
@@ -276,7 +276,7 @@ describe Bluepill::Process do
 
     context "when down and running" do
       before do
-        process.state = "down"
+        process.state = :down
         run_process
         allow(Bluepill::System).to receive(:get_children)
         process.tick
@@ -298,7 +298,7 @@ describe Bluepill::Process do
     context "when up and monitoring children" do
       before do
         process.child_process_factory = instance_double(Bluepill::ProcessFactory, create_child_process: child)
-        process.state = "up"
+        process.state = :up
         process.monitor_children = true
         run_process
         allow(Bluepill::System).to receive(:get_children).with(5).and_return([7])
@@ -315,10 +315,10 @@ describe Bluepill::Process do
     end
 
     {
-      "starting" => %w[up down],
-      "up" => %w[up down],
-      "stopping" => %w[up down],
-      "restarting" => %w[up down]
+      starting: [:up, :down],
+      up: [:up, :down],
+      stopping: [:up, :down],
+      restarting: [:up, :down]
     }.each do |from, (running_to, stopped_to)|
       it "transitions from #{from} to #{running_to} when running" do
         process.state = from
@@ -374,7 +374,7 @@ describe Bluepill::Process do
 
     context "with stop" do
       before do
-        process.state = "up"
+        process.state = :up
         run_process
         process.dispatch!(:stop)
       end
@@ -390,7 +390,7 @@ describe Bluepill::Process do
 
     context "with restart" do
       before do
-        process.state = "down"
+        process.state = :down
         process.restart_command = "restart-cmd"
         process.dispatch!(:restart)
       end
@@ -408,7 +408,7 @@ describe Bluepill::Process do
       let(:thread) { leftover_thread }
 
       before do
-        process.state = "stopping"
+        process.state = :stopping
         thread
         process.dispatch!(:unmonitor)
       end
@@ -581,7 +581,7 @@ describe Bluepill::Process do
     end
 
     it "stops dispatching after a transition" do
-      process.state = "down"
+      process.state = :down
       process.watches << watch_double(:loud, [:start, :stop])
       process.run_watches
       expect(dispatched_events).to eq [[:start, "loud"]]
@@ -592,24 +592,24 @@ describe Bluepill::Process do
     it "is up when running" do
       run_process
       process.determine_initial_state
-      expect(process.state).to eq "up"
+      expect(process.state).to eq(:up)
     end
 
     it "checks again, even if the process was running earlier in the tick" do
       process.process_running = true
       process.determine_initial_state
-      expect(process.state).to eq "down"
+      expect(process.state).to eq(:down)
     end
 
     it "is unmonitored when auto_start is false" do
       process.auto_start = false
       process.determine_initial_state
-      expect(process.state).to eq "unmonitored"
+      expect(process.state).to eq(:unmonitored)
     end
 
     it "is down otherwise" do
       process.determine_initial_state
-      expect(process.state).to eq "down"
+      expect(process.state).to eq(:down)
     end
   end
 
@@ -617,7 +617,7 @@ describe Bluepill::Process do
     context "with start for a running process" do
       before do
         run_process
-        process.handle_user_command("start")
+        process.handle_user_command(:start)
       end
 
       it "refuses to start it" do
@@ -630,21 +630,21 @@ describe Bluepill::Process do
     end
 
     it "starts a stopped process" do
-      process.handle_user_command("start")
+      process.handle_user_command(:start)
       expect(dispatched_events).to eq [[:start, "user initiated"]]
     end
 
     it "checks again before starting, even if the process was running earlier in the tick" do
       process.process_running = true
-      process.handle_user_command("start")
+      process.handle_user_command(:start)
       expect(dispatched_events).to eq [[:start, "user initiated"]]
     end
 
     context "with stop" do
       before do
-        process.state = "up"
+        process.state = :up
         run_process
-        process.handle_user_command("stop")
+        process.handle_user_command(:stop)
       end
 
       it "stops the process" do
@@ -658,9 +658,9 @@ describe Bluepill::Process do
 
     context "with restart for an up process" do
       before do
-        process.state = "up"
+        process.state = :up
         process.restart_command = "restart-cmd"
-        process.handle_user_command("restart")
+        process.handle_user_command(:restart)
       end
 
       it "restarts through the state machine" do
@@ -672,15 +672,15 @@ describe Bluepill::Process do
       end
 
       it "goes to restarting" do
-        expect(process.state).to eq("restarting")
+        expect(process.state).to eq(:restarting)
       end
     end
 
     context "with restart from a state restart cannot leave" do
       before do
-        process.state = "unmonitored"
+        process.state = :unmonitored
         process.restart_command = "restart-cmd"
-        process.handle_user_command("restart")
+        process.handle_user_command(:restart)
       end
 
       it "restarts directly" do
@@ -688,7 +688,7 @@ describe Bluepill::Process do
       end
 
       it "stays in its state" do
-        expect(process.state).to eq("unmonitored")
+        expect(process.state).to eq(:unmonitored)
       end
     end
 
@@ -697,7 +697,7 @@ describe Bluepill::Process do
 
       before do
         process.triggers << trigger
-        process.handle_user_command("unmonitor")
+        process.handle_user_command(:unmonitor)
       end
 
       it "resets triggers" do
@@ -710,11 +710,11 @@ describe Bluepill::Process do
     end
 
     it "returns nil for an unknown command" do
-      expect(process.handle_user_command("bogus")).to be_nil
+      expect(process.handle_user_command(:bogus)).to be_nil
     end
 
     it "ignores unknown commands" do
-      process.handle_user_command("bogus")
+      process.handle_user_command(:bogus)
       expect(dispatched_events).to be_empty
     end
   end
@@ -1651,7 +1651,7 @@ describe Bluepill::Process do
       expect(logger).to have_received(:info).with("Executing post start command: renice 20 5")
     end
 
-    %w[starting restarting].each do |state|
+    [:starting, :restarting].each do |state|
       context "when the process comes up from #{state}" do
         before do
           threads = capture_threads
@@ -1670,7 +1670,7 @@ describe Bluepill::Process do
       end
     end
 
-    %w[down up stopping].each do |state|
+    [:down, :up, :stopping].each do |state|
       it "doesn't run when a process comes back up by itself, or stays up, from #{state}" do
         threads = capture_threads
         process.state = state
@@ -1822,7 +1822,7 @@ describe Bluepill::Process do
     context "when an event changes the state" do
       before do
         threads = capture_threads
-        process.state = "up"
+        process.state = :up
         process.dispatch!(:stop, "user initiated")
         threads.each(&:join)
       end
@@ -1841,7 +1841,7 @@ describe Bluepill::Process do
 
     context "when the transition raises" do
       before do
-        process.state = "up"
+        process.state = :up
         allow(Bluepill::ProcessJournal).to receive(:kill_all_from_journal).and_raise("boom")
       end
 

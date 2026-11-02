@@ -20,6 +20,9 @@ module Bluepill
   # the AppProxy, and also gets it as an argument.
   def self.application: (_ToS app_name, ?Hash[Symbol, untyped] options) { (AppProxy app) [self: AppProxy] -> void } -> void
 
+  # Warns on a Ruby that bluepill 0.2 doesn't run on
+  def self.warn_unsupported_ruby: (?String ruby_version, ?String? jruby_version) -> void
+
   # Times ticks, checks, grace times and flapping with the monotonic clock,
   # or the system clock on a Ruby without Process.clock_gettime
   module Clock

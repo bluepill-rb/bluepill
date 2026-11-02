@@ -14,3 +14,6 @@ class UNIXSocket
   def self.open: (String path) -> instance
     | [T] (String path) { (instance socket) -> T } -> T
 end
+
+# JRuby's version, defined only on JRuby
+JRUBY_VERSION: String

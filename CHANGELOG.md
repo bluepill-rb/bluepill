@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated
 
 - An `http` check of an https URL that doesn't set `verify_ssl:`, since bluepill 0.3.0 verifies its certificate by default. Set `verify_ssl: true` to verify it now, or `verify_ssl: false` to keep checking a server with a self-signed certificate. Bluepill 0.2 ignores the option, so a pill file that sets it works with each version.
+- Ruby 1.9.3 and JRuby 1.7. Bluepill 0.2.0 needs Ruby 2.0 or JRuby 9.0, and later 0.2 releases need Ruby 2.7 or JRuby 9.4. On those Rubies, stay on 0.1 until you upgrade Ruby.
 
 ### Fixed
 

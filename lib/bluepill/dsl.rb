@@ -26,8 +26,31 @@ module Bluepill
   # @api public
   def self.application(app_name, options = {}, &block)
     app_proxy = AppProxy.new(app_name, options)
+    warn_unsupported_ruby
     # instance_eval also passes the proxy to a block that takes an argument
     app_proxy.instance_eval(&block)
     app_proxy.app.load
+  end
+
+  # Warn on a Ruby that bluepill 0.2 doesn't run on
+  #
+  # Bluepill 0.2.0 needs Ruby 2.0 or JRuby 9.0, and later 0.2 releases need
+  # Ruby 2.7 or JRuby 9.4. JRuby 1.7 can run Ruby 2.0 code, so it's told
+  # apart by its own version.
+  #
+  # @param [String] ruby_version the Ruby version, such as "1.9.3"
+  # @param [String, nil] jruby_version the JRuby version, such as "1.7.27",
+  #   or nil on another Ruby
+  #
+  # @return [void]
+  #
+  # @api private
+  def self.warn_unsupported_ruby(ruby_version = RUBY_VERSION, jruby_version = defined?(JRUBY_VERSION) && JRUBY_VERSION)
+    # Only Ruby 1.9 and JRuby 1.7 have a major version of 1
+    return unless ruby_version.start_with?('1.') || (jruby_version && jruby_version.start_with?('1.'))
+
+    message = "bluepill 0.2.0 needs Ruby 2.0 or JRuby 9.0, and later 0.2 releases need Ruby 2.7 or JRuby 9.4, so it won't run on Ruby #{ruby_version}" \
+              "#{" (JRuby #{jruby_version})" if jruby_version}. Stay on bluepill 0.1 until you upgrade Ruby."
+    Deprecation.warn(message, message)
   end
 end

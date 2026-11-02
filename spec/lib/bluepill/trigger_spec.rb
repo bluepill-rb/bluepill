@@ -1,8 +1,8 @@
 describe Bluepill::Trigger do
+  subject { described_class.new(process, logger: logger) }
   let(:process) { instance_double(Bluepill::Process, dispatch!: nil) }
   let(:logger) { instance_double(Bluepill::Logger, info: nil, err: nil) }
 
-  subject { described_class.new(process, logger: logger) }
 
   describe '.[]' do
     it 'looks up registered triggers by name' do

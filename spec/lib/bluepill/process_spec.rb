@@ -1,12 +1,12 @@
 require 'tmpdir'
 
 describe Bluepill::Process do
-  let(:logger) { instance_double(Bluepill::Logger).as_null_object }
-  let(:now) { Time.at(1_000_000) }
-
   subject do
     described_class.new(:proc_name, [], logger: logger)
   end
+  let(:logger) { instance_double(Bluepill::Logger).as_null_object }
+  let(:now) { Time.at(1_000_000) }
+
 
   before do
     allow(Time).to receive(:now).and_return(now)

@@ -200,6 +200,20 @@ module Bluepill
     extend Cleanup
     extend Lock
 
+    # What a journal holds: pids, or process group ids
+    class Kind < Struct[String | Integer]
+      attr_accessor name: String
+      attr_accessor label: String
+      attr_accessor file_tag: String
+      attr_accessor sign: Integer
+
+      def self.new: (String name, String label, String file_tag, Integer sign) -> Kind
+    end
+
+    PID: Kind
+
+    PGID: Kind
+
     # What the modules that ProcessJournal extends use from it
     interface _Journal
       def logger: () -> Logger
@@ -208,15 +222,11 @@ module Bluepill
 
       def legacy_journal_dir: () -> String
 
-      def pid_journal_filename: (String journal_name, ?String dir) -> String
-
-      def pgid_journal_filename: (String journal_name, ?String dir) -> String
+      def journal_filename: (Kind kind, String journal_name, ?String dir) -> String
 
       def journal_entries: (String filename) -> Array[[Integer, Integer?]]
 
-      def pid_journal: (String filename) -> Array[Integer]
-
-      def pgid_journal: (String filename) -> Array[Integer]
+      def journal_ids: (Kind kind, String filename) -> Array[Integer]
     end
 
     # Kills what an earlier run left in a process's journals
@@ -227,17 +237,19 @@ module Bluepill
 
       def kill_all_pids_from_journal: (String journal_name) -> void
 
+      def kill_all_ids_from_journal: (Kind kind, String journal_name) -> void
+
       def journal_dirs: () -> Array[String]
 
-      def kill_all_from_journal_file: (String filename, Array[Integer] ids, String label, Integer sign) -> void
+      def kill_all_from_journal_file: (String filename, Array[Integer] ids, Kind kind) -> void
 
-      def term_then_kill_journaled: (Array[Integer] ids, String label, Integer sign) -> void
+      def term_then_kill_journaled: (Array[Integer] ids, Kind kind) -> void
 
-      def journaled_ids: (String filename, Array[Integer] ids, String label) -> Array[Integer]
+      def journaled_ids: (String filename, Array[Integer] ids, Kind kind) -> Array[Integer]
 
       def same_journaled_process?: (Integer id, Integer? journaled, Integer? boot, Integer written) -> bool
 
-      def signal_journaled: (String signal, Array[Integer] ids, String label, Integer sign) -> void
+      def signal_journaled: (String signal, Array[Integer] ids, Kind kind) -> void
     end
 
     # Locks a journal while bluepill reads and writes it
@@ -272,9 +284,13 @@ module Bluepill
 
     def self.skip_pgid?: (Integer? pgid) -> bool
 
+    def self.skip_id?: (Integer? id) -> bool
+
     def self.pid_journal_filename: (String journal_name, ?String dir) -> String
 
     def self.pgid_journal_filename: (String journal_name, ?String dir) -> String
+
+    def self.journal_filename: (Kind kind, String journal_name, ?String dir) -> String
 
     # Each id, with when its process started (nil before 0.2)
     def self.journal_entries: (String filename) -> Array[[Integer, Integer?]]
@@ -285,12 +301,16 @@ module Bluepill
 
     def self.pgid_journal: (String filename) -> Array[Integer]
 
+    def self.journal_ids: (Kind kind, String filename) -> Array[Integer]
+
     def self.append_pgid_to_journal: (String journal_name, Integer? pgid) -> void
 
     def self.append_pid_to_journal: (String journal_name, Integer? pid) -> void
 
     def self.append_process_group_to_journal: (String journal_name, Integer pid) -> void
 
-    def self.append_to_journal: (String filename, String journal_name, String kind, Integer id) { () -> Array[Integer] } -> void
+    def self.append_to_journal: (Kind kind, String journal_name, Integer? id) ?{ (Integer id) -> void } -> void
+
+    def self.write_to_journal: (String filename, String journal_name, String name, Integer id) { () -> Array[Integer] } -> void
   end
 end

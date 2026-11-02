@@ -31,10 +31,7 @@ module Bluepill
       #
       # @api private
       def kill_all_pgids_from_journal(journal_name)
-        journal_dirs.each do |dir|
-          filename = pgid_journal_filename(journal_name, dir)
-          kill_all_from_journal_file(filename, pgid_journal(filename), "process group", -1)
-        end
+        kill_all_ids_from_journal(PGID, journal_name)
       end
 
       # Kill the processes that a process's journals list
@@ -48,9 +45,24 @@ module Bluepill
       #
       # @api private
       def kill_all_pids_from_journal(journal_name)
+        kill_all_ids_from_journal(PID, journal_name)
+      end
+
+      # Kill the ids that one kind of a process's journals list
+      #
+      # That's the app's journal, and the one that bluepill 0.1 and earlier
+      # shared between apps.
+      #
+      # @param [Kind] kind PID or PGID
+      # @param [String] journal_name the process's name
+      #
+      # @return [void]
+      #
+      # @api private
+      def kill_all_ids_from_journal(kind, journal_name)
         journal_dirs.each do |dir|
-          filename = pid_journal_filename(journal_name, dir)
-          kill_all_from_journal_file(filename, pid_journal(filename), "process", 1)
+          filename = journal_filename(kind, journal_name, dir)
+          kill_all_from_journal_file(filename, journal_ids(kind, filename), kind)
         end
       end
 
@@ -67,25 +79,24 @@ module Bluepill
       #
       # Only kills the ids that still belong to what bluepill journaled (see
       # journaled_ids). Sends TERM, waits a second for any survivors, then
-      # sends KILL to those still alive. A negative sign targets process
-      # groups instead of pids.
+      # sends KILL to those still alive. The kind's sign makes process group
+      # ids target their groups.
       #
       # @param [String] filename the journal's path
       # @param [Array<Integer>] ids the pids or process group ids in it
-      # @param [String] label what the ids are, for the log
-      # @param [Integer] sign 1 for pids, or -1 for process groups
+      # @param [Kind] kind PID or PGID
       #
       # @return [void]
       #
       # @api private
-      def kill_all_from_journal_file(filename, ids, label, sign)
+      def kill_all_from_journal_file(filename, ids, kind)
         if ids.empty?
           logger.debug("No previous process journal - Skipping cleanup")
           return
         end
 
         acquire_atomic_fs_lock(filename) do
-          term_then_kill_journaled(journaled_ids(filename, ids, label), label, sign)
+          term_then_kill_journaled(journaled_ids(filename, ids, kind), kind)
           System.delete_if_exists(filename) # reset journal
           logger.debug("Journal cleanup completed")
         end
@@ -96,20 +107,19 @@ module Bluepill
       # It doesn't wait when every id exited on TERM.
       #
       # @param [Array<Integer>] ids the pids or process group ids
-      # @param [String] label what the ids are, for the log
-      # @param [Integer] sign 1 for pids, or -1 for process groups
+      # @param [Kind] kind PID or PGID
       #
       # @return [void]
       #
       # @api private
-      def term_then_kill_journaled(ids, label, sign)
-        signal_journaled("TERM", ids, label, sign)
-        survivors = ids.select { |id| System.pid_alive?(sign * id) }
+      def term_then_kill_journaled(ids, kind)
+        signal_journaled("TERM", ids, kind)
+        survivors = ids.select { |id| System.pid_alive?(kind.sign * id) }
         return if survivors.empty?
 
         sleep(1)
-        survivors = survivors.select { |id| System.pid_alive?(sign * id) }
-        signal_journaled("KILL", survivors, label, sign)
+        survivors = survivors.select { |id| System.pid_alive?(kind.sign * id) }
+        signal_journaled("KILL", survivors, kind)
       end
 
       # Return the ids that still belong to what bluepill journaled
@@ -118,13 +128,13 @@ module Bluepill
       #
       # @param [String] filename the journal's path
       # @param [Array<Integer>] ids the valid ids in it
-      # @param [String] label what the ids are, for the log
+      # @param [Kind] kind PID or PGID
       #
       # @return [Array<Integer>] the ids that are safe to signal, or none if
       #   the journal was cleared since its ids were read
       #
       # @api private
-      def journaled_ids(filename, ids, label)
+      def journaled_ids(filename, ids, kind)
         # Journals only grow until they're cleared, under the lock this runs in
         return [] unless File.exist?(filename)
 
@@ -133,7 +143,7 @@ module Bluepill
         written = Integer(File.mtime(filename))
         ids.select do |id|
           ours = same_journaled_process?(id, started.fetch(id), boot, written)
-          logger.info("Skipping old #{label} #{id}, which isn't the one bluepill started") unless ours
+          logger.info("Skipping old #{kind.label} #{id}, which isn't the one bluepill started") unless ours
           ours
         end
       end
@@ -169,20 +179,19 @@ module Bluepill
       #
       # @param [String] signal TERM or KILL
       # @param [Array<Integer>] ids the pids or process group ids
-      # @param [String] label what the ids are, for the log
-      # @param [Integer] sign 1 for pids, or -1 for process groups
+      # @param [Kind] kind PID or PGID
       #
       # @return [void]
       #
       # @api private
-      def signal_journaled(signal, ids, label, sign)
+      def signal_journaled(signal, ids, kind)
         past, verb = signal.eql?("TERM") ? %w[Termed term] : %w[Killed kill]
         ids.each do |id|
           begin
-            ::Process.kill(signal, sign * id)
-            logger.info("#{past} old #{label} #{id}")
+            ::Process.kill(signal, kind.sign * id)
+            logger.info("#{past} old #{kind.label} #{id}")
           rescue Errno::ESRCH
-            logger.debug("Unable to #{verb} missing #{label} #{id}")
+            logger.debug("Unable to #{verb} missing #{kind.label} #{id}")
           end
         end
       end

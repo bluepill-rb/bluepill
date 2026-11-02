@@ -696,13 +696,13 @@ describe Bluepill::ProcessJournal do
 
     def journaled(started)
       allow(Bluepill::System).to receive(:started_at).with(42).and_return(started)
-      described_class.journaled_ids(filename, [42], "process")
+      described_class.journaled_ids(filename, [42], described_class::PID)
     end
 
     # The journaled ids of 43, which has no start time in the journal
     def journaled_without_start_time
       allow(Bluepill::System).to receive(:started_at).with(43).and_return(30_000)
-      described_class.journaled_ids(filename, [43], "process")
+      described_class.journaled_ids(filename, [43], described_class::PID)
     end
 
     it "keeps a running process that started when the journal says" do
@@ -744,18 +744,18 @@ describe Bluepill::ProcessJournal do
 
     it "skips one without a start time if the journal was written before the machine booted" do
       File.utime(boot - 3, boot - 3, filename)
-      expect(described_class.journaled_ids(filename, [43], "process")).to eq []
+      expect(described_class.journaled_ids(filename, [43], described_class::PID)).to eq []
     end
 
     it "only keeps a running process that started when the journal says if ps can't tell when the machine booted" do
       allow(Bluepill::System).to receive(:boot_time).and_return(nil)
-      kept = [journaled(20_000), journaled(nil), described_class.journaled_ids(filename, [43], "process")]
+      kept = [journaled(20_000), journaled(nil), described_class.journaled_ids(filename, [43], described_class::PID)]
       expect(kept).to eq [[42], [], []]
     end
 
     it "keeps nothing if the journal was cleared since its ids were read" do
       File.delete(filename)
-      expect(described_class.journaled_ids(filename, [42], "process")).to eq []
+      expect(described_class.journaled_ids(filename, [42], described_class::PID)).to eq []
     end
   end
 

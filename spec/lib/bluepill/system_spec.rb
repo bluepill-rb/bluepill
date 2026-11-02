@@ -203,6 +203,31 @@ describe Bluepill::System do
       expect(described_class.get_children(3)).to eq([])
     end
 
+    it 'shares one empty array for every process without children' do
+      expect(described_class.get_children(3)).to be(described_class::NO_PIDS)
+    end
+
+    it 'returns an empty array for a pid that is not an Integer' do
+      expect(described_class.get_children('1')).to eq([])
+    end
+
+    it 'reads the ps table once, however many processes it looks in' do
+      [1, 2, 3].each { |pid| described_class.get_children(pid) }
+      expect(described_class).to have_received(:ps_axu).once
+    end
+
+    it 'returns the same descendants every time' do
+      2.times { described_class.get_children(1) }
+      expect(described_class.get_children(1)).to eq([2, 4, 3])
+    end
+
+    it 'reads the ps table again after the data is reset' do
+      described_class.get_children(1)
+      described_class.reset_data
+      stub_ps(ps.merge(5 => ['5', '1', '0.0', '50', '00:01', 'child three']))
+      expect(described_class.get_children(1)).to eq([2, 4, 5, 3])
+    end
+
     it 'returns an empty array if ps could not be run' do
       allow(described_class).to receive(:ps_axu).and_raise(Bluepill::System::PsError)
       expect(described_class.get_children(1)).to eq([])
@@ -313,11 +338,26 @@ describe Bluepill::System do
     end
   end
 
+  describe '.children_by_parent' do
+    it "indexes each process's children by its pid, in ps's order" do
+      stub_ps(ps)
+      expect(described_class.children_by_parent).to eq(0 => [1], 1 => [2, 4], 2 => [3])
+    end
+  end
+
   describe '.reset_data' do
     it 'clears the #store' do
       described_class.store[:anotherkey] = 'Lorem ipsum dolor sit amet.'
       described_class.reset_data
       expect(described_class.store).to be_empty
+    end
+
+    it 'forgets the children index' do
+      stub_ps(ps)
+      described_class.children_by_parent
+      described_class.reset_data
+      stub_ps({})
+      expect(described_class.children_by_parent).to eq({})
     end
 
     it 'leaves an empty #store empty' do

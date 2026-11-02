@@ -159,6 +159,26 @@ module Bluepill
       ps.fetch(pid).fetch(IDX_MAP.fetch(:command))
     end
 
+    # Return the pids in this tick's ps table by their parent's pid
+    #
+    # It's built once per ps table, so finding a process's descendants
+    # takes as long as there are descendants, not a pass over the whole
+    # table for each one.
+    #
+    # @return [Hash{Integer => Array<Integer>}] each parent's children, in
+    #   ps's order
+    #
+    # @raise [PsError] if ps could not be run
+    #
+    # @api private
+    def self.children_by_parent
+      @children_by_parent ||= begin
+        index = {} #: Hash[Integer, Array[Integer]]
+        ps_axu.each_pair { |pid, chunks| (index[chunks.fetch(IDX_MAP.fetch(:ppid)).to_i] ||= []) << pid }
+        index
+      end
+    end
+
     # Return the pids of a process's descendants, from this tick's ps table
     #
     # @param [Integer, nil] parent_pid the process's pid
@@ -171,16 +191,15 @@ module Bluepill
       # A process that is still starting has no pid yet, and nil.to_i is 0.
       # The ps header row parses as pid 0 with ppid 0, so it would be its own
       # child and the recursion would never end.
-      return [] unless parent_pid.to_i > 0
+      return NO_PIDS unless parent_pid.to_i > 0
 
-      child_pids = [] #: Array[Integer]
-      ps_axu.each_pair do |_pid, chunks|
-        child_pids << Integer(chunks.fetch(IDX_MAP.fetch(:pid))) if chunks.fetch(IDX_MAP.fetch(:ppid)).to_i.eql?(parent_pid)
-      end
-      grand_children = child_pids.collect { |pid| get_children(pid) }.flatten
-      child_pids.concat grand_children
+      # Most processes have no children, and they all share one empty array
+      children = children_by_parent.fetch(parent_pid) { return NO_PIDS }
+      descendants = children.dup
+      children.each { |pid| descendants.concat(get_children(pid)) }
+      descendants
     rescue PsError
-      []
+      NO_PIDS
     end
 
     # Delete a file if it exists
@@ -221,6 +240,7 @@ module Bluepill
     #
     # @api private
     def self.reset_data
+      @children_by_parent = nil
       store.clear
     end
 
@@ -228,6 +248,10 @@ module Bluepill
     #
     # @api private
     PS_MUTEX = Mutex.new
+
+    # No pids, which get_children returns for a process with no children
+    no_pids = [] #: Array[Integer]
+    NO_PIDS = no_pids.freeze
 
     # Return this tick's ps table, running ps the first time it's asked for
     #

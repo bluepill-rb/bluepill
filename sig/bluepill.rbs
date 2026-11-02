@@ -829,10 +829,14 @@ module Bluepill
 
     PS_MUTEX: Thread::Mutex
 
+    NO_PIDS: Array[Integer]
+
     # The store lives on the module. Steep checks the module functions as
     # instance methods, so it needs the instance variable too.
     self.@store: Hash[Symbol, ps_table | String]
     @store: Hash[Symbol, ps_table | String]
+    self.@children_by_parent: Hash[Integer, Array[Integer]]?
+    @children_by_parent: Hash[Integer, Array[Integer]]?
 
     # Raised when ps could not be run, so there is no data for this tick
     class PsError < StandardError
@@ -851,6 +855,8 @@ module Bluepill
     def self.running_time: (Integer? pid) -> Integer?
 
     def self.command: (Integer? pid) -> String?
+
+    def self.children_by_parent: () -> Hash[Integer, Array[Integer]]
 
     def self.get_children: (Integer? parent_pid) -> Array[Integer]
 

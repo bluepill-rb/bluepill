@@ -1,11 +1,6 @@
 # Methods from Ruby and its standard library that bluepill uses, but that
 # the signatures from rbs leave out
 
-module Kernel
-  # From RubyGems
-  private def gem: (String name, *String requirements) -> bool
-end
-
 module Process
   def self.exit!: (?int | bool status) -> bot
 

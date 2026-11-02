@@ -1,3 +1,4 @@
 #!/bin/bash
-target=`basename $0`
-exec bluepill $1 $target
+# Runs a bluepill command on the process that this link is named after:
+# with bpsv linked as unicorn, `unicorn restart` is `bluepill restart unicorn`
+exec bluepill ${1:+"$1"} "$(basename "$0")"

@@ -66,11 +66,9 @@ workers = Array.new(3) { start_worker(acceptor, port) }
 
 trap("INT") do
   workers.each do |pid|
-    begin
-      Process.kill("INT", pid)
-    rescue Errno::ESRCH
-      nil
-    end
+    Process.kill("INT", pid)
+  rescue Errno::ESRCH
+    nil
   end
   exit
 end

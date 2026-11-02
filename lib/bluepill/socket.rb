@@ -46,12 +46,10 @@ module Bluepill
     def self.client_command(base_dir, name, command)
       res = nil
       MAX_ATTEMPTS.times do |current_attempt|
-        begin
-          res = send_command(base_dir, name, command)
-          break
-        rescue EOFError, Timeout::Error
-          retry_or_abort(current_attempt)
-        end
+        res = send_command(base_dir, name, command)
+        break
+      rescue EOFError, Timeout::Error
+        retry_or_abort(current_attempt)
       end
       res
     end

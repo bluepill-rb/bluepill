@@ -52,11 +52,9 @@ module Bluepill
     # @api private
     def self.safefork
       loop do
-        begin
-          return fork
-        rescue Errno::EWOULDBLOCK
-          sleep 5
-        end
+        return fork
+      rescue Errno::EWOULDBLOCK
+        sleep 5
       end
     end
 
@@ -201,11 +199,9 @@ module Bluepill
     # @api private
     def self.close_fds
       (3..MAX_FD).each do |fd|
-        begin
-          IO.for_fd(fd).close
-        rescue
-          nil
-        end
+        IO.for_fd(fd).close
+      rescue
+        nil
       end
     end
 

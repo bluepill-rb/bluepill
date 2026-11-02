@@ -64,12 +64,10 @@ module Bluepill
       # @api private
       def notify_triggers(transition)
         triggers.each do |trigger|
-          begin
-            trigger.notify(transition)
-          rescue => e
-            logger.err e.backtrace
-            raise
-          end
+          trigger.notify(transition)
+        rescue => e
+          logger.err e.backtrace
+          raise
         end
       end
 

@@ -189,12 +189,10 @@ module Bluepill
       def signal_journaled(signal, ids, kind)
         past, verb = signal.eql?("TERM") ? %w[Termed term] : %w[Killed kill]
         ids.each do |id|
-          begin
-            ::Process.kill(signal, kind.sign * id)
-            logger.info("#{past} old #{kind.label} #{id}")
-          rescue Errno::ESRCH
-            logger.debug("Unable to #{verb} missing #{kind.label} #{id}")
-          end
+          ::Process.kill(signal, kind.sign * id)
+          logger.info("#{past} old #{kind.label} #{id}")
+        rescue Errno::ESRCH
+          logger.debug("Unable to #{verb} missing #{kind.label} #{id}")
         end
       end
     end

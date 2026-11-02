@@ -121,23 +121,33 @@ module Bluepill
     # @api private
     def schedule_event(event, delay)
       mutex.synchronize do
-        thread = Thread.new do
-          begin
-            # Kernel.sleep, not sleep, so the specs can stand in for the clock.
-            # Float takes a duration, through its to_f, but not nil.
-            Kernel.sleep(Float(delay))
-            dispatch!(event)
-            mutex.synchronize do
-              scheduled_events.delete_if { |_, t| t.equal?(Thread.current) }
-            end
-          rescue => e
-            logger.err(e)
-            logger.err(e.backtrace.to_a.join("\n"))
-          end
-        end
+        thread = Thread.new { run_scheduled_event(event, delay) }
         scheduled_events.push([event, thread])
         thread
       end
+    end
+
+    # Wait, dispatch a scheduled event, and forget it, in its own thread
+    #
+    # An error is logged, since nothing joins the thread to see it.
+    #
+    # @param [Symbol] event the event, such as :start
+    # @param [Numeric] delay the seconds to wait first
+    #
+    # @return [void]
+    #
+    # @api private
+    def run_scheduled_event(event, delay)
+      # Kernel.sleep, not sleep, so the specs can stand in for the clock.
+      # Float takes a duration, through its to_f, but not nil.
+      Kernel.sleep(Float(delay))
+      dispatch!(event)
+      mutex.synchronize do
+        scheduled_events.delete_if { |_, t| t.equal?(Thread.current) }
+      end
+    rescue => e
+      logger.err(e)
+      logger.err(e.backtrace.to_a.join("\n"))
     end
 
     # Cancel every scheduled event, killing its thread

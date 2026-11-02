@@ -755,6 +755,8 @@ module Bluepill
 
     def schedule_event: (Symbol event, seconds delay) -> Thread
 
+    def run_scheduled_event: (Symbol event, seconds delay) -> void
+
     def cancel_all_events: () -> void
   end
 

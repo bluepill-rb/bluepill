@@ -94,17 +94,18 @@ describe Bluepill::Trigger do
     # Hold back recording an event until its thread has dispatched it and
     # is waiting for the lock or done
     def record_after_dispatch
+      # The thread that dispatched, once it has
       dispatched = Queue.new
-      worker = nil
-      allow(process).to receive(:dispatch!) do
-        worker = Thread.current
-        dispatched.push(nil)
-      end
+      allow(process).to receive(:dispatch!) { dispatched.push(Thread.current) }
       allow(trigger.scheduled_events).to receive(:push).and_wrap_original do |push, *args|
-        dispatched.pop
-        Thread.pass while worker.status == "run"
+        wait_while_running(dispatched.pop)
         push.call(*args)
       end
+    end
+
+    # Wait until a thread is asleep, waiting for a lock, or done
+    def wait_while_running(thread)
+      Thread.pass while thread.status == "run"
     end
 
     # An error to raise while dispatching, with the given backtrace

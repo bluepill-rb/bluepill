@@ -26,18 +26,6 @@ module Bluepill
     # @api private
     class PsError < StandardError; end
 
-    # The position of each field in ps output
-    #
-    # @api private
-    IDX_MAP = {
-      pid: 0,
-      ppid: 1,
-      pcpu: 2,
-      rss: 3,
-      etime: 4,
-      command: 5
-    }.freeze #: { pid: Integer, ppid: Integer, pcpu: Integer, rss: Integer, etime: Integer, command: Integer }
-
     # Return whether a process is running
     #
     # @param [Integer] pid the process's pid
@@ -98,16 +86,7 @@ module Bluepill
     #
     # @api private
     def self.cpu_usage(pid, include_children)
-      ps = ps_axu
-      return unless ps.key?(pid)
-
-      cpu_used = ps.fetch(pid).fetch(IDX_MAP.fetch(:pcpu)).to_f
-      if include_children
-        get_children(pid).each do |child_pid|
-          cpu_used += ps.fetch(child_pid).fetch(IDX_MAP.fetch(:pcpu)).to_f if ps.key?(child_pid)
-        end
-      end
-      cpu_used
+      usage(pid, include_children, PsTable::PCPU)
     end
 
     # Return a process's resident memory, from this tick's ps table
@@ -122,16 +101,28 @@ module Bluepill
     #
     # @api private
     def self.memory_usage(pid, include_children)
-      ps = ps_axu
-      return unless ps.key?(pid)
+      usage(pid, include_children, PsTable::RSS)
+    end
 
-      mem_used = ps.fetch(pid).fetch(IDX_MAP.fetch(:rss)).to_f
-      if include_children
-        get_children(pid).each do |child_pid|
-          mem_used += ps.fetch(child_pid).fetch(IDX_MAP.fetch(:rss)).to_f if ps.key?(child_pid)
-        end
-      end
-      mem_used
+    # Return a column of a process's row, from this tick's ps table, as a Float
+    #
+    # @param [Integer, nil] pid the process's pid
+    # @param [Boolean] include_children whether to add its descendants'
+    # @param [Integer] column the column, PsTable::PCPU or PsTable::RSS
+    #
+    # @return [Float, nil] the process's value, and its descendants' if
+    #   asked for, or nil if ps doesn't list it
+    #
+    # @raise [PsError] if ps could not be run this tick
+    #
+    # @api private
+    def self.usage(pid, include_children, column)
+      ps = ps_axu
+      row = ps.row(pid)
+      return unless row
+
+      used = row.fetch(column).to_f
+      include_children ? ps.sum(get_children(pid), column, used) : used
     end
 
     # Return how long a process has been running, from this tick's ps table
@@ -145,10 +136,8 @@ module Bluepill
     #
     # @api private
     def self.running_time(pid)
-      ps = ps_axu
-      return unless ps.key?(pid)
-
-      parse_elapsed_time(ps.fetch(pid).fetch(IDX_MAP.fetch(:etime)))
+      row = ps_axu.row(pid)
+      parse_elapsed_time(row.fetch(PsTable::ETIME)) if row
     end
 
     # Return a process's command line, from this tick's ps table
@@ -162,10 +151,8 @@ module Bluepill
     #
     # @api private
     def self.command(pid)
-      ps = ps_axu
-      return unless ps.key?(pid)
-
-      ps.fetch(pid).fetch(IDX_MAP.fetch(:command))
+      row = ps_axu.row(pid)
+      row.fetch(PsTable::COMMAND) if row
     end
 
     # Delete a file if it exists

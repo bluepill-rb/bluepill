@@ -1,3 +1,5 @@
+require "bluepill/system/ps_table"
+
 module Bluepill
   module System
     # Run ps once a tick, and read its table of processes
@@ -10,8 +12,8 @@ module Bluepill
     module Ps
       # Return what this tick has memoized
       #
-      # @return [Hash{Symbol => Hash{Integer => Array<String>}, String}] the
-      #   ps table, or ps's error, by name
+      # @return [Hash{Symbol => PsTable, String}] the ps table, or ps's
+      #   error, by name
       #
       # @api private
       def store
@@ -24,14 +26,13 @@ module Bluepill
       #
       # @api private
       def reset_data
-        @children_by_parent = nil
+        @children_table = nil
         store.clear
       end
 
       # Return this tick's ps table, running ps the first time it's asked for
       #
-      # @return [Hash{Integer => Array<String>}] each process's ps fields, by
-      #   pid, in the order of IDX_MAP
+      # @return [PsTable] each process's ps fields
       #
       # @raise [PsError] if ps could not be run this tick
       #
@@ -45,61 +46,18 @@ module Bluepill
 
       # Run ps, and parse what it prints into a table
       #
-      # @return [Hash{Integer => Array<String>}, String] each process's ps
-      #   fields, by pid, or why ps could not be run
+      # @return [PsTable, String] each process's ps fields, or why ps could
+      #   not be run
       #
       # @api private
       def read_ps_table
         # POSIX options, so this also works with System V ps on Solaris and SmartOS.
         # Use -A because -e shows the environment on FreeBSD and OpenBSD.
-        parse_ps_table(`ps -Ao pid,ppid,pcpu,rss,etime,args`)
+        PsTable.parse(`ps -Ao pid,ppid,pcpu,rss,etime,args`)
       rescue SystemCallError => e
         # Forking ps can fail, for example with ENOMEM or EAGAIN under memory pressure.
         # Cache the message so ps is not run again until the next tick.
         "Could not run ps: #{e.class}: #{e}"
-      end
-
-      # Parse what ps printed into a table
-      #
-      # @param [String] output ps's output, a line per process
-      #
-      # @return [Hash{Integer => Array<String>}] each process's ps fields, by
-      #   pid
-      #
-      # @api private
-      def parse_ps_table(output)
-        lines = output.split("\n")
-
-        table = {} #: ps_table
-        command = IDX_MAP.fetch(:command)
-        lines.each do |line|
-          # Split off the fields before the command, and keep the command
-          # whole, as ps printed it
-          chunks = line.split(" ", command + 1)
-          chunks[command] ||= ""
-          table[chunks.fetch(IDX_MAP.fetch(:pid)).to_i] = chunks
-        end
-        table
-      end
-
-      # Return the pids in this tick's ps table by their parent's pid
-      #
-      # It's built once per ps table, so finding a process's descendants
-      # takes as long as there are descendants, not a pass over the whole
-      # table for each one.
-      #
-      # @return [Hash{Integer => Array<Integer>}] each parent's children, in
-      #   ps's order
-      #
-      # @raise [PsError] if ps could not be run
-      #
-      # @api private
-      def children_by_parent
-        @children_by_parent ||= begin
-          index = {} #: Hash[Integer, Array[Integer]]
-          ps_axu.each_pair { |pid, chunks| (index[chunks.fetch(IDX_MAP.fetch(:ppid)).to_i] ||= []) << pid }
-          index
-        end
       end
 
       # Return the pids of a process's descendants, from this tick's ps table
@@ -116,11 +74,9 @@ module Bluepill
         # child and the recursion would never end.
         return NO_PIDS unless parent_pid.to_i > 0
 
-        # Most processes have no children, and they all share one empty array
-        children = children_by_parent.fetch(parent_pid) { return NO_PIDS }
-        descendants = children.dup
-        children.each { |pid| descendants.concat(get_children(pid)) }
-        descendants
+        # Each process asks every tick, so keep the table rather than take
+        # PS_MUTEX again for each one
+        (@children_table ||= ps_axu).descendants(parent_pid)
       rescue PsError
         NO_PIDS
       end

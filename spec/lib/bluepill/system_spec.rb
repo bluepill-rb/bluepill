@@ -9,8 +9,8 @@ describe Bluepill::System do
     described_class.reset_data
   end
 
-  def stub_ps(output)
-    allow(Bluepill::System).to receive(:ps_axu).and_return(output)
+  def stub_ps(rows)
+    allow(Bluepill::System).to receive(:ps_axu).and_return(Bluepill::System::PsTable.new(rows))
   end
 
   let(:ps) do
@@ -338,13 +338,6 @@ describe Bluepill::System do
     end
   end
 
-  describe ".children_by_parent" do
-    it "indexes each process's children by its pid, in ps's order" do
-      stub_ps(ps)
-      expect(described_class.children_by_parent).to eq(0 => [1], 1 => [2, 4], 2 => [3])
-    end
-  end
-
   describe ".reset_data" do
     it "clears the #store" do
       described_class.store[:anotherkey] = "Lorem ipsum dolor sit amet."
@@ -352,12 +345,11 @@ describe Bluepill::System do
       expect(described_class.store).to be_empty
     end
 
-    it "forgets the children index" do
-      stub_ps(ps)
-      described_class.children_by_parent
+    it "forgets the ps table" do
+      allow(described_class).to receive(:`).and_return("    1     0  0.0   100    01:00 init")
+      table = described_class.ps_axu
       described_class.reset_data
-      stub_ps({})
-      expect(described_class.children_by_parent).to eq({})
+      expect(described_class.ps_axu).not_to equal(table)
     end
 
     it "leaves an empty #store empty" do
@@ -392,8 +384,12 @@ describe Bluepill::System do
         allow(described_class).to receive(:`).and_return(output)
       end
 
-      it "parses ps output into a hash keyed by pid, and keeps it until the next tick" do
-        expect(Array.new(2) { described_class.ps_axu }).to eq([table, table])
+      it "parses ps output into a table keyed by pid" do
+        expect(described_class.ps_axu.rows).to eq(table)
+      end
+
+      it "keeps the table until the next tick" do
+        expect(described_class.ps_axu).to equal(described_class.ps_axu)
       end
 
       it "runs ps once a tick" do
@@ -418,7 +414,7 @@ describe Bluepill::System do
 
       it "still splits ps output on whitespace" do
         allow(described_class).to receive(:`).and_return(output.lines.first(2).join)
-        expect(described_class.ps_axu).to eq(table)
+        expect(described_class.ps_axu.rows).to eq(table)
       end
     end
 

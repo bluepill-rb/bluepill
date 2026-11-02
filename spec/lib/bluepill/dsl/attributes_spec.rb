@@ -50,30 +50,66 @@ describe Bluepill::DSL::Attributes do
     expect(proxy.auto_start).to be(false)
   end
 
-  it "rejects an unknown attribute that is set, and suggests the closest one" do
-    expect { proxy.uidd = "user" }
-      .to raise_error(Bluepill::ConfigError, "Unknown attribute 'uidd' for thing 'it'. Did you mean 'uid'?")
-  end
+  describe "#evaluate" do
+    def evaluate(&block) = proxy.evaluate(&block)
 
-  it "rejects an unknown attribute that is read" do
-    expect { proxy.gidd }.to raise_error(Bluepill::ConfigError, "Unknown attribute 'gidd' for thing 'it'. Did you mean 'gid'?")
-  end
+    it "runs the block with self set to the proxy, and returns what it returns" do
+      expect(evaluate { self }).to be(proxy)
+    end
 
-  it "rejects an unknown attribute with any arguments, or a block" do
-    expect { proxy.auto_strt(1, 2) { nil } }
-      .to raise_error(Bluepill::ConfigError, "Unknown attribute 'auto_strt' for thing 'it'. Did you mean 'auto_start'?")
-  end
+    it "passes the proxy to a block that takes an argument" do
+      expect(evaluate { |p| p }).to be(proxy)
+    end
 
-  it "suggests nothing for an attribute unlike any other" do
-    expect { proxy.frobnicate = 1 }.to raise_error(Bluepill::ConfigError, "Unknown attribute 'frobnicate' for thing 'it'")
-  end
+    it "sets attributes" do
+      evaluate { |p| p.uid = "user" }
+      expect(proxy.attributes).to eq(uid: "user")
+    end
 
-  it "only removes a trailing equals sign from the attribute" do
-    expect { proxy.public_send(:"u=id=", 1) }.to raise_error(Bluepill::ConfigError, /Unknown attribute 'u=id' /)
+    it "rejects an unknown attribute that is set, and suggests the closest one" do
+      expect { evaluate { |p| p.uidd = "user" } }
+        .to raise_error(Bluepill::ConfigError, "Unknown attribute 'uidd' for thing 'it'. Did you mean 'uid'?")
+    end
+
+    it "rejects an unknown attribute that is read" do
+      expect { evaluate { gidd } }.to raise_error(Bluepill::ConfigError, "Unknown attribute 'gidd' for thing 'it'. Did you mean 'gid'?")
+    end
+
+    it "rejects an unknown attribute with any arguments, or a block" do
+      expect { evaluate { auto_strt(1, 2) { nil } } }
+        .to raise_error(Bluepill::ConfigError, "Unknown attribute 'auto_strt' for thing 'it'. Did you mean 'auto_start'?")
+    end
+
+    it "suggests nothing for an attribute unlike any other" do
+      expect { evaluate { |p| p.frobnicate = 1 } }.to raise_error(Bluepill::ConfigError, "Unknown attribute 'frobnicate' for thing 'it'")
+    end
+
+    it "only removes a trailing equals sign from the attribute" do
+      expect { evaluate { public_send(:"u=id=", 1) } }.to raise_error(Bluepill::ConfigError, /Unknown attribute 'u=id' /)
+    end
+
+    it "keeps the backtrace of the call, which points at the pill file's line" do
+      line = __LINE__ + 1
+      expect { evaluate { uidd } }.to raise_error(
+        an_instance_of(Bluepill::ConfigError).and(having_attributes(backtrace: start_with(start_with("#{__FILE__}:#{line}:"))))
+      )
+    end
+
+    it "passes a missing method of another object through" do
+      expect { evaluate { nil.uidd } }.to raise_error(NoMethodError, /uidd/)
+    end
+
+    it "passes a missing constant through" do
+      expect { evaluate { Uidd } }.to raise_error(NameError, /Uidd/)
+    end
   end
 
   it "does not respond to an unknown attribute" do
-    expect([proxy.respond_to?(:uidd=), proxy.send(:respond_to_missing?, :uidd=, false)]).to eq([false, false])
+    expect(proxy).not_to respond_to(:uidd=)
+  end
+
+  it "leaves a call outside a block of the pill file to NoMethodError" do
+    expect { proxy.uidd = "user" }.to raise_error(NoMethodError)
   end
 
   it "rejects a reader or writer given the wrong number of values" do

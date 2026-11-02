@@ -2,7 +2,8 @@ module Bluepill
   # The parts the application and process blocks share
   module DSL
     # The attributes a pill file sets with `name = value`. The writers and
-    # readers are defined at load, and an unknown name raises ConfigError.
+    # readers are defined at load, and evaluate turns a call of an unknown
+    # one into a ConfigError.
     module Attributes : _Owner
       # What Attributes uses from the class that includes it
       interface _Owner
@@ -27,11 +28,11 @@ module Bluepill
 
       attr_reader attributes: Hash[Symbol, untyped]
 
+      def evaluate: () { (untyped proxy) [self: untyped] -> void } -> untyped
+
       private
 
-      def method_missing: (Symbol name, *untyped) -> bot
-
-      def respond_to_missing?: (Symbol name, bool include_private) -> false
+      def unknown_attribute_message: (_ToS? name) -> String
 
       def suggest: (String attribute) -> String?
     end

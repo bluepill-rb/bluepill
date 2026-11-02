@@ -11,11 +11,12 @@ module Bluepill
     #
     # A class that includes it names its attributes with
     # {ClassMethods#attribute}, which defines a writer and a reader for
-    # each. A reader returns nil for an attribute that isn't set. Any other
-    # call fails with a {ConfigError} that names the closest attribute, so
-    # a misspelled one fails when the pill file loads instead of being
-    # ignored. The class sets @attributes to a Hash, and defines
-    # attribute_owner, which names it in the error.
+    # each. A reader returns nil for an attribute that isn't set. A block
+    # that {#evaluate} runs fails with a {ConfigError} that names the
+    # closest attribute for any other call on the proxy, so a misspelled
+    # attribute fails when the pill file loads instead of being ignored.
+    # The class sets @attributes to a Hash, and defines attribute_owner,
+    # which names it in the error.
     #
     # @api private
     module Attributes
@@ -70,41 +71,50 @@ module Bluepill
       # @api private
       attr_reader :attributes
 
+      # Run a block of the pill file with self set to the proxy
+      #
+      # instance_eval also passes the proxy to a block that takes an
+      # argument. A call of a method the proxy doesn't have, such as a
+      # misspelled attribute, fails with a ConfigError instead, with the
+      # backtrace of the call, so it still points at the pill file's line.
+      # Any other NameError, such as one raised on another object, passes
+      # through as it is.
+      #
+      # @yield runs with self set to the proxy
+      # @yieldparam [Attributes] proxy the proxy
+      # @yieldreturn [void]
+      #
+      # @return [Object] what the block returns
+      #
+      # @raise [ConfigError] for a method the proxy doesn't have
+      #
+      # @api private
+      def evaluate(&block)
+        instance_eval(&block)
+      rescue NameError => e
+        raise unless e.receiver.equal?(self)
+
+        raise ConfigError, unknown_attribute_message(e.name), e.backtrace
+      end
+
       private
 
-      # Fail on a call of an attribute that isn't there
+      # Return the message for a call of an attribute that isn't there
       #
-      # The message names the attribute and what it was called on, and the
-      # closest attribute there is, when one is close enough.
+      # It names the attribute and what it was called on, and the closest
+      # attribute there is, when one is close enough.
       #
       # @param [Symbol] name the method's name
       #
-      # @return [void] it never returns
-      #
-      # @raise [ConfigError] always
+      # @return [String] the message
       #
       # @api private
-      def method_missing(name, *)
+      def unknown_attribute_message(name)
         attribute = name.to_s.delete_suffix("=")
         message = "Unknown attribute '#{attribute}' for #{attribute_owner}"
         suggestion = suggest(attribute)
-        message += ". Did you mean '#{suggestion}'?" if suggestion
-        raise ConfigError, message
+        suggestion ? "#{message}. Did you mean '#{suggestion}'?" : message
       end
-
-      # Return false, since method_missing defines no method, and only fails
-      #
-      # Standard asks for it beside method_missing. Object's own returns
-      # false too, so mutant can't tell its `super` mutation apart, and it's
-      # marked mutant:disable for that.
-      #
-      # @param [Symbol] _name the method's name
-      # @param [Boolean] _include_private ignored
-      #
-      # @return [false]
-      #
-      # @api private
-      def respond_to_missing?(_name, _include_private) = false
 
       # Return the attribute that's closest to a misspelled one
       #

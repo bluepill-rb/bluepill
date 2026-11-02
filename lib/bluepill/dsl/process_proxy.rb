@@ -73,8 +73,7 @@ module Bluepill
       @actual_pid = actual_pid
       @checks = []
 
-      # instance_eval also passes the proxy to a block that takes an argument
-      instance_eval(&process_block)
+      evaluate(&process_block)
     end
 
     # Add a check of the process, or a trigger such as :flapping

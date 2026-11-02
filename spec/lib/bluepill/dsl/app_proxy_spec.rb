@@ -32,7 +32,7 @@ describe Bluepill::AppProxy do
     end
 
     it "rejects an unknown attribute, and suggests the closest one" do
-      expect { proxy.uidd = "user" }
+      expect { proxy.evaluate { |app| app.uidd = "user" } }
         .to raise_error(Bluepill::ConfigError, "Unknown attribute 'uidd' for application 'app_name'. Did you mean 'uid'?")
     end
   end

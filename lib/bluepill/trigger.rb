@@ -129,8 +129,7 @@ module Bluepill
               scheduled_events.delete_if { |_, t| t.equal?(Thread.current) }
             end
           rescue StandardError => e
-            logger.err(e)
-            logger.err(e.backtrace.to_a.join("\n"))
+            Util.log_error(logger, "#{self.class.name.split('::').last} failed to dispatch #{event}", e)
           end
         end
         scheduled_events.push([event, thread])

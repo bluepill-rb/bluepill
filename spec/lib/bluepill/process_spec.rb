@@ -133,6 +133,20 @@ describe Bluepill::Process do
   end
 
   describe '#tick' do
+    it 'logs an error, such as a trigger raised, and keeps ticking' do
+      trigger = double('trigger', :logger= => nil)
+      subject.triggers << trigger
+      error = RuntimeError.new('boom')
+      error.set_backtrace(['line 1'])
+      allow(trigger).to receive(:notify).and_raise(error)
+      subject.state = 'down'
+      allow(subject).to receive(:process_running?).and_return(true)
+      expect(logger).to receive(:err).with('tick failed: RuntimeError: boom').ordered
+      expect(logger).to receive(:err).with('line 1').ordered
+      expect { subject.tick }.not_to raise_error
+      expect(subject).to be_down
+    end
+
     it 'does nothing while skipping ticks' do
       subject.skip_ticks_until = now.to_i + 10
       expect(subject).not_to receive(:clean_threads)
@@ -289,11 +303,10 @@ describe Bluepill::Process do
       subject.notify_triggers(transition)
     end
 
-    it 'logs and re-raises errors' do
+    it 're-raises errors, for tick to log' do
       error = RuntimeError.new('boom')
-      error.set_backtrace(%w[a b])
       allow(trigger).to receive(:notify).and_raise(error)
-      expect(logger).to receive(:err).with(%w[a b])
+      expect(logger).not_to receive(:err)
       expect { subject.notify_triggers(transition) }.to raise_error(error)
     end
   end

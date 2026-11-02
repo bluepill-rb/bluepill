@@ -117,17 +117,18 @@ describe Bluepill::Trigger do
       allow(error).to receive(:backtrace).and_return(nil)
       allow(process).to receive(:dispatch!).and_raise(error)
       subject.schedule_event(:start, 0).join
-      expect(logger).to have_received(:err).with(error)
-      expect(logger).to have_received(:err).with('')
+      expect(logger).to have_received(:err).with('Trigger failed to dispatch start: RuntimeError: boom').once
+      expect(logger).to have_received(:err).once
     end
 
-    it 'logs errors raised while dispatching' do
+    it 'logs errors raised while dispatching, with their backtrace' do
       error = RuntimeError.new('boom')
       error.set_backtrace(['line 1', 'line 2'])
       allow(process).to receive(:dispatch!).and_raise(error)
       subject.schedule_event(:start, 0).join
-      expect(logger).to have_received(:err).with(error)
-      expect(logger).to have_received(:err).with("line 1\nline 2")
+      expect(logger).to have_received(:err).with('Trigger failed to dispatch start: RuntimeError: boom').ordered
+      expect(logger).to have_received(:err).with('line 1').ordered
+      expect(logger).to have_received(:err).with('line 2').ordered
     end
   end
 

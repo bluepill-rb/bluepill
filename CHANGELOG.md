@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The README's group example gave every process the same pid file, and its `stop_signals` example waited longer than its stop grace time, so bluepill refused to load either config.
 - Bluepill timed its ticks, checks, grace times and flapping detection with the system clock, so a change to the clock, such as an NTP correction after a VM resumes, could put off ticks and checks for as long as the clock went back, or end grace times early when it went forward. It now times them with the monotonic clock, which only counts up, where Ruby has one (Ruby 2.1 and newer, and JRuby 9.0 and newer). On Ruby 1.9.3 and 2.0, and on JRuby 1.7, it still reads the system clock.
+- An exception in a check, other than a failed `ps`, or in a trigger stopped the daemon, which exited with status 5 and left the processes unmonitored. Bluepill now logs it at `err`, with a line for each line of its backtrace, and keeps monitoring. The check adds nothing to its history and fires nothing, so it doesn't count toward `times`, and it runs again at its next interval. A tick that raises for any other reason is logged the same way, and the process ticks again next second.
 
 ## [0.1.6] - 2026-11-02
 

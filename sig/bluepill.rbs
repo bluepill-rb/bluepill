@@ -583,6 +583,9 @@ module Bluepill
     # Returns the events to fire
     def run: (Integer? pid, ?Integer tick_number) -> Array[Symbol]
 
+    # Logs an error the check raised, which skips it until its next run
+    def check_failed: (StandardError error) -> void
+
     def clear_history!: () -> Util::RotationalArray[HistoryValue]
 
     def fired?: () -> bool
@@ -948,6 +951,10 @@ module Bluepill
   end
 
   module Util
+    # Logs an error at err, a line for its summary and one for each line of
+    # its backtrace
+    def self.log_error: (Logger logger, String summary, Exception error) -> void
+
     # An array that drops its oldest element when it grows past its capacity
     class RotationalArray[Elem] < Array[Elem]
       @capacity: Integer

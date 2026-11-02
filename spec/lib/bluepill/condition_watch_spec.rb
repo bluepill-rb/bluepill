@@ -154,12 +154,48 @@ describe Bluepill::ConditionWatch do
       expect(w.run(123, 40)).to eq([:restart])
     end
 
-    it 'logs and re-raises errors from the process condition' do
+    it 'logs an error from the process condition, and skips the check until its next run' do
+      cpu_usage(90)
+      w = watch(times: [2, 3])
+      w.run(123, 0)
       error = RuntimeError.new('boom')
-      error.set_backtrace(['line 1'])
+      error.set_backtrace(['line 1', 'line 2'])
       allow(Bluepill::System).to receive(:cpu_usage).and_raise(error)
-      expect { watch.run(123, 0) }.to raise_error(error)
-      expect(logger).to have_received(:err).with(['line 1'])
+      expect(w.run(123, 10)).to eq([])
+      expect(logger).to have_received(:err).with('cpu_usage check failed: RuntimeError: boom').ordered
+      expect(logger).to have_received(:err).with('line 1').ordered
+      expect(logger).to have_received(:err).with('line 2').ordered
+      expect(w.to_s).to eq("cpu_usage: [90.0*]\n")
+      expect(w.run(123, 15)).to eq([])
+      expect(Bluepill::System).to have_received(:cpu_usage).twice
+      cpu_usage(90)
+      expect(w.run(123, 20)).to eq([:restart])
+    end
+
+    it 'logs the failure of a subclass of PsError as a warning too' do
+      error_class = Class.new(Bluepill::System::PsError)
+      allow(Bluepill::System).to receive(:cpu_usage).and_raise(error_class, 'Could not parse ps')
+      expect(watch.run(123, 0)).to eq([])
+      expect(logger).to have_received(:warning).with('cpu_usage: Could not parse ps')
+      expect(logger).not_to have_received(:err)
+    end
+
+    it 'logs an error from checking the value' do
+      cpu_usage(90)
+      condition = Bluepill::ProcessConditions::CpuUsage
+      allow_any_instance_of(condition).to receive(:check).and_raise(ArgumentError, 'bad value')
+      w = watch
+      expect(w.run(123, 0)).to eq([])
+      expect(logger).to have_received(:err).with('cpu_usage check failed: ArgumentError: bad value')
+      expect(w.to_s).to eq("cpu_usage: []\n")
+    end
+
+    it 'logs an error from formatting the value' do
+      cpu_usage(90)
+      condition = Bluepill::ProcessConditions::CpuUsage
+      allow_any_instance_of(condition).to receive(:format_value).and_raise(TypeError, 'bad format')
+      expect(watch.run(123, 0)).to eq([])
+      expect(logger).to have_received(:err).with('cpu_usage check failed: TypeError: bad format')
     end
 
     it 'logs a ps failure and skips the check without recording a value' do

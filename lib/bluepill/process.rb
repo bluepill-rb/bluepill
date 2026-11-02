@@ -467,6 +467,10 @@ module Bluepill
     # Unless ticks are being skipped, fire the state machine's tick event, and
     # then, for a process that's up, run its watches and tick its children.
     #
+    # An error, such as one a trigger raised, is logged with its backtrace,
+    # and the process ticks again next time, so one broken check or trigger
+    # doesn't stop the daemon.
+    #
     # @return [void]
     #
     # @api private
@@ -493,6 +497,8 @@ module Bluepill
 
       refresh_children!
       children.each(&:tick)
+    rescue StandardError => e
+      Util.log_error(logger, 'tick failed', e)
     end
 
     # Set the logger, for the process and for its watches and triggers
@@ -551,22 +557,17 @@ module Bluepill
 
     # Tell every trigger about a transition
     #
+    # An error a trigger raises stops the transition, and tick logs it.
+    #
     # @param [#from_name, #to_name, #loopback?] transition the transition
     #
     # @return [void]
     #
-    # @raise [StandardError] what a trigger raised, after logging it
+    # @raise [StandardError] what a trigger raised
     #
     # @api private
     def notify_triggers(transition)
-      triggers.each do |trigger|
-        begin
-          trigger.notify(transition)
-        rescue StandardError => e
-          logger.err e.backtrace
-          raise
-        end
-      end
+      triggers.each { |trigger| trigger.notify(transition) }
     end
 
     # Add a check to run on the process every interval

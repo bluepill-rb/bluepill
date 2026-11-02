@@ -33,6 +33,7 @@ require "timeout"
 require "logger"
 
 require "bluepill/clock"
+require "bluepill/deprecation"
 require "bluepill/units"
 require "bluepill/util/inflections"
 

@@ -120,6 +120,11 @@ describe Bluepill::Application do
         app
         expect(Bluepill::ProcessJournal).to have_received(:logger=).with(logger)
       end
+
+      it "gives the deprecation warnings the same logger" do
+        app
+        expect(Bluepill::Deprecation.logger).to be(logger)
+      end
     end
 
     context "when option foreground is false" do

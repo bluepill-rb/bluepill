@@ -1,0 +1,22 @@
+module Bluepill
+  # Warns, once each, about what bluepill 0.3.0 changes
+  module Deprecation
+    RUBY_REQUIRED: Gem::Version
+
+    self.@warned: Hash[untyped, bool]
+    self.@logger: Logger?
+
+    # Warns about a change, unless a warning of the same key was given
+    def self.warn: (untyped key, String message) -> void
+
+    def self.logger: () -> Logger?
+
+    def self.logger=: (Logger? logger) -> void
+
+    # Forgets the warnings given and the logger
+    def self.reset!: () -> void
+
+    # Warns when bluepill runs on a Ruby that 0.3.0 doesn't support
+    def self.check_ruby: (?String version) -> void
+  end
+end

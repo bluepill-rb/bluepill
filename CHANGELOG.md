@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Deprecated
+
+Bluepill 0.2.9 warns, once each, about what will break in 0.3.0. Each warning starts with `DEPRECATION:` and says what to change, and `bluepill load` prints it, before the daemon starts, and logs it at `warning`. A pill file that loads without any works with 0.3.0.
+
+- Running on Ruby 2.7. Bluepill 0.3.0 needs Ruby 3.0 or newer, or JRuby 9.4 or newer.
+
 ### Fixed
 
 - An exception in a check or trigger no longer stops the daemon. It's logged, with its backtrace a line each, and the check is skipped until its next interval, so it doesn't count toward `times`. Before, it stopped the daemon with exit status 5, and the log showed the backtrace as one Array.

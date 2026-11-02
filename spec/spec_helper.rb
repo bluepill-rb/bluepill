@@ -60,3 +60,12 @@ module Process
     end
   end
 end
+
+RSpec.configure do |config|
+  # Each example starts with no deprecation warnings given, and none about
+  # the Ruby that runs the specs, which deprecation_spec checks itself
+  config.before do
+    Bluepill::Deprecation.reset!
+    allow(Bluepill::Deprecation).to receive(:check_ruby)
+  end
+end

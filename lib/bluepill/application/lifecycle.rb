@@ -125,6 +125,8 @@ module Bluepill
 
       # Create the logger and the pids directory
       #
+      # The deprecation warnings go to the logger too.
+      #
       # Bluepill opens its log file and creates its pids dir as the user that
       # runs it. The uid and gid in the config only apply to its processes.
       # It exits with status 5 if it can't.
@@ -133,7 +135,7 @@ module Bluepill
       #
       # @api private
       def setup_logger_and_pids_dir
-        self.logger = ProcessJournal.logger = Logger.new(log_file: log_file, log_level: @log_level, stdout: foreground?).prefix_with(name)
+        self.logger = ProcessJournal.logger = Deprecation.logger = Logger.new(log_file: log_file, log_level: @log_level, stdout: foreground?).prefix_with(name)
         setup_pids_dir
       rescue SystemCallError => e
         $stderr.puts("Failed to start bluepill: #{e}")

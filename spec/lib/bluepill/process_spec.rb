@@ -477,8 +477,7 @@ describe Bluepill::Process do
     before { subject.start_command = '/etc/init.d/script start' }
 
     it 'functions' do
-      allow(subject).to receive(:on_start_timeout).and_return('freakout')
-      allow(subject).to receive(:daemonize?).and_return(false)
+      allow(subject).to receive_messages(on_start_timeout: 'freakout', daemonize?: false)
 
       expect(subject).to receive(:with_timeout).
         with(3, 'freakout').

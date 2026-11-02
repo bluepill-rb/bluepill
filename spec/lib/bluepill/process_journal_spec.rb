@@ -34,10 +34,8 @@ describe Bluepill::ProcessJournal do
     journal.instance_variable_set(:@legacy_journal_dir, @legacy_dir)
     allow(journal).to receive(:sleep)
     allow(::Process).to receive(:kill)
-    allow(Bluepill::System).to receive(:pid_alive?).and_return(false)
     # Ids without a start time, journaled since the machine booted
-    allow(Bluepill::System).to receive(:started_at).and_return(nil)
-    allow(Bluepill::System).to receive(:boot_time).and_return(0)
+    allow(Bluepill::System).to receive_messages(pid_alive?: false, started_at: nil, boot_time: 0)
   end
 
   def write_journal(filename, ids)

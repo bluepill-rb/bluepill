@@ -99,14 +99,6 @@ module Bluepill
 
     def restarting?: () -> bool
 
-    def start: () -> bool
-
-    def stop: () -> bool
-
-    def unmonitor: () -> bool
-
-    def restart: () -> bool
-
     # Moves the process to the state an event leads to, and returns whether
     # it moved
     def fire_event: (Symbol event) -> bool

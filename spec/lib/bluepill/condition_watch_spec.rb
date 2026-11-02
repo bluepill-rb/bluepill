@@ -132,6 +132,21 @@ describe Bluepill::ConditionWatch do
       expect(watch(fires: %i[stop start]).run(123, 0)).to eq(%i[stop start])
     end
 
+    it "fires every event a process takes" do
+      cpu_usage(90)
+      expect(watch(fires: %i[start stop unmonitor restart]).run(123, 0)).to eq(%i[start stop unmonitor restart])
+    end
+
+    it "refuses an event a process doesn't take" do
+      expect { watch(fires: %i[stop clean_threads tick]) }.to raise_error(
+        Bluepill::ConfigError, "cpu_usage can't fire :clean_threads, :tick: a check fires :start, :stop, :unmonitor, :restart"
+      )
+    end
+
+    it "refuses an event given as a String" do
+      expect { watch(fires: "stop") }.to raise_error(Bluepill::ConfigError, /can't fire "stop"/)
+    end
+
     it "fires the same number of times as it remembers when times is a number" do
       cpu_usage(90, 90, 10)
       w = watch(times: 2)

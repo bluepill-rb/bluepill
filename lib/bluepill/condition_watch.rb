@@ -72,11 +72,13 @@ module Bluepill
     #
     # @return [void]
     #
+    # @raise [ConfigError] for an event a check can't fire
+    #
     # @api private
     def initialize(name, logger: nil, fires: :restart, every: nil, times: 1, include_children: false, **condition_options)
       @name = name
       @logger = logger
-      @fires = Array(fires)
+      @fires = events_to_fire(Array(fires))
       @every = every
       # times: 5 means 5 of the last 5, and times: [3, 5] 3 of the last 5
       times = Array(times) #: Array[Integer]
@@ -85,6 +87,25 @@ module Bluepill
       @include_children = include_children
       clear_history!
       create_condition(condition_options)
+    end
+
+    # Return the events a check fires, if each is one a process takes
+    #
+    # @param [Array<Object>] events what fires: names
+    #
+    # @return [Array<Symbol>] the events
+    #
+    # @raise [ConfigError] for an event that isn't one of
+    #   Process::StateMachine::TRANSITIONS
+    #
+    # @api private
+    def events_to_fire(events)
+      known = Process::StateMachine::TRANSITIONS.keys
+      unknown = events - known
+      return events if unknown.empty?
+
+      raise ConfigError, "#{@name} can't fire #{unknown.collect(&:inspect).join(", ")}: " \
+        "a check fires #{known.collect(&:inspect).join(", ")}"
     end
 
     # Create the check, with the options the watch doesn't take for itself

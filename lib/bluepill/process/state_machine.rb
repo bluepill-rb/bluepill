@@ -6,7 +6,8 @@ module Bluepill
     #
     # A process is unmonitored, up, down, starting, stopping or restarting.
     # Ticks and the start, stop, unmonitor and restart events move it, and
-    # TransitionCallbacks run on the way.
+    # TransitionCallbacks run on the way. Process#dispatch! fires the events
+    # that checks, triggers and commands ask for.
     #
     # @api private
     module StateMachine
@@ -92,43 +93,18 @@ module Bluepill
       # @api private
       def restarting? = state.equal?(:restarting)
 
-      # Start the process, if it's unmonitored or down
-      #
-      # @return [Boolean] whether the process moved to starting
-      #
-      # @api private
-      def start = fire_event(:start)
-
-      # Stop the process, if it's up
-      #
-      # @return [Boolean] whether the process moved to stopping
-      #
-      # @api private
-      def stop = fire_event(:stop)
-
-      # Stop monitoring the process, from any state
-      #
-      # @return [Boolean] whether the process moved to unmonitored
-      #
-      # @api private
-      def unmonitor = fire_event(:unmonitor)
-
-      # Restart the process, if it's up or down
-      #
-      # @return [Boolean] whether the process moved to restarting
-      #
-      # @api private
-      def restart = fire_event(:restart)
-
       # Move the process to the state an event leads to from its state
       #
-      # The before callbacks see the old state, and can throw :halt to cancel
-      # the move. The after callbacks see the new one.
+      # The before callbacks see the old state, and can throw Trigger::HALT
+      # to cancel the move. The after callbacks see the new one.
       #
-      # @param [Symbol] event :tick, :start, :stop, :unmonitor or :restart
+      # @param [Symbol] event :tick, or one of TRANSITIONS: :start, :stop,
+      #   :unmonitor or :restart
       #
       # @return [Boolean] whether the process moved, false when the event
       #   doesn't lead anywhere from its state or a callback halted it
+      #
+      # @raise [KeyError] for any other event
       #
       # @api private
       def fire_event(event)
@@ -137,7 +113,7 @@ module Bluepill
         return false unless to
 
         transition = from.equal?(to) ? LOOPBACKS.fetch(from) : Transition.new(from, to)
-        return false unless catch(:halt) { before_transition(transition) }
+        return false unless catch(Trigger::HALT) { before_transition(transition) }
 
         self.state = to
         after_transition(transition)

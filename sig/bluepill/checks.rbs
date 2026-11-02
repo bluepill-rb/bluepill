@@ -28,6 +28,8 @@ module Bluepill
 
     def initialize: (Symbol name, ?logger: untyped, ?fires: untyped, ?every: untyped, ?times: untyped, ?include_children: bool, **untyped condition_options) -> void
 
+    def events_to_fire: (Array[untyped] events) -> Array[Symbol]
+
     def create_condition: (Hash[Symbol, untyped] options) -> void
 
     # Sets the logger of the watch and its condition

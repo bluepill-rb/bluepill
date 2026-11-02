@@ -154,12 +154,12 @@ describe Bluepill::Process do
       if to
         it "goes from #{from} to #{to} on #{event}" do
           process.state = from
-          expect([process.public_send(event), process.state, calls]).to eq([true, to, callbacks(from, to)])
+          expect([process.fire_event(event), process.state, calls]).to eq([true, to, callbacks(from, to)])
         end
       else
         it "stays #{from} on #{event}, with no callbacks" do
           process.state = from
-          expect([process.public_send(event), process.state, calls]).to eq([false, from, []])
+          expect([process.fire_event(event), process.state, calls]).to eq([false, from, []])
         end
       end
     end
@@ -188,12 +188,12 @@ describe Bluepill::Process do
 
   describe "a callback that halts" do
     before do
-      allow(process.triggers.first).to receive(:notify) { throw :halt }
+      allow(process.triggers.first).to receive(:notify) { throw Bluepill::Trigger::HALT }
     end
 
     it "cancels the transition and the callbacks after it" do
       process.state = :down
-      expect([process.start, process.state, calls]).to eq([false, :down, []])
+      expect([process.fire_event(:start), process.state, calls]).to eq([false, :down, []])
     end
 
     it "cancels a tick from stopping before it cleans up threads" do
@@ -207,13 +207,13 @@ describe Bluepill::Process do
     it "leaves the state alone when it raises before the transition" do
       allow(process.triggers.first).to receive(:notify).and_raise("trigger failed")
       process.state = :up
-      expect([error_from { process.restart }, process.state]).to eq(["trigger failed", :up])
+      expect([error_from { process.fire_event(:restart) }, process.state]).to eq(["trigger failed", :up])
     end
 
     it "keeps the new state when it raises after the transition, without recording it" do
       allow(Bluepill::System).to receive(:daemonize).and_raise("start failed")
       expected = [[:notify_triggers, :unmonitored, :starting, false, :unmonitored], %i[clean_threads starting]]
-      expect([error_from { process.start }, process.state, calls]).to eq(["start failed", :starting, expected])
+      expect([error_from { process.fire_event(:start) }, process.state, calls]).to eq(["start failed", :starting, expected])
     end
   end
 
@@ -222,7 +222,7 @@ describe Bluepill::Process do
       transitions = []
       allow(process.triggers.first).to receive(:notify) { |transition| transitions << transition }
       process.state = :up
-      process.stop
+      process.fire_event(:stop)
       expect(transitions.first).to have_attributes(from_name: :up, to_name: :stopping, loopback?: false)
     end
 

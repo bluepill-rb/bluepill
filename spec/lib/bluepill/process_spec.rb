@@ -313,6 +313,13 @@ describe Bluepill::Process do
       end
     end
 
+    context "with an event that isn't a transition" do
+      it "raises a KeyError, without calling a method of that name" do
+        allow(process).to receive(:clean_threads).and_raise("called clean_threads")
+        expect { process.dispatch!(:clean_threads) }.to raise_error(KeyError)
+      end
+    end
+
     context "with stop" do
       before do
         process.state = :up

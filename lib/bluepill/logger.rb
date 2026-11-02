@@ -89,7 +89,7 @@ module Bluepill
     #   @return [void]
     #   @api private
     LOG_METHODS.each_with_index do |method, priority|
-      class_eval <<-RUBY, __FILE__, __LINE__ + 1
+      class_eval <<~RUBY, __FILE__, __LINE__ + 1
         def #{method}(msg, prefix = nil) # def emerg(msg, prefix = nil)
           # Below the log level, so dropped before anything is formatted
           return if #{priority} > @level # return if 0 > @level

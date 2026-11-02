@@ -44,9 +44,6 @@ Security/MarshalLoad:
     - lib/bluepill/socket.rb
     - lib/bluepill/system/commands.rb
 
-Metrics/BlockNesting:
-  Max: 3
-
 Metrics/ParameterLists:
   Max: 4
   CountKeywordArgs: true

@@ -12,7 +12,7 @@ require "bluepill"
 # The flapping check below leaves trigger threads that are killed when
 # the script ends, and JRuby 9.2 reports a killed thread as one that
 # died with an exception, after "ok"
-Thread.report_on_exception = false if Thread.respond_to?(:report_on_exception=)
+Thread.report_on_exception = false
 
 def check(description)
   raise "#{description} failed" unless yield

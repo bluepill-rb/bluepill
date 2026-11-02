@@ -22,16 +22,12 @@ unless ENV["MUTANT"]
     # Coverage is only enforced on MRI. JRuby counts some lines that it never
     # marks as run, such as code inside class_eval strings.
     if RUBY_ENGINE == "ruby"
+      enable_coverage :branch
       if simplecov1
-        enable_coverage :branch
         enable_coverage :method
         minimum_coverage line: 100, branch: 100, method: 100
-      elsif RUBY_VERSION >= "2.5"
-        # Branch coverage needs Ruby 2.5
-        enable_coverage :branch
-        minimum_coverage line: 100, branch: 100
       else
-        minimum_coverage 100
+        minimum_coverage line: 100, branch: 100
       end
     end
   end

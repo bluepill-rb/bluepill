@@ -118,6 +118,7 @@ if yardstick
   end
 end
 
+desc 'Run the specs, like rake spec'
 task test: :spec
 default_tasks = [:spec, :rubocop]
 default_tasks << :yardstick if yardstick

@@ -944,6 +944,8 @@ module Bluepill
   # they finish
   module System
     extend Ps
+    extend Commands
+    extend Daemon
 
     # Options for daemonize and execute_blocking
     type command_options = {
@@ -1014,48 +1016,61 @@ module Bluepill
 
     def self.parse_elapsed_time: (String? str) -> Integer
 
-    # Returns the daemon's pid
-    def self.daemonize: (String cmd, ?command_options options) -> Integer?
+    # Sets up the process that a command runs in
+    module CommandSetup
+      def setup_command_environment: (command_options options) -> void
 
-    def self.read_daemon_pid: (IO reader, IO writer) -> Integer?
+      def drop_privileges: (String? uid, String? gid, Array[String]? supplementary_groups) -> void
 
-    def self.start_daemon: (String cmd, command_options options, IO pid_pipe) -> bot
+      def join_groups: (Etc::Passwd? user, Integer? gid_num) -> Integer?
 
-    def self.daemon_command: (String cmd, command_options options) -> ^() -> void
+      def add_supplementary_groups: (Array[String]? supplementary_groups) -> void
 
-    def self.execute_blocking: (String cmd, ?command_options options) -> blocking_result
+      def switch_to_user: (Etc::Passwd user) -> void
+    end
 
-    def self.start_blocking_child: (String cmd, command_options options, IO reader, IO result_pipe) -> bot
+    # Runs commands in the background, as daemons
+    module Daemon
+      include CommandSetup
 
-    def self.read_blocking_status: (String cmd, seconds? timeout, Integer child, IO reader) -> String
+      # Returns the daemon's pid
+      def daemonize: (String cmd, ?command_options options) -> Integer?
 
-    def self.kill_group_after: (Integer child, seconds? timeout, String cmd) -> bot
+      def read_daemon_pid: (IO reader, IO writer) -> Integer?
 
-    def self.run_blocking_child: (String cmd, command_options options, IO result_pipe) -> bot
+      def start_daemon: (String cmd, command_options options, IO pid_pipe) -> bot
 
-    def self.collect_blocking_result: (Integer pid, IO cmd_out_read, IO cmd_err_read) -> blocking_result
+      def daemon_command: (String cmd, command_options options) -> ^() -> void
 
-    def self.report_blocking_result: (IO result_pipe, blocking_result result) -> bot
+      def can_write_pid_file: (String pid_file, Logger logger) -> bool
 
-    def self.exec_blocking_grandchild: (String cmd, command_options options, grandchild_pipes pipes) -> bot
+      def redirect_io: (String? io_in, String? io_out, String? io_err) -> void
+    end
 
-    def self.reopen_on_pipe: (IO stream, [IO, IO] pipe) -> void
+    # Runs commands until they finish
+    module Commands
+      include CommandSetup
 
-    def self.report_grandchild_error: (Exception error, grandchild_pipes pipes) -> bot
+      def execute_blocking: (String cmd, ?command_options options) -> blocking_result
 
-    def self.setup_command_environment: (command_options options) -> void
+      def start_blocking_child: (String cmd, command_options options, IO reader, IO result_pipe) -> bot
 
-    def self.drop_privileges: (String? uid, String? gid, Array[String]? supplementary_groups) -> void
+      def read_blocking_status: (String cmd, seconds? timeout, Integer child, IO reader) -> String
 
-    def self.join_groups: (Etc::Passwd? user, Integer? gid_num) -> Integer?
+      def kill_group_after: (Integer child, seconds? timeout, String cmd) -> bot
 
-    def self.add_supplementary_groups: (Array[String]? supplementary_groups) -> void
+      def run_blocking_child: (String cmd, command_options options, IO result_pipe) -> bot
 
-    def self.switch_to_user: (Etc::Passwd user) -> void
+      def collect_blocking_result: (Integer pid, IO cmd_out_read, IO cmd_err_read) -> blocking_result
 
-    def self.can_write_pid_file: (String pid_file, Logger logger) -> bool
+      def report_blocking_result: (IO result_pipe, blocking_result result) -> bot
 
-    def self.redirect_io: (String? io_in, String? io_out, String? io_err) -> void
+      def exec_blocking_grandchild: (String cmd, command_options options, grandchild_pipes pipes) -> bot
+
+      def reopen_on_pipe: (IO stream, [IO, IO] pipe) -> void
+
+      def report_grandchild_error: (Exception error, grandchild_pipes pipes) -> bot
+    end
   end
 
   # Remembers the pids and process groups of the processes bluepill starts,

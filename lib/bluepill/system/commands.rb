@@ -1,475 +1,256 @@
-require "etc"
 require "shellwords"
 require "bluepill/daemonize"
+require "bluepill/system/command_setup"
+require "bluepill/system/daemon"
 
 module Bluepill
   module System
-    # Runs commands for bluepill: in the background as daemons, or until they
-    # finish, optionally as another user. System's documentation is in
-    # system.rb.
-
-    # Start a command as a daemon, and write its pid file
+    # Run commands until they finish, and collect what they print
     #
-    # It forks a child that drops privileges, sets up the environment and
-    # standard streams, and daemonizes the command. The child tells the
-    # parent the daemon's pid over a pipe.
-    #
-    # @param [String] cmd the command, split into words without a shell
-    # @param [Hash{Symbol => Object}] options :uid, :gid,
-    #   :supplementary_groups, :working_dir, :environment, :pid_file,
-    #   :logger, :stdin, :stdout and :stderr
-    #
-    # @return [Integer, nil] the daemon's pid, or nil if it didn't start
+    # System extends this module, so these are System's module functions.
+    # Daemon runs commands in the background instead.
     #
     # @api private
-    def self.daemonize(cmd, options = {})
-      rd, wr = IO.pipe
+    module Commands
+      include CommandSetup
 
-      child = Daemonize.safefork
-      if child
-        # we don't want to create zombies, so detach ourselves from the child exit status
-        ::Process.detach(child)
+      # Run a command until it finishes, and return what it printed
+      #
+      # With a :timeout, the command runs in a process group of its own, and
+      # if it hasn't finished in time, that whole group is killed, so a hung
+      # command and anything it started don't keep running.
+      #
+      # @param [String] cmd the command, split into words without a shell
+      # @param [Hash{Symbol => Object}] options :uid, :gid,
+      #   :supplementary_groups, :working_dir, :environment and :timeout (in
+      #   seconds)
+      #
+      # @return [Hash{Symbol => Object}] its :stdout and :stderr Strings, and
+      #   its :exit_code (nil if a signal ended it)
+      #
+      # @raise [Timeout::Error] if it ran longer than the :timeout
+      #
+      # @api private
+      def execute_blocking(cmd, options = {})
+        rd, wr = IO.pipe
 
-        read_daemon_pid(rd, wr)
-      else
-        # child
-        rd.close
+        child = Daemonize.safefork
+        return start_blocking_child(cmd, options, rd, wr) unless child
 
-        drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
-        start_daemon(cmd, options, wr)
+        # Reap the child in a background thread, so it never becomes a zombie,
+        # even if a timeout interrupts us before it exits
+        waiter = ::Process.detach(child)
+
+        wr.close
+        cmd_status = read_blocking_status(cmd, options[:timeout], child, rd)
+        waiter.join
+
+        cmd_status.empty? ? {exit_code: 0, stdout: "", stderr: ""} : Marshal.load(cmd_status)
       end
-    end
 
-    # Read the daemon's pid from the child that started it, in the parent
-    #
-    # @param [IO] reader the end of the pipe that the child writes the pid to
-    # @param [IO] writer the other end, which only the child uses
-    #
-    # @return [Integer, nil] the daemon's pid, or nil if it didn't start
-    #
-    # @api private
-    def self.read_daemon_pid(reader, writer)
-      # parent
-      writer.close
+      # Run the command in the child, which execute_blocking forked
+      #
+      # With a :timeout, the child gets a process group of its own first.
+      #
+      # @param [String] cmd the command
+      # @param [Hash{Symbol => Object}] options as for execute_blocking
+      # @param [IO] reader the end of the pipe that only the parent uses
+      # @param [IO] result_pipe where to write the result, marshaled
+      #
+      # @return [void] it never returns, since it exits the child
+      #
+      # @api private
+      def start_blocking_child(cmd, options, reader, result_pipe)
+        reader.close
+        # The command and what it starts can all be killed at once on a timeout
+        ::Process.setpgid(0, 0) if options[:timeout]
+        run_blocking_child(cmd, options, result_pipe)
+      end
 
-      daemon_id = reader.read.to_i
-      reader.close
+      # Read what the child reports about the command, in the parent
+      #
+      # @param [String] cmd the command, for the error on a timeout
+      # @param [Numeric, ActiveSupport::Duration, nil] timeout the seconds to
+      #   wait for it, or nil to wait until it finishes
+      # @param [Integer] child the child's pid
+      # @param [IO] reader the end of the pipe that the child writes to
+      #
+      # @return [String] the marshaled result, or "" if the child reported
+      #   nothing
+      #
+      # @raise [Timeout::Error] if it ran longer than the timeout
+      #
+      # @api private
+      def read_blocking_status(cmd, timeout, child, reader)
+        # The signatures for IO.select leave out its timeout
+        ready = timeout.nil? || IO.select([reader], nil, nil, timeout.to_f) # steep:ignore UnresolvedOverloading
+        kill_group_after(child, timeout, cmd) unless ready
+        reader.read
+      ensure
+        reader.close
+      end
 
-      daemon_id if daemon_id > 0
-    end
+      # Kill a command's process group, once it has run past its timeout
+      #
+      # @param [Integer] child the pid of the group's leader, which runs the
+      #   command
+      # @param [Numeric, ActiveSupport::Duration] timeout the seconds it was given
+      # @param [String] cmd the command, for the error
+      #
+      # @return [void] it never returns
+      #
+      # @raise [Timeout::Error] always
+      #
+      # @api private
+      def kill_group_after(child, timeout, cmd)
+        begin
+          ::Process.kill("KILL", -child)
+        rescue Errno::ESRCH
+          nil # it finished just now
+        end
+        raise Timeout::Error, "#{cmd} took longer than #{timeout} seconds"
+      end
 
-    # Daemonize the command, write its pid file, and tell the parent its pid
-    #
-    # It runs in the child, once it has dropped privileges.
-    #
-    # @param [String] cmd the command
-    # @param [Hash{Symbol => Object}] options as for daemonize
-    # @param [IO] pid_pipe where to write the daemon's pid for the parent
-    #
-    # @return [void] it never returns, since it exits the child
-    #
-    # @api private
-    def self.start_daemon(cmd, options, pid_pipe)
-      # Processes that bluepill daemonizes always have a pid file and a logger
-      pid_file = options[:pid_file] #: String
-      logger = options[:logger] #: Logger
+      # Run a command in a grandchild, report its result, and exit
+      #
+      # Sends the grandchild's output and exit code to the parent over
+      # result_pipe.
+      #
+      # @param [String] cmd the command
+      # @param [Hash{Symbol => Object}] options as for execute_blocking
+      # @param [IO] result_pipe where to write the result, marshaled
+      #
+      # @return [void] it never returns, since it exits the child
+      #
+      # @api private
+      def run_blocking_child(cmd, options, result_pipe)
+        # create a child in which we can override the stdin, stdout and stderr
+        cmd_out_read, cmd_out_write = IO.pipe
+        cmd_err_read, cmd_err_write = IO.pipe
 
-      # if we cannot write the pid file as the provided user, err out
-      exit unless can_write_pid_file(pid_file, logger)
+        pid = fork do
+          # @type var pipes: grandchild_pipes
+          pipes = {out: [cmd_out_read, cmd_out_write], err: [cmd_err_read, cmd_err_write], result: result_pipe}
+          exec_blocking_grandchild(cmd, options, pipes)
+        end
 
-      daemon_id = Daemonize.call_as_daemon(daemon_command(cmd, options), cmd)
+        # we do not use these ends of the pipes in the child
+        cmd_out_write.close
+        cmd_err_write.close
 
-      # call_as_daemon returns 0 when the daemon fails to report its pid
-      File.write(pid_file, daemon_id.to_s) if daemon_id > 0
+        report_blocking_result(result_pipe, collect_blocking_result(pid, cmd_out_read, cmd_err_read))
+      end
 
-      pid_pipe.write daemon_id
-      pid_pipe.close
+      # Wait for the grandchild to finish, and collect what it printed
+      #
+      # @param [Integer] pid the grandchild's pid
+      # @param [IO] cmd_out_read where to read its standard output
+      # @param [IO] cmd_err_read where to read its standard error
+      #
+      # @return [Hash{Symbol => Object}] its :stdout and :stderr Strings, and
+      #   its :exit_code (nil if a signal ended it)
+      #
+      # @api private
+      def collect_blocking_result(pid, cmd_out_read, cmd_err_read)
+        # wait for the cmd to finish executing and acknowledge it's death
+        _, status = ::Process.waitpid2(pid)
 
-      ::Process.exit!(true)
-    end
+        # @type var result: blocking_result
+        result = {
+          stdout: cmd_out_read.read,
+          stderr: cmd_err_read.read,
+          exit_code: status.exitstatus
+        }
+        cmd_out_read.close
+        cmd_err_read.close
+        result
+      end
 
-    # Return what the daemon runs: the command, in its environment
-    #
-    # @param [String] cmd the command
-    # @param [Hash{Symbol => Object}] options as for daemonize
-    #
-    # @return [Proc] a block that execs the command
-    #
-    # @api private
-    def self.daemon_command(cmd, options)
-      lambda do
+      # Tell the parent the command's result, and exit the child
+      #
+      # @param [IO] result_pipe where to write the result, marshaled
+      # @param [Hash{Symbol => Object}] result the command's result
+      #
+      # @return [void] it never returns, since it exits the child
+      #
+      # @api private
+      def report_blocking_result(result_pipe, result)
+        # Time to tell the parent about what went down
+        begin
+          result_pipe.write Marshal.dump(result)
+        rescue Errno::EPIPE
+          # The parent timed out and stopped waiting for the result
+        end
+        result_pipe.close
+
+        ::Process.exit!
+      end
+
+      # Replace the grandchild with the command, its output going to the pipes
+      #
+      # @param [String] cmd the command
+      # @param [Hash{Symbol => Object}] options as for execute_blocking
+      # @param [Hash{Symbol => Object}] pipes the :out and :err pipes, each a
+      #   reader and a writer, and the :result pipe
+      #
+      # @return [void] it never returns, since it execs the command, or exits
+      #   with status 1 if it can't
+      #
+      # @api private
+      def exec_blocking_grandchild(cmd, options, pipes)
+        drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
         setup_command_environment(options)
-        redirect_io(options[:stdin], options[:stdout], options[:stderr])
+
+        # close unused fds so ancestors wont hang. This line is the only reason we are not
+        # using something like popen3. If this fd is not closed, the .read call on the parent
+        # will never return because the result pipe would still be open in the "exec"-ed cmd
+        pipes.fetch(:result).close
+
+        # we do not care about stdin of cmd
+        STDIN.reopen(File::NULL)
+
+        # point stdout and stderr of cmd to somewhere we can read
+        reopen_on_pipe(STDOUT, pipes.fetch(:out))
+        reopen_on_pipe(STDERR, pipes.fetch(:err))
 
         Kernel.exec(*Shellwords.shellwords(cmd))
-        exit
-      end
-    end
-
-    # Run a command until it finishes, and return what it printed
-    #
-    # With a :timeout, the command runs in a process group of its own, and
-    # if it hasn't finished in time, that whole group is killed, so a hung
-    # command and anything it started don't keep running.
-    #
-    # @param [String] cmd the command, split into words without a shell
-    # @param [Hash{Symbol => Object}] options :uid, :gid,
-    #   :supplementary_groups, :working_dir, :environment and :timeout (in
-    #   seconds)
-    #
-    # @return [Hash{Symbol => Object}] its :stdout and :stderr Strings, and
-    #   its :exit_code (nil if a signal ended it)
-    #
-    # @raise [Timeout::Error] if it ran longer than the :timeout
-    #
-    # @api private
-    def self.execute_blocking(cmd, options = {})
-      rd, wr = IO.pipe
-
-      child = Daemonize.safefork
-      return start_blocking_child(cmd, options, rd, wr) unless child
-
-      # Reap the child in a background thread, so it never becomes a zombie,
-      # even if a timeout interrupts us before it exits
-      waiter = ::Process.detach(child)
-
-      wr.close
-      cmd_status = read_blocking_status(cmd, options[:timeout], child, rd)
-      waiter.join
-
-      cmd_status.empty? ? {exit_code: 0, stdout: "", stderr: ""} : Marshal.load(cmd_status)
-    end
-
-    # Run the command in the child, which execute_blocking forked
-    #
-    # With a :timeout, the child gets a process group of its own first.
-    #
-    # @param [String] cmd the command
-    # @param [Hash{Symbol => Object}] options as for execute_blocking
-    # @param [IO] reader the end of the pipe that only the parent uses
-    # @param [IO] result_pipe where to write the result, marshaled
-    #
-    # @return [void] it never returns, since it exits the child
-    #
-    # @api private
-    def self.start_blocking_child(cmd, options, reader, result_pipe)
-      reader.close
-      # The command and what it starts can all be killed at once on a timeout
-      ::Process.setpgid(0, 0) if options[:timeout]
-      run_blocking_child(cmd, options, result_pipe)
-    end
-
-    # Read what the child reports about the command, in the parent
-    #
-    # @param [String] cmd the command, for the error on a timeout
-    # @param [Numeric, ActiveSupport::Duration, nil] timeout the seconds to
-    #   wait for it, or nil to wait until it finishes
-    # @param [Integer] child the child's pid
-    # @param [IO] reader the end of the pipe that the child writes to
-    #
-    # @return [String] the marshaled result, or "" if the child reported
-    #   nothing
-    #
-    # @raise [Timeout::Error] if it ran longer than the timeout
-    #
-    # @api private
-    def self.read_blocking_status(cmd, timeout, child, reader)
-      # The signatures for IO.select leave out its timeout
-      ready = timeout.nil? || IO.select([reader], nil, nil, timeout.to_f) # steep:ignore UnresolvedOverloading
-      kill_group_after(child, timeout, cmd) unless ready
-      reader.read
-    ensure
-      reader.close
-    end
-
-    # Kill a command's process group, once it has run past its timeout
-    #
-    # @param [Integer] child the pid of the group's leader, which runs the
-    #   command
-    # @param [Numeric, ActiveSupport::Duration] timeout the seconds it was given
-    # @param [String] cmd the command, for the error
-    #
-    # @return [void] it never returns
-    #
-    # @raise [Timeout::Error] always
-    #
-    # @api private
-    def self.kill_group_after(child, timeout, cmd)
-      begin
-        ::Process.kill("KILL", -child)
-      rescue Errno::ESRCH
-        nil # it finished just now
-      end
-      raise Timeout::Error, "#{cmd} took longer than #{timeout} seconds"
-    end
-
-    # Run a command in a grandchild, report its result, and exit
-    #
-    # Sends the grandchild's output and exit code to the parent over
-    # result_pipe.
-    #
-    # @param [String] cmd the command
-    # @param [Hash{Symbol => Object}] options as for execute_blocking
-    # @param [IO] result_pipe where to write the result, marshaled
-    #
-    # @return [void] it never returns, since it exits the child
-    #
-    # @api private
-    def self.run_blocking_child(cmd, options, result_pipe)
-      # create a child in which we can override the stdin, stdout and stderr
-      cmd_out_read, cmd_out_write = IO.pipe
-      cmd_err_read, cmd_err_write = IO.pipe
-
-      pid = fork do
-        # @type var pipes: grandchild_pipes
-        pipes = {out: [cmd_out_read, cmd_out_write], err: [cmd_err_read, cmd_err_write], result: result_pipe}
-        exec_blocking_grandchild(cmd, options, pipes)
+      rescue => e
+        report_grandchild_error(e, pipes)
       end
 
-      # we do not use these ends of the pipes in the child
-      cmd_out_write.close
-      cmd_err_write.close
-
-      report_blocking_result(result_pipe, collect_blocking_result(pid, cmd_out_read, cmd_err_read))
-    end
-
-    # Wait for the grandchild to finish, and collect what it printed
-    #
-    # @param [Integer] pid the grandchild's pid
-    # @param [IO] cmd_out_read where to read its standard output
-    # @param [IO] cmd_err_read where to read its standard error
-    #
-    # @return [Hash{Symbol => Object}] its :stdout and :stderr Strings, and
-    #   its :exit_code (nil if a signal ended it)
-    #
-    # @api private
-    def self.collect_blocking_result(pid, cmd_out_read, cmd_err_read)
-      # wait for the cmd to finish executing and acknowledge it's death
-      _, status = ::Process.waitpid2(pid)
-
-      # @type var result: blocking_result
-      result = {
-        stdout: cmd_out_read.read,
-        stderr: cmd_err_read.read,
-        exit_code: status.exitstatus
-      }
-      cmd_out_read.close
-      cmd_err_read.close
-      result
-    end
-
-    # Tell the parent the command's result, and exit the child
-    #
-    # @param [IO] result_pipe where to write the result, marshaled
-    # @param [Hash{Symbol => Object}] result the command's result
-    #
-    # @return [void] it never returns, since it exits the child
-    #
-    # @api private
-    def self.report_blocking_result(result_pipe, result)
-      # Time to tell the parent about what went down
-      begin
-        result_pipe.write Marshal.dump(result)
-      rescue Errno::EPIPE
-        # The parent timed out and stopped waiting for the result
+      # Point a standard stream at a pipe's writer, and close the pipe's ends
+      #
+      # @param [IO] stream STDOUT or STDERR
+      # @param [Array(IO, IO)] pipe the pipe's reader, which only the
+      #   grandchild's parent uses, and its writer
+      #
+      # @return [void]
+      #
+      # @api private
+      def reopen_on_pipe(stream, pipe)
+        reader, writer = pipe
+        reader.close
+        stream.reopen(writer)
+        writer.close
       end
-      result_pipe.close
 
-      ::Process.exit!
-    end
-
-    # Replace the grandchild with the command, its output going to the pipes
-    #
-    # @param [String] cmd the command
-    # @param [Hash{Symbol => Object}] options as for execute_blocking
-    # @param [Hash{Symbol => Object}] pipes the :out and :err pipes, each a
-    #   reader and a writer, and the :result pipe
-    #
-    # @return [void] it never returns, since it execs the command, or exits
-    #   with status 1 if it can't
-    #
-    # @api private
-    def self.exec_blocking_grandchild(cmd, options, pipes)
-      drop_privileges(options[:uid], options[:gid], options[:supplementary_groups])
-      setup_command_environment(options)
-
-      # close unused fds so ancestors wont hang. This line is the only reason we are not
-      # using something like popen3. If this fd is not closed, the .read call on the parent
-      # will never return because the result pipe would still be open in the "exec"-ed cmd
-      pipes.fetch(:result).close
-
-      # we do not care about stdin of cmd
-      STDIN.reopen(File::NULL)
-
-      # point stdout and stderr of cmd to somewhere we can read
-      reopen_on_pipe(STDOUT, pipes.fetch(:out))
-      reopen_on_pipe(STDERR, pipes.fetch(:err))
-
-      Kernel.exec(*Shellwords.shellwords(cmd))
-    rescue => e
-      report_grandchild_error(e, pipes)
-    end
-
-    # Point a standard stream at a pipe's writer, and close the pipe's ends
-    #
-    # @param [IO] stream STDOUT or STDERR
-    # @param [Array(IO, IO)] pipe the pipe's reader, which only the
-    #   grandchild's parent uses, and its writer
-    #
-    # @return [void]
-    #
-    # @api private
-    def self.reopen_on_pipe(stream, pipe)
-      reader, writer = pipe
-      reader.close
-      stream.reopen(writer)
-      writer.close
-    end
-
-    # Print why the grandchild couldn't exec the command, and exit
-    #
-    # It prints to the pipe for the command's standard error, unless that's
-    # closed already.
-    #
-    # @param [Exception] error what went wrong
-    # @param [Hash{Symbol => Object}] pipes as for exec_blocking_grandchild
-    #
-    # @return [void] it never returns, since it exits with status 1
-    #
-    # @api private
-    def self.report_grandchild_error(error, pipes)
-      cmd_err_write = pipes.fetch(:err).last
-      err = cmd_err_write.closed? ? STDERR : cmd_err_write
-      err.puts "Exception in grandchild: #{error}."
-      err.puts error.backtrace
-      exit 1
-    end
-
-    # Change to the command's working directory and set its environment
-    #
-    # @param [Hash{Symbol => Object}] options :working_dir and :environment
-    #
-    # @return [void]
-    #
-    # @api private
-    def self.setup_command_environment(options)
-      # Setting end PWD env emulates bash behavior when dealing with symlinks
-      working_dir = options[:working_dir]
-      Dir.chdir(ENV["PWD"] = working_dir.to_s) if working_dir
-      environment = options[:environment]
-      environment.each { |key, value| ENV[key.to_s] = value.to_s } if environment
-    end
-
-    # Switch to another user and groups, when bluepill runs as root
-    #
-    # With a uid, the command gets the user's own supplementary groups, the
-    # way logging in as the user does, and the user's primary group unless
-    # gid names another. supplementary_groups adds more groups to those.
-    #
-    # Be sure to call this from a fork, or it changes the user and groups of
-    # the bluepill daemon itself.
-    #
-    # @param [String, nil] uid the user's name
-    # @param [String, nil] gid the group's name
-    # @param [Array<String>, nil] supplementary_groups more groups' names
-    #
-    # @return [void]
-    #
-    # @api private
-    def self.drop_privileges(uid, gid, supplementary_groups)
-      return unless ::Process::Sys.geteuid.zero?
-
-      user = Etc.getpwnam(uid) if uid
-      gid_num = join_groups(user, (Etc.getgrnam(gid).gid if gid))
-      add_supplementary_groups(supplementary_groups)
-      ::Process::Sys.setgid(gid_num) if gid_num
-      switch_to_user(user) if user
-    end
-
-    # Join the user's groups, or just the named group without a user
-    #
-    # @param [Etc::Passwd, nil] user the user
-    # @param [Integer, nil] gid_num the named group's id
-    #
-    # @return [Integer, nil] the primary group's id: the named group's, or
-    #   else the user's own
-    #
-    # @api private
-    def self.join_groups(user, gid_num)
-      if user
-        gid_num ||= user.gid
-        ::Process.initgroups(user.name, gid_num)
-      elsif gid_num
-        ::Process.groups = [gid_num]
-      end
-      gid_num
-    end
-
-    # Add more groups to the ones the process is in
-    #
-    # @param [Array<String>, nil] supplementary_groups the groups' names
-    #
-    # @return [void]
-    #
-    # @api private
-    def self.add_supplementary_groups(supplementary_groups)
-      group_nums = (supplementary_groups || []).collect { |group| Etc.getgrnam(group).gid }
-      ::Process.groups |= group_nums unless group_nums.empty?
-    end
-
-    # Become the user, once the groups are set, and point HOME at its home directory
-    #
-    # @param [Etc::Passwd] user the user
-    #
-    # @return [void]
-    #
-    # @api private
-    def self.switch_to_user(user)
-      ::Process::Sys.setuid(user.uid)
-      ENV["HOME"] = user.dir if user.dir
-    end
-
-    # Return whether the pid file can be written, logging why if it can't
-    #
-    # @param [String] pid_file the pid file's path
-    # @param [Logger] logger where to log the error
-    #
-    # @return [Boolean] true if the file could be created and removed
-    #
-    # @api private
-    def self.can_write_pid_file(pid_file, logger)
-      FileUtils.touch(pid_file)
-      File.unlink(pid_file)
-      true
-    rescue => e
-      logger.warning(format("%s - %s", e.class, e))
-      # A rescued exception was raised, so it has a backtrace
-      backtrace = e.backtrace #: Array[String]
-      backtrace.each { |l| logger.warning l }
-      false
-    end
-
-    # Point standard input, output and error at files
-    #
-    # Output and error share one file when they name the same one.
-    #
-    # @param [String, nil] io_in the file for standard input
-    # @param [String, nil] io_out the file for standard output, appended to
-    # @param [String, nil] io_err the file for standard error, appended to
-    #
-    # @return [void]
-    #
-    # @api private
-    def self.redirect_io(io_in, io_out, io_err)
-      $stdin.reopen(io_in) if io_in
-
-      if !io_out.nil? && io_out.eql?(io_err)
-        $stdout.reopen(io_out, APPEND_MODE)
-        $stderr.reopen($stdout)
-
-      else
-        $stdout.reopen(io_out, APPEND_MODE) if io_out
-        $stderr.reopen(io_err, APPEND_MODE) if io_err
+      # Print why the grandchild couldn't exec the command, and exit
+      #
+      # It prints to the pipe for the command's standard error, unless that's
+      # closed already.
+      #
+      # @param [Exception] error what went wrong
+      # @param [Hash{Symbol => Object}] pipes as for exec_blocking_grandchild
+      #
+      # @return [void] it never returns, since it exits with status 1
+      #
+      # @api private
+      def report_grandchild_error(error, pipes)
+        cmd_err_write = pipes.fetch(:err).last
+        err = cmd_err_write.closed? ? STDERR : cmd_err_write
+        err.puts "Exception in grandchild: #{error}."
+        err.puts error.backtrace
+        exit 1
       end
     end
   end

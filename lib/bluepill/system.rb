@@ -1,4 +1,5 @@
 require "bluepill/system/ps"
+require "bluepill/system/commands"
 
 module Bluepill
   # Read what the system says about its processes, and run commands
@@ -6,11 +7,14 @@ module Bluepill
   # This represents the system that bluepill is running on. It memoizes
   # the results of running ps each tick, so that every watch of every
   # process doesn't fork a ps of its own. Running ps and reading its table
-  # is in System::Ps, which System extends.
+  # is in System::Ps, and running commands is in System::Commands and
+  # System::Daemon. System extends them all.
   #
   # @api private
   module System
     extend Ps
+    extend Commands
+    extend Daemon
 
     # The mode that a daemon's stdout and stderr files are opened in
     #
@@ -215,5 +219,3 @@ module Bluepill
     end
   end
 end
-
-require "bluepill/system/commands"

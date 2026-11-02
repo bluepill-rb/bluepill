@@ -26,7 +26,7 @@ describe Bluepill::Process do
         start_grace_time: 3,
         stop_grace_time: 3,
         restart_grace_time: 3,
-        on_start_timeout: "start",
+        on_start_timeout: :start,
         environment: {},
         state: :unmonitored,
         group_start_noblock: true,
@@ -229,7 +229,7 @@ describe Bluepill::Process do
 
     context "when up and monitoring children" do
       before do
-        process.child_process_factory = instance_double(Bluepill::ProcessFactory, create_child_process: child)
+        process.child_process_factory = instance_double(Bluepill::ProcessFactory::ChildFactory, create_child_process: child)
         process.state = :up
         process.monitor_children = true
         run_process

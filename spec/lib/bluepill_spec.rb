@@ -102,6 +102,12 @@ describe Bluepill do
       expect { described_class.application(:app_name, **options) { raise ArgumentError, "bad" } }.to raise_error(ArgumentError, "bad")
     end
 
+    it "turns a misspelled app attribute into a config error" do
+      expect { described_class.application(:app_name, **options) { |a| a.uidd = "deploy" } }
+        .to raise_error(an_instance_of(SystemExit).and(having_attributes(status: 6)))
+        .and output(/Unknown attribute 'uidd' for application 'app_name'\. Did you mean 'uid'\?/).to_stderr
+    end
+
     it "defaults to no options" do
       allow(Bluepill::Application).to receive(:new).with("app_name").and_return(app)
       described_class.application(:app_name) { |_app| } # an app with no processes

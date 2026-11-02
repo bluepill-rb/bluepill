@@ -44,7 +44,9 @@ module Bluepill
     #
     # It's the first frame of the backtrace in a file outside {LIBRARY_DIR},
     # so the pill file's line wherever bluepill raised the error, or a line
-    # of a file that the pill file loads.
+    # of a file that the pill file loads. An error raised with a backtrace of
+    # its own, as Strings, has no frames, so it looks in the error it was
+    # raised in place of, its cause.
     #
     # @example
     #   error.location # => "/etc/bluepill/app.pill.rb:5"
@@ -54,7 +56,8 @@ module Bluepill
     #
     # @api public
     def location
-      frame = Array(backtrace_locations).find { |candidate| outside_library?(candidate) }
+      frames = backtrace_locations || cause&.backtrace_locations
+      frame = Array(frames).find { |candidate| outside_library?(candidate) }
       "#{frame.path}:#{frame.lineno}" if frame
     end
 

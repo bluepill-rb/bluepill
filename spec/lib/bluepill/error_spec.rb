@@ -82,6 +82,11 @@ describe Bluepill::Error do
         expect(location_of("x = 1\n#{raise_config_error}")).to eq("#{dir}/app.pill.rb:2")
       end
 
+      it "is the line of the error it replaced, when it was raised with that error's backtrace" do
+        code = "begin\n  undefined_method_here\nrescue NameError => e\n  raise Bluepill::ConfigError, 'bad', e.backtrace\nend\n"
+        expect(location_of(code)).to eq("#{dir}/app.pill.rb:2")
+      end
+
       it "skips eval'd code, which isn't in a file" do
         expect(location_of("instance_eval(#{raise_config_error.inspect})")).to eq("#{dir}/app.pill.rb:1")
       end

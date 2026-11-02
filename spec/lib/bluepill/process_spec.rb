@@ -978,21 +978,23 @@ describe Bluepill::Process do
       end
     end
 
-    it 'journals children when monitoring children' do
-      process.monitor_children = true
-      allow(Bluepill::System).to receive(:get_children).with(5).and_return([6, 7])
-      journaled = record_journal
-      process.stop_process
-      expect(journaled).to eq [[:proc_name, 6], [:proc_name, 7]]
-    end
+    context 'when monitoring children' do
+      before { process.monitor_children = true }
 
-    it 'journals no children when stopped before it has a pid' do
-      process.clear_pid
-      process.monitor_children = true
-      allow(Bluepill::System).to receive(:ps_axu).and_return(0 => %w[PID PPID %CPU RSS ELAPSED COMMAND])
-      journaled = record_journal
-      process.stop_process
-      expect(journaled).to be_empty
+      it 'journals children' do
+        allow(Bluepill::System).to receive(:get_children).with(5).and_return([6, 7])
+        journaled = record_journal
+        process.stop_process
+        expect(journaled).to eq [[:proc_name, 6], [:proc_name, 7]]
+      end
+
+      it 'journals no children when stopped before it has a pid' do
+        process.clear_pid
+        allow(Bluepill::System).to receive(:ps_axu).and_return(0 => %w[PID PPID %CPU RSS ELAPSED COMMAND])
+        journaled = record_journal
+        process.stop_process
+        expect(journaled).to be_empty
+      end
     end
 
     context 'without a stop command or stop signals' do
@@ -1777,6 +1779,18 @@ describe Bluepill::Process do
     before { process.notify_command = 'alert {{PID}}' }
 
     context 'with an app, a group, a pid and a reason' do
+      let(:details) do
+        {
+          'BLUEPILL_APP' => 'app',
+          'BLUEPILL_GROUP' => 'web',
+          'BLUEPILL_PROCESS' => 'proc_name',
+          'BLUEPILL_FROM' => 'up',
+          'BLUEPILL_TO' => 'restarting',
+          'BLUEPILL_REASON' => 'mem_usage: [1.2GB*]',
+          'BLUEPILL_PID' => '5',
+        }
+      end
+
       before do
         process.app_name = 'app'
         process.group_name = 'web'
@@ -1786,20 +1800,7 @@ describe Bluepill::Process do
       end
 
       it 'runs the notify command in the background, with the details in its environment' do
-        expect(Bluepill::System).to have_received(:execute_blocking).with(
-          'alert 5',
-          hash_including(
-            environment: {
-              'BLUEPILL_APP' => 'app',
-              'BLUEPILL_GROUP' => 'web',
-              'BLUEPILL_PROCESS' => 'proc_name',
-              'BLUEPILL_FROM' => 'up',
-              'BLUEPILL_TO' => 'restarting',
-              'BLUEPILL_REASON' => 'mem_usage: [1.2GB*]',
-              'BLUEPILL_PID' => '5',
-            }
-          )
-        )
+        expect(Bluepill::System).to have_received(:execute_blocking).with('alert 5', hash_including(environment: details))
       end
 
       it 'logs the notify command' do
@@ -1811,10 +1812,8 @@ describe Bluepill::Process do
       run_process
       process.clear_pid
       process.notify_transition(transition).join
-      expect(Bluepill::System).to have_received(:execute_blocking).with(
-        'alert 5',
-        hash_including(environment: hash_including('BLUEPILL_APP' => '', 'BLUEPILL_GROUP' => '', 'BLUEPILL_REASON' => '', 'BLUEPILL_PID' => '5'))
-      )
+      expect(Bluepill::System).to have_received(:execute_blocking).
+        with('alert 5', hash_including(environment: hash_including('BLUEPILL_APP' => '', 'BLUEPILL_GROUP' => '', 'BLUEPILL_REASON' => '', 'BLUEPILL_PID' => '5')))
     end
 
     it 'gives no pid before the process has one' do
@@ -1861,12 +1860,14 @@ describe Bluepill::Process do
         expect { process.dispatch!(:stop, 'user initiated') }.to raise_error('boom')
       end
 
+      def dispatch_and_rescue
+        process.dispatch!(:stop, 'user initiated')
+      rescue RuntimeError
+        nil
+      end
+
       it 'forgets the reason even so' do
-        begin
-          process.dispatch!(:stop, 'user initiated')
-        rescue RuntimeError
-          nil
-        end
+        dispatch_and_rescue
         expect(process.instance_variable_get(:@transition_reason)).to be_nil
       end
     end

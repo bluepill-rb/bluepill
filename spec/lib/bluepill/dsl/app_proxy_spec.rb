@@ -27,45 +27,47 @@ describe Bluepill::AppProxy do
   end
 
   describe '#process' do
-    it 'adds a process built from the app attributes to its group' do
-      proxy.working_dir = '/work'
-      proxy.uid = 'user'
-      proxy.process('web') do
+    # Add a process that keeps the app's value of an attribute and one that
+    # sets its own, and return the value each process ends up with
+    def added(attribute, own_value)
+      values = []
+      allow(app).to receive(:add_process) { |process, _| values << process.public_send(attribute) }
+      proxy.process('web') { start_command 'run' }
+      proxy.process('worker') do
         start_command 'run'
-        group 'servers'
+        public_send(attribute, own_value)
+      end
+      values
+    end
+
+    context 'with app attributes and a group' do
+      before do
+        proxy.working_dir = '/work'
+        proxy.uid = 'user'
+        proxy.process('web') do
+          start_command 'run'
+          group 'servers'
+        end
       end
 
-      # The default pid file is assigned before the process block runs, so
-      # it does not include a group set inside the block.
-      process = be_a(Bluepill::Process).and have_attributes(
-        name: 'web', working_dir: '/work', uid: 'user', pid_file: '/pids/web.pid'
-      )
-      expect(app).to have_received(:add_process).with(process, 'servers')
+      it 'adds a process built from the app attributes to its group' do
+        # The default pid file is assigned before the process block runs, so
+        # it does not include a group set inside the block.
+        process = be_a(Bluepill::Process).and have_attributes(
+          name: 'web', working_dir: '/work', uid: 'user', pid_file: '/pids/web.pid'
+        )
+        expect(app).to have_received(:add_process).with(process, 'servers')
+      end
     end
 
     it "gives every process the app's supplementary groups, unless it sets its own" do
-      groups = []
-      allow(app).to receive(:add_process) { |process, _| groups << process.supplementary_groups }
       proxy.supplementary_groups = ['rvm']
-      proxy.process('web') { start_command 'run' }
-      proxy.process('worker') do
-        start_command 'run'
-        supplementary_groups ['ssl-cert']
-      end
-
-      expect(groups).to eq([['rvm'], ['ssl-cert']])
+      expect(added(:supplementary_groups, ['ssl-cert'])).to eq([['rvm'], ['ssl-cert']])
     end
 
     it "gives every process the app's notify_command, unless it sets its own" do
-      commands = []
-      allow(app).to receive(:add_process) { |process, _| commands << process.notify_command }
       proxy.notify_command = 'alert'
-      proxy.process('web') { start_command 'run' }
-      proxy.process('worker') do
-        start_command 'run'
-        notify_command 'page'
-      end
-      expect(commands).to eq(%w[alert page])
+      expect(added(:notify_command, 'page')).to eq(%w[alert page])
     end
 
     it 'adds a process without a group' do

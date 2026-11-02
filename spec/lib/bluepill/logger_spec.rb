@@ -37,6 +37,12 @@ describe Bluepill::Logger do
     record($stdout, :puts, :flush)
   end
 
+  # Move the log file aside, as logrotate does, and reopen the logger
+  def rotate(logger)
+    File.rename(log_file, "#{log_file}.1")
+    logger.reopen
+  end
+
   # The messages in the log file, without its header or each line's start
   def log_file_messages
     File.read(log_file).scan(/ -- : (.*)$/).flatten
@@ -225,8 +231,7 @@ describe Bluepill::Logger do
     it 'recreates the underlying logger' do
       logger = described_class.new(log_file: log_file)
       logger.info('before')
-      File.rename(log_file, "#{log_file}.1")
-      logger.reopen
+      rotate(logger)
       logger.info('after')
       expect(log_file_messages).to eq(['after'])
     end

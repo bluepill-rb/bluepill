@@ -6,8 +6,18 @@ describe Bluepill::Controller do
 
   after { FileUtils.remove_entry(base_dir) }
 
-  def touch(*path)
-    File.open(File.join(base_dir, *path), 'w') { |f| yield f if block_given? }
+  def touch(path, contents = '')
+    File.write(File.join(base_dir, path), contents)
+  end
+
+  # Leave an application's socket, and its pid file unless pid is nil
+  def touch_app(name, pid = nil)
+    touch("socks/#{name}.sock")
+    touch("pids/#{name}.pid", pid) if pid
+  end
+
+  def files_left
+    Dir[File.join(base_dir, '*', '*')]
   end
 
   def exit_with(status)
@@ -34,43 +44,50 @@ describe Bluepill::Controller do
       expect(%w[socks pids].collect { |dir| File.directory?(File.join(base_dir, dir)) }).to eq([true, true])
     end
 
-    it 'keeps existing directories' do
-      controller
-      touch('socks', 'app.sock')
-      touch('pids', 'app.pid') { |f| f.write('123') }
-      allow(Bluepill::System).to receive(:pid_alive?).with(123).and_return(true)
-      described_class.new(base_dir: base_dir)
-      expect(File.exist?(File.join(base_dir, 'socks', 'app.sock'))).to be true
-    end
+    context 'with applications' do
+      before { controller }
 
-    it 'keeps checking applications after a running one' do
-      controller
-      touch('socks', 'a.sock')
-      touch('pids', 'a.pid') { |f| f.write('123') }
-      touch('socks', 'b.sock')
-      allow(Bluepill::System).to receive(:pid_alive?).with(123).and_return(true)
-      described_class.new(base_dir: base_dir)
-      expect(controller.running_applications).to eq(['a'])
-    end
+      it 'keeps the files of a running application' do
+        touch_app('app', '123')
+        allow(Bluepill::System).to receive(:pid_alive?).with(123).and_return(true)
+        described_class.new(base_dir: base_dir)
+        expect(files_left).to contain_exactly(File.join(base_dir, 'socks', 'app.sock'), File.join(base_dir, 'pids', 'app.pid'))
+      end
 
-    it 'removes the files of applications that are not running' do
-      controller
-      touch('socks', 'dead.sock')
-      touch('pids', 'dead.pid') { |f| f.write('456') }
-      touch('socks', 'nopid.sock')
-      touch('socks', 'empty.sock')
-      touch('pids', 'empty.pid')
-      allow(Bluepill::System).to receive(:pid_alive?).with(456).and_return(false)
-      described_class.new(base_dir: base_dir)
-      expect(Dir[File.join(base_dir, '*', '*')]).to eq([])
+      it 'keeps checking applications after a running one' do
+        touch_app('a', '123')
+        touch_app('b')
+        allow(Bluepill::System).to receive(:pid_alive?).with(123).and_return(true)
+        described_class.new(base_dir: base_dir)
+        expect(controller.running_applications).to eq(['a'])
+      end
+
+      it 'removes the files of an application that is not running' do
+        touch_app('dead', '456')
+        allow(Bluepill::System).to receive(:pid_alive?).with(456).and_return(false)
+        described_class.new(base_dir: base_dir)
+        expect(files_left).to eq([])
+      end
+
+      it 'removes the socket of an application without a pid file' do
+        touch_app('nopid')
+        described_class.new(base_dir: base_dir)
+        expect(files_left).to eq([])
+      end
+
+      it 'removes the files of an application with an empty pid file' do
+        touch_app('empty', '')
+        described_class.new(base_dir: base_dir)
+        expect(files_left).to eq([])
+      end
     end
   end
 
   describe '#running_applications' do
     it 'lists the applications that have a socket' do
       controller
-      touch('socks', 'app.sock')
-      touch('socks', 'other.txt')
+      touch('socks/app.sock')
+      touch('socks/other.txt')
       expect(controller.running_applications).to eq(['app'])
     end
   end
@@ -117,7 +134,7 @@ describe Bluepill::Controller do
     end
 
     def write_pid(pid)
-      touch('pids', 'app.pid') { |f| f.write(pid) }
+      touch('pids/app.pid', pid)
     end
 
     def quit
@@ -258,9 +275,7 @@ describe Bluepill::Controller do
       error = RuntimeError.new('boom')
       error.set_backtrace(['a.rb:1', 'b.rb:2'])
       stub_daemon('status', error)
-      expect { controller.send_to_daemon('app', :status) }.to exit_with(8).and output(
-        "Received error from server:\n#{error.inspect}\na.rb:1\nb.rb:2\n"
-      ).to_stderr
+      expect { controller.send_to_daemon('app', :status) }.to exit_with(8).and output("Received error from server:\n#{error.inspect}\na.rb:1\nb.rb:2\n").to_stderr
     end
 
     it 'exits when the daemon returns an error without a backtrace' do
@@ -282,18 +297,14 @@ describe Bluepill::Controller do
       stub_daemon('status', 'up')
       allow(Bluepill::Socket).to receive(:client_command).
         with(base_dir, 'app', 'version').and_return('0.0.1')
-      expect { controller.send_to_daemon('app', :status) }.to exit_with(1).and output(
-        "The running version of your daemon seems to be out of date.\nDaemon Version: 0.0.1, CLI Version: #{Bluepill::Version}\n"
-      ).to_stderr
+      expect { controller.send_to_daemon('app', :status) }.to exit_with(1).and output("The running version of your daemon seems to be out of date.\nDaemon Version: 0.0.1, CLI Version: #{Bluepill::Version}\n").to_stderr
     end
 
     it 'aborts when the daemon does not understand the version command' do
       stub_daemon('status', 'up')
       allow(Bluepill::Socket).to receive(:client_command).
         with(base_dir, 'app', 'version').and_raise(ArgumentError)
-      expect { controller.send_to_daemon('app', :status) }.to exit_with(1).and output(
-        "The running version of your daemon seems to be out of date.\n"
-      ).to_stderr
+      expect { controller.send_to_daemon('app', :status) }.to exit_with(1).and output("The running version of your daemon seems to be out of date.\n").to_stderr
     end
   end
 

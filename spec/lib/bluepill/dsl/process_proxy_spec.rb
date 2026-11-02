@@ -46,12 +46,8 @@ describe Bluepill::ProcessProxy do
     end
 
     it 'reads attributes that have been set' do
-      value = nil
-      described_class.new('web', {}, proc do
-        start_command 'run'
-        value = start_command
-      end)
-      expect(value).to eq('run')
+      proxy = described_class.new('web', {}, proc { start_command 'run' })
+      expect(proxy.start_command).to eq('run')
     end
 
     it 'raises NameError for unknown attributes without arguments' do
@@ -202,11 +198,14 @@ describe Bluepill::ProcessProxy do
   end
 
   describe '#to_process' do
-    it 'builds a process from its watches and attributes' do
-      proxy = described_class.new('web', {}, proc do
+    let(:proxy) do
+      described_class.new('web', {}, proc do
         start_command 'run'
         checks :always_true, every: 10
       end)
+    end
+
+    it 'builds a process from its watches and attributes' do
       expect(proxy.to_process).to be_a(Bluepill::Process).and have_attributes(
         name: 'web', start_command: 'run', watches: have_attributes(size: 1)
       )

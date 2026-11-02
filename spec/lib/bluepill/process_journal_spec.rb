@@ -404,6 +404,12 @@ describe Bluepill::ProcessJournal do
         [[:debug, "#{kind} journal file: #{legacy_filename}"], [:debug, 'No previous process journal - Skipping cleanup']]
       end
 
+      # The log of a cleanup of the app's journal that found ids, and signaled them
+      define_method(:cleanup_log) do |ids, *signaled|
+        journal_log(ids) + [[:debug, "Acquired lock #{filename}.lock"], *signaled] +
+          [[:debug, 'Journal cleanup completed'], [:debug, "Cleared lock #{filename}.lock"]] + no_legacy_journal_log
+      end
+
       # Make an id's process exit before the signal reaches it
       define_method(:missing) do |signal, id|
         allow(::Process).to(receive(:kill).with(signal, sign * id)) do |*args|
@@ -511,13 +517,7 @@ describe Bluepill::ProcessJournal do
         end
 
         it 'logs each, under the lock' do
-          expect(log).to eq journal_log([42, 43]) + [
-            [:debug, "Acquired lock #{filename}.lock"],
-            [:info, "Termed old #{label} 42"],
-            [:debug, "Unable to term missing #{label} 43"],
-            [:debug, 'Journal cleanup completed'],
-            [:debug, "Cleared lock #{filename}.lock"],
-          ] + no_legacy_journal_log
+          expect(log).to eq cleanup_log([42, 43], [:info, "Termed old #{label} 42"], [:debug, "Unable to term missing #{label} 43"])
         end
       end
 
@@ -537,13 +537,7 @@ describe Bluepill::ProcessJournal do
         end
 
         it 'logs both signals' do
-          expect(log).to eq journal_log([42]) + [
-            [:debug, "Acquired lock #{filename}.lock"],
-            [:info, "Termed old #{label} 42"],
-            [:info, "Killed old #{label} 42"],
-            [:debug, 'Journal cleanup completed'],
-            [:debug, "Cleared lock #{filename}.lock"],
-          ] + no_legacy_journal_log
+          expect(log).to eq cleanup_log([42], [:info, "Termed old #{label} 42"], [:info, "Killed old #{label} 42"])
         end
       end
 
@@ -585,6 +579,11 @@ describe Bluepill::ProcessJournal do
         allow(File).to receive(:open).and_call_original
       end
 
+      # The log of an append, which reads the journal under its lock
+      define_method(:append_log) do |*lines|
+        [[:debug, "Acquired lock #{filename}.lock"], [:debug, "#{kind} journal file: #{filename}"], *lines, [:debug, "Cleared lock #{filename}.lock"]]
+      end
+
       context "when a new #{kind} is appended" do
         before do
           described_class.send(method, 'app', 42)
@@ -599,14 +598,11 @@ describe Bluepill::ProcessJournal do
         end
 
         it 'logs it, under the journal lock' do
-          expect(log).to eq [
-            [:debug, "Acquired lock #{filename}.lock"],
-            [:debug, "#{kind} journal file: #{filename}"],
+          expect(log).to eq append_log(
             [:debug, "Saving #{kind} 42 to process journal app"],
             [:info, "Saved #{kind} 42 to journal app"],
-            [:debug, "Journal now = 42\n"],
-            [:debug, "Cleared lock #{filename}.lock"],
-          ]
+            [:debug, "Journal now = 42\n"]
+          )
         end
       end
 
@@ -630,13 +626,7 @@ describe Bluepill::ProcessJournal do
         end
 
         it 'logs that it skipped the duplicate, under the journal lock' do
-          expect(log).to eq [
-            [:debug, "Acquired lock #{filename}.lock"],
-            [:debug, "#{kind} journal file: #{filename}"],
-            [:debug, "#{kind} journal = 42"],
-            [:debug, "Skipping duplicate #{kind} 42 already in journal app"],
-            [:debug, "Cleared lock #{filename}.lock"],
-          ]
+          expect(log).to eq append_log([:debug, "#{kind} journal = 42"], [:debug, "Skipping duplicate #{kind} 42 already in journal app"])
         end
       end
 

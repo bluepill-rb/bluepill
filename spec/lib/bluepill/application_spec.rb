@@ -16,6 +16,22 @@ describe Bluepill::Application do
     raise_error(an_instance_of(SystemExit).and(having_attributes(status: status)))
   end
 
+  # An error whose class has no name
+  def anonymous_error(message)
+    Class.new(StandardError) { define_method(:message) { message } }
+  end
+
+  def mutex_locked?
+    app.instance_variable_get(:@mutex).locked?
+  end
+
+  def without_home
+    home = ENV.delete('HOME')
+    yield
+  ensure
+    ENV['HOME'] = home
+  end
+
   describe '#initialize' do
     subject(:app) { described_class.new('test', options) }
 
@@ -44,12 +60,7 @@ describe Bluepill::Application do
       end
 
       it 'does not need HOME' do
-        home = ENV.delete('HOME')
-        begin
-          expect(app.base_dir).to eq('/var/run/bluepill')
-        ensure
-          ENV['HOME'] = home
-        end
+        expect(without_home { app.base_dir }).to eq('/var/run/bluepill')
       end
     end
 
@@ -368,12 +379,7 @@ describe Bluepill::Application do
       end
 
       it 'reports the message of an error from an anonymous class' do
-        error_class = Class.new(StandardError) do
-          def message
-            'boom'
-          end
-        end
-        allow(app).to receive(:start_server).and_raise(error_class)
+        allow(app).to receive(:start_server).and_raise(anonymous_error('boom'))
         expect { app.load }.to exit_with(5).and output(/^ `boom`$/).to_stderr
       end
     end
@@ -406,15 +412,17 @@ describe Bluepill::Application do
         end
       end
 
+      def startup_calls
+        [
+          [:kill_previous_bluepill], [:clear_all_atomic_fs_locks], [:setpgid, 0, 0], [:daemonize],
+          [:setup_signal_traps], [:reopen], [:determine_initial_state], [:server, base_dir, 'test'],
+          [:start_listener], [:run]
+        ]
+      end
+
       it 'daemonizes and runs the application' do
         app.send(:start_server)
-        expect(calls).to eq(
-          [
-            [:kill_previous_bluepill], [:clear_all_atomic_fs_locks], [:setpgid, 0, 0], [:daemonize],
-            [:setup_signal_traps], [:reopen], [:determine_initial_state], [:server, base_dir, 'test'],
-            [:start_listener], [:run]
-          ]
-        )
+        expect(calls).to eq(startup_calls)
       end
 
       it 'names its process after the application' do
@@ -443,12 +451,7 @@ describe Bluepill::Application do
 
         it 'does not daemonize, or trap signals again' do
           app.send(:start_server)
-          expect(calls).to eq(
-            [
-              [:kill_previous_bluepill], [:clear_all_atomic_fs_locks], [:setpgid, 0, 0],
-              [:reopen], [:determine_initial_state], [:server, base_dir, 'test'], [:start_listener], [:run]
-            ]
-          )
+          expect(calls).to eq(startup_calls - [[:daemonize], [:setup_signal_traps]])
         end
       end
 
@@ -460,40 +463,28 @@ describe Bluepill::Application do
     end
 
     describe 'run' do
-      before { app.groups = {'web' => group, 'db' => other_group} }
+      let(:calls) { [] }
 
-      it 'ticks every group each second until terminated' do
+      before do
+        app.groups = {'web' => group, 'db' => other_group}
         allow(app).to receive(:puts)
         allow(app).to receive(:cleanup)
-        calls = []
-        allow(Bluepill::System).to receive(:reset_data) { calls << :reset_data }
-        allow(group).to receive(:tick) { calls << :web }
-        allow(other_group).to receive(:tick) { calls << :db }
+        allow(Bluepill::System).to receive(:reset_data) { calls << [:reset_data, mutex_locked?] }
+        allow(group).to receive(:tick) { calls << [:web, mutex_locked?] }
+        allow(other_group).to receive(:tick) { calls << [:db, mutex_locked?] }
         allow(app).to receive(:sleep).with(1) do
-          calls << :sleep
-          traps['TERM'].call(15) if calls.count(:sleep) == 2
+          calls << [:sleep, mutex_locked?]
+          traps['TERM'].call(15) if calls.collect(&:first).count(:sleep) == 2
         end
         app.send(:run)
-        expect(calls).to eq([:reset_data, :web, :db, :sleep, :reset_data, :web, :db, :sleep])
       end
 
-      it 'ticks while holding the mutex' do
-        locked = false
-        allow(app).to receive(:mutex) do |&block|
-          locked = true
-          block.call
-          locked = false
-        end
-        calls = []
-        allow(Bluepill::System).to receive(:reset_data) { calls << [:reset_data, locked] }
-        allow(group).to receive(:tick) { calls << [:web, locked] }
-        allow(other_group).to receive(:tick) { calls << [:db, locked] }
-        allow(app).to receive(:sleep).with(1) do
-          calls << [:sleep, locked]
-          app.instance_variable_set(:@running, false)
-        end
-        app.send(:run)
-        expect(calls).to eq([[:reset_data, true], [:web, true], [:db, true], [:sleep, false]])
+      it 'ticks every group each second until terminated' do
+        expect(calls.collect(&:first)).to eq([:reset_data, :web, :db, :sleep, :reset_data, :web, :db, :sleep])
+      end
+
+      it 'ticks while holding the mutex, and sleeps without it' do
+        expect(calls.first(4)).to eq([[:reset_data, true], [:web, true], [:db, true], [:sleep, false]])
       end
     end
 
@@ -583,14 +574,7 @@ describe Bluepill::Application do
       end
 
       it 'runs the command while holding the mutex' do
-        locked = false
-        allow(app).to receive(:mutex) do |&block|
-          locked = true
-          result = block.call
-          locked = false
-          result
-        end
-        allow(app).to receive(:status) { locked }
+        allow(app).to receive(:status) { mutex_locked? }
         listen
         expect(client).to have_received(:write).with(Marshal.dump(true))
       end
@@ -633,12 +617,7 @@ describe Bluepill::Application do
       end
 
       it 'logs the message of an error from an anonymous class' do
-        error_class = Class.new(StandardError) do
-          def message
-            'broken pipe'
-          end
-        end
-        allow(client).to receive(:write).and_raise(error_class)
+        allow(client).to receive(:write).and_raise(anonymous_error('broken pipe'))
         listen
         expect(logged.first).to eq('Got exception in cmd listener:  `broken pipe`')
       end
@@ -760,9 +739,7 @@ describe Bluepill::Application do
         it 'interrupts it and waits for it to die' do
           allow(Bluepill::System).to receive(:pid_alive?).with(1234).and_return(true, true, false)
           kill_previous_bluepill
-          expect(calls).to eq(
-            [[:kill, 0, 1234], [:puts, 'Killing previous bluepilld[1234]'], [:kill, 2, 1234], [:sleep, 0.5], [:sleep, 0.5]]
-          )
+          expect(calls).to eq([[:kill, 0, 1234], [:puts, 'Killing previous bluepilld[1234]'], [:kill, 2, 1234]] + ([[:sleep, 0.5]] * 2))
         end
 
         it 'exits when it does not die' do

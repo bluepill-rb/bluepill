@@ -276,12 +276,14 @@ describe Bluepill::ProcessFactory do
     let(:logger) { instance_double(Bluepill::Logger) }
     let(:attributes) { {start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 5, uid: 'user', gid: 'staff', supplementary_groups: ['rvm'], working_dir: '/srv'} }
 
-    it 'creates a child process with the grace times, user and groups of its parent' do
-      allow(::Process).to receive(:kill).with(0, 123).and_return(1)
-      factory = described_class.new(attributes, proc { stop_command 'halt' })
-      child = factory.create_child_process('child', 123, logger)
+    before { allow(::Process).to receive(:kill).with(0, 123).and_return(1) }
 
-      expect(child).to be_a(Bluepill::Process).and have_attributes(
+    def create_child(attributes, block)
+      described_class.new(attributes, block).create_child_process('child', 123, logger)
+    end
+
+    it 'creates a child process with the grace times, user and groups of its parent' do
+      expect(create_child(attributes, proc { stop_command 'halt' })).to be_a(Bluepill::Process).and have_attributes(
         state: 'up', name: 'child', actual_pid: 123, logger: logger, stop_command: 'halt',
         start_grace_time: 1, stop_grace_time: 2, restart_grace_time: 5,
         uid: 'user', gid: 'staff', supplementary_groups: ['rvm'], working_dir: nil
@@ -289,17 +291,14 @@ describe Bluepill::ProcessFactory do
     end
 
     it 'gives a child the default grace times when its parent sets none' do
-      allow(::Process).to receive(:kill).with(0, 123).and_return(1)
-      factory = described_class.new({}, proc { stop_command 'halt' })
-      child = factory.create_child_process('child', 123, logger)
+      child = create_child({}, proc { stop_command 'halt' })
       expect([child.start_grace_time, child.stop_grace_time, child.restart_grace_time]).to eq([3, 3, 3])
     end
 
     it 'requires a stop command' do
-      factory = described_class.new(attributes, proc {})
       message = "Config Error: Invalid child process monitor for child\nYou must specify a stop command to monitor child processes.\n"
       expect_config_error(message) do
-        factory.create_child_process('child', 123, logger)
+        create_child(attributes, proc {})
       end
     end
   end

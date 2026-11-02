@@ -125,6 +125,10 @@ describe Bluepill::Daemonize do
   describe '.daemonize' do
     before do
       allow(described_class).to(receive(:become_daemon)) { |*args| events << [:become_daemon, *args] }
+      allow(described_class).to(receive(:exit)) do |*args|
+        events << [:exit, *args]
+        raise SystemExit
+      end
     end
 
     # Daemonize until the process exits, as all but the daemon do
@@ -136,10 +140,6 @@ describe Bluepill::Daemonize do
 
     it 'exits the process that called it, so the command returns' do
       allow(described_class).to receive(:safefork).and_return(1)
-      allow(described_class).to(receive(:exit)) do |*args|
-        events << [:exit, *args]
-        raise SystemExit
-      end
       daemonize
       expect(events).to eq([[:exit]])
     end

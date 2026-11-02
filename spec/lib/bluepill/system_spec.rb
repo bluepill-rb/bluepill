@@ -249,8 +249,14 @@ describe Bluepill::System do
       end
     end
 
-    it 'deletes an existing file' do
-      Dir.mktmpdir do |dir|
+    context 'when the file exists' do
+      let(:dir) { Dir.mktmpdir }
+
+      after do
+        FileUtils.remove_entry(dir)
+      end
+
+      it 'deletes it' do
         filename = File.join(dir, 'file')
         File.write(filename, 'x')
         described_class.delete_if_exists(filename)
@@ -533,14 +539,16 @@ describe Bluepill::System do
         expect(described_class.can_write_pid_file(pid_file, logger)).to be false
       end
 
+      # What writing the pid file raises, as it's logged
+      def error
+        FileUtils.touch(pid_file)
+      rescue Errno::ENOENT => e
+        "Errno::ENOENT - #{e.message}"
+      end
+
       it 'logs the error' do
-        message = begin
-          FileUtils.touch(pid_file)
-        rescue Errno::ENOENT => e
-          "Errno::ENOENT - #{e.message}"
-        end
         described_class.can_write_pid_file(pid_file, logger)
-        expect(warnings.first).to eq message
+        expect(warnings.first).to eq error
       end
 
       it 'logs its backtrace after it' do

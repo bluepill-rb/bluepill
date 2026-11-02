@@ -37,6 +37,14 @@ describe 'The README and example configs', type: :integration do
     watch(process, name).instance_variable_get(:@process_condition)
   end
 
+  def every(process, name)
+    watch(process, name).instance_variable_get(:@every)
+  end
+
+  def below(process, name)
+    condition(process, name).instance_variable_get(:@below)
+  end
+
   it 'finds the configs in the README' do
     expect(README_CONFIGS.size).to be > 10
   end
@@ -59,19 +67,14 @@ describe 'The README and example configs', type: :integration do
   it 'reads durations as seconds and sizes as bytes' do
     eval(README_CONFIGS.detect { |c| c.include?(':file_time') }, binding, 'README.md') # rubocop:disable Security/Eval
     process = processes.fetch('process_name')
-    values = [
-      watch(process, :mem_usage).instance_variable_get(:@every),
-      condition(process, :mem_usage).instance_variable_get(:@below),
-      condition(process, :file_time).instance_variable_get(:@below),
-    ]
+    values = [every(process, :mem_usage), below(process, :mem_usage), below(process, :file_time)]
     expect(values).to eql([10, 104_857_600, 180])
   end
 
   it 'reads minutes and hours' do
     eval(README_CONFIGS.detect { |c| c.include?(':running_time') }, binding, 'README.md') # rubocop:disable Security/Eval
     process = processes.fetch('process_name')
-    values = [watch(process, :running_time).instance_variable_get(:@every), condition(process, :running_time).instance_variable_get(:@below)]
-    expect(values).to eql([600, 86_400])
+    expect([every(process, :running_time), below(process, :running_time)]).to eql([600, 86_400])
   end
 
   it 'reads grace times' do
@@ -89,7 +92,7 @@ describe 'The README and example configs', type: :integration do
     load File.join(BLUEPILL_ROOT, 'examples', 'sample_app.rb')
     process = processes.fetch('forking_server')
     child = process.child_process_factory.create_child_process('child', 1, instance_double(Bluepill::Logger).as_null_object)
-    values = [process.stop_grace_time, condition(child, :mem_usage).instance_variable_get(:@below), process.triggers.first.within]
+    values = [process.stop_grace_time, below(child, :mem_usage), process.triggers.first.within]
     expect(values).to eql([5, 52_428_800, 30])
   end
 

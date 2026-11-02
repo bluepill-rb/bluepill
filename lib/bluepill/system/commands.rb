@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "io/wait"
 require "shellwords"
 require "bluepill/daemonize"
 require "bluepill/system/command_setup"
@@ -84,8 +85,7 @@ module Bluepill
       #
       # @api private
       def read_blocking_status(cmd, timeout, child, reader)
-        # The signatures for IO.select leave out its timeout
-        ready = timeout.nil? || IO.select([reader], nil, nil, timeout.to_f) # steep:ignore UnresolvedOverloading
+        ready = timeout.nil? || reader.wait_readable(timeout.to_f)
         kill_group_after(child, timeout, cmd) unless ready
         reader.read
       ensure

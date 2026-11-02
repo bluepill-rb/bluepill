@@ -59,11 +59,6 @@ Metrics/ParameterLists:
   Max: 4
   CountKeywordArgs: false
 
-# Bluepill never runs under a fiber scheduler, and IO#wait_readable isn't
-# on every Ruby it supports
-Lint/IncompatibleIoSelectWithFiberScheduler:
-  Enabled: false
-
 # fire_event and before_transition do something and then say whether it
 # worked, so they aren't questions
 Naming/PredicateMethod:

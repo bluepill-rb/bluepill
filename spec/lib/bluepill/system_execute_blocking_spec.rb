@@ -42,21 +42,21 @@ describe Bluepill::System, ".execute_blocking" do
       expect(waiter).to have_received(:join)
     end
 
-    it "gives IO.select a timeout it can read, from a duration too" do
-      allow(IO).to receive(:select).and_return([[rd], [], []])
+    it "waits for the pipe with a timeout it can read, from a duration too" do
+      allow(rd).to receive(:wait_readable).and_return(rd)
       described_class.execute_blocking("cmd", timeout: 2.seconds)
-      expect(IO).to have_received(:select).with([rd], nil, nil, an_instance_of(Float)).once
+      expect(rd).to have_received(:wait_readable).with(an_instance_of(Float)).once
     end
 
     it "times out even if the command has just finished" do
-      allow(IO).to receive(:select).and_return(nil)
+      allow(rd).to receive(:wait_readable).and_return(nil)
       allow(Process).to receive(:kill).with("KILL", -123).and_raise(Errno::ESRCH)
       expect { described_class.execute_blocking("cmd", timeout: 2) }.to raise_error(Timeout::Error)
     end
 
     context "with a timeout the command finishes within" do
       before do
-        allow(IO).to receive(:select).with([rd], nil, nil, 2.5).and_return([[rd], [], []])
+        allow(rd).to receive(:wait_readable).with(2.5).and_return(rd)
         allow(Process).to receive(:kill)
       end
 
@@ -66,7 +66,7 @@ describe Bluepill::System, ".execute_blocking" do
 
       it "waits for its result for that long, once" do
         described_class.execute_blocking("cmd", timeout: 2.5)
-        expect(IO).to have_received(:select).once
+        expect(rd).to have_received(:wait_readable).once
       end
 
       it "doesn't kill it" do
@@ -77,7 +77,7 @@ describe Bluepill::System, ".execute_blocking" do
 
     context "with a timeout the command runs past" do
       before do
-        allow(IO).to receive(:select).with([rd], nil, nil, 2.0).and_return(nil)
+        allow(rd).to receive(:wait_readable).with(2.0).and_return(nil)
         allow(Process).to receive(:kill)
       end
 
@@ -95,7 +95,7 @@ describe Bluepill::System, ".execute_blocking" do
 
       it "waits for its result for that long, once" do
         execute_blocking
-        expect(IO).to have_received(:select).once
+        expect(rd).to have_received(:wait_readable).once
       end
 
       it "kills the command's process group" do

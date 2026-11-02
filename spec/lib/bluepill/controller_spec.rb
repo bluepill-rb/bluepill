@@ -32,7 +32,6 @@ describe Bluepill::Controller do
       touch('socks', 'app.sock')
       touch('pids', 'app.pid') { |f| f.write('123') }
       allow(Bluepill::System).to receive(:pid_alive?).with(123).and_return(true)
-      expect(FileUtils).not_to receive(:mkdir_p)
       described_class.new(base_dir: base_dir)
       expect(File.exist?(File.join(base_dir, 'socks', 'app.sock'))).to be true
     end

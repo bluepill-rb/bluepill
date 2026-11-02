@@ -439,7 +439,7 @@ module Bluepill
     #
     # @api private
     def setup_pids_dir
-      FileUtils.mkdir_p(pids_dir) unless File.exist?(pids_dir)
+      FileUtils.mkdir_p(pids_dir)
       # we need everybody to be able to write to the pids_dir as processes managed by
       # bluepill will be writing to this dir after they've dropped privileges
       FileUtils.chmod(0o777, pids_dir)

@@ -207,7 +207,7 @@ module Bluepill
     # @api private
     def setup_dir_structure
       [@sockets_dir, @pids_dir].each do |dir|
-        FileUtils.mkdir_p(dir) unless File.exist?(dir)
+        FileUtils.mkdir_p(dir)
       end
     end
 

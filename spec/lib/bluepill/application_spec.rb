@@ -152,7 +152,6 @@ describe Bluepill::Application do
 
     it 'exits with a clear message when it cannot open the log file' do
       allow(Bluepill::Logger).to receive(:new).and_raise(Errno::EACCES, '/var/log/bluepill.log')
-      expect(FileUtils).not_to receive(:mkdir_p)
       expect_startup_failure('Permission denied - /var/log/bluepill.log')
       subject
     end
@@ -186,7 +185,6 @@ describe Bluepill::Application do
       it 'is made writable for everybody when it already exists' do
         FileUtils.mkdir_p(pids_dir)
         FileUtils.chmod(0o700, pids_dir)
-        expect(FileUtils).not_to receive(:mkdir_p)
         app
         expect(File.stat(pids_dir).mode & 0o777).to eq(0o777)
       end

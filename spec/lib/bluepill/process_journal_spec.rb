@@ -85,7 +85,6 @@ describe Bluepill::ProcessJournal do
       legacy = File.join(@dir, 'journals')
       Dir.mkdir(legacy, 0o700)
       Dir.mkdir(File.join(legacy, 'web'), 0o700)
-      expect(FileUtils).not_to receive(:mkdir_p)
       journal.setup(@dir, 'web')
       expect(File.stat(legacy).mode & 0o777).to eq 0o777
       expect(File.stat(File.join(legacy, 'web')).mode & 0o777).to eq 0o777

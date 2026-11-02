@@ -74,7 +74,7 @@ module Bluepill
         @legacy_journal_dir ||= File.join(base_dir, 'journals')
         @journal_base_dir ||= File.join(@legacy_journal_dir, app_name.to_s)
         [@legacy_journal_dir, @journal_base_dir].each do |dir|
-          FileUtils.mkdir_p(dir) unless File.exist?(dir)
+          FileUtils.mkdir_p(dir)
           FileUtils.chmod(0o777, dir)
         end
       end

@@ -22,10 +22,17 @@ describe Bluepill::ConditionWatch do
   # What the watch fires at each tick
   def run_at(watch, *ticks) = ticks.collect { |tick| watch.run(123, tick) }
 
+  # Forget the conditions an example defines
+  around do |example|
+    entries = Bluepill::CheckRegistry.instance_variable_get(:@entries).dup
+    example.run
+    Bluepill::CheckRegistry.instance_variable_set(:@entries, entries)
+  end
+
   # A condition that records its logger and options once its initialize has
   # called super
   def logging_condition(seen)
-    stub_const("Bluepill::ProcessConditions::LoggingCheck", Class.new(Bluepill::ProcessConditions::ProcessCondition) do
+    stub_const("Bluepill::ProcessConditions::LoggingCheck", Class.new(Bluepill::ProcessConditions::AlwaysTrue) do
       define_method(:initialize) do |below:, **options|
         super(**options)
         seen << logger << below
@@ -50,7 +57,7 @@ describe Bluepill::ConditionWatch do
     end
 
     it "gives its logger to a condition whose initialize doesn't call super" do
-      stub_const("Bluepill::ProcessConditions::NoSuperCheck", Class.new(Bluepill::ProcessConditions::ProcessCondition) do
+      stub_const("Bluepill::ProcessConditions::NoSuperCheck", Class.new(Bluepill::ProcessConditions::AlwaysTrue) do
         define_method(:initialize) { |**| nil }
       end)
       w = described_class.new(:no_super_check, logger: logger, every: 10)

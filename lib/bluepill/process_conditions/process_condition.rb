@@ -7,10 +7,30 @@ module Bluepill
     # A ConditionWatch runs the condition every so often. The condition reads
     # a value (run), says whether the value is fine (check), and formats it
     # for the watch's history (format_value). Subclasses implement run and
-    # check.
+    # check?, and add themselves to CheckRegistry by their underscored
+    # name, in whatever module they're defined.
     #
     # @api private
     class ProcessCondition
+      # The methods a subclass must define
+      #
+      # @api private
+      REQUIRED_METHODS = %i[run check?].freeze
+
+      # Add a subclass to the checks a config can name
+      #
+      # A config names it by its underscored name, such as :mem_usage.
+      #
+      # @param [Class] klass the subclass
+      #
+      # @return [void]
+      #
+      # @api private
+      def self.inherited(klass)
+        super
+        CheckRegistry.add(klass, ProcessCondition, REQUIRED_METHODS)
+      end
+
       # Return the logger the condition can write to
       #
       # It's the watch's logger, so lines carry the app's and the process's

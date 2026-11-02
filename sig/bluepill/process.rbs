@@ -57,7 +57,7 @@ module Bluepill
 
     def add_checks: (checks checks, Logger logger) -> void
 
-    def add_trigger: (Symbol name, **untyped options) -> Array[Trigger]
+    def add_check: (Symbol name, Hash[Symbol, untyped] options) -> void
 
     # Runs the watches that are due, and dispatches their events
     def run_watches: () -> void

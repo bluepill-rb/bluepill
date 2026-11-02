@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "bluepill/check_registry"
 require "bluepill/util/log_error"
 
 module Bluepill
@@ -7,7 +8,7 @@ module Bluepill
   #
   # A config names a trigger the way it names a check, by its underscored
   # class name: `checks :flapping` makes a Triggers::Flapping. Subclasses
-  # register themselves by that name, and implement notify.
+  # add themselves to CheckRegistry by that name, and implement notify.
   #
   # @api private
   class Trigger
@@ -17,9 +18,14 @@ module Bluepill
     # @api private
     HALT = :halt
 
-    @implementations = {}
+    # The methods a subclass must define
+    #
+    # @api private
+    REQUIRED_METHODS = %i[notify].freeze
 
-    # Register a subclass by its underscored name, such as :flapping
+    # Add a subclass to the checks a config can name
+    #
+    # A config names it by its underscored name, such as :flapping.
     #
     # @param [Class] klass the subclass
     #
@@ -28,18 +34,8 @@ module Bluepill
     # @api private
     def self.inherited(klass)
       super
-      @implementations[Util.underscore(klass.name.split("::").last).to_sym] = klass
+      CheckRegistry.add(klass, Trigger, REQUIRED_METHODS)
     end
-
-    # Return the trigger class a config names
-    #
-    # @param [Symbol] name the trigger's underscored name, such as :flapping
-    #
-    # @return [Class, nil] the Trigger subclass, or nil when no trigger has
-    #   that name (so the name is a check's)
-    #
-    # @api private
-    def self.[](name) = @implementations[name]
 
     # Return the process the trigger watches
     #

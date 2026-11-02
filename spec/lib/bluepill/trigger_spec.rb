@@ -16,35 +16,26 @@ describe Bluepill::Trigger do
     double
   end
 
-  describe ".[]" do
-    it "looks up registered triggers by name" do
-      expect(described_class[:flapping]).to eq(Bluepill::Triggers::Flapping)
-    end
-
-    it "returns nil for unknown triggers" do
-      expect(described_class[:unknown]).to be_nil
-    end
-  end
-
   describe ".inherited" do
-    let(:klass) { Class.new }
-
-    before do
-      allow(klass).to receive(:name).and_return("Bluepill::Triggers::SpecExample")
-      allow(Object).to receive(:inherited).and_call_original
+    around do |example|
+      entries = Bluepill::CheckRegistry.instance_variable_get(:@entries).dup
+      example.run
+      Bluepill::CheckRegistry.instance_variable_set(:@entries, entries)
     end
 
-    after do
-      described_class.instance_variable_get(:@implementations).delete(:spec_example)
+    it "adds a subclass to the registry, wherever it's defined, by its underscored name" do
+      klass = stub_const("SpecApp::SpecExample", Class.new(described_class) { define_method(:notify) { |_| nil } })
+      expect(Bluepill::CheckRegistry.fetch(:spec_example)).to equal(klass)
     end
 
-    it "registers subclasses by their underscored name" do
-      described_class.send(:inherited, klass)
-      expect(described_class[:spec_example]).to equal(klass)
+    it "requires a subclass to define notify" do
+      stub_const("SpecApp::SpecExample", Class.new(described_class))
+      expect { Bluepill::CheckRegistry.fetch(:spec_example) }.to raise_error(Bluepill::ConfigError, "SpecApp::SpecExample, the class of check 'spec_example', must define notify")
     end
 
     it "calls the inherited hook of its superclass" do
-      described_class.send(:inherited, klass)
+      allow(Object).to receive(:inherited).and_call_original
+      klass = Class.new(described_class)
       expect(Object).to have_received(:inherited).with(klass)
     end
   end

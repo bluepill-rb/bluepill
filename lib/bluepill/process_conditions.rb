@@ -1,22 +1,15 @@
 # frozen_string_literal: true
 
+require "bluepill/check_registry"
+
 module Bluepill
   # The checks a process can run, named in a config by their underscored
   # class name, such as `checks :mem_usage`
   #
+  # CheckRegistry finds them by that name.
+  #
   # @api private
   module ProcessConditions
-    # Return the check class a config names
-    #
-    # @param [Symbol, String] name the check's underscored name, such as
-    #   :mem_usage
-    #
-    # @return [Class] the ProcessCondition subclass, such as MemUsage
-    #
-    # @raise [NameError] when no check has that name
-    #
-    # @api private
-    def self.[](name) = const_get(Util.camelize(name))
   end
 end
 

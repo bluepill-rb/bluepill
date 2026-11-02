@@ -103,6 +103,10 @@ describe Bluepill::Process do
       end
     end
 
+    it "refuses a check no class has the name of" do
+      expect { described_class.new(:proc_name, {mem_usag: {below: 100}}, logger: logger) }.to raise_error(Bluepill::ConfigError, /Unknown check 'mem_usag'/)
+    end
+
     it "accepts an actual pid" do
       process = described_class.new(:proc_name, [], logger: logger, actual_pid: 42)
       expect(process.actual_pid).to eq 42

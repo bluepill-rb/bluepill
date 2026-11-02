@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "bluepill/check_registry"
 require "bluepill/util/log_error"
 
 module Bluepill
@@ -120,7 +121,7 @@ module Bluepill
     #
     # @api private
     def create_condition(options)
-      @process_condition = ProcessConditions[@name].new(**options, logger: @logger)
+      @process_condition = CheckRegistry.fetch(@name).new(**options, logger: @logger)
       self.logger = @logger
     end
 

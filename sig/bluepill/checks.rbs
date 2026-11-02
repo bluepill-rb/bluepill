@@ -1,4 +1,24 @@
 module Bluepill
+  # The checks and triggers a config can name, by their underscored class
+  # names
+  module CheckRegistry
+    # Each class, newest first, with the class it builds on and the methods
+    # it must define
+    self.@entries: Array[[Class, Class, Array[Symbol]]]
+
+    def self.add: (Class klass, Class base, Array[Symbol] required) -> void
+
+    def self.fetch: (Symbol | String name) -> Class
+
+    def self.names: () -> Array[String]
+
+    def self.check_name: (Class klass) -> String?
+
+    def self.missing_methods: (Class klass, Class base, Array[Symbol] required) -> Array[Symbol]
+
+    def self.unknown_message: (String name) -> String
+  end
+
   # Runs a process condition every so often, and fires its events when the
   # check fails often enough
   class ConditionWatch
@@ -53,11 +73,9 @@ module Bluepill
   class Trigger
     HALT: :halt
 
-    self.@implementations: Hash[Symbol, singleton(Trigger)]
+    REQUIRED_METHODS: Array[Symbol]
 
-    def self.inherited: (singleton(Trigger) klass) -> void
-
-    def self.[]: %a{implicitly-returns-nil} (Symbol name) -> singleton(Trigger)
+    def self.inherited: (Class klass) -> void
 
     attr_accessor process: Process
     attr_accessor logger: Logger
@@ -106,11 +124,12 @@ module Bluepill
   end
 
   module ProcessConditions
-    def self.[]: (Symbol | String name) -> singleton(ProcessCondition)
-
     # Checks something about a process. V is the type of value that run
     # returns and check tests.
     class ProcessCondition[V]
+      REQUIRED_METHODS: Array[Symbol]
+
+      def self.inherited: (Class klass) -> void
 
       # The watch's logger
       attr_accessor logger: Logger?

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "bluepill/system"
+require "bluepill/check_registry"
 require "bluepill/util/log_error"
 require "bluepill/process_journal"
 require "bluepill/process_commands"
@@ -221,8 +222,8 @@ module Bluepill
 
     # Set the logger, and add each check
     #
-    # A check is a trigger if one has its name, and a watch otherwise. Each
-    # gets the logger.
+    # A check is a trigger if CheckRegistry finds a Trigger by its name, and
+    # a watch otherwise. Each gets the logger.
     #
     # @param [Hash{Symbol => Hash{Symbol => Object}}, Array<Array(Symbol, Hash{Symbol => Object})>]
     #   checks each check's name and options, as a Hash, or as a list of
@@ -231,30 +232,35 @@ module Bluepill
     #
     # @return [void]
     #
+    # @raise [ConfigError] for a name that no check or trigger has
+    #
     # @api private
     def add_checks(checks, logger)
       @watches = Watches.new
       @triggers = []
       self.logger = logger
-      checks.each do |name, opts|
-        if Trigger[name]
-          add_trigger(name, **opts)
-        else
-          watches.add(name, **opts)
-        end
-      end
+      checks.each { |name, options| add_check(name, options) }
     end
 
-    # Add a trigger to notify of the process's transitions
+    # Add a check, as a trigger or as a watch
     #
-    # @param [Symbol] name the trigger's name, such as :flapping
-    # @param [Hash{Symbol => Object}] options the trigger's options
+    # It's a trigger if CheckRegistry finds a Trigger by its name.
     #
-    # @return [Array<Trigger>] the process's triggers
+    # @param [Symbol] name the check's name, such as :mem_usage
+    # @param [Hash{Symbol => Object}] options the check's options
+    #
+    # @return [void]
+    #
+    # @raise [ConfigError] for a name that no check or trigger has
     #
     # @api private
-    def add_trigger(name, **options)
-      triggers << Trigger[name].new(self, **options, logger: logger)
+    def add_check(name, options)
+      check = CheckRegistry.fetch(name)
+      if check < Trigger
+        triggers << check.new(self, **options, logger: logger)
+      else
+        watches.add(name, **options)
+      end
     end
 
     # Run every watch that's due, and dispatch the events they fire

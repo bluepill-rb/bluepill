@@ -24,7 +24,7 @@ end
 
 $LOAD_PATH.unshift(lib)
 require "bluepill"
-Dir[File.join(lib, "bluepill", "**", "*.rb")].sort.each { |file| require file }
+Dir[File.join(lib, "bluepill", "**", "*.rb")].each { |file| require file }
 
 def bluepill_method?(mod, name, lib)
   location = mod.instance_method(name).source_location

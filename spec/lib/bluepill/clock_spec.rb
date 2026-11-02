@@ -17,14 +17,16 @@ describe Bluepill::Clock do
       expect(Bluepill::Clock.reader(process).call).to eql(100)
     end
 
-    if monotonic
-      it 'reads the monotonic clock in whole seconds, where Ruby has it' do
-        process = double('Process')
-        allow(process).to receive(:respond_to?).with(:clock_gettime).and_return(true)
-        allow(process).to receive(:clock_gettime).with(::Process::CLOCK_MONOTONIC).and_return(12.7)
-        expect(Bluepill::Clock.reader(process).call).to eql(12)
-      end
+    # CLOCK_MONOTONIC is stubbed, since Ruby 1.9.3 and 2.0 don't have it
+    it 'reads the monotonic clock in whole seconds, where Ruby has it' do
+      stub_const('Process::CLOCK_MONOTONIC', 1)
+      process = double('Process')
+      allow(process).to receive(:respond_to?).with(:clock_gettime).and_return(true)
+      allow(process).to receive(:clock_gettime).with(1).and_return(12.7)
+      expect(Bluepill::Clock.reader(process).call).to eql(12)
+    end
 
+    if monotonic
       it 'reads the monotonic clock of the Ruby it runs on by default' do
         allow(::Process).to receive(:clock_gettime).with(::Process::CLOCK_MONOTONIC).and_return(7.2)
         expect(Bluepill::Clock.reader.call).to eql(7)

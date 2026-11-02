@@ -46,13 +46,15 @@ describe Bluepill::ConditionWatch do
     end
 
     it 'passes include_children to the process condition' do
-      expect(Bluepill::System).to receive(:cpu_usage).with(123, true).and_return(10)
+      allow(Bluepill::System).to receive(:cpu_usage).and_return(10)
       watch(include_children: true).run(123, 0)
+      expect(Bluepill::System).to have_received(:cpu_usage).with(123, true)
     end
 
     it 'does not include children by default' do
-      expect(Bluepill::System).to receive(:cpu_usage).with(123, false).and_return(10)
+      allow(Bluepill::System).to receive(:cpu_usage).and_return(10)
       watch.run(123, 0)
+      expect(Bluepill::System).to have_received(:cpu_usage).with(123, false)
     end
 
     it 'can be created without options' do

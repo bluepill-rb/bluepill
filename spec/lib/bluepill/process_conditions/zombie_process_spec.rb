@@ -2,7 +2,7 @@ describe Bluepill::ProcessConditions::ZombieProcess do
   subject(:condition) { described_class.new }
 
   it 'returns the command of the process' do
-    expect(Bluepill::System).to receive(:command).with(123).and_return('ruby server.rb')
+    allow(Bluepill::System).to receive(:command).with(123).and_return('ruby server.rb')
     expect(condition.run(123, false)).to eq('ruby server.rb')
   end
 

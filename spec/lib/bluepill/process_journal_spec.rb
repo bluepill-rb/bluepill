@@ -315,7 +315,7 @@ describe Bluepill::ProcessJournal do
       it 'terms the journaled ids and resets the journal' do
         write_journal(filename, [42, 43])
         expect(::Process).to receive(:kill).with('TERM', sign * 42)
-        expect(::Process).to receive(:kill).with('TERM', sign * 43).and_raise(Errno::ESRCH)
+        allow(::Process).to receive(:kill).with('TERM', sign * 43).and_raise(Errno::ESRCH)
         expect(journal).not_to receive(:sleep)
         journal.send(method, 'app')
         expect(File.exist?(filename)).to be false
@@ -351,7 +351,7 @@ describe Bluepill::ProcessJournal do
         alive = {42 => true, 43 => true, 44 => false}
         allow(Bluepill::System).to receive(:pid_alive?) { |id| alive[sign * id] }
         expect(journal).to(receive(:sleep).with(1).once { alive[43] = false })
-        expect(::Process).to receive(:kill).with('KILL', sign * 42).and_raise(Errno::ESRCH)
+        allow(::Process).to receive(:kill).with('KILL', sign * 42).and_raise(Errno::ESRCH)
         expect(::Process).not_to receive(:kill).with('KILL', sign * 43)
         expect(::Process).not_to receive(:kill).with('KILL', sign * 44)
         journal.send(method, 'app')
@@ -427,7 +427,7 @@ describe Bluepill::ProcessJournal do
 
   describe '.journal_line' do
     it 'has the id and when its process started' do
-      expect(Bluepill::System).to receive(:started_at).with(42).and_return(1000)
+      allow(Bluepill::System).to receive(:started_at).with(42).and_return(1000)
       expect(journal.journal_line(42)).to eq '42 1000'
     end
 
@@ -503,7 +503,7 @@ describe Bluepill::ProcessJournal do
     let(:filename) { journal.pid_journal_filename('app') }
 
     it 'journals when the process and its group leader started' do
-      expect(::Process).to receive(:getpgid).with(42).and_return(40)
+      allow(::Process).to receive(:getpgid).with(42).and_return(40)
       allow(Bluepill::System).to receive(:started_at).with(42).and_return(1000)
       allow(Bluepill::System).to receive(:started_at).with(40).and_return(900)
       journal.append_pid_to_journal('app', 42)
@@ -520,8 +520,9 @@ describe Bluepill::ProcessJournal do
     end
 
     it 'ignores missing processes when looking up the process group' do
-      expect(::Process).to receive(:getpgid).with(42).and_raise(Errno::ESRCH)
+      allow(::Process).to receive(:getpgid).with(42).and_raise(Errno::ESRCH)
       journal.append_pid_to_journal('app', 42)
+      expect(::Process).to have_received(:getpgid).once
       expect(File.read(filename)).to eq "42\n"
       expect(File.exist?(journal.pgid_journal_filename('app'))).to be false
     end

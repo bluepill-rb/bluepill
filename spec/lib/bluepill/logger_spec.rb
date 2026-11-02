@@ -21,16 +21,18 @@ describe Bluepill::Logger do
       syslog = class_double(Syslog)
       allow(Syslog).to receive(:opened?).and_return(false)
       expect(Syslog).not_to receive(:close)
-      expect(Syslog).to receive(:open).with('bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6).and_return(syslog)
+      allow(Syslog).to receive(:open).with('bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6).and_return(syslog)
       expect(syslog).to receive(:info).with('hello')
       described_class.new.info('hello')
+      expect(Syslog).to have_received(:open)
     end
 
     it 'closes an already opened syslog and uses the given identity' do
       allow(Syslog).to receive(:opened?).and_return(true)
       expect(Syslog).to receive(:close)
-      expect(Syslog).to receive(:open).with('myapp', Syslog::LOG_PID, Syslog::LOG_LOCAL6).and_return(class_double(Syslog))
+      allow(Syslog).to receive(:open).with('myapp', Syslog::LOG_PID, Syslog::LOG_LOCAL6).and_return(class_double(Syslog))
       described_class.new(identity: 'myapp')
+      expect(Syslog).to have_received(:open)
     end
 
     it 'explains how to fix a missing syslog library' do
@@ -52,8 +54,9 @@ describe Bluepill::Logger do
 
     it 'logs to syslog when log_file is nil' do
       allow(Syslog).to receive(:opened?).and_return(false)
-      expect(Syslog).to receive(:open).with('bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6).and_return(class_double(Syslog))
+      allow(Syslog).to receive(:open).with('bluepilld', Syslog::LOG_PID, Syslog::LOG_LOCAL6).and_return(class_double(Syslog))
       described_class.new(log_file: nil)
+      expect(Syslog).to have_received(:open)
     end
 
     it 'prefixes messages with the given prefix' do

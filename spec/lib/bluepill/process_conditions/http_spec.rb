@@ -86,7 +86,7 @@ describe Bluepill::ProcessConditions::Http do
     end
 
     it 'requests the url over http' do
-      expect(Net::HTTP).to receive(:new).with('example.com', 8080).and_return(session)
+      allow(Net::HTTP).to receive(:new).with('example.com', 8080).and_return(session)
       expect(http(open_timeout: 1, read_timeout: 2).run(123, false)).to eq(ok)
       expect(session).to have_received(:open_timeout=).with(1)
       expect(session).to have_received(:read_timeout=).with(2)
@@ -97,7 +97,7 @@ describe Bluepill::ProcessConditions::Http do
       allow(condition).to receive(:require).and_call_original
       allow(session).to receive(:use_ssl=)
       allow(session).to receive(:verify_mode=)
-      expect(Net::HTTP).to receive(:new).with('example.com', 443).and_return(session)
+      allow(Net::HTTP).to receive(:new).with('example.com', 443).and_return(session)
       expect(condition.run(123, false)).to eq(ok)
       expect(condition).to have_received(:require).with('net/https')
       expect(session).to have_received(:use_ssl=).with(true)

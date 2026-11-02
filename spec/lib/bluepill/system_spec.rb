@@ -25,23 +25,27 @@ describe Bluepill::System do
 
   describe '.pid_alive?' do
     it 'is true if process responds to zero signal' do
-      expect(Process).to receive(:kill).with(0, 555).and_return(1)
+      allow(Process).to receive(:kill).with(0, 555).and_return(1)
       expect(described_class.pid_alive?(555)).to be true
+      expect(Process).to have_received(:kill).with(0, 555).once
     end
 
     it 'is false if process throws exception on zero signal' do
-      expect(Process).to receive(:kill).with(0, 555).and_raise(Errno::ESRCH)
+      allow(Process).to receive(:kill).with(0, 555).and_raise(Errno::ESRCH)
       expect(described_class.pid_alive?(555)).to be false
+      expect(Process).to have_received(:kill).with(0, 555).once
     end
 
     it 'is true if there is no permission to signal the process' do
-      expect(Process).to receive(:kill).with(0, 555).and_raise(Errno::EPERM)
+      allow(Process).to receive(:kill).with(0, 555).and_raise(Errno::EPERM)
       expect(described_class.pid_alive?(555)).to be true
+      expect(Process).to have_received(:kill).with(0, 555).once
     end
 
     it 'is false if signaling raises any other error' do
-      expect(Process).to receive(:kill).with(0, nil).and_raise(TypeError)
+      allow(Process).to receive(:kill).with(0, nil).and_raise(TypeError)
       expect(described_class.pid_alive?(nil)).to be false
+      expect(Process).to have_received(:kill).with(0, nil).once
     end
   end
 
@@ -49,23 +53,27 @@ describe Bluepill::System do
     before { allow(Time).to receive(:now).and_return(Time.at(1_000_000)) }
 
     it "subtracts the process's elapsed time from now" do
-      expect(IO).to receive(:popen).with(%w[ps -o etime= -p 555], err: File::NULL).and_return("  1-02:03:04\n")
+      allow(IO).to receive(:popen).with(%w[ps -o etime= -p 555], err: File::NULL).and_return("  1-02:03:04\n")
       expect(described_class.started_at(555)).to eq 1_000_000 - 93_784
+      expect(IO).to have_received(:popen).once
     end
 
     it 'is nil without such a process' do
-      expect(IO).to receive(:popen).with(%w[ps -o etime= -p 555], err: File::NULL).and_return('')
+      allow(IO).to receive(:popen).with(%w[ps -o etime= -p 555], err: File::NULL).and_return('')
       expect(described_class.started_at(555)).to be_nil
+      expect(IO).to have_received(:popen).once
     end
 
     it 'is nil when ps prints only a newline' do
-      expect(IO).to receive(:popen).with(%w[ps -o etime= -p 555], err: File::NULL).and_return("\n")
+      allow(IO).to receive(:popen).with(%w[ps -o etime= -p 555], err: File::NULL).and_return("\n")
       expect(described_class.started_at(555)).to be_nil
+      expect(IO).to have_received(:popen).once
     end
 
     it "is nil if ps can't run" do
-      expect(IO).to receive(:popen).and_raise(Errno::ENOENT)
+      allow(IO).to receive(:popen).and_raise(Errno::ENOENT)
       expect(described_class.started_at(555)).to be_nil
+      expect(IO).to have_received(:popen).once
     end
 
     it 'only passes ps a pid' do
@@ -89,8 +97,9 @@ describe Bluepill::System do
 
   describe '.boot_time' do
     it 'is when pid 1 started' do
-      expect(described_class).to receive(:started_at).with(1).and_return(42)
+      allow(described_class).to receive(:started_at).with(1).and_return(42)
       expect(described_class.boot_time).to eq 42
+      expect(described_class).to have_received(:started_at).once
     end
   end
 
@@ -272,18 +281,22 @@ describe Bluepill::System do
       end
 
       it 'exits if the pid file cannot be written' do
-        expect(described_class).to receive(:can_write_pid_file).with(pid_file, logger).and_return(false)
-        expect(described_class).to receive(:exit).with(no_args).and_raise(SystemExit)
+        allow(described_class).to receive(:can_write_pid_file).with(pid_file, logger).and_return(false)
+        allow(described_class).to receive(:exit).with(no_args).and_raise(SystemExit)
         expect { described_class.daemonize('cmd', options) }.to raise_error(SystemExit)
+        expect(described_class).to have_received(:can_write_pid_file).once
+        expect(described_class).to have_received(:exit).once
         expect(rd).to have_received(:close)
         expect(described_class).to have_received(:drop_privileges).with('user', 'group', ['extra'])
         expect(Bluepill::Daemonize).not_to have_received(:call_as_daemon)
       end
 
       it 'runs without options' do
-        expect(described_class).to receive(:can_write_pid_file).with(nil, nil).and_return(false)
-        expect(described_class).to receive(:exit).with(no_args).and_raise(SystemExit)
+        allow(described_class).to receive(:can_write_pid_file).with(nil, nil).and_return(false)
+        allow(described_class).to receive(:exit).with(no_args).and_raise(SystemExit)
         expect { described_class.daemonize('cmd') }.to raise_error(SystemExit)
+        expect(described_class).to have_received(:can_write_pid_file).once
+        expect(described_class).to have_received(:exit).once
         expect(described_class).to have_received(:drop_privileges).with(nil, nil, nil)
       end
 
@@ -343,9 +356,10 @@ describe Bluepill::System do
     end
 
     it 'does nothing if the file does not exist' do
-      expect(File).to receive(:exist?).with('missing').and_return(false)
+      allow(File).to receive(:exist?).with('missing').and_return(false)
       expect(File).not_to receive(:unlink)
       described_class.delete_if_exists('missing')
+      expect(File).to have_received(:exist?).once
     end
 
     it 'deletes an existing file' do
@@ -359,8 +373,9 @@ describe Bluepill::System do
 
     it 'ignores files that disappear before deletion' do
       allow(File).to receive(:exist?).with('file').and_return(true)
-      expect(File).to receive(:unlink).with('file').and_raise(Errno::ENOENT)
+      allow(File).to receive(:unlink).with('file').and_raise(Errno::ENOENT)
       expect { described_class.delete_if_exists('file') }.not_to raise_error
+      expect(File).to have_received(:unlink).once
     end
 
     it 'retries and then warns when permission is denied' do
@@ -405,25 +420,28 @@ describe Bluepill::System do
       end
 
       it "doesn't kill a command that finishes within its timeout" do
-        expect(IO).to receive(:select).with([rd], nil, nil, 2.5).and_return([[rd], [], []])
+        allow(IO).to receive(:select).with([rd], nil, nil, 2.5).and_return([[rd], [], []])
         allow(rd).to receive(:read).and_return('')
         expect(Process).not_to receive(:kill)
         expect(described_class.execute_blocking('cmd', timeout: 2.5)).to eq(exit_code: 0, stdout: '', stderr: '')
+        expect(IO).to have_received(:select).once
       end
 
       it "kills the command's process group when it runs past its timeout" do
-        expect(IO).to receive(:select).with([rd], nil, nil, 2.0).and_return(nil)
+        allow(IO).to receive(:select).with([rd], nil, nil, 2.0).and_return(nil)
         expect(Process).to receive(:kill).with('KILL', -123)
         expect(rd).not_to receive(:read)
         expect { described_class.execute_blocking('cmd', timeout: 2) }.
           to raise_error(Timeout::Error, 'cmd took longer than 2 seconds')
+        expect(IO).to have_received(:select).once
         expect(rd).to have_received(:close)
       end
 
       it 'gives IO.select a timeout it can read, from a duration too' do
-        expect(IO).to receive(:select).with([rd], nil, nil, an_instance_of(Float)).and_return([[rd], [], []])
+        allow(IO).to receive(:select).and_return([[rd], [], []])
         allow(rd).to receive(:read).and_return('')
         described_class.execute_blocking('cmd', timeout: 2.seconds)
+        expect(IO).to have_received(:select).with([rd], nil, nil, an_instance_of(Float)).once
       end
 
       it 'times out even if the command has just finished' do
@@ -613,12 +631,13 @@ describe Bluepill::System do
     end
 
     it "raises a PsError and doesn't retry until the next tick if ps cannot be run" do
-      expect(described_class).to receive(:`).once.and_raise(Errno::ENOMEM)
+      allow(described_class).to receive(:`).and_raise(Errno::ENOMEM)
       message = 'Could not run ps: Errno::ENOMEM: Cannot allocate memory'
       expect { described_class.ps_axu }.to raise_error(Bluepill::System::PsError, message)
       expect { described_class.memory_usage(1, false) }.to raise_error(Bluepill::System::PsError, message)
+      expect(described_class).to have_received(:`).once
       described_class.reset_data
-      expect(described_class).to receive(:`).and_return(output)
+      allow(described_class).to receive(:`).and_return(output)
       expect(described_class.memory_usage(1, false)).to eq(1234.0)
     end
   end

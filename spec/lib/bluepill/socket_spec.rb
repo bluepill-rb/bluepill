@@ -11,7 +11,7 @@ describe Bluepill::Socket do
 
   describe '.client' do
     it 'opens a UNIX socket and yields it' do
-      expect(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
+      allow(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
       yielded = nil
       described_class.client(base_dir, 'app') { |s| yielded = s }
       expect(yielded).to be(socket)
@@ -27,8 +27,9 @@ describe Bluepill::Socket do
 
     it 'sends the command and returns the response' do
       allow(socket).to receive(:read).and_return(Marshal.dump(%w[ok]))
-      expect(UNIXSocket).to receive(:open).with(socket_path).once.and_yield(socket)
+      allow(UNIXSocket).to receive(:open).with(socket_path).and_yield(socket)
       expect(described_class.client_command(base_dir, 'app', 'status')).to eq(%w[ok])
+      expect(UNIXSocket).to have_received(:open).once
       expect(socket).to have_received(:puts).with('status')
       expect(Timeout).to have_received(:timeout).with(Bluepill::Socket::TIMEOUT).once
       expect(described_class).not_to have_received(:puts)
@@ -65,7 +66,7 @@ describe Bluepill::Socket do
     let(:server) { instance_double(UNIXServer) }
 
     it 'opens a UNIX server socket' do
-      expect(UNIXServer).to receive(:open).with(socket_path).and_return(server)
+      allow(UNIXServer).to receive(:open).with(socket_path).and_return(server)
       expect(described_class.server(base_dir, 'app')).to be(server)
     end
 
@@ -81,9 +82,10 @@ describe Bluepill::Socket do
       end
 
       it 'replaces a stale socket file' do
-        expect(UNIXSocket).to receive(:open).with(socket_path).and_raise(Errno::ECONNREFUSED)
-        expect(File).to receive(:delete).with(socket_path)
+        allow(UNIXSocket).to receive(:open).with(socket_path).and_raise(Errno::ECONNREFUSED)
+        allow(File).to receive(:delete)
         expect(described_class.server(base_dir, 'app')).to be(server)
+        expect(File).to have_received(:delete).with(socket_path)
       end
 
       context 'when another server is listening' do

@@ -101,20 +101,20 @@ describe Bluepill::Application do
       end
 
       it 'logs to the log file with the application name as prefix' do
-        expect(Bluepill::Logger).to receive(:new).with(log_file: nil, log_level: nil, stdout: false).and_return(logger)
-        expect(logger).to receive(:prefix_with).with('test').and_return(logger)
-        expect(Bluepill::ProcessJournal).to receive(:logger=).with(logger)
         expect(app.logger).to eq(logger)
+        expect(Bluepill::Logger).to have_received(:new).with(log_file: nil, log_level: nil, stdout: false)
+        expect(logger).to have_received(:prefix_with).with('test')
+        expect(Bluepill::ProcessJournal).to have_received(:logger=).with(logger)
       end
 
       context 'with other options' do
         let(:options) { {base_dir: '/var/bluepill', foreground: true, log_file: 'log', log_level: :info, kill_timeout: 3} }
 
         it 'uses them' do
-          expect(Bluepill::Logger).to receive(:new).with(log_file: 'log', log_level: :info, stdout: true).and_return(logger)
           expect(app.kill_timeout).to eq(3)
           expect(app.log_file).to eq('log')
           expect(app).to be_foreground
+          expect(Bluepill::Logger).to have_received(:new).with(log_file: 'log', log_level: :info, stdout: true)
         end
       end
     end
@@ -238,10 +238,11 @@ describe Bluepill::Application do
       it 'adds the process to a new group named after the group name' do
         group_logger = instance_double(Bluepill::Logger)
         allow(logger).to receive(:prefix_with).with('web').and_return(group_logger)
-        expect(Bluepill::Group).to receive(:new).with('web', logger: group_logger).and_return(group)
-        expect(group).to receive(:add_process).with(process)
+        allow(Bluepill::Group).to receive(:new).with('web', logger: group_logger).and_return(group)
+        allow(group).to receive(:add_process)
         app.add_process(process, :web)
         expect(app.groups).to eq('web' => group)
+        expect(group).to have_received(:add_process).with(process)
       end
 
       it 'adds processes without a group to the nil group' do
@@ -268,38 +269,39 @@ describe Bluepill::Application do
       described_class::PROCESS_COMMANDS.each do |command|
         describe "##{command}" do
           it 'is sent to every group without arguments' do
-            expect(group).to receive(command).with(no_args).and_return(['web:a'])
-            expect(other_group).to receive(command).with(no_args).and_return(['db:b'])
+            allow(group).to receive(command).with(no_args).and_return(['web:a'])
+            allow(other_group).to receive(command).with(no_args).and_return(['db:b'])
             expect(app.send(command)).to eq(['web:a', 'db:b'])
           end
 
           it 'is sent to the named group' do
-            expect(group).to receive(command).with('a').and_return(['web:a'])
+            allow(group).to receive(command).with('a').and_return(['web:a'])
             expect(app.send(command, 'web', 'a')).to eq(['web:a'])
           end
 
           it 'is sent to every group for a process name' do
-            expect(group).to receive(command).with('a').and_return(['web:a'])
-            expect(other_group).to receive(command).with('a').and_return([])
-            expect(app.send(command, 'a')).to eq(['web:a'])
+            allow(group).to receive(command).with('a').and_return(['web:a'])
+            allow(other_group).to receive(command).with('a').and_return(['db:a'])
+            expect(app.send(command, 'a')).to eq(['web:a', 'db:a'])
           end
 
           it 'is sent to every group for a process name containing a colon' do
-            expect(group).to receive(command).with('job:a').and_return(['web:job:a'])
-            expect(other_group).to receive(command).with('job:a').and_return([])
-            expect(app.send(command, 'job', 'a')).to eq(['web:job:a'])
+            allow(group).to receive(command).with('job:a').and_return(['web:job:a'])
+            allow(other_group).to receive(command).with('job:a').and_return(['db:job:a'])
+            expect(app.send(command, 'job', 'a')).to eq(['web:job:a', 'db:job:a'])
           end
 
           it 'is sent to every group for a process name without a group' do
-            expect(group).to receive(command).with('a').and_return(['web:a'])
-            expect(other_group).to receive(command).with('a').and_return([])
-            expect(app.send(command, nil, 'a')).to eq(['web:a'])
+            allow(group).to receive(command).with('a').and_return(['web:a'])
+            allow(other_group).to receive(command).with('a').and_return(['db:a'])
+            expect(app.send(command, nil, 'a')).to eq(['web:a', 'db:a'])
           end
 
           it 'prefers the named group over a process name containing a colon' do
-            expect(group).to receive(command).with('job:a').and_return(['web:job:a'])
-            expect(other_group).not_to receive(command)
+            allow(group).to receive(command).with('job:a').and_return(['web:job:a'])
+            allow(other_group).to receive(command)
             expect(app.send(command, 'web', 'job:a')).to eq(['web:job:a'])
+            expect(other_group).not_to have_received(command)
           end
         end
       end
@@ -419,11 +421,16 @@ describe Bluepill::Application do
           block.call
           locked = false
         end
-        expect(Bluepill::System).to receive(:reset_data) { expect(locked).to be true }
-        expect(group).to receive(:tick) { expect(locked).to be true }
-        expect(other_group).to receive(:tick) { expect(locked).to be true }
-        expect(app).to receive(:sleep).with(1) { app.instance_variable_set(:@running, false) }
+        calls = []
+        allow(Bluepill::System).to receive(:reset_data) { calls << [:reset_data, locked] }
+        allow(group).to receive(:tick) { calls << [:web, locked] }
+        allow(other_group).to receive(:tick) { calls << [:db, locked] }
+        allow(app).to receive(:sleep).with(1) do
+          calls << [:sleep, locked]
+          app.instance_variable_set(:@running, false)
+        end
         app.send(:run)
+        expect(calls).to eq([[:reset_data, true], [:web, true], [:db, true], [:sleep, false]])
       end
     end
 
@@ -488,16 +495,17 @@ describe Bluepill::Application do
         expect(app).to receive(:loop).and_yield
         allow(client).to receive(:close_on_exec=)
         expect(client).to receive(:close_on_exec=).with(true)
-        expect(app).to receive(:status).with('web').and_return(['web:a'])
-        expect(client).to receive(:write).with(Marshal.dump(['web:a']))
-        expect(client).to receive(:close)
+        allow(app).to receive(:status).with('web').and_return(['web:a'])
         listen
+        expect(client).to have_received(:write).with(Marshal.dump(['web:a']))
+        expect(client).to have_received(:close)
       end
 
       it 'ignores whitespace around the command' do
         allow(client).to receive(:readline).and_return(" status:web\n")
-        expect(app).to receive(:status).with('web').and_return([])
+        allow(app).to receive(:status).and_return([])
         listen
+        expect(app).to have_received(:status).with('web')
       end
 
       it 'runs the command while holding the mutex' do
@@ -508,27 +516,31 @@ describe Bluepill::Application do
           locked = false
           result
         end
-        expect(app).to receive(:status) { expect(locked).to be true }
+        locked_during_status = nil
+        allow(app).to receive(:status) { locked_during_status = locked }
         listen
+        expect(locked_during_status).to be true
       end
 
       it 'sends a command without a target' do
         allow(client).to receive(:readline).and_return("status:\n")
-        expect(app).to receive(:status).with(no_args).and_return([])
+        allow(app).to receive(:status).and_return([])
         listen
+        expect(app).to have_received(:status).with(no_args)
       end
 
       it 'keeps the colons in a process name' do
         allow(client).to receive(:readline).and_return("status:jobs:job_1:IMPORT\n")
-        expect(app).to receive(:status).with('jobs', 'job_1:IMPORT').and_return([])
+        allow(app).to receive(:status).and_return([])
         listen
+        expect(app).to have_received(:status).with('jobs', 'job_1:IMPORT')
       end
 
       it 'answers with the error raised by a command' do
         error = RuntimeError.new('boom')
         allow(app).to receive(:status).and_raise(error)
         response = nil
-        expect(client).to receive(:write) { |data| response = Marshal.load(data) }
+        allow(client).to receive(:write) { |data| response = Marshal.load(data) }
         listen
         expect(response).to be_a(RuntimeError)
         expect(response.message).to eq('boom')
@@ -603,15 +615,18 @@ describe Bluepill::Application do
 
       it 'does nothing when the previous bluepill is not running' do
         write_pid
-        expect(Bluepill::System).to receive(:pid_alive?).with(1234).and_return(false)
-        expect(::Process).not_to receive(:kill)
+        allow(Bluepill::System).to receive(:pid_alive?).and_return(false)
+        allow(::Process).to receive(:kill)
         app.send(:kill_previous_bluepill)
+        expect(Bluepill::System).to have_received(:pid_alive?).with(1234)
+        expect(::Process).not_to have_received(:kill)
       end
 
       it 'checks a previous bluepill with pid 1, as in a container' do
         File.write(pid_file, '1')
-        expect(Bluepill::System).to receive(:pid_alive?).with(1).and_return(false)
+        allow(Bluepill::System).to receive(:pid_alive?).and_return(false)
         app.send(:kill_previous_bluepill)
+        expect(Bluepill::System).to have_received(:pid_alive?).with(1)
       end
 
       ['', 'garbage'].each do |contents|

@@ -10,12 +10,12 @@ describe Bluepill::ProcessConditions::RunningTime do
   end
 
   it 'returns the running time of the process' do
-    expect(Bluepill::System).to receive(:running_time).with(123).and_return(30)
+    allow(Bluepill::System).to receive(:running_time).with(123).and_return(30)
     expect(condition.run(123, false)).to eq(30)
   end
 
   it 'returns 0 for a process that ps does not list' do
-    expect(Bluepill::System).to receive(:running_time).with(123).and_return(nil)
+    allow(Bluepill::System).to receive(:running_time).with(123).and_return(nil)
     expect(condition.run(123, false)).to eq(0)
   end
 

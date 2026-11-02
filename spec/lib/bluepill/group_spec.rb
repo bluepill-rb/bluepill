@@ -22,9 +22,10 @@ describe Bluepill::Group do
   describe '#add_process' do
     it 'gives the process a prefixed logger and stores it' do
       process = process_double('unicorn')
-      expect(logger).to receive(:prefix_with).with('unicorn').and_return(process_logger)
+      allow(logger).to receive(:prefix_with).with('unicorn').and_return(process_logger)
       expect(process).to receive(:logger=).with(process_logger)
       group.add_process(process)
+      expect(logger).to have_received(:prefix_with)
       expect(group.processes).to eq([process])
     end
   end

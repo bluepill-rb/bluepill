@@ -64,7 +64,7 @@ describe Bluepill do
     end
 
     it 'defaults to no options' do
-      expect(Bluepill::Application).to receive(:new).with('app_name', {}).and_return(app)
+      allow(Bluepill::Application).to receive(:new).with('app_name', {}).and_return(app)
       described_class.application(:app_name) { |_app| } # an app with no processes
       expect(app).to have_received(:load)
     end

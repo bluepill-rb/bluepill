@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "bluepill/dsl/attributes"
+
 module Bluepill
   # The self of the block given to {Bluepill.application}
   #
@@ -18,82 +20,87 @@ module Bluepill
     # process sets its own
     APP_ATTRIBUTES = %i[working_dir uid gid supplementary_groups environment auto_start notify_command].freeze
 
-    # The directory that the application's processes start in
-    #
-    # @example
-    #   app.working_dir = '/srv/my_app'
-    #
-    # @return [String, nil] the directory, or nil for the default
-    #
-    # @api public
-    attr_accessor :working_dir
+    include DSL::Attributes
 
-    # The user that the application's processes run as
-    #
-    # @example
-    #   app.uid = 'deploy'
-    #
-    # @return [String, nil] the user's name, or nil for bluepill's own user
-    #
-    # @api public
-    attr_accessor :uid
+    attribute(*APP_ATTRIBUTES)
 
-    # The group that the application's processes run as
+    # @!attribute [rw] working_dir
+    #   The directory that the application's processes start in
     #
-    # @example
-    #   app.gid = 'deploy'
+    #   @example
+    #     app.working_dir = '/srv/my_app'
     #
-    # @return [String, nil] the group's name, or nil for bluepill's own group
+    #   @return [String, nil] the directory, or nil for the default
     #
-    # @api public
-    attr_accessor :gid
+    #   @api public
 
-    # More groups that the application's processes run with
+    # @!attribute [rw] uid
+    #   The user that the application's processes run as
     #
-    # The processes already get every group that their uid belongs to. These
-    # are added to those.
+    #   @example
+    #     app.uid = 'deploy'
     #
-    # @example
-    #   app.supplementary_groups = ['rvm', 'ssl-cert']
+    #   @return [String, nil] the user's name, or nil for bluepill's own user
     #
-    # @return [Array<String>, nil] the groups' names
-    #
-    # @api public
-    attr_accessor :supplementary_groups
+    #   @api public
 
-    # The environment variables that the application's processes get
+    # @!attribute [rw] gid
+    #   The group that the application's processes run as
     #
-    # @example
-    #   app.environment = {'RAILS_ENV' => 'production'}
+    #   @example
+    #     app.gid = 'deploy'
     #
-    # @return [Hash{#to_s => #to_s}, nil] the variables by name
+    #   @return [String, nil] the group's name, or nil for bluepill's own
+    #     group
     #
-    # @api public
-    attr_accessor :environment
+    #   @api public
 
-    # Whether the application's processes start when bluepill loads
+    # @!attribute [rw] supplementary_groups
+    #   More groups that the application's processes run with
     #
-    # @example
-    #   app.auto_start = false
+    #   The processes already get every group that their uid belongs to.
+    #   These are added to those.
     #
-    # @return [Boolean, nil] false to leave the processes unmonitored until
-    #   they're started
+    #   @example
+    #     app.supplementary_groups = ['rvm', 'ssl-cert']
     #
-    # @api public
-    attr_accessor :auto_start
+    #   @return [Array<String>, nil] the groups' names
+    #
+    #   @api public
 
-    # The command the application's processes run on every change of state
+    # @!attribute [rw] environment
+    #   The environment variables that the application's processes get
     #
-    # A process can set its own. See Process#notify_command for the
-    # environment variables it gets.
+    #   @example
+    #     app.environment = {'RAILS_ENV' => 'production'}
     #
-    # @example
-    #   app.notify_command = '/usr/local/bin/alert'
+    #   @return [Hash{#to_s => #to_s}, nil] the variables by name
     #
-    # @return [String, nil] the command, without a shell
+    #   @api public
+
+    # @!attribute [rw] auto_start
+    #   Whether the application's processes start when bluepill loads
     #
-    # @api public
-    attr_accessor :notify_command
+    #   @example
+    #     app.auto_start = false
+    #
+    #   @return [Boolean, nil] false to leave the processes unmonitored
+    #     until they're started
+    #
+    #   @api public
+
+    # @!attribute [rw] notify_command
+    #   The command the application's processes run on each change of state
+    #
+    #   A process can set its own. See Process#notify_command for the
+    #   environment variables it gets.
+    #
+    #   @example
+    #     app.notify_command = '/usr/local/bin/alert'
+    #
+    #   @return [String, nil] the command, without a shell
+    #
+    #   @api public
 
     # Return the application that the config describes
     #
@@ -111,15 +118,17 @@ module Bluepill
     #
     # @api private
     def initialize(app_name, **options)
-      @app = Application.new(app_name.to_s, **options)
+      @name = app_name.to_s
+      @app = Application.new(@name, **options)
+      @attributes = {}
       @registry = ProcessFactory::Registry.new
     end
 
     # Define a process of the application
     #
     # The block runs with self set to a {ProcessProxy}, and also gets the
-    # proxy as an argument. The process starts with the application's
-    # attributes, which the block can override.
+    # proxy as an argument. The process starts with the application
+    # attributes that are set, which the block can override.
     #
     # @example
     #   app.process('web') do |process|
@@ -138,12 +147,16 @@ module Bluepill
     #
     # @api public
     def process(process_name, &process_block)
-      attributes = {} #: Hash[Symbol, untyped]
-      APP_ATTRIBUTES.each { |a| attributes[a] = public_send(a) }
-
       process_factory = ProcessFactory.new(attributes, process_block, @registry)
       process, group = process_factory.create_process(process_name, @app.pids_dir)
       @app.add_process(process, group)
     end
+
+    # Name the application, for an unknown attribute's error
+    #
+    # @return [String] the application's name
+    #
+    # @api private
+    def attribute_owner = "application '#{@name}'"
   end
 end

@@ -1,17 +1,67 @@
 module Bluepill
+  # The parts the application and process blocks share
+  module DSL
+    # The attributes a pill file sets with `name = value`. The writers and
+    # readers are defined at load, and an unknown name raises ConfigError.
+    module Attributes : _Owner
+      # What Attributes uses from the class that includes it
+      interface _Owner
+        def attribute_owner: () -> String
+
+        # The class, which extends ClassMethods
+        def class: () -> ClassMethods
+      end
+
+      def self.included: (Module base) -> void
+
+      # The attribute macro
+      module ClassMethods : Module
+        @attribute_names: Array[Symbol]
+
+        attr_reader attribute_names: Array[Symbol]
+
+        def attribute: (*Symbol names) -> void
+      end
+
+      @attributes: Hash[Symbol, untyped]
+
+      attr_reader attributes: Hash[Symbol, untyped]
+
+      private
+
+      def method_missing: (Symbol name, *untyped) -> bot
+
+      def respond_to_missing?: (Symbol name, bool include_private) -> false
+
+      def suggest: (String attribute) -> String?
+    end
+  end
+
   # self in an application block
   class AppProxy
+    include DSL::Attributes
+    extend DSL::Attributes::ClassMethods
+
     APP_ATTRIBUTES: Array[Symbol]
 
-    attr_accessor working_dir: String?
-    attr_accessor uid: String?
-    attr_accessor gid: String?
-    attr_accessor supplementary_groups: Array[String]?
-    attr_accessor environment: Hash[_ToS, _ToS]?
-    attr_accessor auto_start: bool?
-    attr_accessor notify_command: String?
+    def working_dir: () -> String?
+    def working_dir=: (String? value) -> String?
+    def uid: () -> String?
+    def uid=: (String? value) -> String?
+    def gid: () -> String?
+    def gid=: (String? value) -> String?
+    def supplementary_groups: () -> Array[String]?
+    def supplementary_groups=: (Array[String]? value) -> Array[String]?
+    def environment: () -> Hash[_ToS, _ToS]?
+    def environment=: (Hash[_ToS, _ToS]? value) -> Hash[_ToS, _ToS]?
+    def auto_start: () -> bool?
+    def auto_start=: (bool? value) -> bool?
+    def notify_command: () -> String?
+    def notify_command=: (String? value) -> String?
+
     attr_reader app: Application
 
+    @name: String
     @registry: ProcessFactory::Registry
 
     def initialize: (_ToS app_name, **untyped options) -> void
@@ -19,6 +69,8 @@ module Bluepill
     # The block runs with self set to the ProcessProxy, and also gets it as
     # an argument
     def process: (String process_name) { (ProcessProxy process) [self: ProcessProxy] -> void } -> Array[Process]
+
+    def attribute_owner: () -> String
   end
 
   # Builds processes from a process block in the config
@@ -89,10 +141,13 @@ module Bluepill
     end
   end
 
-  # self in a process block. Any attribute can be set with `name = value`,
-  # `name value` or `name!` (for true), and read back with `name`.
+  # self in a process block. Each attribute is set with `name = value`
+  # and read back with `name`. The writers and readers are defined at load,
+  # from Process::CONFIGURABLE_ATTRIBUTES, so they aren't listed here.
   class ProcessProxy
-    attr_reader attributes: Hash[Symbol, untyped]
+    include DSL::Attributes
+    extend DSL::Attributes::ClassMethods
+
     attr_reader name: String
 
     # The checks the block added, in order, with their options
@@ -100,15 +155,7 @@ module Bluepill
 
     def initialize: (String process_name, Hash[Symbol, untyped] attributes, process_block process_block) -> void
 
-    # Sets or reads an attribute
-    def method_missing: (Symbol name, *untyped args) -> untyped
-
-    def respond_to_missing?: (Symbol name, bool? include_private) -> bool
-
-    # Whether a config can set the attribute on a process
-    def self.attribute?: (Symbol name) -> bool
-
-    def self.attribute_names: () -> Array[Symbol]
+    def actual_pid: () -> Integer?
 
     def checks: (Symbol name, **untyped options) -> nil
 
@@ -117,12 +164,6 @@ module Bluepill
 
     def to_process: () -> Process
 
-    private
-
-    def attribute_call: (Symbol name, Array[untyped] args) -> ([Symbol, bool] | [Symbol, bool, untyped])?
-
-    def unknown_attribute!: (Symbol key) -> bot
-
-    def suggest: (Symbol key) -> String?
+    def attribute_owner: () -> String
   end
 end

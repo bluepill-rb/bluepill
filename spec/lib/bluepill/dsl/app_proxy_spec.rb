@@ -21,16 +21,32 @@ describe Bluepill::AppProxy do
     expect(described_class.new(:app_name, foreground: true, log_level: :info).app).to be(configured)
   end
 
+  describe "attributes" do
+    it "sets and reads the app attributes" do
+      proxy.working_dir = "/work"
+      expect([proxy.working_dir, proxy.uid]).to eq(["/work", nil])
+    end
+
+    it "names the app attributes" do
+      expect(described_class.attribute_names).to eq(Bluepill::AppProxy::APP_ATTRIBUTES)
+    end
+
+    it "rejects an unknown attribute, and suggests the closest one" do
+      expect { proxy.uidd = "user" }
+        .to raise_error(Bluepill::ConfigError, "Unknown attribute 'uidd' for application 'app_name'. Did you mean 'uid'?")
+    end
+  end
+
   describe "#process" do
     # Add a process that keeps the app's value of an attribute and one that
     # sets its own, and return the value each process ends up with
     def added(attribute, own_value)
       values = []
       allow(app).to receive(:add_process) { |process, _| values << process.public_send(attribute) }
-      proxy.process("web") { start_command "run" }
+      proxy.process("web") { self.start_command = "run" }
       proxy.process("worker") do
-        start_command "run"
-        public_send(attribute, own_value)
+        self.start_command = "run"
+        public_send(:"#{attribute}=", own_value)
       end
       values
     end
@@ -40,8 +56,8 @@ describe Bluepill::AppProxy do
         proxy.working_dir = "/work"
         proxy.uid = "user"
         proxy.process("web") do
-          start_command "run"
-          group "servers"
+          self.start_command = "run"
+          self.group = "servers"
         end
       end
 
@@ -65,21 +81,35 @@ describe Bluepill::AppProxy do
       expect(added(:notify_command, "page")).to eq(%w[alert page])
     end
 
+    it "gives a process only the app attributes that are set" do
+      proxy.uid = "user"
+      allow(Bluepill::ProcessFactory).to receive(:new).and_call_original
+      proxy.process("web") { self.start_command = "run" }
+      expect(Bluepill::ProcessFactory).to have_received(:new).with({uid: "user"}, any_args)
+    end
+
+    it "leaves a process the default environment when the app sets none" do
+      environments = []
+      allow(app).to receive(:add_process) { |process, _| environments << process.environment }
+      proxy.process("web") { self.start_command = "run" }
+      expect(environments).to eq([{}])
+    end
+
     it "rejects a second process with the same name" do
-      proxy.process("web") { start_command "run" }
-      expect { proxy.process("web") { start_command "run" } }
+      proxy.process("web") { self.start_command = "run" }
+      expect { proxy.process("web") { self.start_command = "run" } }
         .to raise_error(Bluepill::ConfigError, "Config Error: You have two entries for the process name 'web'")
     end
 
     it "checks its processes apart from another application's" do
-      proxy.process("web") { start_command "run" }
+      proxy.process("web") { self.start_command = "run" }
       other = described_class.new(:app_name)
-      other.process("web") { start_command "run" }
+      other.process("web") { self.start_command = "run" }
       expect(app).to have_received(:add_process).twice
     end
 
     it "adds a process without a group" do
-      proxy.process("worker") { start_command "run" }
+      proxy.process("worker") { self.start_command = "run" }
       expect(app).to have_received(:add_process).with(kind_of(Bluepill::Process), nil)
     end
   end

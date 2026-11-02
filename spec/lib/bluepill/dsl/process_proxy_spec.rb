@@ -33,43 +33,23 @@ describe Bluepill::ProcessProxy do
       expect(proxy.attributes).to eq(start_command: "run")
     end
 
-    it "sets attributes with a single argument" do
-      proxy = described_class.new("web", {}, proc { stop_command "halt" })
-      expect(proxy.attributes).to eq(stop_command: "halt")
-    end
-
-    it "sets attributes to true with a bang method" do
-      proxy = described_class.new("web", {}, proc { daemonize! })
-      expect(proxy.attributes).to eq(daemonize: true)
-    end
-
-    it "responds to setters, bang methods and attributes that have been set" do
-      proxy = described_class.new("web", {uid: "user"}, proc {})
-      expect(proxy).to respond_to(:start_command=, :daemonize!, :uid)
-    end
-
-    it "does not respond to attributes that have not been set" do
-      proxy = described_class.new("web", {uid: "user"}, proc {})
-      expect(proxy).not_to respond_to(:gid)
-    end
-
     it "reads attributes that have been set" do
-      proxy = described_class.new("web", {}, proc { start_command "run" })
+      proxy = described_class.new("web", {}, proc { self.start_command = "run" })
       expect(proxy.start_command).to eq("run")
     end
 
-    it "raises NameError for unknown attributes without arguments" do
-      expect { described_class.new("web", {}, proc { start_command }) }.to raise_error(NameError)
+    it "reads an attribute that has not been set as nil" do
+      expect(described_class.new("web", {}, proc {}).start_command).to be_nil
     end
 
-    it "raises NoMethodError when called with several arguments" do
-      expect { described_class.new("web", {start_command: "a"}, proc { start_command "a", "b" }) }.to raise_error(NoMethodError, /undefined method/)
+    it "reads the attributes the app set" do
+      expect(described_class.new("web", {uid: "user"}, proc {}).uid).to eq("user")
     end
 
     it "sets an attribute to false or nil" do
       proxy = described_class.new("web", {}, proc do |p|
         p.auto_start = false
-        p.pid_file nil
+        p.pid_file = nil
       end)
       expect(proxy.attributes).to eq(auto_start: false, pid_file: nil)
     end
@@ -79,40 +59,43 @@ describe Bluepill::ProcessProxy do
       expect(proxy.attributes).to eq(group: "workers")
     end
 
-    it "sets every configurable attribute" do
-      Bluepill::Process::CONFIGURABLE_ATTRIBUTES.each do |attribute|
-        proxy = described_class.new("web", {}, proc { |p| p.public_send("#{attribute}=", 1) })
-        expect(proxy.attributes).to eq(attribute => 1)
+    it "sets every configurable attribute, but the two that monitor_children sets" do
+      (Bluepill::Process::CONFIGURABLE_ATTRIBUTES - %i[monitor_children child_process_factory]).each do |attribute|
+        proxy = described_class.new("web", {}, proc { |p| p.public_send(:"#{attribute}=", 1) })
+        expect([proxy.attributes, proxy.public_send(attribute)]).to eq([{attribute => 1}, 1])
       end
     end
 
-    it "rejects an unknown attribute set with a setter, and suggests the closest one" do
+    it "names the attributes a config can set" do
+      expect(described_class.attribute_names).to eq(
+        Bluepill::Process::CONFIGURABLE_ATTRIBUTES - %i[monitor_children child_process_factory] + [:group]
+      )
+    end
+
+    it "rejects child_process_factory, which monitor_children sets" do
+      expect { described_class.new("web", {}, proc { |p| p.child_process_factory = 1 }) }
+        .to raise_error(Bluepill::ConfigError, /Unknown attribute 'child_process_factory' for process 'web'/)
+    end
+
+    it "rejects an unknown attribute, and suggests the closest one" do
       expect { described_class.new("web", {}, proc { |p| p.start_comand = "run" }) }.to raise_error(
         Bluepill::ConfigError, "Unknown attribute 'start_comand' for process 'web'. Did you mean 'start_command'?"
       )
     end
 
-    it "rejects an unknown attribute set with an argument" do
-      expect { described_class.new("web", {}, proc { stop_comand "halt" }) }.to raise_error(
-        Bluepill::ConfigError, "Unknown attribute 'stop_comand' for process 'web'. Did you mean 'stop_command'?"
+    it "suggests the setter for a bang method, which bluepill 0.2 took" do
+      expect { described_class.new("web", {}, proc { daemonize! }) }.to raise_error(
+        Bluepill::ConfigError, "Unknown attribute 'daemonize!' for process 'web'. Did you mean 'daemonize'?"
       )
     end
 
-    it "rejects an unknown attribute set with a bang method" do
-      expect { described_class.new("web", {}, proc { daemonise! }) }.to raise_error(
-        Bluepill::ConfigError, "Unknown attribute 'daemonise' for process 'web'. Did you mean 'daemonize'?"
-      )
+    it "rejects a value given as an argument, which bluepill 0.2 took" do
+      expect { described_class.new("web", {}, proc { start_command "run" }) }.to raise_error(ArgumentError)
     end
 
-    it "rejects an unknown attribute that is read" do
-      expect { described_class.new("web", {}, proc { pidfile }) }.to raise_error(
-        Bluepill::ConfigError, "Unknown attribute 'pidfile' for process 'web'. Did you mean 'pid_file'?"
-      )
-    end
-
-    it "suggests nothing for an attribute unlike any other" do
-      expect { described_class.new("worker", {}, proc { |p| p.frobnicate = 1 }) }.to raise_error(
-        Bluepill::ConfigError, "Unknown attribute 'frobnicate' for process 'worker'"
+    it "suggests the group" do
+      expect { described_class.new("web", {}, proc { |p| p.grop = "workers" }) }.to raise_error(
+        Bluepill::ConfigError, "Unknown attribute 'grop' for process 'web'. Did you mean 'group'?"
       )
     end
 
@@ -121,44 +104,14 @@ describe Bluepill::ProcessProxy do
       expect(proxy.attributes).to eq(working_dir: "/web")
     end
 
-    it "reads an attribute that bluepill sets, such as a child process pid" do
+    it "reads no pid for a process that isn't a child" do
+      expect(described_class.new("web", {}, proc {}).actual_pid).to be_nil
+    end
+
+    it "reads a child process's pid" do
       value = nil
       described_class.new("<child(pid:5)>", {actual_pid: 5}, proc { value = actual_pid })
       expect(value).to eq(5)
-    end
-
-    it "suggests the closest attribute by its name" do
-      proxy = described_class.new("web", {}, proc {})
-      expect(proxy.send(:suggest, :start_comand)).to eq("start_command")
-    end
-
-    it "suggests an attribute for a short misspelling too" do
-      proxy = described_class.new("web", {}, proc {})
-      suggestions = %i[auto_srt uidx gids ui].collect { |name| proxy.send(:suggest, name) }
-      expect(suggestions).to eq(%w[auto_start uid gid uid])
-    end
-
-    it "suggests the first in order among attributes as close as each other" do
-      proxy = described_class.new("web", {}, proc {})
-      expect(proxy.send(:suggest, :xid)).to eq("gid")
-    end
-
-    it "leaves a bang method with an argument to NoMethodError" do
-      expect { described_class.new("web", {}, proc { daemonize! true }) }.to raise_error(NoMethodError, /undefined method/)
-    end
-
-    it "leaves a setter without an argument to NoMethodError" do
-      expect { described_class.new("web", {}, proc { |p| p.__send__(:start_command=) }) }.to raise_error(NoMethodError, /undefined method/)
-    end
-
-    it "responds to unknown attributes no more than it accepts them" do
-      proxy = described_class.new("web", {}, proc {})
-      expect(proxy).not_to respond_to(:start_comand=, :daemonise!, :pidfile)
-    end
-
-    it "responds to the group setter" do
-      proxy = described_class.new("web", {}, proc {})
-      expect(proxy).to respond_to(:group=)
     end
   end
 
@@ -199,7 +152,7 @@ describe Bluepill::ProcessProxy do
   describe "#to_process" do
     let(:proxy) do
       described_class.new("web", {}, proc do
-        start_command "run"
+        self.start_command = "run"
         checks :always_true, every: 10
       end)
     end

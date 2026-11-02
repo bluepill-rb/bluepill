@@ -1,29 +1,29 @@
 # frozen_string_literal: true
 
-require "did_you_mean"
+require "bluepill/dsl/attributes"
+require "bluepill/process/attributes"
 
 module Bluepill
   # The self of a process block in a config file
   #
-  # Any of the process's attributes can be set with `name = value`,
-  # `name value`, or `name!` for true, and read back with `name`. See
-  # {Process::CONFIGURABLE_ATTRIBUTES} for the attributes a process has.
+  # Each of the process's attributes is set with `name = value`, and read
+  # back with `name`, which is nil until it's set. See
+  # {Process::CONFIGURABLE_ATTRIBUTES} for the attributes a process has, and
+  # `group` sets the group it's in.
   #
   # @example
   #   app.process('web') do |process|
   #     process.start_command = '/usr/bin/my_server'
-  #     process.daemonize!
+  #     process.daemonize = true
   #     process.checks :mem_usage, every: 10.seconds, below: 100.megabytes
   #   end
   #
   # @api public
   class ProcessProxy
-    # Return the attributes that the block set, by name
-    #
-    # @return [Hash{Symbol => Object}] the attributes
-    #
-    # @api private
-    attr_reader :attributes
+    include DSL::Attributes
+
+    # monitor_children sets the two attributes it leaves out
+    attribute(*(Process::Attributes::CONFIGURABLE_ATTRIBUTES - %i[monitor_children child_process_factory]), :group)
 
     # Return the process's name
     #
@@ -51,79 +51,17 @@ module Bluepill
       instance_eval(&process_block)
     end
 
-    # Set or read an attribute of the process
-    #
-    # A name ending in `=`, or one given a value, sets the attribute. A name
-    # ending in `!` sets it to true. A name alone reads an attribute that's
-    # set. Only the attributes a process has can be set, so a misspelled one
-    # fails when the config loads instead of being ignored.
+    # Return the pid of the child that a monitor_children block configures
     #
     # @example
-    #   process.start_command = '/usr/bin/my_server'
-    #   process.stop_grace_time 10.seconds
-    #   process.daemonize!
-    #   process.start_command # => "/usr/bin/my_server"
+    #   process.monitor_children do |child|
+    #     child.stop_command = "kill -QUIT #{child.actual_pid}"
+    #   end
     #
-    # @param [Symbol] name the attribute's name
-    # @param [Array<Object>] args the value, if it's set
-    #
-    # @return [Object] the value that was set or read
-    #
-    # @raise [ConfigError] for an attribute a process doesn't have
-    #
-    # @raise [NoMethodError] for an attribute that isn't set yet, or more
-    #   than one value
+    # @return [Integer, nil] the child's pid, or nil for a process
     #
     # @api public
-    def method_missing(name, *args)
-      key, reader, value = attribute_call(name, args)
-      if key
-        return @attributes.fetch(key) if reader && @attributes.key?(key)
-
-        unknown_attribute!(key) unless self.class.attribute?(key)
-        return @attributes[key] = value unless reader
-      end
-      # A call with the wrong number of values, or the reader of a known
-      # attribute that isn't set yet
-      super
-    end
-
-    # Return whether the proxy answers a name through method_missing
-    #
-    # Ruby turns a String name into a Symbol before calling this.
-    #
-    # @param [Symbol] name the method's name
-    # @param [Boolean, nil] _include_private ignored
-    #
-    # @return [Boolean] true for the setter or `name!` of an attribute a
-    #   process has, or the reader of one that's set
-    #
-    # @api private
-    def respond_to_missing?(name, _include_private)
-      attribute = name.to_s
-      key = attribute.sub(/[=!]\z/, "")
-      return @attributes.key?(name) if key.eql?(attribute)
-
-      self.class.attribute?(key.to_sym)
-    end
-
-    # Return whether a process has an attribute that a config can set
-    #
-    # These are a process's configurable attributes, and the group it's in.
-    #
-    # @param [Symbol] name the attribute's name
-    #
-    # @return [Boolean] true for an attribute a config can set
-    #
-    # @api private
-    def self.attribute?(name) = attribute_names.include?(name)
-
-    # Return the attributes a config can set on a process
-    #
-    # @return [Array<Symbol>] a process's configurable attributes, and :group
-    #
-    # @api private
-    def self.attribute_names = Process::CONFIGURABLE_ATTRIBUTES + [:group]
+    def actual_pid = attributes[:actual_pid]
 
     # Add a check of the process, or a trigger such as :flapping
     #
@@ -165,8 +103,8 @@ module Bluepill
     #
     # @api public
     def monitor_children(&child_process_block)
-      @attributes[:monitor_children] = true
-      @attributes[:child_process_block] = child_process_block
+      attributes[:monitor_children] = true
+      attributes[:child_process_block] = child_process_block
     end
 
     # Create the process that the block described
@@ -174,66 +112,13 @@ module Bluepill
     # @return [Process] the process
     #
     # @api private
-    def to_process = Process.new(@name, @checks, **@attributes)
+    def to_process = Process.new(@name, @checks, **attributes)
 
-    private
-
-    # Return the attribute a call names, and the value it sets
+    # Name the process, for an unknown attribute's error
     #
-    # A name alone with no value reads the attribute. A name ending in `=`,
-    # or one alone, sets it to one value, and a name ending in `!` sets it
-    # to true with none.
-    #
-    # @param [Symbol] name the method's name
-    # @param [Array<Object>] args the call's arguments
-    #
-    # @return [Array(Symbol, Boolean), Array(Symbol, Boolean, Object), nil]
-    #   the attribute's name, whether the call reads it, and the value a
-    #   setter sets, or nil for a call with the wrong number of values
+    # @return [String] the process's name
     #
     # @api private
-    def attribute_call(name, args)
-      attribute = name.to_s
-      key = attribute.sub(/[=!]\z/, "").to_sym
-      return [key, true] if args.empty? && key.to_s.eql?(attribute)
-
-      bang = attribute.end_with?("!")
-      value, = args
-      [key, false, bang || value] if args.size.equal?(bang ? 0 : 1)
-    end
-
-    # Fail on an attribute a process doesn't have
-    #
-    # The message names the process and the attribute, and the closest
-    # attribute a process has, when there's one close enough.
-    #
-    # @param [Symbol] key the attribute's name
-    #
-    # @return [void] it never returns
-    #
-    # @raise [ConfigError] always
-    #
-    # @api private
-    def unknown_attribute!(key)
-      message = "Unknown attribute '#{key}' for process '#{@name}'"
-      suggestion = suggest(key)
-      message += ". Did you mean '#{suggestion}'?" if suggestion
-      raise ConfigError, message
-    end
-
-    # Return the attribute a process has that's closest to a misspelled one
-    #
-    # Ruby's did_you_mean picks it, as it picks a method for a misspelled
-    # one.
-    #
-    # @param [Symbol] key the misspelled attribute
-    #
-    # @return [String, nil] the closest attribute, or nil
-    #
-    # @api private
-    def suggest(key)
-      names = self.class.attribute_names.collect(&:to_s)
-      DidYouMean::SpellChecker.new(dictionary: names).correct(key).first
-    end
+    def attribute_owner = "process '#{@name}'"
   end
 end

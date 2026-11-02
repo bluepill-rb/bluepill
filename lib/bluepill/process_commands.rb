@@ -30,23 +30,50 @@ module Bluepill
       # ProcessFactory makes sure every process has a start command
       command = start_command #: String
       logger.warning "Executing start command: #{command}"
+      run_start_command(command)
+
+      skip_ticks_for(start_grace_time)
+    end
+
+    # Run the start command, as a daemon or for a self-daemonizing process
+    #
+    # A self-daemonizing process gets start_grace_time to finish, and then
+    # on_start_timeout is dispatched.
+    #
+    # @param [String] command the start command
+    #
+    # @return [void]
+    #
+    # @api private
+    def run_start_command(command)
       if daemonize?
-        daemon_id = System.daemonize(command, system_command_options)
-        if daemon_id
-          ProcessJournal.append_pid_to_journal(name, daemon_id)
-          # Only refresh_children! fills children, and only when monitoring them
-          children.each do |child|
-            ProcessJournal.append_pid_to_journal(name, child.actual_pid)
-          end
-        end
+        daemonize_process(command)
       else
         # This is a self-daemonizing process
         with_timeout(start_grace_time, on_start_timeout) do
           run_command(command, "Start")
         end
       end
+    end
 
-      skip_ticks_for(start_grace_time)
+    # Run the start command as a daemon, and add its pid to the journal
+    #
+    # The children's pids go in the journal too.
+    #
+    # @param [String] command the start command
+    #
+    # @return [void]
+    #
+    # @api private
+    def daemonize_process(command)
+      daemon_id = System.daemonize(command, system_command_options)
+      return unless daemon_id
+
+      ProcessJournal.append_pid_to_journal(name, daemon_id)
+      # Only refresh_children! fills children, and only when monitoring them
+      children.each do |child|
+        ProcessJournal.append_pid_to_journal(name, child.actual_pid)
+      end
     end
 
     # Stop the process with its stop command, stop signals, or TERM
@@ -62,21 +89,30 @@ module Bluepill
       # The pid, for post_stop_command, before cleanup forgets it
       @stopping_pid = actual_pid
       pre_stop_process
+      journal_children if monitor_children
+      send_stop
+      skip_ticks_for(stop_grace_time)
+    end
 
-      if monitor_children
-        System.get_children(actual_pid).each do |child_pid|
-          ProcessJournal.append_pid_to_journal(name, child_pid)
-        end
+    # Add the pids of the process's children to its journal
+    #
+    # @return [void]
+    #
+    # @api private
+    def journal_children
+      System.get_children(actual_pid).each do |child_pid|
+        ProcessJournal.append_pid_to_journal(name, child_pid)
       end
+    end
 
+    # Run the stop command, send the stop signals, or send TERM
+    #
+    # @return [void]
+    #
+    # @api private
+    def send_stop
       if stop_command
-        cmd = prepare_command(stop_command)
-        logger.warning "Executing stop command: #{cmd}"
-
-        with_timeout(stop_grace_time, "stop") do
-          run_command(cmd, "Stop")
-        end
-        cleanup_process
+        run_stop_command(stop_command)
       elsif stop_signals
         send_stop_signals_in_background(stop_signals)
       else
@@ -84,8 +120,23 @@ module Bluepill
         signal_process("TERM")
         cleanup_process
       end
+    end
 
-      skip_ticks_for(stop_grace_time)
+    # Run the stop command, and clean up after the process
+    #
+    # @param [String] command the stop command
+    #
+    # @return [void]
+    #
+    # @api private
+    def run_stop_command(command)
+      cmd = prepare_command(command)
+      logger.warning "Executing stop command: #{cmd}"
+
+      with_timeout(stop_grace_time, "stop") do
+        run_command(cmd, "Stop")
+      end
+      cleanup_process
     end
 
     # Restart the process with its restart command, or by stopping and starting
@@ -95,15 +146,7 @@ module Bluepill
     # @api private
     def restart_process
       if restart_command
-        cmd = prepare_command(restart_command)
-
-        logger.warning "Executing restart command: #{cmd}"
-
-        with_timeout(restart_grace_time, "restart") do
-          run_command(cmd, "Restart")
-        end
-
-        skip_ticks_for(restart_grace_time)
+        run_restart_command(restart_command)
       else
         logger.warning "No restart_command specified. Must stop and start to restart"
         stop_process
@@ -112,6 +155,25 @@ module Bluepill
         @threads.each(&:join)
         start_process
       end
+    end
+
+    # Run the restart command, and skip ticks for restart_grace_time
+    #
+    # @param [String] command the restart command
+    #
+    # @return [Integer] when ticks resume, in epoch seconds
+    #
+    # @api private
+    def run_restart_command(command)
+      cmd = prepare_command(command)
+
+      logger.warning "Executing restart command: #{cmd}"
+
+      with_timeout(restart_grace_time, "restart") do
+        run_command(cmd, "Restart")
+      end
+
+      skip_ticks_for(restart_grace_time)
     end
 
     # Kill what's left of the process, and delete its pid file

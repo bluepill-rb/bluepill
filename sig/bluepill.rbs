@@ -313,9 +313,21 @@ module Bluepill
 
     def start_process: () -> Integer
 
+    def run_start_command: (String command) -> void
+
+    def daemonize_process: (String command) -> void
+
     def stop_process: () -> Integer
 
+    def journal_children: () -> void
+
+    def send_stop: () -> void
+
+    def run_stop_command: (String command) -> void
+
     def restart_process: () -> Integer
+
+    def run_restart_command: (String command) -> Integer
 
     def cleanup_process: () -> void
   end

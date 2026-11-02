@@ -24,16 +24,9 @@ module Bluepill
       # @api private
       def system_command_options
         {
-          uid: uid,
-          gid: gid,
-          working_dir: working_dir,
-          environment: environment,
-          pid_file: pid_file,
-          logger: logger,
-          stdin: stdin,
-          stdout: stdout,
-          stderr: stderr,
-          supplementary_groups: supplementary_groups
+          uid: uid, gid: gid, supplementary_groups: supplementary_groups,
+          working_dir: working_dir, environment: environment, pid_file: pid_file,
+          logger: logger, stdin: stdin, stdout: stdout, stderr: stderr
         }
       end
 

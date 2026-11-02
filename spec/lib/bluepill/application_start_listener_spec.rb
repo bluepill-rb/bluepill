@@ -24,14 +24,15 @@ describe Bluepill::Application do
 
   describe 'start_listener' do
     let(:client) { instance_double(UNIXSocket, readline: "status:web\n", write: nil, close: nil) }
+    let(:group) { instance_double(Bluepill::Group, status: []) }
     let(:logged) { [] }
 
     before do
       app.socket = instance_double(UNIXServer)
       accepting(client)
+      app.groups = {'web' => group}
       # The listener's thread is its block, which listen calls
       allow(Thread).to receive(:new) { |&block| block }
-      allow(app).to receive(:status).and_return([])
       allow(logger).to receive(:err) { |line| logged << line }
     end
 
@@ -57,7 +58,7 @@ describe Bluepill::Application do
       before do
         # JRuby 1.7's sockets have no close_on_exec=, which the listener skips
         allow(client).to receive(:close_on_exec=) if UNIXSocket.method_defined?(:close_on_exec=)
-        allow(app).to receive(:status).with('web').and_return(['web:a'])
+        allow(group).to receive(:status).with(nil).and_return(['web:a'])
         listen
       end
 
@@ -82,11 +83,11 @@ describe Bluepill::Application do
     it 'ignores whitespace around the command' do
       allow(client).to receive(:readline).and_return(" status:web\n")
       listen
-      expect(app).to have_received(:status).with('web')
+      expect(group).to have_received(:status).with(nil)
     end
 
     it 'runs the command while holding the mutex' do
-      allow(app).to receive(:status) { mutex_locked? }
+      allow(group).to receive(:status) { mutex_locked? }
       listen
       expect(client).to have_received(:write).with(Marshal.dump(true))
     end
@@ -94,18 +95,19 @@ describe Bluepill::Application do
     it 'sends a command without a target' do
       allow(client).to receive(:readline).and_return("status:\n")
       listen
-      expect(app).to have_received(:status).with(no_args)
+      expect(group).to have_received(:status).with(no_args)
     end
 
     it 'keeps the colons in a process name' do
+      app.groups = {'jobs' => group}
       allow(client).to receive(:readline).and_return("status:jobs:job_1:IMPORT\n")
       listen
-      expect(app).to have_received(:status).with('jobs', 'job_1:IMPORT')
+      expect(group).to have_received(:status).with('job_1:IMPORT')
     end
 
     it 'answers with the error raised by a command' do
       error = RuntimeError.new('boom')
-      allow(app).to receive(:status).and_raise(error)
+      allow(group).to receive(:status).and_raise(error)
       listen
       expect(client).to have_received(:write).with(Marshal.dump(error))
     end

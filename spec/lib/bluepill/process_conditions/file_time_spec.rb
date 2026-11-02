@@ -27,14 +27,14 @@ describe Bluepill::ProcessConditions::FileTime do
     end
 
     it 'watches the given file' do
-      File.open(filename, 'w') {}
+      File.write(filename, '')
       expect(subject.run(123, false)).to be_a(Float)
     end
   end
 
   describe '#run' do
     it 'returns the time since the file was modified' do
-      File.open(filename, 'w') {}
+      File.write(filename, '')
       mtime = File.mtime(filename)
       allow(Time).to receive(:now).and_return(mtime + 30)
       expect(subject.run(123, false)).to eq(30)

@@ -24,7 +24,7 @@ describe Bluepill do
 
     it 'defaults to no options' do
       expect(Bluepill::Application).to receive(:new).with('app_name', {}).and_return(app)
-      Bluepill.application(:app_name) {}
+      Bluepill.application(:app_name) { |_app| } # an app with no processes
       expect(app).to have_received(:load)
     end
   end

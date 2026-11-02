@@ -887,7 +887,7 @@ describe Bluepill::Process do
       end
 
       it 'is nil for an empty pid file' do
-        File.open(subject.pid_file, 'w') {}
+        File.write(subject.pid_file, '')
         expect(subject.actual_pid).to be_nil
       end
 

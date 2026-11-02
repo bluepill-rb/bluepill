@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rbconfig"
+require "tempfile"
 
 # The configs that the README and the examples show, loaded the way bluepill
 # loads a config, without starting a daemon. Bluepill no longer depends on
@@ -18,6 +19,18 @@ describe "The README and example configs", type: :integration do
     allow(Bluepill::Application).to receive(:new).and_return(app)
   end
 
+  # Load a config from the README the way bluepill loads a pill file
+  def load_config(config)
+    Tempfile.create(["readme_config", ".rb"]) do |file|
+      file.write(config)
+      file.flush
+      load file.path
+    end
+  end
+
+  # Load the README's config that includes the text
+  def load_config_with(text) = load_config(README_CONFIGS.detect { |c| c.include?(text) })
+
   def watch(process, name) = process.watches.detect { |w| w.name.equal?(name) }
 
   def condition(process, name) = watch(process, name).instance_variable_get(:@process_condition)
@@ -32,7 +45,7 @@ describe "The README and example configs", type: :integration do
 
   README_CONFIGS.each_with_index do |config, i|
     it "loads README config #{i + 1}" do
-      eval(config, binding, "README.md") # rubocop:disable Security/Eval
+      load_config(config)
       expect(Bluepill::Application).to have_received(:new).with("app_name", any_args)
     end
 
@@ -40,32 +53,32 @@ describe "The README and example configs", type: :integration do
     next unless config.include?(".process(")
 
     it "adds the processes of README config #{i + 1}" do
-      eval(config, binding, "README.md") # rubocop:disable Security/Eval
+      load_config(config)
       expect(processes).not_to be_empty
     end
   end
 
   it "reads durations as seconds and sizes as bytes" do
-    eval(README_CONFIGS.detect { |c| c.include?(":file_time") }, binding, "README.md") # rubocop:disable Security/Eval
+    load_config_with(":file_time")
     process = processes.fetch("process_name")
     values = [every(process, :mem_usage), below(process, :mem_usage), below(process, :file_time)]
     expect(values).to eql([10, 104_857_600, 180])
   end
 
   it "reads minutes and hours" do
-    eval(README_CONFIGS.detect { |c| c.include?(":running_time") }, binding, "README.md") # rubocop:disable Security/Eval
+    load_config_with(":running_time")
     process = processes.fetch("process_name")
     expect([every(process, :running_time), below(process, :running_time)]).to eql([600, 86_400])
   end
 
   it "reads grace times" do
-    eval(README_CONFIGS.detect { |c| c.include?("start_grace_time = 3.seconds") }, binding, "README.md") # rubocop:disable Security/Eval
+    load_config_with("start_grace_time = 3.seconds")
     process = processes.fetch("process_name")
     expect([process.start_grace_time, process.stop_grace_time, process.restart_grace_time]).to eql([3, 5, 8])
   end
 
   it "reads the delays between stop signals" do
-    eval(README_CONFIGS.detect { |c| c.include?("stop_signals") }, binding, "README.md") # rubocop:disable Security/Eval
+    load_config_with("stop_signals")
     expect(processes.fetch("process_name").stop_signals).to eql([:quit, 30, :term, 5, :kill])
   end
 

@@ -695,6 +695,10 @@ module Bluepill
   class ProcessFactory
     PRE_START_COMMAND: String
 
+    UID_WITHOUT_GID: String
+
+    UID_WITH_GID: String
+
     @@process_keys: Hash[Array[String?], nil]
     @@pid_files: Hash[String, nil]
 
@@ -726,6 +730,10 @@ module Bluepill
 
     # Warns about what bluepill 0.2.0 does differently with the process
     def warn_of_0_2_changes: () -> void
+
+    # Warns, as root, that 0.2.0 runs a process with a uid in the user's
+    # groups
+    def warn_of_0_2_groups: () -> void
 
     def config_error!: (String message) -> bot
 

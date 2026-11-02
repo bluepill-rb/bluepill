@@ -22,6 +22,21 @@ module Bluepill
                         "and starts the process even when the command can't run, where 0.1 waits for it however long it takes. " \
                         'Set hook_timeout, which 0.1 ignores, if it can take longer.'.freeze
 
+    # The warning about a process with a uid and no gid, which bluepill
+    # 0.2.0 runs in the user's groups instead of root's
+    #
+    # @api private
+    UID_WITHOUT_GID = 'bluepill 0.2.0 runs a process that sets uid but not gid in the primary group and the other groups ' \
+                      "of that user, where 0.1 keeps it in root's groups. Set gid and supplementary_groups to the groups it needs.".freeze
+
+    # The warning about a process with a uid and a gid, which bluepill 0.2.0
+    # also runs in the user's other groups
+    #
+    # @api private
+    UID_WITH_GID = 'bluepill 0.2.0 also runs a process that sets uid in every other group that user is in, ' \
+                   'where 0.1 gives it only its gid and supplementary_groups. ' \
+                   "Make sure the user's groups don't give it access it shouldn't have.".freeze
+
     # Only the keys matter
     @@process_keys = {} #: Hash[Array[String?], nil]
     @@pid_files = {} #: Hash[String, nil]
@@ -226,6 +241,24 @@ module Bluepill
     # @api private
     def warn_of_0_2_changes
       Deprecation.warn(:pre_start_command, PRE_START_COMMAND) if attributes[:pre_start_command]
+      warn_of_0_2_groups if attributes[:uid]
+    end
+
+    # Warn that bluepill 0.2.0 runs a process with a uid in the user's groups
+    #
+    # Bluepill only switches users when it runs as root.
+    #
+    # @return [void]
+    #
+    # @api private
+    def warn_of_0_2_groups
+      return unless ::Process.euid.zero?
+
+      if attributes[:gid]
+        Deprecation.warn(:uid_with_gid, UID_WITH_GID)
+      else
+        Deprecation.warn(:uid_without_gid, UID_WITHOUT_GID)
+      end
     end
 
     # Print a config error and exit with status 6

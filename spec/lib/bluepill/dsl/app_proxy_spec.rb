@@ -28,6 +28,7 @@ describe Bluepill::AppProxy do
 
   describe '#process' do
     it 'adds a process built from the app attributes to its group' do
+      allow(::Process).to receive(:euid).and_return(1000)
       subject.working_dir = '/work'
       subject.uid = 'user'
       subject.process('web') do

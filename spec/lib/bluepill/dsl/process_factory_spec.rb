@@ -46,6 +46,36 @@ describe Bluepill::ProcessFactory do
         create('web', proc { start_command 'run' }, pre_start_command: 'setup', daemonize: true)
       end
 
+      context 'as root' do
+        before { allow(::Process).to receive(:euid).and_return(0) }
+
+        it 'warns once that 0.2.0 runs a process with a uid and no gid in the user\'s groups' do
+          expect(Bluepill::Deprecation).to receive(:warn).twice.with(:uid_without_gid, Bluepill::ProcessFactory::UID_WITHOUT_GID).and_call_original
+          expect do
+            create('web', proc { start_command 'run' }, uid: 'deploy', gid: nil, daemonize: true)
+            create('db', proc { start_command 'run' }, uid: 'deploy', daemonize: true)
+          end.to output("DEPRECATION: #{Bluepill::ProcessFactory::UID_WITHOUT_GID}\n").to_stderr
+        end
+
+        it 'warns once that 0.2.0 runs a process with a uid and a gid in the user\'s other groups too' do
+          expect(Bluepill::Deprecation).to receive(:warn).with(:uid_with_gid, Bluepill::ProcessFactory::UID_WITH_GID).and_call_original
+          expect do
+            create('web', proc { start_command 'run' }, uid: 'deploy', gid: 'deploy', daemonize: true)
+          end.to output("DEPRECATION: #{Bluepill::ProcessFactory::UID_WITH_GID}\n").to_stderr
+        end
+
+        it 'warns about nothing for a process without a uid' do
+          expect(Bluepill::Deprecation).not_to receive(:warn)
+          create('web', proc { start_command 'run' }, uid: nil, gid: 'deploy', daemonize: true)
+        end
+      end
+
+      it 'warns about no uid when bluepill does not run as root, since it switches no users' do
+        allow(::Process).to receive(:euid).and_return(1000)
+        expect(Bluepill::Deprecation).not_to receive(:warn)
+        create('web', proc { start_command 'run' }, uid: 'deploy', daemonize: true)
+      end
+
       it 'warns about nothing without a pre_start_command' do
         expect(Bluepill::Deprecation).not_to receive(:warn)
         create('web', proc { start_command 'run' }, pre_start_command: nil, pid_file: '/var/web.pid')

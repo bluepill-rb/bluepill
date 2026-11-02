@@ -113,7 +113,8 @@ module Bluepill
     def system_command_options: () -> System::command_options
 
     # Runs the block, and dispatches next_state if it takes longer than secs
-    def with_timeout: [T] (seconds secs, String | Symbol next_state) { (Numeric secs) -> T } -> (T | bool)
+    # It takes a String until on_start_timeout is always a Symbol
+    def with_timeout: [T] (seconds secs, Symbol | String next_state) { (Numeric secs) -> T } -> (T | bool)
 
     def run_command: (String cmd, String description, ?System::command_options options) -> void
   end

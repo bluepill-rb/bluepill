@@ -32,10 +32,10 @@ describe Bluepill::Process do
     end
 
     it "dispatches on_start_timeout when the start command takes too long" do
-      process.on_start_timeout = "unmonitor"
+      process.on_start_timeout = :unmonitor
       allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
       process.start_process
-      expect(dispatched_events).to eq [["unmonitor", nil]]
+      expect(dispatched_events).to eq [[:unmonitor, nil]]
     end
 
     it "runs the pre start command first" do
@@ -182,7 +182,7 @@ describe Bluepill::Process do
       process.stop_command = "/etc/init.d/script stop"
       allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
       process.stop_process
-      expect(dispatched_events).to eq [["stop", nil]]
+      expect(dispatched_events).to eq [[:stop, nil]]
     end
 
     context "with a stop command that fails" do
@@ -388,7 +388,7 @@ describe Bluepill::Process do
       process.restart_command = "/etc/init.d/script restart"
       allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
       process.restart_process
-      expect(dispatched_events).to eq [["restart", nil]]
+      expect(dispatched_events).to eq [[:restart, nil]]
     end
 
     context "with a restart command that fails" do
@@ -530,7 +530,7 @@ describe Bluepill::Process do
     let(:block) { proc {} }
 
     it "returns the result of the block" do
-      expect(process.with_timeout(3, "state_override") { :done }).to eq :done
+      expect(process.with_timeout(3, :unmonitor) { :done }).to eq :done
     end
 
     context "when the block times out" do
@@ -539,7 +539,7 @@ describe Bluepill::Process do
       before do
         allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
         errors
-        process.with_timeout(3, "unmonitor", &block)
+        process.with_timeout(3, :unmonitor, &block)
       end
 
       it "logs why it might" do
@@ -551,13 +551,13 @@ describe Bluepill::Process do
       end
 
       it "proceeds to next_state" do
-        expect(dispatched_events).to eq [["unmonitor", nil]]
+        expect(dispatched_events).to eq [[:unmonitor, nil]]
       end
     end
 
     it "times out after a fraction of a second" do
-      process.with_timeout(0.01, "unmonitor") { Kernel.sleep 1 }
-      expect(dispatched_events).to eq [["unmonitor", nil]]
+      process.with_timeout(0.01, :unmonitor) { Kernel.sleep 1 }
+      expect(dispatched_events).to eq [[:unmonitor, nil]]
     end
   end
 

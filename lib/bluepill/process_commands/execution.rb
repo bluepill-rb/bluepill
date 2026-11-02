@@ -43,7 +43,7 @@ module Bluepill
       # Run a block, and dispatch an event if it takes too long
       #
       # @param [Integer, Float] secs how long the block may take
-      # @param [String, Symbol] next_state the event to dispatch if it times out
+      # @param [Symbol] next_state the event to dispatch if it times out
       #
       # @yield the work to time
       # @yieldparam [Numeric] secs the time limit

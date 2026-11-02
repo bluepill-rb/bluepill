@@ -135,7 +135,7 @@ module Bluepill
       cmd = prepare_command(command)
       logger.warning "Executing stop command: #{cmd}"
 
-      with_timeout(stop_grace_time, "stop") do
+      with_timeout(stop_grace_time, :stop) do
         run_command(cmd, "Stop")
       end
       cleanup_process
@@ -171,7 +171,7 @@ module Bluepill
 
       logger.warning "Executing restart command: #{cmd}"
 
-      with_timeout(restart_grace_time, "restart") do
+      with_timeout(restart_grace_time, :restart) do
         run_command(cmd, "Restart")
       end
 

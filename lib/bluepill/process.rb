@@ -59,7 +59,7 @@ module Bluepill
       :group_start_noblock,
       :group_restart_noblock,
       :group_stop_noblock,
-      :group_unmonitor_noblock,
+      :group_unmonitor_noblock
 
     ].freeze
 
@@ -482,7 +482,7 @@ module Bluepill
       up: [:up, :down],
       stopping: [:up, :down],
       down: [:up, :starting],
-      restarting: [:up, :down],
+      restarting: [:up, :down]
     }.freeze
 
     # The states that a start or restart moves a process through on its
@@ -497,7 +497,7 @@ module Bluepill
         unmonitored: :unmonitored, up: :unmonitored, down: :unmonitored,
         starting: :unmonitored, stopping: :unmonitored, restarting: :unmonitored
       },
-      restart: {up: :restarting, down: :restarting},
+      restart: {up: :restarting, down: :restarting}
     }.freeze
 
     # Return the process's state, such as "up"

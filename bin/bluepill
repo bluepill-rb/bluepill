@@ -15,7 +15,7 @@ options = {
   base_dir: ENV["BLUEPILL_BASE_DIR"] || (::Process.euid.zero? ? "/var/run/bluepill" : File.join(ENV.fetch("HOME", nil), ".bluepill")),
   privileged: true,
   timeout: 10,
-  attempts: 1,
+  attempts: 1
 }
 
 OptionParser.new do |opts|

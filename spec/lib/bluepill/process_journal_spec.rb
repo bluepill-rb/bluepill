@@ -288,7 +288,7 @@ describe Bluepill::ProcessJournal do
       [
         File.join(dir, ".b.lock"),
         File.join(legacy_dir, "other", ".bluepill_pids_journal.web.lock"),
-        File.join(legacy_dir, ".bluepill_pids_journal.web.lock"),
+        File.join(legacy_dir, ".bluepill_pids_journal.web.lock")
       ]
     end
 
@@ -378,7 +378,7 @@ describe Bluepill::ProcessJournal do
 
   {
     kill_all_pids_from_journal: [:pid_journal_filename, 1, "process", "pid"],
-    kill_all_pgids_from_journal: [:pgid_journal_filename, -1, "process group", "pgid"],
+    kill_all_pgids_from_journal: [:pgid_journal_filename, -1, "process group", "pgid"]
   }.each do |method, (filename_method, sign, label, kind)|
     describe ".#{method}" do
       let(:filename) { described_class.send(filename_method, "app") }
@@ -435,7 +435,7 @@ describe Bluepill::ProcessJournal do
         it "skips cleanup" do
           expect(log).to eq [
             [:debug, "#{kind} journal file: #{filename}"],
-            [:debug, "No previous process journal - Skipping cleanup"],
+            [:debug, "No previous process journal - Skipping cleanup"]
           ] + no_legacy_journal_log
         end
       end

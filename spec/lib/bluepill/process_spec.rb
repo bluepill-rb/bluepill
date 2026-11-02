@@ -116,7 +116,7 @@ describe Bluepill::Process do
         group_start_noblock: true,
         group_stop_noblock: true,
         group_restart_noblock: true,
-        group_unmonitor_noblock: true,
+        group_unmonitor_noblock: true
       }.each do |attr, value|
         it "sets ##{attr} to #{value.inspect}" do
           expect(process.public_send(attr)).to eq value
@@ -311,7 +311,7 @@ describe Bluepill::Process do
       "starting" => %w[up down],
       "up" => %w[up down],
       "stopping" => %w[up down],
-      "restarting" => %w[up down],
+      "restarting" => %w[up down]
     }.each do |from, (running_to, stopped_to)|
       it "transitions from #{from} to #{running_to} when running" do
         process.state = from
@@ -1401,7 +1401,7 @@ describe Bluepill::Process do
           dead: instance_double(described_class, "dead", actual_pid: 6),
           alive: instance_double(described_class, "alive", actual_pid: 7),
           other: instance_double(described_class, "other", actual_pid: 9, process_running?: true),
-          new: instance_double(described_class, "new child"),
+          new: instance_double(described_class, "new child")
         }
       end
 
@@ -1503,7 +1503,7 @@ describe Bluepill::Process do
         stdin: "in",
         stdout: "out",
         stderr: "err",
-        supplementary_groups: ["extra"],
+        supplementary_groups: ["extra"]
       }
     end
 
@@ -1760,7 +1760,7 @@ describe Bluepill::Process do
           "BLUEPILL_FROM" => "up",
           "BLUEPILL_TO" => "restarting",
           "BLUEPILL_REASON" => "mem_usage: [1.2GB*]",
-          "BLUEPILL_PID" => "5",
+          "BLUEPILL_PID" => "5"
         }
       end
 

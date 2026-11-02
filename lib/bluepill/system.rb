@@ -26,7 +26,7 @@ module Bluepill
       pcpu: 2,
       rss: 3,
       etime: 4,
-      command: 5,
+      command: 5
     }.freeze #: { pid: Integer, ppid: Integer, pcpu: Integer, rss: Integer, etime: Integer, command: Integer }
 
     # Return whether a process is running

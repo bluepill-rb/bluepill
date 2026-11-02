@@ -172,7 +172,7 @@ module Bluepill
       result = {
         stdout: cmd_out_read.read,
         stderr: cmd_err_read.read,
-        exit_code: status.exitstatus,
+        exit_code: status.exitstatus
       }
       cmd_out_read.close
       cmd_err_read.close

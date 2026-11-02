@@ -10,14 +10,14 @@ describe Bluepill::Process do
     start: {"unmonitored" => "starting", "down" => "starting"},
     stop: {"up" => "stopping"},
     unmonitor: Hash[PROCESS_STATES.collect { |state| [state, "unmonitored"] }],
-    restart: {"up" => "restarting", "down" => "restarting"},
+    restart: {"up" => "restarting", "down" => "restarting"}
   }
   ticks = {
     "up" => %w[up down],
     "down" => %w[up starting],
     "starting" => %w[up down],
     "stopping" => %w[up down],
-    "restarting" => %w[up down],
+    "restarting" => %w[up down]
   }
 
   # The process daemonizes, so starting it doesn't wait on a timeout, and it

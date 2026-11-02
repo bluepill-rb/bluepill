@@ -12,7 +12,7 @@ describe Bluepill::Util do
       "x" => "X",
       "Ab_c" => "AbC",
       "mem_usage_check" => "MemUsageCheck",
-      "a_bCD" => "ABcd",
+      "a_bCD" => "ABcd"
     }.each do |name, camelized|
       it "turns #{name.inspect} into #{camelized}" do
         expect(described_class.camelize(name)).to eq(camelized)
@@ -31,7 +31,7 @@ describe Bluepill::Util do
       "MyTriggerName" => "my_trigger_name",
       "HTTPServerXMLParser" => "http_server_xml_parser",
       "ABcDEf" => "a_bc_d_ef",
-      "X-Ray" => "x-ray",
+      "X-Ray" => "x-ray"
     }.each do |name, underscored|
       it "turns #{name} into #{underscored}" do
         expect(described_class.underscore(name)).to eq(underscored)

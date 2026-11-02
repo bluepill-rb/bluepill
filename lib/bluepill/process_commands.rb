@@ -191,7 +191,7 @@ module Bluepill
         "BLUEPILL_FROM" => transition.from_name.to_s,
         "BLUEPILL_TO" => transition.to_name.to_s,
         "BLUEPILL_REASON" => @transition_reason.to_s,
-        "BLUEPILL_PID" => pid.to_s,
+        "BLUEPILL_PID" => pid.to_s
       }
       run_hook_in_background(command, "Notify", pid, env)
     end
@@ -267,7 +267,7 @@ module Bluepill
         stdin: stdin,
         stdout: stdout,
         stderr: stderr,
-        supplementary_groups: supplementary_groups,
+        supplementary_groups: supplementary_groups
       }
     end
 

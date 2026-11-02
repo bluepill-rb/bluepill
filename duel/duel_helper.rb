@@ -46,7 +46,7 @@ module PsListing
     "/usr/bin/redis-server 127.0.0.1:6379",
     "[kworker/3:1-events]",
     "/lib/systemd/systemd-journald",
-    "ruby /srv/app/bin/sidekiq -e production -C config/sidekiq.yml",
+    "ruby /srv/app/bin/sidekiq -e production -C config/sidekiq.yml"
   ].freeze
   ELAPSED = %w[00:03 12:41 03:12:09 1-07:22:41 45-02:13:07].freeze
 
@@ -82,7 +82,7 @@ end
 def table_hooks(processes, **listing)
   {
     setup: -> { @table = ps_table(ps_listing(processes, **listing)) },
-    before_sample: -> { Bluepill::System.store[:ps_axu] = @table },
+    before_sample: -> { Bluepill::System.store[:ps_axu] = @table }
   }
 end
 
@@ -105,7 +105,7 @@ def watch_hooks(check, options)
       @watch = Bluepill::ConditionWatch.new(check, options.merge(every: 10.seconds, logger: process_logger))
       10.times { run_watch }
     end,
-    before_sample: -> { Bluepill::System.store[:ps_axu] = @table },
+    before_sample: -> { Bluepill::System.store[:ps_axu] = @table }
   }
 end
 

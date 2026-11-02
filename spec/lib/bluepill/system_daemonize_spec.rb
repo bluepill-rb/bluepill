@@ -14,7 +14,7 @@ describe Bluepill::System, ".daemonize" do
       logger: logger,
       stdin: "/dev/null",
       stdout: "out.log",
-      stderr: "err.log",
+      stderr: "err.log"
     }
   end
 

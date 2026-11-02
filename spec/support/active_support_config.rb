@@ -37,7 +37,7 @@ factory = Bluepill::ProcessFactory.new(
     pid_file: "/tmp/bluepill_active_support.pid",
     start_grace_time: 2.seconds,
     stop_grace_time: 40.seconds,
-    stop_signals: [:quit, 30.seconds, :kill],
+    stop_signals: [:quit, 30.seconds, :kill]
   },
   proc {}
 )

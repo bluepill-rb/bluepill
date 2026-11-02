@@ -147,11 +147,12 @@ Layout/MultilineOperationIndentation:
 Layout/SpaceInsideHashLiteralBraces:
   EnforcedStyle: no_space
 
+# No trailing commas, as Standard wants
 Style/TrailingCommaInArrayLiteral:
-  EnforcedStyleForMultiline: comma
+  EnforcedStyleForMultiline: no_comma
 
 Style/TrailingCommaInHashLiteral:
-  EnforcedStyleForMultiline: comma
+  EnforcedStyleForMultiline: no_comma
 
 # ::Process says Ruby's Process, which is easy to mistake for
 # Bluepill::Process in this codebase, even where it's redundant

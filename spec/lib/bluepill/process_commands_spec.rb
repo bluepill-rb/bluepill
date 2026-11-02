@@ -314,7 +314,7 @@ describe Bluepill::Process do
 
       it "leaves the stop signals as they were" do
         run_stop_signals([:quit, 2, :term, 3, :kill])
-        expect(process.stop_signals).to eq [:quit, 2, :term, 3, :kill]
+        expect(process.stop_signals.to_a).to eq [:quit, 2, :term, 3, :kill]
       end
 
       it "stops once the process has terminated" do
@@ -430,10 +430,11 @@ describe Bluepill::Process do
       end
 
       it "waits for the stop signals to finish before starting" do
-        # A real delay, and a grace time that leaves nothing to wait for after
-        # the last signal
-        process.stop_signals = [:quit, 0.1, :kill]
-        process.stop_grace_time = 2
+        # A real delay, shortened, so the stop signals are still running when
+        # the restart waits for them. The default stop_grace_time of 3 leaves
+        # nothing to wait for after the last signal.
+        allow(Kernel).to receive(:sleep) { sleep(0.1) }
+        process.stop_signals = [:quit, 1, :kill]
         calls = record_calls
         process.restart_process
         expect(calls).to eq [["QUIT", 5], [0, 5], ["KILL", 5], :cleanup, :unlink, :cleanup, "start-cmd"]

@@ -9,15 +9,15 @@ module Bluepill
     module StopSignals
       # Send the stop signals from a thread of their own, with their delays
       #
-      # @param [Array<Symbol, Integer>] signals signals with the delays between
+      # @param [Process::StopSignals] signals the signals, with the delays
+      #   between
       #
       # @return [Array<Thread>] the process's threads, with the new one
       #
       # @api private
       def send_stop_signals_in_background(signals)
-        # issue stop signals with configurable delay between each
         logger.warning "Sending stop signals to #{actual_pid}"
-        @threads << Thread.new(signals.clone) { |copy| send_stop_signals(copy) }
+        @threads << Thread.new { send_stop_signals(signals) }
       end
 
       # Send stop signals, with their delays, until the process stops
@@ -26,13 +26,14 @@ module Bluepill
       # the process is still running. Then gives the last signal the rest of
       # stop_grace_time to work before cleaning up.
       #
-      # @param [Array<Symbol, Integer>] signals signals with the delays between
+      # @param [Process::StopSignals] signals the signals, with the delays
+      #   between
       #
       # @return [void]
       #
       # @api private
       def send_stop_signals(signals)
-        send_stop_signal(signals.shift) # send first signal
+        send_stop_signal(signals.first_signal)
         remaining = send_later_stop_signals(signals)
         wait_for_stop(remaining) if remaining
         cleanup_process
@@ -42,30 +43,25 @@ module Bluepill
       #
       # It stops once the process isn't running.
       #
-      # @param [Array<Symbol, Integer>] signals the delays, each followed by
-      #   its signal
+      # @param [Process::StopSignals] signals the signals, with the delays
+      #   between
       #
       # @return [Integer, Float, nil] how much of stop_grace_time is left, or
       #   nil if the process stopped
       #
       # @api private
       def send_later_stop_signals(signals)
-        remaining = stop_grace_time
-        until signals.empty?
-          # we already checked to make sure signals had an odd number of items
-          delay = signals.shift #: Integer
-          signal = signals.shift
-          remaining -= delay
-          return unless running_after?(delay)
+        signals.later_signals.each do |delay, signal|
+          return nil unless running_after?(delay)
 
           send_stop_signal(signal)
         end
-        remaining
+        stop_grace_time - signals.total_delay
       end
 
       # Send one of the stop signals, and log it
       #
-      # @param [Symbol, Integer] signal the signal
+      # @param [Symbol] signal the signal
       #
       # @return [Boolean] whether the signal was sent
       #
@@ -86,7 +82,6 @@ module Bluepill
         logger.debug "Sleeping for #{delay} seconds"
         # Kernel.sleep, not sleep, so the specs can stand in for the clock
         Kernel.sleep(delay)
-        # break unless signal_process(0) #break unless the process can be reached
         return true if signal_process(0)
 
         logger.debug "Process has terminated."

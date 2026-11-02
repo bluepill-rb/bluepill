@@ -99,9 +99,7 @@ module Bluepill
 
     def validate_stop_signals!: (ProcessProxy process) -> void
 
-    def validate_stop_signal_order!: (Array[Symbol | Integer] stop_signals) -> void
-
-    def validate_stop_grace_time!: (Array[Symbol | Integer] stop_signals, Integer? stop_grace_time) -> void
+    def validate_stop_grace_time!: (Process::StopSignals stop_signals, seconds? stop_grace_time) -> void
 
     def validate_on_start_timeout!: (ProcessProxy process) -> void
 

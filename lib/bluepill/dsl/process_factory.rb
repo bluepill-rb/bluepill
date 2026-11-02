@@ -154,56 +154,42 @@ module Bluepill
       config_error!("Config Error: You have two entries with the pid file: #{pid_file}")
     end
 
-    # Fail on a mistake in stop_signals
+    # Parse a process's stop_signals, and fail on a mistake
     #
     # The signals and delays must alternate, starting and ending with a
-    # signal, and stop_grace_time must be longer than the delays.
+    # signal, and stop_grace_time must be longer than the delays. The
+    # proxy keeps the parsed {Process::StopSignals}, for the process.
     #
     # @param [ProcessProxy] process the process's proxy
     #
     # @return [void]
     #
+    # @raise [ConfigError] for a mistake in stop_signals
+    #
     # @api private
     def validate_stop_signals!(process)
-      stop_signals = process.attributes[:stop_signals]
-      return if stop_signals.nil?
+      attributes = process.attributes
+      signals = attributes[:stop_signals]
+      return if signals.nil?
 
-      validate_stop_signal_order!(stop_signals)
-      validate_stop_grace_time!(stop_signals, process.attributes[:stop_grace_time])
-    end
-
-    # Fail unless stop_signals alternates signals and delays
-    #
-    # The signals and delays must alternate, starting and ending with a
-    # signal. Checks the more specific problems before the 'odd number'
-    # message.
-    #
-    # @param [Array<Symbol, Integer>] stop_signals the signals and delays
-    #
-    # @return [void]
-    #
-    # @api private
-    def validate_stop_signal_order!(stop_signals)
-      stop_signals.each_with_index do |value, i|
-        expected, label = i.even? ? [Symbol, "a symbol (signal)"] : [Integer, "a number (delay)"]
-        next if value.is_a?(expected)
-
-        config_error!("Config Error: Invalid stop_signals!  Expected #{label} at position #{i} instead of '#{value}'.")
-      end
-      config_error!("Config Error: Invalid stop_signals!  Expected an odd number of elements.") unless stop_signals.size.odd?
+      stop_signals = Process::StopSignals.new(signals)
+      validate_stop_grace_time!(stop_signals, attributes[:stop_grace_time])
+      attributes[:stop_signals] = stop_signals
     end
 
     # Fail unless stop_grace_time is longer than the stop_signals delays
     #
-    # @param [Array<Symbol, Integer>] stop_signals the signals and delays
-    # @param [Integer, nil] stop_grace_time the process's stop_grace_time
+    # @param [Process::StopSignals] stop_signals the signals and delays
+    # @param [Integer, Float, nil] stop_grace_time the process's
+    #   stop_grace_time
     #
     # @return [void]
     #
+    # @raise [ConfigError] unless stop_grace_time is longer
+    #
     # @api private
     def validate_stop_grace_time!(stop_signals, stop_grace_time)
-      delays = stop_signals.select.with_index { |_, i| i.odd? }
-      return unless stop_grace_time.nil? || stop_grace_time <= delays.sum
+      return if stop_grace_time && stop_grace_time > stop_signals.total_delay
 
       config_error!("Config Error: Stop_grace_time should be greater than the sum of stop_signals delays!")
     end

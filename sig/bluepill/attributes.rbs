@@ -29,8 +29,9 @@ module Bluepill
     attr_accessor pid_command: String?
     attr_accessor auto_start: bool?
     attr_accessor supplementary_groups: Array[String]?
-    # Signal names alternating with delays in seconds
-    attr_accessor stop_signals: Array[Symbol | Integer]?
+    attr_reader stop_signals: Process::StopSignals?
+    # Takes signal names alternating with delays in seconds, too
+    def stop_signals=: (Process::StopSignals | Array[Symbol | Integer] | nil signals) -> Process::StopSignals?
     attr_accessor on_start_timeout: Symbol
     attr_accessor post_start_command: String?
     attr_accessor pre_stop_command: String?

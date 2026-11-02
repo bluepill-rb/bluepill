@@ -279,17 +279,23 @@ describe Bluepill::ProcessFactory do
 
       it "accepts valid stop signals" do
         process = create_with_signals([:quit, 5, :term], 10)
-        expect(process.stop_signals).to eq([:quit, 5, :term])
+        expect(process.stop_signals.to_a).to eq([:quit, 5, :term])
+      end
+
+      it "parses the stop signals once" do
+        allow(Bluepill::Process::StopSignals).to receive(:new).and_call_original
+        create_with_signals([:quit, 5, :term], 10)
+        expect(Bluepill::Process::StopSignals).to have_received(:new).once
       end
 
       it "accepts a single stop signal" do
         process = create_with_signals([:term], 10)
-        expect(process.stop_signals).to eq([:term])
+        expect(process.stop_signals.to_a).to eq([:term])
       end
 
       it "accepts Active Support durations as delays" do
         process = create_with_signals([:quit, 5.seconds, :term], 10)
-        expect(process.stop_signals).to eq([:quit, 5, :term])
+        expect(process.stop_signals.to_a).to eq([:quit, 5, :term])
       end
 
       # An Integer that isn't an instance of Integer. Every Integer is one
@@ -303,7 +309,7 @@ describe Bluepill::ProcessFactory do
 
       it "accepts a stop_grace_time just above the sum of the delays" do
         process = create_with_signals([:quit, 9, :term], 10)
-        expect(process.stop_signals).to eq([:quit, 9, :term])
+        expect(process.stop_signals.to_a).to eq([:quit, 9, :term])
       end
 
       it "rejects a stop_grace_time below the sum of the delays" do

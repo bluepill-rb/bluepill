@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "bluepill/process/stop_signals"
+
 module Bluepill
   class Process
     # The options a config can set for a Process, and their defaults
@@ -330,14 +332,28 @@ module Bluepill
 
       # Return the signals that stop the process, with the delays between
       #
-      # A signal, then a delay in seconds and a signal, and so on, such as
-      # [:quit, 30, :term, 5, :kill]. Each later signal is only sent if the
-      # process is still running.
+      # Each later signal is only sent if the process is still running.
       #
-      # @return [Array<Symbol, Integer>, nil]
+      # @return [StopSignals, nil]
       #
       # @api private
-      attr_accessor :stop_signals
+      attr_reader :stop_signals
+
+      # Set the signals that stop the process, with the delays between
+      #
+      # @param [StopSignals, Array<Symbol, Integer>, nil] signals the stop
+      #   signals, or a signal, then a delay in seconds and a signal, and so
+      #   on, such as [:quit, 30, :term, 5, :kill]
+      #
+      # @return [void]
+      #
+      # @raise [ConfigError] for an Array that doesn't alternate signals and
+      #   delays
+      #
+      # @api private
+      def stop_signals=(signals)
+        @stop_signals = signals && StopSignals.from(signals)
+      end
 
       # Return the event to dispatch when the start command takes too long
       #

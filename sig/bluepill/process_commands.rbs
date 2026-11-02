@@ -9,7 +9,7 @@ module Bluepill
       %a{pure} def start_command: () -> String?
       %a{pure} def stop_command: () -> String?
       %a{pure} def restart_command: () -> String?
-      %a{pure} def stop_signals: () -> Array[Symbol | Integer]?
+      %a{pure} def stop_signals: () -> Process::StopSignals?
       %a{pure} def start_grace_time: () -> seconds
       %a{pure} def stop_grace_time: () -> seconds
       %a{pure} def restart_grace_time: () -> seconds
@@ -76,13 +76,13 @@ module Bluepill
 
     @threads: Array[Thread]
 
-    def send_stop_signals_in_background: (Array[Symbol | Integer] signals) -> Array[Thread]
+    def send_stop_signals_in_background: (Process::StopSignals signals) -> Array[Thread]
 
-    def send_stop_signals: (Array[Symbol | Integer] signals) -> void
+    def send_stop_signals: (Process::StopSignals signals) -> void
 
-    def send_later_stop_signals: (Array[Symbol | Integer] signals) -> seconds?
+    def send_later_stop_signals: (Process::StopSignals signals) -> seconds?
 
-    def send_stop_signal: (Symbol | Integer signal) -> bool
+    def send_stop_signal: (Symbol signal) -> bool
 
     def running_after?: (Integer delay) -> bool
 

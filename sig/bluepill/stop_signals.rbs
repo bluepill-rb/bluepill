@@ -1,0 +1,21 @@
+module Bluepill
+  # The signals that stop a process, with the delays between them
+  class Process::StopSignals
+    def self.from: (Process::StopSignals | Array[Symbol | Integer] signals) -> Process::StopSignals
+
+    attr_reader first_signal: Symbol
+
+    # Each delay, with the signal sent after it
+    attr_reader later_signals: Array[[Integer, Symbol]]
+
+    def initialize: (Array[Symbol | Integer] signals) -> void
+
+    def total_delay: () -> Integer
+
+    def to_a: () -> Array[Symbol | Integer]
+
+    private
+
+    def validate!: (Array[Symbol | Integer] signals) -> void
+  end
+end

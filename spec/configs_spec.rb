@@ -79,7 +79,7 @@ describe "The README and example configs", type: :integration do
 
   it "reads the delays between stop signals" do
     load_config_with("stop_signals")
-    expect(processes.fetch("process_name").stop_signals).to eql([:quit, 30, :term, 5, :kill])
+    expect(processes.fetch("process_name").stop_signals.to_a).to eql([:quit, 30, :term, 5, :kill])
   end
 
   it "loads the sample app, with its child limit in bytes" do

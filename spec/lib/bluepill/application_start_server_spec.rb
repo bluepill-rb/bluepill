@@ -64,52 +64,75 @@ describe Bluepill::Application do
 
     before do
       app.groups = {'web' => group}
+      # A previous bluepill's pid file, which kill_previous_bluepill reads
+      File.write(pid_file, '4321')
+      record(Bluepill::System, :pid_alive?, false)
       [
-        [app, :kill_previous_bluepill], [Bluepill::ProcessJournal, :clear_all_atomic_fs_locks],
-        [::Process, :setpgid], [Bluepill::Daemonize, :daemonize], [app, :setup_signal_traps],
-        [logger, :reopen], [group, :determine_initial_state], [app, :start_listener], [app, :run]
-      ].each do |object, method|
-        allow(object).to receive(method) { |*args| calls << [method, *args] }
-      end
+        [Bluepill::ProcessJournal, :clear_all_atomic_fs_locks], [::Process, :setpgid], [Bluepill::Daemonize, :daemonize],
+        [logger, :reopen], [group, :determine_initial_state], [Bluepill::System, :reset_data], [group, :tick]
+      ].each { |object, method| record(object, method) }
+      # After creating the app, which traps signals too
+      allow(Signal).to receive(:trap) { |signal| calls << [:trap, signal] }
+      # Don't run the listener
+      allow(Thread).to receive(:new) { calls << [:thread] }
       allow(Bluepill::Socket).to receive(:server) do |*args|
         calls << [:server, *args]
         instance_double(UNIXServer)
       end
+      # End the run loop after its first tick
+      allow(Kernel).to receive(:sleep) do |seconds|
+        calls << [:sleep, seconds]
+        raise Interrupt
+      end
+    end
+
+    # Record a call to a method, and return result
+    def record(object, method, result = nil)
+      allow(object).to receive(method) do |*args|
+        calls << [method, *args]
+        result
+      end
+    end
+
+    def start_server
+      app.send(:start_server)
+    rescue Interrupt
+      nil
     end
 
     def startup_calls
       [
-        [:kill_previous_bluepill], [:clear_all_atomic_fs_locks], [:setpgid, 0, 0], [:daemonize],
-        [:setup_signal_traps], [:reopen], [:determine_initial_state], [:server, base_dir, 'test'],
-        [:start_listener], [:run]
+        [:pid_alive?, 4321], [:clear_all_atomic_fs_locks], [:setpgid, 0, 0], [:daemonize],
+        [:trap, 'TERM'], [:trap, 'INT'], [:trap, 'HUP'], [:reopen], [:determine_initial_state],
+        [:server, base_dir, 'test'], [:thread], [:reset_data], [:tick], [:sleep, 1]
       ]
     end
 
     it 'daemonizes and runs the application' do
-      app.send(:start_server)
+      start_server
       expect(calls).to eq(startup_calls)
     end
 
     it 'names its process after the application' do
-      app.send(:start_server)
+      start_server
       expect($0).to eq('bluepilld: test')
     end
 
     it 'writes its pid file' do
-      app.send(:start_server)
+      start_server
       expect(File.read(pid_file)).to eq(::Process.pid.to_s)
     end
 
     it 'keeps the socket' do
       socket = instance_double(UNIXServer)
       allow(Bluepill::Socket).to receive(:server).and_return(socket)
-      app.send(:start_server)
+      start_server
       expect(app.socket).to eq(socket)
     end
 
     it 'writes the pid as a string with File.write' do
       allow(File).to receive(:write).and_call_original
-      app.send(:start_server)
+      start_server
       expect(File).to have_received(:write).with(pid_file, ::Process.pid.to_s)
     end
 
@@ -117,15 +140,15 @@ describe Bluepill::Application do
       let(:app) { described_class.new('test', base_dir: base_dir, foreground: true) }
 
       it 'does not daemonize, or trap signals again' do
-        app.send(:start_server)
-        expect(calls).to eq(startup_calls - [[:daemonize], [:setup_signal_traps]])
+        start_server
+        expect(calls).to eq(startup_calls - [[:daemonize], [:trap, 'TERM'], [:trap, 'INT'], [:trap, 'HUP']])
       end
     end
 
     it 'ignores being unable to become a process group leader' do
       allow(::Process).to receive(:setpgid).and_raise(Errno::EPERM)
-      app.send(:start_server)
-      expect(app).to have_received(:run)
+      start_server
+      expect(Bluepill::System).to have_received(:reset_data)
     end
   end
 end

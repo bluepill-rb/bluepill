@@ -26,7 +26,3 @@ ignore:
       - Style/GlobalStdStream
   - 'spec/lib/bluepill/system_spec.rb':
       - Style/GlobalStdStream
-  # caller only takes a range, or a length, from Ruby 2.0, and the specs
-  # run on 1.9.3 too
-  - 'spec/spec_helper.rb':
-      - Performance/Caller

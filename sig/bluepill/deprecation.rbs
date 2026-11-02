@@ -43,5 +43,26 @@ module Bluepill
     def self.custom?: (UnboundMethod method) -> bool
 
     def self.positional_options?: (UnboundMethod initialize, Integer positional) -> bool
+
+    EVENTS: Array[Symbol]
+    EVENTS_LIST: String
+    NO_OPTIONS: Array[Symbol]
+    TRIGGER_OPTIONS: Array[Symbol]
+    CHECK_OPTIONS: Hash[Symbol, Array[Symbol]]
+    REQUIRED_OPTIONS: Hash[Symbol, Array[Symbol]]
+
+    # Warns about the options of a check that 0.3.0 rejects or needs
+    def self.check_options: (Symbol | String name, Hash[untyped, untyped] options, Array[Symbol] taken) -> void
+
+    def self.warn_unknown_options: (Symbol check, Array[untyped] unknown) -> void
+
+    def self.warn_missing_options: (Symbol check, Array[Symbol] missing) -> void
+
+    # Warns about a watch's options and events that 0.3.0 rejects
+    def self.check_watch: (Symbol | String name, Hash[Symbol, untyped] options, Array[untyped] events) -> void
+
+    def self.check_fires: (Symbol | String name, Array[untyped] events) -> void
+
+    def self.check_on_start_timeout: (String process_name, Hash[Symbol, untyped] attributes) -> void
   end
 end

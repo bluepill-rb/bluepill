@@ -88,3 +88,4 @@ module Bluepill
 end
 
 require "bluepill/deprecation/custom_checks"
+require "bluepill/deprecation/options"

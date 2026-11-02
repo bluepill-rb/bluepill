@@ -23,6 +23,8 @@ Bluepill 0.2.9 warns, once each, about what will break in 0.3.0. Each warning st
 - A custom check or trigger whose `initialize` doesn't call `super`. Bluepill 0.3.0 gives it its logger only through `super`.
 - Calling `logger=` on a check or trigger from outside bluepill. Bluepill 0.3.0 removes it.
 - A custom trigger that dispatches an event as a String, such as `dispatch!("start")`. Bluepill 0.3.0 takes only Symbols.
+- An option of a built-in check or trigger that bluepill 0.3.0 doesn't take, such as a misspelled `evry:`, or `within:` on an `http` check, which 0.2 ignores, and a check without an option that 0.3.0 needs: `below:` for `mem_usage`, `cpu_usage` and `running_time`, and `filename:` and `below:` for `file_time`. Bluepill 0.3.0 fails the config.
+- A `fires:` or `on_start_timeout` that isn't one of the Symbols `:start`, `:stop`, `:unmonitor` and `:restart`, such as `"stop"`. Bluepill 0.3.0 fails the config.
 - A custom check that subclasses `MemUsage`. Bluepill 0.3.0 gives its `run`, `check?` and `format_value` the memory usage in bytes, where 0.2 gives kilobytes.
 
 ### Fixed

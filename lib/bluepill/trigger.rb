@@ -57,6 +57,7 @@ module Bluepill
     #
     # @api private
     def self.create(process, **options)
+      Deprecation.check_options(Util.underscore(name.to_s.split("::").last.to_s), options, Deprecation::TRIGGER_OPTIONS)
       Deprecation.check_trigger_class(self)
       trigger = new(process, **options) #: untyped
       Deprecation.check_logger(trigger, options[:logger])

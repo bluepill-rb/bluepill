@@ -89,6 +89,8 @@ module Bluepill
 
     # Create the check, with the options the watch doesn't take for itself
     #
+    # It first warns about the options that bluepill 0.3.0 rejects.
+    #
     # The condition gets the logger while it's created, so its own
     # initialize can log, and again after, in case that initialize doesn't
     # call super. It gets its options as keyword arguments, which an
@@ -102,6 +104,7 @@ module Bluepill
     #
     # @api private
     def create_condition(options)
+      Deprecation.check_watch(@name, options, @fires)
       condition_options = options.reject { |key, _| WATCH_KEYS.include?(key) }
       condition_options[:logger] = @logger
       condition = ProcessConditions[@name] #: untyped

@@ -57,6 +57,7 @@ module Bluepill
       default_pid_file = assign_default_pid_file(attributes, name, pids_dir)
 
       process = ProcessProxy.new(name, attributes, @process_block)
+      Deprecation.check_on_start_timeout(name, attributes)
       child_process_block = attributes.delete(:child_process_block)
       attributes[:child_process_factory] = ProcessFactory.new(attributes, child_process_block) if attributes[:monitor_children]
 

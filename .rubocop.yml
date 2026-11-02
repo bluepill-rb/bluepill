@@ -17,6 +17,14 @@ AllCops:
   NewCops: enable
   SuggestExtensions: true
 
+# Standard checks style and layout (see .standard.yml), so RuboCop leaves
+# them to it, and checks for bugs, complexity and the specs
+Style:
+  Enabled: false
+
+Layout:
+  Enabled: false
+
 # required_ruby_version is 1.9.3, which RuboCop cannot target
 Gemspec/RequiredRubyVersion:
   Enabled: false
@@ -44,119 +52,14 @@ Lint/SuppressedException:
 Metrics/BlockNesting:
   Max: 3
 
-Layout/LineLength:
-  AllowURI: true
-  Enabled: false
-
 Metrics/ParameterLists:
   Max: 4
   CountKeywordArgs: true
-
-Style/SpecialGlobalVars:
-  Enabled: false
-
-Style/FormatStringToken:
-  EnforcedStyle: unannotated
-
-# Writing to $stderr keeps errors visible under ruby -W0, which silences warn,
-# and lets the specs capture them
-Style/StderrPuts:
-  Enabled: false
-
-# Daemonizing and running commands reopen file descriptors 0, 1 and 2,
-# which STDIN, STDOUT and STDERR always are
-Style/GlobalStdStream:
-  Enabled: false
-
-# __dir__ needs Ruby 2.0
-Style/ExpandPathArguments:
-  Enabled: false
-
-# Keyword arguments need Ruby 2.0
-Style/OptionalBooleanParameter:
-  Enabled: false
-
-# %i needs Ruby 2.0
-Style/SymbolArray:
-  EnforcedStyle: brackets
-
-# Allow the `#: Type` comments that Steep reads
-Layout/LeadingCommentSpace:
-  AllowRBSInlineAnnotation: true
-
-# private and protected indented like the methods after them, as Standard wants
-Layout/AccessModifierIndentation:
-  EnforcedStyle: indent
-
-Style/ClassVars:
-  Exclude:
-    - lib/bluepill/dsl/process_factory.rb
-    - spec/lib/bluepill/dsl/app_proxy_spec.rb
-    - spec/lib/bluepill/dsl/process_factory_spec.rb
-    - spec/configs_spec.rb
-
-Style/CollectionMethods:
-  Enabled: true
-  PreferredMethods:
-    map:      'collect'
-    map!:     'collect!'
-    reduce:   'inject'
-    find:     'detect'
-    find_all: 'select'
-
-Style/Documentation:
-  Enabled: false
-
-# A chained call's dot starts its line, indented a level, as Standard wants
-Layout/DotPosition:
-  EnforcedStyle: leading
-
-Style/DoubleNegation:
-  Enabled: false
-
-Style/GuardClause:
-  Exclude:
-    - lib/bluepill/dsl/process_factory.rb
-
-# Continued lines indented a level, not lined up, as Standard wants
-Layout/MultilineOperationIndentation:
-  EnforcedStyle: indented
-
-Layout/SpaceInsideHashLiteralBraces:
-  EnforcedStyle: no_space
-
-# No trailing commas, as Standard wants
-Style/TrailingCommaInArrayLiteral:
-  EnforcedStyleForMultiline: no_comma
-
-Style/TrailingCommaInHashLiteral:
-  EnforcedStyleForMultiline: no_comma
-
-# ::Process says Ruby's Process, which is easy to mistake for
-# Bluepill::Process in this codebase, even where it's redundant
-Style/RedundantConstantBase:
-  Enabled: false
-
-# On Ruby 1.9.3, Dir.home raises when HOME isn't set, as it often isn't
-# for root under init, and bluepill reads HOME before it knows it's root
-Style/EnvHome:
-  Enabled: false
-
-# Array#to_h needs Ruby 2.1
-Style/HashConversion:
-  Enabled: false
 
 # Bluepill never runs under a fiber scheduler, and IO#wait_readable isn't
 # on every Ruby it supports
 Lint/IncompatibleIoSelectWithFiberScheduler:
   Enabled: false
-
-# units.rb defines Bluepill::Units and mixes it into Numeric, and the
-# benchmark helper holds the small doubles the benchmarks share
-Style/OneClassPerFile:
-  Exclude:
-    - lib/bluepill/units.rb
-    - duel/duel_helper.rb
 
 # fire_event and before_transition do something and then say whether it
 # worked, so they aren't questions
@@ -186,59 +89,3 @@ RSpec/DescribeClass:
     type:
       - integration
 
-# Double quotes, as Standard wants
-Style/StringLiterals:
-  EnforcedStyle: double_quotes
-  ConsistentQuotesInMultiline: false
-
-Style/StringLiteralsInInterpolation:
-  EnforcedStyle: double_quotes
-
-# A bare rescue, which rescues StandardError, as Standard wants
-Style/RescueStandardError:
-  EnforcedStyle: implicit
-
-Layout/MultilineMethodCallIndentation:
-  EnforcedStyle: indented
-
-# alias_method, as Standard wants
-Style/Alias:
-  EnforcedStyle: prefer_alias_method
-
-# No extra spaces to line things up, as Standard wants
-Layout/ExtraSpacing:
-  AllowForAlignment: false
-  AllowBeforeTrailingComments: true
-
-# A hash uses one style of keys, as Standard wants
-Style/HashSyntax:
-  EnforcedStyle: ruby19_no_mixed_keys
-  EnforcedShorthandSyntax: either
-
-# Parentheses around a complex ternary condition, as Standard wants
-Style/TernaryParentheses:
-  EnforcedStyle: require_parentheses_when_complex
-  AllowSafeAssignment: true
-
-# An empty method's end on its own line, as Standard wants
-Style/EmptyMethod:
-  EnforcedStyle: expanded
-
-Style/SingleLineMethods:
-  AllowIfMethodIsEmpty: false
-
-# end lined up with the variable a case or if is assigned to, as Standard wants
-Layout/EndAlignment:
-  EnforcedStyleAlignWith: variable
-
-Layout/CaseIndentation:
-  EnforcedStyle: end
-
-Layout/ArgumentAlignment:
-  EnforcedStyle: with_fixed_indentation
-
-Layout/ArrayAlignment:
-  EnforcedStyle: with_fixed_indentation
-
-Layout/ParameterAlignment:
-  EnforcedStyle: with_fixed_indentation

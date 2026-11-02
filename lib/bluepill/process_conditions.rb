@@ -15,6 +15,4 @@ end
 
 require "bluepill/process_conditions/process_condition"
 require "bluepill/process_conditions/below_threshold"
-Dir["#{File.dirname(__FILE__)}/process_conditions/*.rb"].each do |pc|
-  require pc
-end
+Dir.glob("process_conditions/*.rb", base: __dir__).each { |file| require_relative file }

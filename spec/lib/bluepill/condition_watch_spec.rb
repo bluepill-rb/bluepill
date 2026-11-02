@@ -69,10 +69,42 @@ describe Bluepill::ConditionWatch do
       expect(received).to eq([{below: 50, logger: logger}])
     end
 
+    it "leaves the options it was given as they were" do
+      options = {logger: logger, fires: :stop, every: 10, times: [2, 3], include_children: true, below: 50}
+      copy = options.dup
+      described_class.new(:cpu_usage, options)
+      expect(options).to eq(copy)
+    end
+
+    it "passes none of its own options to the process condition" do
+      received = []
+      record_cpu_usage_options(received)
+      watch(fires: :stop, times: [2, 3], include_children: true)
+      expect(received).to eq([{below: 50, logger: logger}])
+    end
+
+    it "passes a nil logger to the process condition when it has none" do
+      received = []
+      record_cpu_usage_options(received)
+      described_class.new(:cpu_usage, below: 50)
+      expect(received).to eq([{below: 50, logger: nil}])
+    end
+
     it "passes include_children to the process condition" do
       allow(Bluepill::System).to receive(:cpu_usage).and_return(10)
       watch(include_children: true).run(123, 0)
       expect(Bluepill::System).to have_received(:cpu_usage).with(123, true)
+    end
+
+    it "does not include children when told not to" do
+      allow(Bluepill::System).to receive(:cpu_usage).and_return(10)
+      watch(include_children: false).run(123, 0)
+      expect(Bluepill::System).to have_received(:cpu_usage).with(123, false)
+    end
+
+    it "fires nothing when fires is nil" do
+      cpu_usage(90)
+      expect(watch(fires: nil).run(123, 0)).to eq([])
     end
 
     it "does not include children by default" do

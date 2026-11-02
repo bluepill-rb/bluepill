@@ -1,29 +1,35 @@
 module Bluepill
-  # A value a ConditionWatch got, and whether it passed the check
-  class HistoryValue < Struct[_ToS]
-    attr_accessor value: _ToS
-    attr_accessor critical: bool
-
-    def self.new: (_ToS value, bool critical) -> HistoryValue
-  end
-
   # Runs a process condition every so often, and fires its events when the
   # check fails often enough
   class ConditionWatch
+    # A value the watch got, and whether it passed the check
+    class HistoryValue < Struct[_ToS]
+      attr_accessor value: _ToS
+      attr_accessor critical: bool
+
+      def self.new: (_ToS value, bool critical) -> HistoryValue
+    end
+
     EMPTY_ARRAY: Array[Symbol]
+    WATCH_KEYS: Array[Symbol]
 
     attr_reader logger: Logger
     attr_accessor name: Symbol
 
     @fires: Array[Symbol]
     @every: Integer
-    @times: Array[Integer]
+    # How many values in the window must fail for the watch to fire
+    @required: Integer
+    # How many of the last values the watch remembers
+    @window: Integer
     @include_children: bool
     @history: Util::RotationalArray[HistoryValue]
     @process_condition: ProcessConditions::ProcessCondition[untyped]
     @last_ran_at: Integer?
 
     def initialize: (Symbol name, ?Hash[Symbol, untyped] options) -> void
+
+    def create_condition: (Hash[Symbol, untyped] options) -> void
 
     # Sets the logger of the watch and its condition
     def logger=: (Logger logger) -> void

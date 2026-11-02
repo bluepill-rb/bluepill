@@ -59,7 +59,7 @@ module Bluepill
       process = ProcessProxy.new(name, attributes, @process_block)
       Deprecation.check_on_start_timeout(name, attributes)
       child_process_block = attributes.delete(:child_process_block)
-      attributes[:child_process_factory] = ProcessFactory.new(attributes, child_process_block) if attributes[:monitor_children]
+      attributes[:child_process_factory] = child_factory(name, attributes, child_process_block) if attributes[:monitor_children]
 
       validate_process! process
       warn_unless_pid_known(process, default_pid_file)
@@ -67,6 +67,22 @@ module Bluepill
     end
 
     protected
+
+    # Create the factory of a process's children, and check their block
+    #
+    # @param [String] name the process's name
+    # @param [Hash{Symbol => Object}] attributes the process's attributes
+    # @param [Proc, nil] child_process_block the block that configures each
+    #   child
+    #
+    # @return [ProcessFactory] the children's factory
+    #
+    # @api private
+    def child_factory(name, attributes, child_process_block)
+      factory = ProcessFactory.new(attributes, child_process_block)
+      factory.check_children(name)
+      factory
+    end
 
     # Set the default pid file, unless the process sets its own
     #

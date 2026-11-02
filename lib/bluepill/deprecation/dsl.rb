@@ -46,6 +46,23 @@ module Bluepill
                                                     "as for process '#{process_name}'. Give it a block that sets the children's stop_command.")
     end
 
+    # Warn about a monitor_children block that sets no stop_command
+    #
+    # @param [String] parent_name the parent process's name
+    # @param [Hash{Symbol => Object}] attributes the attributes that the
+    #   block set on a child
+    #
+    # @return [void]
+    #
+    # @api private
+    def self.check_child_stop_command(parent_name, attributes)
+      return if attributes.key?(:stop_command)
+
+      warn([:child_stop_command, parent_name], "bluepill 0.3.0 fails the config when a monitor_children block sets no stop_command, " \
+                                               "as for the children of '#{parent_name}', where 0.2 exits the daemon when it first finds a child. " \
+                                               "Set the children's stop_command in the block.")
+    end
+
     # The options that 0.3.0's Bluepill.application takes
     APPLICATION_OPTIONS = %i[foreground log_file log_level base_dir kill_timeout].freeze
 

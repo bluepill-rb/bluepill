@@ -51,6 +51,8 @@ module Bluepill
 
     def self.check_monitor_children: (String process_name, Proc? block) -> void
 
+    def self.check_child_stop_command: (String parent_name, Hash[Symbol, untyped] attributes) -> void
+
     APPLICATION_OPTIONS: Array[Symbol]
 
     # Warns about options passed as a Hash, without **

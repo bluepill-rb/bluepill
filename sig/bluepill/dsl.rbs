@@ -38,6 +38,8 @@ module Bluepill
 
     private
 
+    def child_factory: (String name, Hash[Symbol, untyped] attributes, process_block child_process_block) -> ProcessFactory
+
     def assign_default_pid_file: (Hash[Symbol, untyped] attributes, String process_name, String pids_dir) -> String?
 
     def validate_process!: (ProcessProxy process) -> void
@@ -81,6 +83,9 @@ module Bluepill
       @process_block: process_block
 
       def create_child_process: (String name, Integer pid, Logger logger) -> Process
+
+      # Warns about what 0.3.0 rejects in the children's block
+      def check_children: (String parent_name) -> void
 
       private
 

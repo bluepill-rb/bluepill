@@ -1,9 +1,11 @@
 describe Bluepill::Triggers::Flapping do
-  # What the trigger logs and schedules, in order
+  # What the trigger logs, in order
   let(:calls) { [] }
+  # The events the trigger's threads dispatch to the process, each with
+  # how long its thread slept first
+  let(:dispatched) { [] }
   let(:process) { instance_double(Bluepill::Process) }
   let(:logger) { record(instance_double(Bluepill::Logger), :info) }
-  let(:starting) { Bluepill::Process::Transition.new(:down, :starting) }
 
   # Record each method's calls in calls, as [method, *args]
   def record(double, *methods)
@@ -13,11 +15,35 @@ describe Bluepill::Triggers::Flapping do
     double
   end
 
-  def flapping(options = {})
-    record(Bluepill::Triggers::Flapping.new(process, {logger: logger}.merge(options)), :schedule_event)
+  # The seconds each of the trigger's threads slept, by thread
+  def record_dispatches
+    slept = {}
+    allow(Kernel).to receive(:sleep) { |seconds| slept[Thread.current] = seconds }
+    allow(process).to receive(:dispatch!) { |event, reason| dispatched << [event, reason, slept[Thread.current]] }
   end
 
-  # What the trigger has logged and scheduled, and its timeline
+  def flapping(options = {})
+    described_class.new(process, {logger: logger}.merge(options))
+  end
+
+  # Wait for the events the trigger has scheduled to dispatch, so its
+  # threads don't outlast the example and its doubles
+  def settle(trigger)
+    trigger.mutex.synchronize { trigger.scheduled_events.collect(&:last) }.each(&:join)
+  end
+
+  # Notify the trigger, and wait for the events it schedules to dispatch
+  def notify_and_dispatch(trigger, time)
+    catch(:halt) { notify_at(trigger, time) }
+    settle(trigger)
+  end
+
+  # A process that went down coming back up
+  def starting
+    Bluepill::Process::Transition.new(:down, :starting)
+  end
+
+  # What the trigger has logged, and its timeline
   def history(trigger)
     [calls.dup, trigger.timeline.dup]
   end
@@ -78,25 +104,43 @@ describe Bluepill::Triggers::Flapping do
       expect(history(trigger)).to eq([[], [100, 111]])
     end
 
-    it 'detects flapping, schedules a retry and halts the transition' do
-      trigger = flapping(times: 2, within: 10, retry_in: 30)
-      notify_at(trigger, 100)
-      expect { notify_at(trigger, 110) }.to throw_symbol(:halt).and change { history(trigger) }.to(
-        [[[:info, 'Flapping detected: retrying in 30 seconds'], [:schedule_event, :start, 30], [:schedule_event, :unmonitor, 0]], []]
-      )
+    context 'when the process flaps' do
+      let(:trigger) { flapping(times: 2, within: 10, retry_in: 30) }
+
+      before do
+        record_dispatches
+        notify_at(trigger, 100)
+      end
+
+      after { settle(trigger) }
+
+      it 'halts the transition' do
+        expect { notify_at(trigger, 110) }.to throw_symbol(:halt)
+      end
+
+      it 'logs it, and clears the timeline' do
+        notify_and_dispatch(trigger, 110)
+        expect(history(trigger)).to eq([[[:info, 'Flapping detected: retrying in 30 seconds']], []])
+      end
+
+      it 'retries after retry_in, and unmonitors the process at once' do
+        notify_and_dispatch(trigger, 110)
+        expect(dispatched).to contain_exactly([:start, 'Flapping', 30.0], [:unmonitor, 'Flapping', 0.0])
+      end
     end
 
     it 'accepts a Float times' do
+      record_dispatches
       trigger = flapping(times: 2.0, within: 10)
       notify_at(trigger, 100)
-      expect { notify_at(trigger, 105) }.to throw_symbol(:halt)
+      notify_and_dispatch(trigger, 105)
+      expect(dispatched.collect(&:first)).to contain_exactly(:start, :unmonitor)
     end
 
     it 'does not retry when retry_in is zero' do
-      trigger = flapping(times: 1, retry_in: 0)
-      expect { notify_at(trigger, 0) }.to throw_symbol(:halt).and change(calls, :dup).to(
-        [[:info, 'Flapping detected: retrying in 0 seconds'], [:schedule_event, :unmonitor, 0]]
-      )
+      record_dispatches
+      notify_and_dispatch(flapping(times: 1, retry_in: 0), 0)
+      expect([calls, dispatched]).to eq([[[:info, 'Flapping detected: retrying in 0 seconds']], [[:unmonitor, 'Flapping', 0.0]]])
     end
   end
 

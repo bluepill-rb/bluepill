@@ -124,15 +124,15 @@ describe Bluepill::Trigger do
     end
 
     it 'sleeps for a duration in seconds' do
-      started = Time.now
+      allow(Kernel).to receive(:sleep)
       trigger.schedule_event(:start, 0.05.seconds).join
-      expect(Time.now - started).to be >= 0.05
+      expect(Kernel).to have_received(:sleep).with(0.05)
     end
 
     it 'sleeps for a delay that only converts to a Float, such as a duration' do
-      started = Time.now
+      allow(Kernel).to receive(:sleep)
       trigger.schedule_event(:start, Struct.new(:to_f).new(0.05)).join
-      expect(Time.now - started).to be >= 0.05
+      expect(Kernel).to have_received(:sleep).with(an_instance_of(Float).and(eq(0.05)))
     end
 
     it 'records the scheduled events in order until each one is dispatched' do

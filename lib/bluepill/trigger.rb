@@ -123,7 +123,9 @@ module Bluepill
       mutex.synchronize do
         thread = Thread.new do
           begin
-            sleep delay.to_f
+            # Kernel.sleep, not sleep, so the specs can stand in for the clock.
+            # Float takes a duration, through its to_f, but not nil.
+            Kernel.sleep(Float(delay))
             dispatch!(event)
             mutex.synchronize do
               scheduled_events.delete_if { |_, t| t.equal?(Thread.current) }

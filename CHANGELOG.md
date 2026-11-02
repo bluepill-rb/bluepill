@@ -73,6 +73,49 @@ Most pill files work with 0.3.0 unchanged. Check these before you upgrade:
 - The CLI's check that the daemon runs the same version of bluepill never failed: the daemon now answers with its version as a string.
 - `bluepill log` quotes the log file's path and the pattern, so a path with spaces or shell characters works.
 
+## [0.2.9] - 2026-11-02
+
+### Added
+
+- The `http` check's `verify_ssl:` option. Set it to true to verify an https server's certificate, which bluepill 0.3.0 does by default. It's off by default in 0.2.9, so a check of a server with a self-signed certificate keeps passing.
+- A custom check or trigger gets its options as keyword arguments, so one can name them, as in `def initialize(path:, below:, **options)` and `super(**options)`, as bluepill 0.3.0 needs. One that takes them as a Hash, as in `def initialize(options = {})`, still gets the Hash.
+
+### Deprecated
+
+Bluepill 0.2.9 warns, once each, about what will break in 0.3.0. Each warning starts with `DEPRECATION:` and says what to change, and `bluepill load` prints it, before the daemon starts, and logs it at `warning`. A pill file that loads without any works with 0.3.0.
+
+- Running on Ruby 2.7. Bluepill 0.3.0 needs Ruby 3.0 or newer, or JRuby 9.4 or newer.
+- An application option that bluepill 0.3.0 doesn't take, such as a misspelled `log_flie:`, which 0.2 ignores. Bluepill 0.3.0 fails the config.
+- Options kept in a Hash and passed to `Bluepill.application` or `checks` without `**`, as in `process.checks :mem_usage, options`, on Ruby 3.0 or newer. Bluepill 0.3.0 takes them only as keyword arguments, so write `process.checks :mem_usage, **options`. Ruby 2.7 passes such a Hash as keywords, so bluepill can't tell there.
+- An https `http` check without `verify_ssl:`. Bluepill 0.3.0 verifies the server's certificate by default, so set `verify_ssl: false` to keep checking a server with a self-signed certificate.
+- A daemon older than 0.2.9, which the CLI of bluepill 0.3.0 says is out of date. Run `bluepill load` again after upgrading, so the daemon runs the same version as the CLI.
+- A custom check or trigger whose `initialize` takes its options as a Hash, as in `def initialize(options = {})`. Bluepill 0.3.0 passes them as keyword arguments, so name them, as in `def initialize(path:, below:, **options)`, and call `super(**options)`.
+- A custom check that defines `check` instead of `check?`, or that doesn't define `run` and `check?`, and a custom trigger that doesn't define `notify`. Bluepill 0.3.0 fails the config.
+- A custom check or trigger whose `initialize` doesn't call `super`. Bluepill 0.3.0 gives it its logger only through `super`.
+- Calling `logger=` on a check or trigger from outside bluepill. Bluepill 0.3.0 removes it.
+- A custom trigger that dispatches an event as a String, such as `dispatch!("start")`. Bluepill 0.3.0 takes only Symbols.
+- An option of a built-in check or trigger that bluepill 0.3.0 doesn't take, such as a misspelled `evry:`, or `within:` on an `http` check, which 0.2 ignores, and a check without an option that 0.3.0 needs: `below:` for `mem_usage`, `cpu_usage` and `running_time`, and `filename:` and `below:` for `file_time`. Bluepill 0.3.0 fails the config.
+- A `fires:` or `on_start_timeout` that isn't one of the Symbols `:start`, `:stop`, `:unmonitor` and `:restart`, such as `"stop"`. Bluepill 0.3.0 fails the config.
+- Setting a process attribute with `name!` or `name value`, such as `process.daemonize!` or `process.start_command "cmd"`. Write `process.daemonize = true` and `process.start_command = "cmd"`.
+- Setting `monitor_children` or `child_process_factory` in a process block, and `monitor_children` without a block. Bluepill 0.3.0 takes only `monitor_children` with a block.
+- A `monitor_children` block that sets no `stop_command`. Bluepill 0.3.0 fails the config, where 0.2 exits the daemon when it first finds a child. To find it, and the mistakes in the children's checks, `bluepill load` runs the block once, as 0.3.0 does, for a child whose pid isn't known yet.
+- Two checks of the same name in one process, such as two `:http` checks of different URLs. Bluepill 0.2 runs only the last, and 0.3.0 runs both.
+- A custom check that subclasses `MemUsage`. Bluepill 0.3.0 gives its `run`, `check?` and `format_value` the memory usage in bytes, where 0.2 gives kilobytes.
+- Bluepill 0.3.0 also changes some things that 0.2.9 can't warn about: options kept in a Hash and passed without `**` on Ruby 2.7, where Ruby can't tell them from keywords, a 0.3.0 `bluepill` command refuses every 0.2 daemon, so run `bluepill load` again after upgrading, a mistake that already fails a 0.2 config, such as a misspelled attribute, fails with a `Bluepill::ConfigError` and exit status 6, and reading an attribute that isn't set returns nil. Read 0.3.0's "Upgrading from 0.2" before upgrading.
+- To check a `monitor_children` block, as 0.3.0 does, bluepill 0.2.9 runs it once when the pill file loads, for a child with no pid, besides once for each child it finds. A block that raises for that child gives no warning.
+
+### Fixed
+
+- An exception in a check or trigger no longer stops the daemon. It's logged, with its backtrace a line each, and the check is skipped until its next interval, so it doesn't count toward `times`. Before, it stopped the daemon with exit status 5, and the log showed the backtrace as one Array.
+- The CLI's check that the daemon runs the same version of bluepill never failed: the daemon now answers with its version as a String. A daemon older than 0.2.9 can't say which version it runs, so the CLI talks to it as before, and a CLI older than 0.2.9 says that a 0.2.9 daemon is out of date.
+- The daemon logs what stops it at `crit`, with its backtrace, since its stderr is `/dev/null`.
+- `bluepill load` no longer prints an error when the daemon it replaces exits just before it's signaled.
+
+### Security
+
+- The `http` check can verify an https server's certificate, with `verify_ssl: true`. Without it, the check passes against any server that answers, whatever its certificate.
+- `bluepill log` passes the log file's path and the pattern to `tail` and `grep` as the shell's arguments, so a path with spaces works, and a quote or `$(...)` in the path or in a process's name no longer runs as shell code.
+
 ## [0.2.7] - 2026-11-02
 
 ### Changed
@@ -160,6 +203,35 @@ To upgrade, install 0.2.0 and run `bluepill load` with the same pill file. It re
 ### Fixed
 
 - The README's group example gave every process the same pid file, and its `stop_signals` example waited longer than its stop grace time, so bluepill refused to load either config.
+
+## [0.1.7] - 2026-11-02
+
+### Added
+
+- Warnings about what bluepill 0.2.0 and later will change, each in a line that starts with `DEPRECATION:`, once each, on stderr, where `bluepill load` shows it, and in bluepill's log. Each says what to do now. See Deprecated for what they warn about.
+
+### Deprecated
+
+- An `http` check of an https URL that doesn't set `verify_ssl:`, since bluepill 0.3.0 verifies its certificate by default. Set `verify_ssl: true` to verify it now, or `verify_ssl: false` to keep checking a server with a self-signed certificate. Bluepill 0.2 ignores the option, so a pill file that sets it works with each version.
+- Ruby 1.9.3 and JRuby 1.7. Bluepill 0.2.0 needs Ruby 2.0 or JRuby 9.0, and later 0.2 releases need Ruby 2.7 or JRuby 9.4. On those Rubies, stay on 0.1 until you upgrade Ruby.
+- Setting a process attribute that bluepill doesn't know, such as a misspelled `start_comand`, which bluepill 0.1 ignores. Bluepill 0.2.0 fails the config on it. The warning names the attribute: remove it, or fix its name. `hook_timeout` and the hooks that 0.2.0 adds don't warn, though 0.1 ignores them.
+- `pre_start_command`, which bluepill 0.2.0 runs like its other hooks: it kills one that runs longer than `hook_timeout`, 30 seconds by default, and starts the process even when the command can't run, such as a missing program. Bluepill 0.1 waits for it however long it takes. Set `hook_timeout`, which 0.1 ignores, for one that can take longer, such as a migration.
+- A process with a `uid`, when bluepill runs as root. Bluepill 0.2.0 runs it with every group the user is in, as after logging in, and in the user's primary group when it sets no `gid`. Bluepill 0.1 gives it only its `gid` and `supplementary_groups`, and keeps it in root's groups when it sets no `gid`. Set `gid` and `supplementary_groups` to the groups it needs.
+- `monitor_children` on a process with a `uid`, `gid` or `supplementary_groups`, when bluepill runs as root. Bluepill 0.2.0 runs the children's commands, such as their `stop_command`, as the parent's user and groups, where 0.1 runs them as root. Make sure they work as that user, or run one that needs root with `sudo`.
+- A custom trigger that reads anything of the transition its `notify` gets but `from_name`, `to_name` and `loopback?`, such as `from`, `to` or `event`. Bluepill 0.2.0's transitions have only those three. The warning names the trigger and what it read. Bluepill's own `flapping` trigger only reads those three, so it gets its transitions as before.
+- Bluepill 0.2.0 also changes some things that 0.1.7 can't warn about: it no longer loads ActiveSupport, so a pill file, check or trigger that uses `5.minutes.ago`, `blank?` or a unit such as `1.week` needs it required, a process's `state` is a Symbol, such as `:up`, the `state_machine` methods of a process, such as `state_name` and `can_start?`, are gone, and a custom check also gets a `logger:` option. Read 0.2.0's "Upgrading from 0.1" before upgrading.
+
+### Fixed
+
+- The README's group example gave every process the same pid file, and its `stop_signals` example waited longer than its stop grace time, so bluepill refused to load either config.
+- Bluepill timed its ticks, checks, grace times and flapping detection with the system clock, so a change to the clock, such as an NTP correction after a VM resumes, could put off ticks and checks for as long as the clock went back, or end grace times early when it went forward. It now times them with the monotonic clock, which only counts up, where Ruby has one (Ruby 2.1 and newer, and JRuby 9.0 and newer). On Ruby 1.9.3 and 2.0, and on JRuby 1.7, it still reads the system clock.
+- An exception in a check, other than a failed `ps`, or in a trigger stopped the daemon, which exited with status 5 and left the processes unmonitored. Bluepill now logs it at `err`, with a line for each line of its backtrace, and keeps monitoring. The check adds nothing to its history and fires nothing, so it doesn't count toward `times`, and it runs again at its next interval. A tick that raises for any other reason is logged the same way, and the process ticks again next second.
+- The CLI's check that the daemon runs the same version of bluepill never failed, since the daemon answered with its `Version` module, which Marshal loads as the CLI's own. The daemon now answers with its version as a String, and the CLI stops when it differs. A daemon from before 0.1.7 can't say which version it runs, so the CLI warns about it and goes on, as before. Run `bluepill load` again after upgrading to replace it.
+
+### Security
+
+- `bluepill log` built a shell command with the log file's path and the pattern unquoted, so a path with a space broke the command, and a quote or `$(...)` in the path or the process name ran as shell code. It now passes them to `tail` and `grep` as the shell's arguments, so they are never parsed.
+- The `http` check's `verify_ssl:` option. With `verify_ssl: true`, a check of an https URL verifies the server's certificate, so it fails against a server that isn't the one it names. It still doesn't verify it by default, as before, since that would fail the checks of servers with self-signed certificates. Bluepill 0.3.0 verifies it by default.
 
 ## [0.1.6] - 2026-11-02
 
@@ -919,11 +991,13 @@ Initial release.
 - Added syslog logging.
 
 [unreleased]: https://github.com/bluepill-rb/bluepill/compare/v0.2.7...HEAD
+[0.2.9]: https://github.com/bluepill-rb/bluepill/compare/v0.2.7...v0.2.9
 [0.2.7]: https://github.com/bluepill-rb/bluepill/compare/v0.2.5...v0.2.7
 [0.2.5]: https://github.com/bluepill-rb/bluepill/compare/v0.2.3...v0.2.5
 [0.2.3]: https://github.com/bluepill-rb/bluepill/compare/v0.2.1...v0.2.3
 [0.2.1]: https://github.com/bluepill-rb/bluepill/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/bluepill-rb/bluepill/compare/v0.1.6...v0.2.0
+[0.1.7]: https://github.com/bluepill-rb/bluepill/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/bluepill-rb/bluepill/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/bluepill-rb/bluepill/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/bluepill-rb/bluepill/compare/v0.1.3...v0.1.4

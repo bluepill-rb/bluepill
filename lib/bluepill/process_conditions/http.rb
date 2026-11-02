@@ -49,15 +49,7 @@ module Bluepill
       #
       # @api private
       def run(_pid, _include_children)
-        host = @uri.host #: String
-        session = Net::HTTP.new(host, @uri.port)
-        if @uri.scheme.eql?("https")
-          require "net/https"
-          session.use_ssl = true
-          session.verify_mode = OpenSSL::SSL::VERIFY_NONE
-        end
-        session.open_timeout = @open_timeout
-        session.read_timeout = @read_timeout
+        session = new_session
         hide_net_http_bug do
           session.start do |http|
             http.get(@uri.request_uri)
@@ -107,6 +99,26 @@ module Bluepill
         else
           Net::HTTPSuccess
         end
+      end
+
+      # Return a session with the URL's host, set up to get the URL
+      #
+      # HTTPS is checked without verifying the certificate.
+      #
+      # @return [Net::HTTP] the session, not started yet
+      #
+      # @api private
+      def new_session
+        host = @uri.host #: String
+        session = Net::HTTP.new(host, @uri.port)
+        if @uri.scheme.eql?("https")
+          require "net/https"
+          session.use_ssl = true
+          session.verify_mode = OpenSSL::SSL::VERIFY_NONE
+        end
+        session.open_timeout = @open_timeout
+        session.read_timeout = @read_timeout
+        session
       end
 
       # Run the block, raising a refused connection as one

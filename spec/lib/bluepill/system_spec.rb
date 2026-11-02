@@ -211,7 +211,13 @@ describe Bluepill::System do
     context 'in the parent' do
       before do
         allow(Bluepill::Daemonize).to receive(:safefork).and_return(123)
-        expect(Process).to receive(:detach).with(123)
+        allow(Process).to receive(:detach)
+      end
+
+      it 'detaches the daemon, so it never becomes a zombie' do
+        allow(rd).to receive(:read).and_return('456')
+        described_class.daemonize('cmd')
+        expect(Process).to have_received(:detach).with(123)
       end
 
       it 'returns the pid of the daemon' do

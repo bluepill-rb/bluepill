@@ -431,24 +431,36 @@ describe Bluepill::Application do
       let(:socket) { double('socket', path: File.join(base_dir, 'test.sock')) }
 
       before do
-        expect(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks)
-        expect(Bluepill::System).to receive(:delete_if_exists).with(pid_file)
+        allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks)
+        allow(Bluepill::System).to receive(:delete_if_exists)
       end
 
-      it 'deletes the socket and pid file' do
-        app.socket = socket
-        expect(Bluepill::System).to receive(:delete_if_exists).with(socket.path)
+      it 'clears the journal locks' do
         app.send(:cleanup)
+        expect(Bluepill::ProcessJournal).to have_received(:clear_all_atomic_fs_locks)
+      end
+
+      it 'deletes the pid file' do
+        app.send(:cleanup)
+        expect(Bluepill::System).to have_received(:delete_if_exists).with(pid_file)
+      end
+
+      it 'deletes the socket' do
+        app.socket = socket
+        app.send(:cleanup)
+        expect(Bluepill::System).to have_received(:delete_if_exists).with(socket.path)
       end
 
       it 'deletes only the pid file without a socket' do
         app.send(:cleanup)
+        expect(Bluepill::System).to have_received(:delete_if_exists).once
       end
 
       it 'ignores a closed socket' do
         allow(socket).to receive(:path).and_raise(IOError)
         app.socket = socket
         app.send(:cleanup)
+        expect(Bluepill::System).to have_received(:delete_if_exists).once
       end
     end
 

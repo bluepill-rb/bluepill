@@ -477,8 +477,8 @@ describe Bluepill::Process do
     before { subject.start_command = '/etc/init.d/script start' }
 
     it 'functions' do
-      allow(subject).to receive(:on_start_timeout) { 'freakout' }
-      allow(subject).to receive(:daemonize?) { false }
+      allow(subject).to receive(:on_start_timeout).and_return('freakout')
+      allow(subject).to receive(:daemonize?).and_return(false)
 
       expect(subject).to receive(:with_timeout).
         with(3, 'freakout').
@@ -587,7 +587,7 @@ describe Bluepill::Process do
     before { subject.actual_pid = 5 }
 
     it 'functions' do
-      allow(subject).to receive(:stop_command) { '/etc/init.d/script stop' }
+      allow(subject).to receive(:stop_command).and_return('/etc/init.d/script stop')
       expect(subject).to receive(:with_timeout).
         with(3, 'stop').
         and_yield
@@ -721,7 +721,7 @@ describe Bluepill::Process do
 
   describe '#restart_process' do
     it 'functions' do
-      allow(subject).to receive(:restart_command) { '/etc/init.d/script restart' }
+      allow(subject).to receive(:restart_command).and_return('/etc/init.d/script restart')
       expect(subject).to receive(:with_timeout).
         with(3, 'restart').
         and_yield

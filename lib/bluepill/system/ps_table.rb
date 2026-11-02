@@ -76,9 +76,7 @@ module Bluepill
       # @return [undefined]
       #
       # @api private
-      def initialize(rows)
-        @rows = rows
-      end
+      def initialize(rows) = @rows = rows
 
       # Return a process's ps fields
       #
@@ -87,9 +85,7 @@ module Bluepill
       # @return [Array<String>, nil] its fields, or nil if ps doesn't list it
       #
       # @api private
-      def row(pid)
-        @rows[pid]
-      end
+      def row(pid) = @rows[pid]
 
       # Return the pids of a process's children
       #
@@ -99,9 +95,7 @@ module Bluepill
       #   NO_PIDS if it has none
       #
       # @api private
-      def children(pid)
-        children_by_parent.fetch(pid, NO_PIDS)
-      end
+      def children(pid) = children_by_parent.fetch(pid, NO_PIDS)
 
       # Return the pids of a process's descendants
       #

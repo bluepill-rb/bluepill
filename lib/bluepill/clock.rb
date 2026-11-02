@@ -18,8 +18,6 @@ module Bluepill
     # @return [Integer]
     #
     # @api private
-    def self.now
-      ::Process.clock_gettime(::Process::CLOCK_MONOTONIC, :second)
-    end
+    def self.now = ::Process.clock_gettime(::Process::CLOCK_MONOTONIC, :second)
   end
 end

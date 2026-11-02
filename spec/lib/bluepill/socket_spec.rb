@@ -30,9 +30,7 @@ describe Bluepill::Socket do
       allow(described_class).to receive(:abort)
     end
 
-    def client_command
-      described_class.client_command(base_dir, "app", "status")
-    end
+    def client_command = described_class.client_command(base_dir, "app", "status")
 
     context "when the daemon answers" do
       before { allow(socket).to receive(:read).and_return(Marshal.dump(%w[ok])) }

@@ -14,9 +14,7 @@ module Bluepill
       # @return [String]
       #
       # @api private
-      def prepare_command(command)
-        substitute_pid(command, actual_pid)
-      end
+      def prepare_command(command) = substitute_pid(command, actual_pid)
 
       # Return a command with <tt>{{PID}}</tt> replaced by a pid
       #
@@ -26,9 +24,7 @@ module Bluepill
       # @return [String]
       #
       # @api private
-      def substitute_pid(command, pid)
-        command.gsub("{{PID}}", pid.to_s)
-      end
+      def substitute_pid(command, pid) = command.gsub("{{PID}}", pid.to_s)
 
       # Return the options the process's commands run with
       #

@@ -30,9 +30,7 @@ describe Bluepill::Application do
     ENV[name] = original
   end
 
-  def pids_dir
-    File.join(base_dir, "pids", "test")
-  end
+  def pids_dir = File.join(base_dir, "pids", "test")
 
   describe "#initialize" do
     subject(:app) { described_class.new("test", **options) }

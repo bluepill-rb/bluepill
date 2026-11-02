@@ -27,9 +27,7 @@ module Bluepill
     # @return [Object] what the block returns
     #
     # @api private
-    def self.client(base_dir, name, &block)
-      UNIXSocket.open(socket_path(base_dir, name), &block)
-    end
+    def self.client(base_dir, name, &block) = UNIXSocket.open(socket_path(base_dir, name), &block)
 
     # Send a command to an application's daemon, and return its answer
     #
@@ -135,8 +133,6 @@ module Bluepill
     # @return [String]
     #
     # @api private
-    def self.socket_path(base_dir, name)
-      BaseDirectory.new(base_dir).socket_file(name)
-    end
+    def self.socket_path(base_dir, name) = BaseDirectory.new(base_dir).socket_file(name)
   end
 end

@@ -18,9 +18,7 @@ module Bluepill
       #   error, by name
       #
       # @api private
-      def store
-        @store ||= {}
-      end
+      def store = @store ||= {}
 
       # Forget what the last tick memoized, so ps runs again
       #

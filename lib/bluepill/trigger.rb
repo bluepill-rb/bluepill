@@ -37,9 +37,7 @@ module Bluepill
     #   that name (so the name is a check's)
     #
     # @api private
-    def self.[](name)
-      @implementations[name]
-    end
+    def self.[](name) = @implementations[name]
 
     # Return the process the trigger watches
     #
@@ -91,9 +89,7 @@ module Bluepill
     # @return [void]
     #
     # @api private
-    def reset!
-      cancel_all_events
-    end
+    def reset! = cancel_all_events
 
     # React to a state transition, before it happens
     #
@@ -104,9 +100,7 @@ module Bluepill
     # @raise [RuntimeError] unless a subclass implements it
     #
     # @api private
-    def notify(_transition)
-      raise "Implement in subclass"
-    end
+    def notify(_transition) = raise("Implement in subclass")
 
     # Send an event to the process, with the trigger's name as the reason
     #
@@ -115,9 +109,7 @@ module Bluepill
     # @return [Boolean] whether the process made the transition
     #
     # @api private
-    def dispatch!(event)
-      process.dispatch!(event, @reason)
-    end
+    def dispatch!(event) = process.dispatch!(event, @reason)
 
     # Dispatch an event after a delay, in a thread of its own
     #

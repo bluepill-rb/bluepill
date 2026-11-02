@@ -55,90 +55,70 @@ module Bluepill
       # @return [Boolean]
       #
       # @api private
-      def unmonitored?
-        state.equal?(:unmonitored)
-      end
+      def unmonitored? = state.equal?(:unmonitored)
 
       # Return whether the process is up
       #
       # @return [Boolean]
       #
       # @api private
-      def up?
-        state.equal?(:up)
-      end
+      def up? = state.equal?(:up)
 
       # Return whether the process is down
       #
       # @return [Boolean]
       #
       # @api private
-      def down?
-        state.equal?(:down)
-      end
+      def down? = state.equal?(:down)
 
       # Return whether the process is starting
       #
       # @return [Boolean]
       #
       # @api private
-      def starting?
-        state.equal?(:starting)
-      end
+      def starting? = state.equal?(:starting)
 
       # Return whether the process is stopping
       #
       # @return [Boolean]
       #
       # @api private
-      def stopping?
-        state.equal?(:stopping)
-      end
+      def stopping? = state.equal?(:stopping)
 
       # Return whether the process is restarting
       #
       # @return [Boolean]
       #
       # @api private
-      def restarting?
-        state.equal?(:restarting)
-      end
+      def restarting? = state.equal?(:restarting)
 
       # Start the process, if it's unmonitored or down
       #
       # @return [Boolean] whether the process moved to starting
       #
       # @api private
-      def start
-        fire_event(:start)
-      end
+      def start = fire_event(:start)
 
       # Stop the process, if it's up
       #
       # @return [Boolean] whether the process moved to stopping
       #
       # @api private
-      def stop
-        fire_event(:stop)
-      end
+      def stop = fire_event(:stop)
 
       # Stop monitoring the process, from any state
       #
       # @return [Boolean] whether the process moved to unmonitored
       #
       # @api private
-      def unmonitor
-        fire_event(:unmonitor)
-      end
+      def unmonitor = fire_event(:unmonitor)
 
       # Restart the process, if it's up or down
       #
       # @return [Boolean] whether the process moved to restarting
       #
       # @api private
-      def restart
-        fire_event(:restart)
-      end
+      def restart = fire_event(:restart)
 
       # Move the process to the state an event leads to from its state
       #

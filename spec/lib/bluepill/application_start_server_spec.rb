@@ -25,13 +25,9 @@ describe Bluepill::Application do
   end
 
   # An error whose class has no name
-  def anonymous_error(message)
-    Class.new(StandardError) { define_method(:message) { message } }
-  end
+  def anonymous_error(message) = Class.new(StandardError) { define_method(:message) { message } }
 
-  def pid_file
-    File.join(base_dir, "pids", "test.pid")
-  end
+  def pid_file = File.join(base_dir, "pids", "test.pid")
 
   # Stub and record what starting the server calls
   def stub_startup

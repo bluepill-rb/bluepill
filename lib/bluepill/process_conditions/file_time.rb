@@ -51,9 +51,7 @@ module Bluepill
       #   for a missing file or an error
       #
       # @api private
-      def check?(value)
-        value.is_a?(Numeric) && super
-      end
+      def check?(value) = value.is_a?(Numeric) && super
     end
   end
 end

@@ -450,9 +450,7 @@ describe Bluepill::System do
         nil
       end
 
-      def message
-        "Could not run ps: Errno::ENOMEM: Cannot allocate memory"
-      end
+      def message = "Could not run ps: Errno::ENOMEM: Cannot allocate memory"
 
       it "raises a PsError" do
         expect { described_class.ps_axu }.to raise_error(Bluepill::System::PsError, message)

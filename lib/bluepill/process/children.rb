@@ -11,9 +11,7 @@ module Bluepill
       # @return [Boolean]
       #
       # @api private
-      def monitor_children?
-        !!monitor_children
-      end
+      def monitor_children? = !!monitor_children
 
       # Update the list of children from the tick's ps table
       #

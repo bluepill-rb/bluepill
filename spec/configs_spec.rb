@@ -18,21 +18,13 @@ describe "The README and example configs", type: :integration do
     allow(Bluepill::Application).to receive(:new).and_return(app)
   end
 
-  def watch(process, name)
-    process.watches.detect { |w| w.name.equal?(name) }
-  end
+  def watch(process, name) = process.watches.detect { |w| w.name.equal?(name) }
 
-  def condition(process, name)
-    watch(process, name).instance_variable_get(:@process_condition)
-  end
+  def condition(process, name) = watch(process, name).instance_variable_get(:@process_condition)
 
-  def every(process, name)
-    watch(process, name).instance_variable_get(:@every)
-  end
+  def every(process, name) = watch(process, name).instance_variable_get(:@every)
 
-  def below(process, name)
-    condition(process, name).instance_variable_get(:@below)
-  end
+  def below(process, name) = condition(process, name).instance_variable_get(:@below)
 
   it "finds the configs in the README" do
     expect(README_CONFIGS.size).to be > 10

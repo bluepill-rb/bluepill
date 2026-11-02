@@ -22,9 +22,7 @@ module Bluepill
       #   doesn't list
       #
       # @api private
-      def run(pid, _include_children)
-        System.command(pid)
-      end
+      def run(pid, _include_children) = System.command(pid)
 
       # Return whether the process isn't a zombie
       #
@@ -33,9 +31,7 @@ module Bluepill
       # @return [Boolean] true unless the command line says <defunct>
       #
       # @api private
-      def check?(value)
-        !value&.match?(/<defunct>/)
-      end
+      def check?(value) = !value&.match?(/<defunct>/)
     end
   end
 end

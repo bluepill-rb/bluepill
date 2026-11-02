@@ -29,9 +29,7 @@ describe Bluepill::Triggers::Flapping do
     end
   end
 
-  def flapping(**options)
-    described_class.new(process, logger: logger, **options)
-  end
+  def flapping(**options) = described_class.new(process, logger: logger, **options)
 
   # Wait for the events the trigger has scheduled to dispatch, so its
   # threads don't outlast the example and its doubles
@@ -46,14 +44,10 @@ describe Bluepill::Triggers::Flapping do
   end
 
   # A process that went down coming back up
-  def starting
-    Bluepill::Process::Transition.new(:down, :starting)
-  end
+  def starting = Bluepill::Process::Transition.new(:down, :starting)
 
   # What the trigger has logged, and its timeline
-  def history(trigger)
-    [calls.dup, trigger.timeline.dup]
-  end
+  def history(trigger) = [calls.dup, trigger.timeline.dup]
 
   def notify_at(trigger, time, transition = starting)
     allow(Bluepill::Clock).to receive(:now).and_return(time)

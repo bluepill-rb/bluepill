@@ -80,9 +80,7 @@ module Bluepill
     # @return [void]
     #
     # @api private
-    def tick
-      processes.each(&:tick)
-    end
+    def tick = processes.each(&:tick)
 
     # Set each process's state from whether it's running
     #
@@ -91,9 +89,7 @@ module Bluepill
     # @return [void]
     #
     # @api private
-    def determine_initial_state
-      processes.each(&:determine_initial_state)
-    end
+    def determine_initial_state = processes.each(&:determine_initial_state)
 
     # Start the group's processes, or one of them
     #
@@ -107,9 +103,7 @@ module Bluepill
     # @return [Array<String>] the processes it started, as group:process
     #
     # @api private
-    def start(process_name = nil)
-      send_user_command(:start, process_name)
-    end
+    def start(process_name = nil) = send_user_command(:start, process_name)
 
     # Stop monitoring the group's processes, or one of them
     #
@@ -123,9 +117,7 @@ module Bluepill
     # @return [Array<String>] the processes it unmonitored, as group:process
     #
     # @api private
-    def unmonitor(process_name = nil)
-      send_user_command(:unmonitor, process_name)
-    end
+    def unmonitor(process_name = nil) = send_user_command(:unmonitor, process_name)
 
     # Stop the group's processes, or one of them
     #
@@ -139,9 +131,7 @@ module Bluepill
     # @return [Array<String>] the processes it stopped, as group:process
     #
     # @api private
-    def stop(process_name = nil)
-      send_user_command(:stop, process_name)
-    end
+    def stop(process_name = nil) = send_user_command(:stop, process_name)
 
     # Restart the group's processes, or one of them
     #
@@ -155,9 +145,7 @@ module Bluepill
     # @return [Array<String>] the processes it restarted, as group:process
     #
     # @api private
-    def restart(process_name = nil)
-      send_user_command(:restart, process_name)
-    end
+    def restart(process_name = nil) = send_user_command(:restart, process_name)
 
     # Return the status lines that bluepill status shows
     #
@@ -245,9 +233,7 @@ module Bluepill
     # @return [Boolean]
     #
     # @api private
-    def noblock?(process, event)
-      process.public_send(NOBLOCK.fetch(event))
-    end
+    def noblock?(process, event) = process.public_send(NOBLOCK.fetch(event))
 
     # Return a process's status line
     #

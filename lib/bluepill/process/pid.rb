@@ -60,18 +60,14 @@ module Bluepill
       # @return [Boolean]
       #
       # @api private
-      def cache_actual_pid?
-        !!@cache_actual_pid
-      end
+      def cache_actual_pid? = !!@cache_actual_pid
 
       # Return the process's pid, from pid_command or the pid file
       #
       # @return [Integer, nil] the pid, or nil if there's none yet
       #
       # @api private
-      def actual_pid
-        pid_command ? pid_from_command : pid_from_file
-      end
+      def actual_pid = pid_command ? pid_from_command : pid_from_file
 
       # Return the pid in the pid file, cached unless cache_actual_pid is false
       #
@@ -148,9 +144,7 @@ module Bluepill
       # @return [void]
       #
       # @api private
-      def unlink_pid
-        System.delete_if_exists(pid_file)
-      end
+      def unlink_pid = System.delete_if_exists(pid_file)
     end
   end
 end

@@ -42,22 +42,16 @@ describe Bluepill::ProcessJournal do
   end
 
   # The app's journal directory, in the one before 0.2
-  def dir
-    File.join(legacy_dir, "app")
-  end
+  def dir = File.join(legacy_dir, "app")
 
-  def write_journal(filename, ids)
-    File.open(filename, "w") { |f| ids.each { |id| f.puts(id) } }
-  end
+  def write_journal(filename, ids) = File.open(filename, "w") { |f| ids.each { |id| f.puts(id) } }
 
   def lock_log(filename)
     [[:debug, "Acquired lock #{filename}.lock"], [:debug, "Cleared lock #{filename}.lock"]]
   end
 
   # Return each file's permissions
-  def modes(*files)
-    files.collect { |file| File.stat(file).mode & 0o777 }
-  end
+  def modes(*files) = files.collect { |file| File.stat(file).mode & 0o777 }
 
   describe ".logger=" do
     it "only sets the logger once" do
@@ -74,13 +68,9 @@ describe Bluepill::ProcessJournal do
       described_class.instance_variable_set(:@legacy_journal_dir, nil)
     end
 
-    def journals
-      File.join(dir, "journals")
-    end
+    def journals = File.join(dir, "journals")
 
-    def journal_dirs
-      [described_class.journal_base_dir, described_class.legacy_journal_dir]
-    end
+    def journal_dirs = [described_class.journal_base_dir, described_class.legacy_journal_dir]
 
     context "when first set up" do
       before do

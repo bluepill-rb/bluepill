@@ -2,9 +2,7 @@
 
 describe Bluepill::Units do
   # The module's own method, whatever Numeric has, such as ActiveSupport's
-  def units(number, method)
-    described_class.instance_method(method).bind_call(number)
-  end
+  def units(number, method) = described_class.instance_method(method).bind_call(number)
 
   {
     seconds: 1, second: 1, minutes: 60, minute: 60, hours: 3600, hour: 3600, days: 86_400, day: 86_400,

@@ -20,9 +20,7 @@ describe Bluepill::ConditionWatch do
   end
 
   # What the watch fires at each tick
-  def run_at(watch, *ticks)
-    ticks.collect { |tick| watch.run(123, tick) }
-  end
+  def run_at(watch, *ticks) = ticks.collect { |tick| watch.run(123, tick) }
 
   # A condition that records its logger and options once its initialize has
   # called super

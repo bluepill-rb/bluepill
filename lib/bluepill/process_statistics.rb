@@ -24,9 +24,7 @@ module Bluepill
     # @return [void]
     #
     # @api private
-    def initialize
-      @events = Util::RotationalArray.new(EVENTS_TO_PERSIST)
-    end
+    def initialize = @events = Util::RotationalArray.new(EVENTS_TO_PERSIST)
 
     # Add an event to the history, with the time it happened
     #
@@ -37,9 +35,7 @@ module Bluepill
     #   history, newest last
     #
     # @api private
-    def record_event(event, reason)
-      events.push([event, reason, Time.now])
-    end
+    def record_event(event, reason) = events.push([event, reason, Time.now])
 
     # Return the history as text, newest first, for bluepill status
     #

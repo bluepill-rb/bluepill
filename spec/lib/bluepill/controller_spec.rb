@@ -8,9 +8,7 @@ describe Bluepill::Controller do
 
   after { FileUtils.remove_entry(base_dir) }
 
-  def touch(path, contents = "")
-    File.write(File.join(base_dir, path), contents)
-  end
+  def touch(path, contents = "") = File.write(File.join(base_dir, path), contents)
 
   # Leave an application's socket, and its pid file unless pid is nil
   def touch_app(name, pid = nil)
@@ -18,9 +16,7 @@ describe Bluepill::Controller do
     touch("pids/#{name}.pid", pid) if pid
   end
 
-  def files_left
-    Dir[File.join(base_dir, "*", "*")]
-  end
+  def files_left = Dir[File.join(base_dir, "*", "*")]
 
   def exit_with(status)
     raise_error(an_instance_of(SystemExit).and(having_attributes(status: status)))
@@ -137,13 +133,9 @@ describe Bluepill::Controller do
       allow($stdout).to receive(:puts)
     end
 
-    def write_pid(pid)
-      touch("pids/app.pid", pid)
-    end
+    def write_pid(pid) = touch("pids/app.pid", pid)
 
-    def quit
-      controller.handle_command("app", "quit")
-    end
+    def quit = controller.handle_command("app", "quit")
 
     context "when the daemon is running" do
       before { allow(Bluepill::System).to receive(:pid_alive?).with(789).and_return(true) }

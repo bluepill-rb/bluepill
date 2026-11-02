@@ -15,13 +15,9 @@ describe Bluepill::Application do
     allow(FileUtils).to receive_messages(mkdir_p: nil, chmod: nil)
   end
 
-  def mutex_locked?
-    app.instance_variable_get(:@mutex).locked?
-  end
+  def mutex_locked? = app.instance_variable_get(:@mutex).locked?
 
-  def pid_file
-    "/var/bluepill/pids/test.pid"
-  end
+  def pid_file = "/var/bluepill/pids/test.pid"
 
   describe "run" do
     let(:group) { instance_double(Bluepill::Group) }

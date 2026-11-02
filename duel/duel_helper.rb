@@ -112,9 +112,7 @@ end
 
 # The logger a process gets: the app's, prefixed with the app's name and
 # then the process's
-def process_logger
-  Bluepill::Logger.new(logger: NullLog.new).prefix_with("app").prefix_with("web")
-end
+def process_logger = Bluepill::Logger.new(logger: NullLog.new).prefix_with("app").prefix_with("web")
 
 # The hooks of a benchmark of a check of the app server's master, among
 # 300 processes. The watch has a full history, as it does after its first
@@ -133,9 +131,7 @@ def watch_hooks(check, options)
   }
 end
 
-def run_watch
-  @watch.run(PsListing::MASTER, @tick += 10)
-end
+def run_watch = @watch.run(PsListing::MASTER, @tick += 10)
 
 # A process that's up, with the given pid
 def up_process(name, pid)

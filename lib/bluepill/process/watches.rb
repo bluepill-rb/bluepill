@@ -30,9 +30,7 @@ module Bluepill
       # @return [void]
       #
       # @api private
-      def initialize
-        @watches = []
-      end
+      def initialize = @watches = []
 
       # Add a watch for a check, with the watches' logger
       #
@@ -42,9 +40,7 @@ module Bluepill
       # @return [Watches] the watches
       #
       # @api private
-      def add(name, **options)
-        self << ConditionWatch.new(name, **options, logger: logger)
-      end
+      def add(name, **options) = self << ConditionWatch.new(name, **options, logger: logger)
 
       # Add a watch
       #
@@ -65,9 +61,7 @@ module Bluepill
       # @return [Array<ConditionWatch>] the watches
       #
       # @api private
-      def each(&block)
-        @watches.each(&block)
-      end
+      def each(&block) = @watches.each(&block)
 
       # Set the logger, for the watches and for any added later
       #
@@ -86,9 +80,7 @@ module Bluepill
       # @return [void]
       #
       # @api private
-      def clear_history!
-        each(&:clear_history!)
-      end
+      def clear_history! = each(&:clear_history!)
 
       # Run every watch that's due, and return the events they fire
       #

@@ -72,9 +72,7 @@ module Bluepill
     # @return [Integer, nil] when it booted, or nil if ps can't tell
     #
     # @api private
-    def self.boot_time
-      started_at(1)
-    end
+    def self.boot_time = started_at(1)
 
     # Return a process's CPU usage, from this tick's ps table
     #
@@ -87,9 +85,7 @@ module Bluepill
     # @raise [PsError] if ps could not be run this tick
     #
     # @api private
-    def self.cpu_usage(pid, include_children)
-      usage(pid, include_children, PsTable::PCPU)
-    end
+    def self.cpu_usage(pid, include_children) = usage(pid, include_children, PsTable::PCPU)
 
     # Return a process's resident memory, from this tick's ps table
     #
@@ -102,9 +98,7 @@ module Bluepill
     # @raise [PsError] if ps could not be run this tick
     #
     # @api private
-    def self.memory_usage(pid, include_children)
-      usage(pid, include_children, PsTable::RSS)
-    end
+    def self.memory_usage(pid, include_children) = usage(pid, include_children, PsTable::RSS)
 
     # Return a column of a process's row, from this tick's ps table, as a Float
     #

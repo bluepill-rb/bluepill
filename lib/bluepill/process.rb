@@ -273,9 +273,7 @@ module Bluepill
     # @return [Boolean]
     #
     # @api private
-    def daemonize?
-      !!daemonize
-    end
+    def daemonize? = !!daemonize
 
     # Skip ticks for a while, such as for a command's grace time
     #
@@ -297,8 +295,6 @@ module Bluepill
     # @return [Boolean, nil]
     #
     # @api private
-    def skipping_ticks?
-      skip_ticks_until && skip_ticks_until > Clock.now
-    end
+    def skipping_ticks? = skip_ticks_until && skip_ticks_until > Clock.now
   end
 end

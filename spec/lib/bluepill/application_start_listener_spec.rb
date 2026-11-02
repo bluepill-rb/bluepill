@@ -16,13 +16,9 @@ describe Bluepill::Application do
   end
 
   # An error whose class has no name
-  def anonymous_error(message)
-    Class.new(StandardError) { define_method(:message) { message } }
-  end
+  def anonymous_error(message) = Class.new(StandardError) { define_method(:message) { message } }
 
-  def mutex_locked?
-    app.instance_variable_get(:@mutex).locked?
-  end
+  def mutex_locked? = app.instance_variable_get(:@mutex).locked?
 
   describe "start_listener" do
     let(:client) { instance_double(UNIXSocket, readline: "status:web\n", write: nil, close: nil) }

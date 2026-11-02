@@ -16,9 +16,7 @@ module Bluepill
     # @return [Integer] the major version
     #
     # @api public
-    def self.major
-      0
-    end
+    def self.major = 0
 
     # Return the minor version
     #
@@ -28,9 +26,7 @@ module Bluepill
     # @return [Integer] the minor version
     #
     # @api public
-    def self.minor
-      2
-    end
+    def self.minor = 2
 
     # Return the patch version
     #
@@ -40,9 +36,7 @@ module Bluepill
     # @return [Integer] the patch version
     #
     # @api public
-    def self.patch
-      7
-    end
+    def self.patch = 7
 
     # Return the pre-release version
     #
@@ -81,9 +75,7 @@ module Bluepill
     # @return [Array<Integer>] the parts of the version
     #
     # @api public
-    def self.to_a
-      to_h.values.compact
-    end
+    def self.to_a = to_h.values.compact
 
     # Return the version as a string
     #
@@ -93,8 +85,6 @@ module Bluepill
     # @return [String] the version, such as "0.2.7"
     #
     # @api public
-    def self.to_s
-      to_a.join(".")
-    end
+    def self.to_s = to_a.join(".")
   end
 end

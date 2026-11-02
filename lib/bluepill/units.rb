@@ -36,9 +36,7 @@ module Bluepill
     # @return [Numeric] the number itself
     #
     # @api public
-    def seconds
-      self
-    end
+    def seconds = self
     alias_method :second, :seconds
 
     # Return this many minutes, in seconds
@@ -49,9 +47,7 @@ module Bluepill
     # @return [Numeric] the number of seconds
     #
     # @api public
-    def minutes
-      self * MINUTE
-    end
+    def minutes = self * MINUTE
     alias_method :minute, :minutes
 
     # Return this many hours, in seconds
@@ -62,9 +58,7 @@ module Bluepill
     # @return [Numeric] the number of seconds
     #
     # @api public
-    def hours
-      self * HOUR
-    end
+    def hours = self * HOUR
     alias_method :hour, :hours
 
     # Return this many days, in seconds
@@ -75,9 +69,7 @@ module Bluepill
     # @return [Numeric] the number of seconds
     #
     # @api public
-    def days
-      self * DAY
-    end
+    def days = self * DAY
     alias_method :day, :days
 
     # Return this many kilobytes, in bytes
@@ -88,9 +80,7 @@ module Bluepill
     # @return [Numeric] the number of bytes
     #
     # @api public
-    def kilobytes
-      self * KILOBYTE
-    end
+    def kilobytes = self * KILOBYTE
     alias_method :kilobyte, :kilobytes
 
     # Return this many megabytes, in bytes
@@ -101,9 +91,7 @@ module Bluepill
     # @return [Numeric] the number of bytes
     #
     # @api public
-    def megabytes
-      self * MEGABYTE
-    end
+    def megabytes = self * MEGABYTE
     alias_method :megabyte, :megabytes
 
     # Return this many gigabytes, in bytes
@@ -114,9 +102,7 @@ module Bluepill
     # @return [Numeric] the number of bytes
     #
     # @api public
-    def gigabytes
-      self * GIGABYTE
-    end
+    def gigabytes = self * GIGABYTE
     alias_method :gigabyte, :gigabytes
   end
 end

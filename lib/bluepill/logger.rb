@@ -117,9 +117,7 @@ module Bluepill
     # @return [Logger] the prefixed logger
     #
     # @api private
-    def prefix_with(prefix)
-      @prefixes[prefix] ||= self.class.new(logger: self, prefix: prefix)
-    end
+    def prefix_with(prefix) = @prefixes[prefix] ||= self.class.new(logger: self, prefix: prefix)
 
     # Open the log file or syslog again, such as after log rotation
     #

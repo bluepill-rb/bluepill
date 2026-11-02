@@ -25,9 +25,7 @@ describe Bluepill::Process do
 
   # Give the process pid 5, which signal 0 finds running, since
   # ::Process.kill is stubbed
-  def run_process
-    process.actual_pid = 5
-  end
+  def run_process = process.actual_pid = 5
 
   # A thread left over from an earlier command, which clean_threads kills
   def leftover_thread

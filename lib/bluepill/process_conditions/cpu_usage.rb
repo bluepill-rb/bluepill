@@ -21,10 +21,7 @@ module Bluepill
       # @return [Float] the percentage, or 0.0 for a process ps doesn't list
       #
       # @api private
-      def run(pid, include_children)
-        # third col in the ps axu output
-        System.cpu_usage(pid, include_children).to_f
-      end
+      def run(pid, include_children) = System.cpu_usage(pid, include_children).to_f
     end
   end
 end

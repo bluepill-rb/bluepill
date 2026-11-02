@@ -32,9 +32,7 @@ module Bluepill
       # @return [void]
       #
       # @api private
-      def kill_all_pgids_from_journal(journal_name)
-        kill_all_ids_from_journal(PGID, journal_name)
-      end
+      def kill_all_pgids_from_journal(journal_name) = kill_all_ids_from_journal(PGID, journal_name)
 
       # Kill the processes that a process's journals list
       #
@@ -46,9 +44,7 @@ module Bluepill
       # @return [void]
       #
       # @api private
-      def kill_all_pids_from_journal(journal_name)
-        kill_all_ids_from_journal(PID, journal_name)
-      end
+      def kill_all_pids_from_journal(journal_name) = kill_all_ids_from_journal(PID, journal_name)
 
       # Kill the ids that one kind of a process's journals list
       #
@@ -73,9 +69,7 @@ module Bluepill
       # @return [Array<String>] the app's, and then the one before 0.2
       #
       # @api private
-      def journal_dirs
-        [journal_base_dir, legacy_journal_dir]
-      end
+      def journal_dirs = [journal_base_dir, legacy_journal_dir]
 
       # Kill the ids a journal lists, and then delete the journal
       #

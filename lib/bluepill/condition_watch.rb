@@ -209,9 +209,7 @@ module Bluepill
     # @return [Util::RotationalArray<HistoryValue>] the new, empty history
     #
     # @api private
-    def clear_history!
-      @history = Util::RotationalArray.new(@window)
-    end
+    def clear_history! = @history = Util::RotationalArray.new(@window)
 
     # Return the check's name and history, as the log shows it
     #

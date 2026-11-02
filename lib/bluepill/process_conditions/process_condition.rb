@@ -48,9 +48,7 @@ module Bluepill
       # @raise [RuntimeError] unless a subclass implements it
       #
       # @api private
-      def run(_pid, _include_children)
-        raise "Implement in subclass!"
-      end
+      def run(_pid, _include_children) = raise("Implement in subclass!")
 
       # Return whether a value is fine
       #
@@ -64,9 +62,7 @@ module Bluepill
       # @raise [RuntimeError] unless a subclass implements check? or check
       #
       # @api private
-      def check?(value)
-        check(value)
-      end
+      def check?(value) = check(value)
 
       # Return whether a value is fine, as bluepill 0.1 named check?
       #
@@ -77,9 +73,7 @@ module Bluepill
       # @raise [RuntimeError] unless a subclass implements it
       #
       # @api private
-      def check(_value)
-        raise "Implement in subclass!"
-      end
+      def check(_value) = raise("Implement in subclass!")
 
       # Format a value for the watch's history and log
       #
@@ -89,9 +83,7 @@ module Bluepill
       #   value itself
       #
       # @api private
-      def format_value(value)
-        value
-      end
+      def format_value(value) = value
     end
   end
 end

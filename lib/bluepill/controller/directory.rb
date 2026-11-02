@@ -13,9 +13,7 @@ module Bluepill
       # @return [Array<String>]
       #
       # @api private
-      def running_applications
-        base_directory.socket_names
-      end
+      def running_applications = base_directory.socket_names
 
       private
 

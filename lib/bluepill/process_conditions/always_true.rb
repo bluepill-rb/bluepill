@@ -14,9 +14,7 @@ module Bluepill
       # @return [Integer] always 1
       #
       # @api private
-      def run(_pid, _include_children)
-        1
-      end
+      def run(_pid, _include_children) = 1
 
       # Pass whatever the value is
       #
@@ -25,9 +23,7 @@ module Bluepill
       # @return [Boolean] always true
       #
       # @api private
-      def check?(_value)
-        true
-      end
+      def check?(_value) = true
     end
   end
 end

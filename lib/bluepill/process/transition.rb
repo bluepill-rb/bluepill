@@ -39,9 +39,7 @@ module Bluepill
       # @return [Boolean]
       #
       # @api private
-      def loopback?
-        from_name.equal?(to_name)
-      end
+      def loopback? = from_name.equal?(to_name)
     end
   end
 end

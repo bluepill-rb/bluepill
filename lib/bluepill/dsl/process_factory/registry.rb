@@ -46,9 +46,7 @@ module Bluepill
       #   added
       #
       # @api private
-      def add_pid_file?(pid_file)
-        add?(@pid_files, pid_file)
-      end
+      def add_pid_file?(pid_file) = add?(@pid_files, pid_file)
 
       private
 

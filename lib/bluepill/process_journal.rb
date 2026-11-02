@@ -141,9 +141,7 @@ module Bluepill
     # @return [Boolean] true unless pid is an Integer above 1
     #
     # @api private
-    def self.skip_pid?(pid)
-      skip_id?(pid)
-    end
+    def self.skip_pid?(pid) = skip_id?(pid)
 
     # Return whether a process group id can't be journaled or signaled
     #
@@ -152,9 +150,7 @@ module Bluepill
     # @return [Boolean] true unless pgid is an Integer above 1
     #
     # @api private
-    def self.skip_pgid?(pgid)
-      skip_id?(pgid)
-    end
+    def self.skip_pgid?(pgid) = skip_id?(pgid)
 
     # Return whether an id can't be journaled or signaled
     #
@@ -163,9 +159,7 @@ module Bluepill
     # @return [Boolean] true unless id is an Integer above 1
     #
     # @api private
-    def self.skip_id?(id)
-      !id.is_a?(Integer) || id <= 1
-    end
+    def self.skip_id?(id) = !id.is_a?(Integer) || id <= 1
 
     # Return the path of a process's pid journal
     #
@@ -230,9 +224,7 @@ module Bluepill
     # @return [String] the line, without a start time if ps can't tell
     #
     # @api private
-    def self.journal_line(id)
-      [id, System.started_at(id)].compact.join(" ")
-    end
+    def self.journal_line(id) = [id, System.started_at(id)].compact.join(" ")
 
     # Return the valid pids in a pid journal
     #
@@ -241,9 +233,7 @@ module Bluepill
     # @return [Array<Integer>] the pids, or none if there's no journal
     #
     # @api private
-    def self.pid_journal(filename)
-      journal_ids(PID, filename)
-    end
+    def self.pid_journal(filename) = journal_ids(PID, filename)
 
     # Return the valid process group ids in a process group journal
     #
@@ -253,9 +243,7 @@ module Bluepill
     #   journal
     #
     # @api private
-    def self.pgid_journal(filename)
-      journal_ids(PGID, filename)
-    end
+    def self.pgid_journal(filename) = journal_ids(PGID, filename)
 
     # Return the valid ids in a journal
     #

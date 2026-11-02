@@ -22,20 +22,14 @@ describe Bluepill::Application do
     raise_error(an_instance_of(SystemExit).and(having_attributes(status: status)))
   end
 
-  def pid_file
-    File.join(base_dir, "pids", "test.pid")
-  end
+  def pid_file = File.join(base_dir, "pids", "test.pid")
 
   describe "kill_previous_bluepill" do
     let(:calls) { [] }
 
-    def write_pid(pid = "1234")
-      File.write(pid_file, pid)
-    end
+    def write_pid(pid = "1234") = File.write(pid_file, pid)
 
-    def kill_previous_bluepill
-      app.send(:kill_previous_bluepill)
-    end
+    def kill_previous_bluepill = app.send(:kill_previous_bluepill)
 
     def kill_previous_bluepill_until_exit
       kill_previous_bluepill
@@ -58,13 +52,9 @@ describe Bluepill::Application do
     end
 
     # What's been printed so far, while an output matcher captures stdout
-    def printed
-      $stdout.string.dup
-    end
+    def printed = $stdout.string.dup
 
-    def killing
-      "Killing previous bluepilld[1234]\n"
-    end
+    def killing = "Killing previous bluepilld[1234]\n"
 
     # The signals and sleeps of a previous bluepill that's killed, and then
     # waited for that many times

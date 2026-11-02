@@ -65,9 +65,7 @@ describe Bluepill::Logger do
   end
 
   # Make $stdout record what's written and flushed
-  def record_stdout
-    record($stdout, :puts, :flush)
-  end
+  def record_stdout = record($stdout, :puts, :flush)
 
   # Move the log file aside, as logrotate does, and reopen the logger
   def rotate(logger)
@@ -76,9 +74,7 @@ describe Bluepill::Logger do
   end
 
   # The messages in the log file, without its header or each line's start
-  def log_file_messages
-    File.read(log_file).scan(/ -- : (.*)$/).flatten
-  end
+  def log_file_messages = File.read(log_file).scan(/ -- : (.*)$/).flatten
 
   let(:dir) { Dir.mktmpdir }
   let(:log_file) { File.join(dir, "bluepill.log") }

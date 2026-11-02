@@ -121,18 +121,14 @@ module Bluepill
     # @return [Boolean] true for an attribute a config can set
     #
     # @api private
-    def self.attribute?(name)
-      attribute_names.include?(name)
-    end
+    def self.attribute?(name) = attribute_names.include?(name)
 
     # Return the attributes a config can set on a process
     #
     # @return [Array<Symbol>] a process's configurable attributes, and :group
     #
     # @api private
-    def self.attribute_names
-      Process::CONFIGURABLE_ATTRIBUTES + [:group]
-    end
+    def self.attribute_names = Process::CONFIGURABLE_ATTRIBUTES + [:group]
 
     # Add a check of the process, or a trigger such as :flapping
     #
@@ -147,9 +143,7 @@ module Bluepill
     # @return [Hash{Symbol => Object}] the options
     #
     # @api public
-    def checks(name, **options)
-      @watches[name] = options
-    end
+    def checks(name, **options) = @watches[name] = options
 
     # Monitor the process's children too
     #
@@ -179,9 +173,7 @@ module Bluepill
     # @return [Process] the process
     #
     # @api private
-    def to_process
-      Process.new(@name, @watches, **@attributes)
-    end
+    def to_process = Process.new(@name, @watches, **@attributes)
 
     private
 

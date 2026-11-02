@@ -180,9 +180,7 @@ module Bluepill
       # @return [Integer, nil]
       #
       # @api private
-      def cached_pid
-        @actual_pid || @last_pid
-      end
+      def cached_pid = @actual_pid || @last_pid
     end
   end
 end

@@ -28,27 +28,21 @@ module Bluepill
     # @return [void]
     #
     # @api private
-    def initialize(path)
-      @path = path
-    end
+    def initialize(path) = @path = path
 
     # Return the directory with the daemons' sockets
     #
     # @return [String]
     #
     # @api private
-    def sockets_dir
-      File.join(path, "socks")
-    end
+    def sockets_dir = File.join(path, "socks")
 
     # Return the directory with the daemons' pid files
     #
     # @return [String]
     #
     # @api private
-    def pids_dir
-      File.join(path, "pids")
-    end
+    def pids_dir = File.join(path, "pids")
 
     # Return the socket that an application's daemon listens on
     #
@@ -57,9 +51,7 @@ module Bluepill
     # @return [String]
     #
     # @api private
-    def socket_file(app)
-      File.join(sockets_dir, "#{app}#{SOCKET_EXTENSION}")
-    end
+    def socket_file(app) = File.join(sockets_dir, "#{app}#{SOCKET_EXTENSION}")
 
     # Return an application's daemon's pid file
     #
@@ -68,9 +60,7 @@ module Bluepill
     # @return [String]
     #
     # @api private
-    def pid_file(app)
-      File.join(pids_dir, "#{app}.pid")
-    end
+    def pid_file(app) = File.join(pids_dir, "#{app}.pid")
 
     # Return the directory with the pid files of an application's processes
     #
@@ -79,9 +69,7 @@ module Bluepill
     # @return [String]
     #
     # @api private
-    def process_pids_dir(app)
-      File.join(pids_dir, app)
-    end
+    def process_pids_dir(app) = File.join(pids_dir, app)
 
     # Return the names of the applications with a socket
     #

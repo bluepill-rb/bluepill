@@ -42,10 +42,7 @@ module Bluepill
       #   doesn't list
       #
       # @api private
-      def run(pid, include_children)
-        # rss is on the 5th col
-        System.memory_usage(pid, include_children).to_f
-      end
+      def run(pid, include_children) = System.memory_usage(pid, include_children).to_f
 
       # Return whether the usage is below the limit
       #

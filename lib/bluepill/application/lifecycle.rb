@@ -160,9 +160,7 @@ module Bluepill
       # @return [void]
       #
       # @api private
-      def write_pid_file
-        File.write(pid_file, ::Process.pid.to_s)
-      end
+      def write_pid_file = File.write(pid_file, ::Process.pid.to_s)
     end
   end
 end

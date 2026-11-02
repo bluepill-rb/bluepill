@@ -16,9 +16,7 @@ module Bluepill
     # @raise [NameError] when no check has that name
     #
     # @api private
-    def self.[](name)
-      const_get(Util.camelize(name))
-    end
+    def self.[](name) = const_get(Util.camelize(name))
   end
 end
 

@@ -135,9 +135,7 @@ module Bluepill
     # @return [Boolean]
     #
     # @api private
-    def foreground?
-      !!@foreground
-    end
+    def foreground? = !!@foreground
 
     # Run a block while holding the daemon's lock
     #
@@ -149,9 +147,7 @@ module Bluepill
     # @return [Object] what the block returns
     #
     # @api private
-    def synchronize(&block)
-      @mutex.synchronize(&block)
-    end
+    def synchronize(&block) = @mutex.synchronize(&block)
 
     # Start the daemon and monitor the application's processes
     #
@@ -255,9 +251,7 @@ module Bluepill
     # @return [Module] the Version module
     #
     # @api private
-    def version
-      Version
-    end
+    def version = Version
 
     protected
 

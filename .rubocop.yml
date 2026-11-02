@@ -20,6 +20,14 @@ AllCops:
 Style:
   Enabled: false
 
+# An endless method stays on one line, and one whose body ends in a
+# modifier, such as `def m = x if y`, would apply the modifier to the def
+Style/EndlessMethod:
+  Enabled: true
+
+Style/AmbiguousEndlessMethodDefinition:
+  Enabled: true
+
 # Frozen string literals change what a file's strings allocate, not how
 # the file looks, and Standard leaves them out, so RuboCop asks for the
 # comment in every file

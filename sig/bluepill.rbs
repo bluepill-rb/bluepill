@@ -41,6 +41,8 @@ module Bluepill
   class Application
     PROCESS_COMMANDS: Array[Symbol]
 
+    DAEMON_COMMANDS: Array[Symbol]
+
     attr_accessor name: String
     attr_accessor logger: Logger
     attr_accessor base_dir: String
@@ -89,6 +91,8 @@ module Bluepill
     def send_to_process_or_group: (Symbol method, String? group_name, String? process_name) -> Array[String]
 
     def start_listener: () -> Thread
+
+    def daemon_command: (String? command) -> Symbol
 
     def start_server: () -> void
 

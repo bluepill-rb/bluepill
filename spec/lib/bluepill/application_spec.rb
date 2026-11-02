@@ -498,6 +498,56 @@ describe Bluepill::Application do
         listen
       end
 
+      # What the daemon answers a line from a client with
+      def answer(line)
+        allow(client).to receive(:readline).and_return(line)
+        answered = []
+        allow(Marshal).to receive(:dump) do |object|
+          answered << object
+          'answer'
+        end
+        listen
+        answered.first
+      end
+
+      it 'answers the version command' do
+        expect(answer("version\n")).to eq(Bluepill::Version)
+      end
+
+      it 'answers the log_file command' do
+        app.log_file = '/var/log/app.log'
+        expect(answer("log_file\n")).to eq('/var/log/app.log')
+      end
+
+      it 'answers a method that is not a command with a NoMethodError' do
+        error = answer("add_process:web\n")
+        expect([error.class, error.message]).to eq([NoMethodError, 'Unknown command `add_process`'])
+      end
+
+      it 'does not run a method that is not a command' do
+        expect(app).not_to receive(:instance_eval)
+        answer("instance_eval:groups.clear\n")
+      end
+
+      it 'does not run a command setter' do
+        expect([answer("log_file=:/tmp/log\n").message, app.log_file]).to eq(['Unknown command `log_file=`', nil])
+      end
+
+      it 'answers an empty line with a NoMethodError' do
+        error = answer("\n")
+        expect([error.class, error.message]).to eq([NoMethodError, 'Unknown command ``'])
+      end
+
+      # The error takes caller's lines, which start at the method that asked
+      # for the command, so Ruby 3.1's error_highlight has no line to quote
+      it 'answers an unknown command with the backtrace of the listener' do
+        expect(answer("add_process:web\n").backtrace.first).to include('start_listener')
+      end
+
+      it 'only answers the process commands, version and log_file' do
+        expect(Bluepill::Application::DAEMON_COMMANDS).to eq([:start, :stop, :restart, :unmonitor, :status, :version, :log_file])
+      end
+
       it 'answers with the error raised by a command' do
         error = RuntimeError.new('boom')
         allow(app).to receive(:status).and_raise(error)

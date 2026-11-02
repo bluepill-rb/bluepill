@@ -13,6 +13,12 @@ module Bluepill
     # The commands that act on a process or group, and that the CLI sends
     PROCESS_COMMANDS = [:start, :stop, :restart, :unmonitor, :status].freeze
 
+    # The commands that the daemon answers over its socket: the
+    # PROCESS_COMMANDS, and the version and log file that the CLI asks for
+    #
+    # @api private
+    DAEMON_COMMANDS = (PROCESS_COMMANDS + [:version, :log_file]).freeze
+
     attr_accessor :name, :logger, :base_dir, :socket, :pid_file, :kill_timeout, :groups, :work_queue, :pids_dir, :log_file
 
     # @!attribute [rw] name
@@ -298,8 +304,8 @@ module Bluepill
             # The target is group:process and the process name may contain ':'
             command, *args = client.readline.strip.split(':', 3).reject(&:empty?)
             response = begin
-              # An empty line leaves command nil, so public_send raises an error for the client
-              mutex { public_send(command, *args) } # steep:ignore ArgumentTypeMismatch
+              method = daemon_command(command)
+              mutex { public_send(method, *args) }
             rescue StandardError => e
               e
             end
@@ -317,6 +323,25 @@ module Bluepill
           end
         end
       end
+    end
+
+    # Return the one of the DAEMON_COMMANDS that a client's command names
+    #
+    # Anyone who can write to the socket can send any line, so only these
+    # commands may run, and not any other of the daemon's public methods.
+    #
+    # @param [String, nil] command the command, or nil for an empty line
+    #
+    # @raise [NoMethodError] if it names none of them
+    #
+    # @return [Symbol]
+    #
+    # @api private
+    def daemon_command(command)
+      # The backtrace is caller's lines, with no locations, so Ruby 3.1's
+      # error_highlight doesn't add a snippet of this file to the message
+      DAEMON_COMMANDS.detect { |name| name.to_s.eql?(command) } ||
+        raise(NoMethodError, "Unknown command `#{command}`", caller)
     end
 
     # Start the daemon

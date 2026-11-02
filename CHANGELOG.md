@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- The daemon now runs only the commands that the CLI sends over its socket: `start`, `stop`, `restart`, `unmonitor`, `status`, `version` and `log_file`. Before, it called whatever method a line on the socket named, so anyone who could write to the socket could call any of the daemon's public methods, such as `instance_eval` with code of their own. The socket takes the daemon's umask, so with the usual umask of 022 only the daemon's own user could connect. Any other command now gets a `NoMethodError` back.
+
 ## [0.1.5] - 2026-11-01
 
 ### Removed

@@ -28,9 +28,9 @@ In order to take advantage of logging with syslog, you also need to setup your s
 > [!IMPORTANT]
 > Bluepill logs to syslog by default, which on Ruby 3.4 and newer needs the `syslog` gem (`sudo gem install syslog`), since Ruby no longer includes it. Or have bluepill write to a log file instead (see [Logging](#logging)).
 
-You'll also want to add _/var/log/bluepill.log_ to _/etc/logrotate.d/syslog_ so that it gets rotated.
+You'll also want to add `/var/log/bluepill.log` to `/etc/logrotate.d/syslog` so that it gets rotated.
 
-Lastly, create the _/var/run/bluepill_ directory for bluepill to store its pid and sock files.
+Lastly, create the `/var/run/bluepill` directory for bluepill to store its pid and sock files.
 
 ## Usage
 ### Config
@@ -79,7 +79,7 @@ Bluepill.application("app_name") do |app|
 end
 ```
 
-We added a line that checks every 10 seconds to make sure the cpu usage of this process is below 5 percent. Three failed checks in a row restart the process. We can specify a two-element array for the _times_ option to say that 3 out of 5 failed attempts result in a restart. A check restarts the process by default, and `fires:` picks other events instead, from `:start`, `:stop`, `:unmonitor` and `:restart`, such as `fires: :stop` or `fires: [:stop, :start]`.
+We added a line that checks every 10 seconds to make sure the cpu usage of this process is below 5 percent. Three failed checks in a row restart the process. We can specify a two-element array for the `times:` option to say that 3 out of 5 failed attempts result in a restart. A check restarts the process by default, and `fires:` picks other events instead, from `:start`, `:stop`, `:unmonitor` and `:restart`, such as `fires: :stop` or `fires: [:stop, :start]`.
 
 To watch memory usage, we just add one more line:
 
@@ -475,7 +475,7 @@ show how to run it. [examples/runit.rb](examples/runit.rb) monitors a
 service managed by runit.
 
 ### Logging
-By default, bluepill uses syslog local6 facility as described in the installation section. But if for any reason you don't want to use syslog, you can use a log file. You can do this by setting the :log\_file option in the config:
+By default, bluepill uses syslog local6 facility as described in the installation section. But if for any reason you don't want to use syslog, you can use a log file. You can do this by setting the `log_file:` option in the config:
 
 ```ruby
 Bluepill.application("app_name", log_file: "/path/to/bluepill.log") do |app|
@@ -486,7 +486,7 @@ end
 > [!TIP]
 > Set up log rotation for the log file too (described in the installation section), to keep it from growing huge.
 
-Bluepill logs everything by default, including a line for every check it runs. To log less, set the :log\_level option to the least severe priority you want to keep. Bluepill drops anything less severe, whether it logs to syslog, a log file, or stdout in foreground mode:
+Bluepill logs everything by default, including a line for every check it runs. To log less, set the `log_level:` option to the least severe priority you want to keep. Bluepill drops anything less severe, whether it logs to syslog, a log file, or stdout in foreground mode:
 
 ```ruby
 Bluepill.application("app_name", log_level: :warning) do |app|

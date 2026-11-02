@@ -7,7 +7,7 @@ Bluepill is a simple process monitoring tool written in Ruby.
 [![Mutant](https://github.com/bluepill-rb/bluepill/actions/workflows/mutant.yml/badge.svg?branch=master)][mutant]
 [![Maintainability](https://qlty.sh/gh/bluepill-rb/projects/bluepill/maintainability.svg)][qlty]
 [![Coverage Status](https://coveralls.io/repos/github/bluepill-rb/bluepill/badge.svg?branch=master)][coveralls]
-[![Gem Version](https://badge.fury.io/rb/bluepill.svg)][gem]
+[![Gem Version](https://img.shields.io/gem/v/bluepill?color=blue)][gem]
 
 [gem]: https://rubygems.org/gems/bluepill
 [test]: https://github.com/bluepill-rb/bluepill/actions/workflows/test.yml

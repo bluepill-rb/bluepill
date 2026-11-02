@@ -661,7 +661,7 @@ describe Bluepill::Process do
 
       it "logs the failure" do
         process.run_hook("cleanup", "Post stop", 7)
-        expect(logger).to have_received(:err).with("Post stop command failed: Resource temporarily unavailable - fork")
+        expect(logger).to have_received(:err).with("Post stop command failed: #{Errno::EAGAIN.new("fork").message}")
       end
     end
   end

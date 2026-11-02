@@ -50,7 +50,8 @@ module Bluepill
     # @return [Integer, nil] the pre-release version, or nil for a release
     #
     # @api public
-    def self.pre; end
+    def self.pre
+    end
 
     # Return the version's parts by name
     #

@@ -245,3 +245,10 @@ Style/HashSyntax:
 Style/TernaryParentheses:
   EnforcedStyle: require_parentheses_when_complex
   AllowSafeAssignment: true
+
+# An empty method's end on its own line, as Standard wants
+Style/EmptyMethod:
+  EnforcedStyle: expanded
+
+Style/SingleLineMethods:
+  AllowIfMethodIsEmpty: false

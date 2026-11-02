@@ -216,7 +216,7 @@ module Bluepill
       Process.new(@name, @watches, @attributes)
     end
 
-  private
+    private
 
     # Fail on an attribute a process doesn't have
     #

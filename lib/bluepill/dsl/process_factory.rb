@@ -85,7 +85,7 @@ module Bluepill
       process
     end
 
-  protected
+    protected
 
     # Set the default pid file, unless the process sets its own
     #

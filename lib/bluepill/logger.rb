@@ -171,7 +171,7 @@ module Bluepill
     # @api private
     attr_reader :names
 
-  protected
+    protected
 
     # Return the prefixes as they start a message, as in "[app:web] "
     #

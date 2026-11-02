@@ -109,8 +109,9 @@ Style/SymbolArray:
 Layout/LeadingCommentSpace:
   AllowRBSInlineAnnotation: true
 
+# private and protected indented like the methods after them, as Standard wants
 Layout/AccessModifierIndentation:
-  EnforcedStyle: outdent
+  EnforcedStyle: indent
 
 Style/ClassVars:
   Exclude:

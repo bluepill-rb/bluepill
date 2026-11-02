@@ -164,7 +164,7 @@ module Bluepill
       ['\[.*', Regexp.escape(pattern), ".*"].join
     end
 
-  private
+    private
 
     # Remove the socket and pid file of each daemon that's not running
     #

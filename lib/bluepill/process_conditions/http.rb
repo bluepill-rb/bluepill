@@ -91,7 +91,7 @@ module Bluepill
         !(@pattern =~ response.body).nil?
       end
 
-    private
+      private
 
       # Run the block, raising a refused connection as one
       #

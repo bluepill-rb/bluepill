@@ -255,7 +255,7 @@ module Bluepill
       Version
     end
 
-  protected
+    protected
 
     # Send a command to a process, a group, or every process
     #

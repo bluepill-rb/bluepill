@@ -348,11 +348,30 @@ describe Bluepill::Controller do
       expect(controller.send_to_daemon("app", :status)).to eq("up")
     end
 
-    it "talks to a daemon older than 0.2.9, which answers with its Version module" do
+    # A daemon older than 0.2.9, which answers with its Version module
+    def stub_old_daemon
       stub_daemon("status", "up")
       allow(Bluepill::Socket).to receive(:client_command)
         .with(base_dir, "app", "version").and_return(through_marshal(Bluepill::Version))
+    end
+
+    it "talks to a daemon older than 0.2.9, which answers with its Version module" do
+      stub_old_daemon
+      allow($stderr).to receive(:puts)
       expect(controller.send_to_daemon("app", :status)).to eq("up")
+    end
+
+    it "warns that 0.3.0's CLI refuses a daemon older than 0.2.9" do
+      stub_old_daemon
+      expect { controller.send_to_daemon("app", :status) }.to output(
+        "DEPRECATION: this daemon runs a bluepill older than 0.2.9, which the CLI of bluepill 0.3.0 says is out of date. " \
+        "Run bluepill load again, so the daemon runs this version.\n"
+      ).to_stderr
+    end
+
+    it "says nothing about a daemon of this version" do
+      stub_daemon("status", "up")
+      expect { controller.send_to_daemon("app", :status) }.not_to output.to_stderr
     end
 
     it "aborts when the daemon does not understand the version command" do

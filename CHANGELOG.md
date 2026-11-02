@@ -20,6 +20,7 @@ Bluepill 0.2.9 warns, once each, about what will break in 0.3.0. Each warning st
 - An application option that bluepill 0.3.0 doesn't take, such as a misspelled `log_flie:`, which 0.2 ignores. Bluepill 0.3.0 fails the config.
 - Options kept in a Hash and passed to `Bluepill.application` or `checks` without `**`, as in `process.checks :mem_usage, options`. Bluepill 0.3.0 takes them only as keyword arguments, so write `process.checks :mem_usage, **options`.
 - An https `http` check without `verify_ssl:`. Bluepill 0.3.0 verifies the server's certificate by default, so set `verify_ssl: false` to keep checking a server with a self-signed certificate.
+- A daemon older than 0.2.9, which the CLI of bluepill 0.3.0 says is out of date. Run `bluepill load` again after upgrading, so the daemon runs the same version as the CLI.
 - A custom check or trigger whose `initialize` takes its options as a Hash, as in `def initialize(options = {})`. Bluepill 0.3.0 passes them as keyword arguments, so name them, as in `def initialize(path:, below:, **options)`, and call `super(**options)`.
 - A custom check that defines `check` instead of `check?`, or that doesn't define `run` and `check?`, and a custom trigger that doesn't define `notify`. Bluepill 0.3.0 fails the config.
 - A custom check or trigger whose `initialize` doesn't call `super`. Bluepill 0.3.0 gives it its logger only through `super`.

@@ -63,6 +63,23 @@ module Bluepill
                                                "Set the children's stop_command in the block.")
     end
 
+    # Warn about a daemon older than 0.2.9, which 0.3.0's CLI refuses
+    #
+    # A daemon older than 0.2.9 answers the CLI with its Version module,
+    # which Marshal loads as the CLI's own.
+    #
+    # @param [Module, String] version what the daemon answered
+    #
+    # @return [void]
+    #
+    # @api private
+    def self.check_daemon_version(version)
+      return if version.instance_of?(String)
+
+      warn(:daemon_version, "this daemon runs a bluepill older than 0.2.9, which the CLI of bluepill 0.3.0 says is out of date. " \
+                            "Run bluepill load again, so the daemon runs this version.")
+    end
+
     # The options that 0.3.0's Bluepill.application takes
     APPLICATION_OPTIONS = %i[foreground log_file log_level base_dir kill_timeout].freeze
 

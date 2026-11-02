@@ -228,7 +228,8 @@ module Bluepill
     #
     # A daemon older than 0.2.9 answers with its Version module, which
     # Marshal loads as the CLI's own, so it can't say which version it runs,
-    # and the CLI talks to it as before.
+    # and the CLI talks to it as before, with a warning, since bluepill
+    # 0.3.0's CLI refuses it.
     #
     # @param [String] application the application's name
     #
@@ -237,7 +238,7 @@ module Bluepill
     # @api private
     def verify_version!(application)
       version = Socket.client_command(base_dir, application, "version")
-      return if version.equal?(Version) || Version.to_s.eql?(version)
+      return Deprecation.check_daemon_version(version) if version.equal?(Version) || Version.to_s.eql?(version)
 
       abort("#{OUT_OF_DATE}\nDaemon Version: #{version}, CLI Version: #{Version}")
     rescue ArgumentError

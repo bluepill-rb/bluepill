@@ -53,6 +53,8 @@ module Bluepill
 
     def self.check_child_stop_command: (String parent_name, Hash[Symbol, untyped] attributes) -> void
 
+    def self.check_daemon_version: (Module | String version) -> void
+
     APPLICATION_OPTIONS: Array[Symbol]
 
     # Warns about options passed as a Hash, without **

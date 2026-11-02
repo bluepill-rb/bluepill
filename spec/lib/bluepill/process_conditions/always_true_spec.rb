@@ -14,6 +14,6 @@ describe Bluepill::ProcessConditions::AlwaysTrue do
   end
 
   it 'always passes' do
-    expect(subject.check(100)).to be true
+    expect(subject.check?(100)).to be true
   end
 end

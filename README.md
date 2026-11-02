@@ -335,7 +335,7 @@ If a pill file loads ActiveSupport, for example by loading a Rails app, ActiveSu
 
 ### Custom checks
 
-A check is a class in `Bluepill::ProcessConditions`, named after the check in camel case, so `checks :log_size` uses `LogSize`. Define it in the config file, before the application. It gets the check's options, except `every`, `times`, `fires`, and `include_children`, which bluepill handles. `run` reads a value, and `check` returns whether the value is fine:
+A check is a class in `Bluepill::ProcessConditions`, named after the check in camel case, so `checks :log_size` uses `LogSize`. Define it in the config file, before the application. It gets the check's options, except `every`, `times`, `fires`, and `include_children`, which bluepill handles. `run` reads a value, and `check?` returns whether the value is fine:
 
 ```ruby
 module Bluepill
@@ -351,7 +351,7 @@ module Bluepill
         File.size?(@path).to_i
       end
 
-      def check(size)
+      def check?(size)
         logger.warning("#{@path} is #{size} bytes") unless size < @below
         size < @below
       end
@@ -368,7 +368,7 @@ Bluepill.application("app_name") do |app|
 end
 ```
 
-`logger` writes to bluepill's log, with the app's and the process's names, like the built-in checks. It's set once `super` returns, so call `super` first in `initialize`.
+`logger` writes to bluepill's log, with the app's and the process's names, like the built-in checks. It's set once `super` returns, so call `super` first in `initialize`. A check written for bluepill 0.1, which defines `check` instead of `check?`, still works.
 
 ### Commands Don't Run in a Shell
 

@@ -49,7 +49,7 @@ module Bluepill
       #   for a missing file or an error
       #
       # @api private
-      def check(value)
+      def check?(value)
         value.is_a?(Numeric) && value < @below
       end
     end

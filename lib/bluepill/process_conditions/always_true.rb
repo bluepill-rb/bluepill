@@ -23,7 +23,7 @@ module Bluepill
       # @return [Boolean] always true
       #
       # @api private
-      def check(_value)
+      def check?(_value)
         true
       end
     end

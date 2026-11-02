@@ -174,3 +174,10 @@ Style/OneClassPerFile:
   Exclude:
     - lib/bluepill/units.rb
     - duel/duel_helper.rb
+
+# fire_event and before_transition do something and then say whether it
+# worked, so they aren't questions
+Naming/PredicateMethod:
+  AllowedMethods:
+    - fire_event
+    - before_transition

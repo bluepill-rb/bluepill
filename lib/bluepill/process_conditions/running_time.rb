@@ -44,7 +44,7 @@ module Bluepill
       # @return [Boolean] true when it's below the limit
       #
       # @api private
-      def check(value)
+      def check?(value)
         value < @below
       end
     end

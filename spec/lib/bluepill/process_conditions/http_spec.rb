@@ -155,29 +155,29 @@ describe Bluepill::ProcessConditions::Http do
     end
   end
 
-  describe '#check' do
+  describe '#check?' do
     it 'fails when the response is not of the expected kind' do
-      expect(http.check(response(Net::HTTPNotFound, '404', 'ok'))).to be false
+      expect(http.check?(response(Net::HTTPNotFound, '404', 'ok'))).to be false
     end
 
     it 'fails when the request raised an error' do
-      expect(http.check(Errno::ECONNREFUSED.new)).to be false
+      expect(http.check?(Errno::ECONNREFUSED.new)).to be false
     end
 
     it 'passes when the response is of the expected kind and there is no pattern' do
-      expect(http.check(response(Net::HTTPOK, '200'))).to be true
+      expect(http.check?(response(Net::HTTPOK, '200'))).to be true
     end
 
     it 'fails when a pattern is given and the response has no body' do
-      expect(http(pattern: /ok/).check(response(Net::HTTPNoContent, '204'))).to be false
+      expect(http(pattern: /ok/).check?(response(Net::HTTPNoContent, '204'))).to be false
     end
 
     it 'passes when the body matches the pattern' do
-      expect(http(pattern: /ok/).check(response(Net::HTTPOK, '200', 'all ok'))).to be_truthy
+      expect(http(pattern: /ok/).check?(response(Net::HTTPOK, '200', 'all ok'))).to be_truthy
     end
 
     it 'fails when the body does not match the pattern' do
-      expect(http(pattern: /ok/).check(response(Net::HTTPOK, '200', 'down'))).to be_falsey
+      expect(http(pattern: /ok/).check?(response(Net::HTTPOK, '200', 'down'))).to be_falsey
     end
   end
 end

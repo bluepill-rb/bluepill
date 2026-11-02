@@ -20,10 +20,10 @@ describe Bluepill::ProcessConditions::RunningTime do
   end
 
   it 'passes when the running time is below the limit' do
-    expect(subject.check(59)).to be true
+    expect(subject.check?(59)).to be true
   end
 
   it 'fails when the running time is not below the limit' do
-    expect(subject.check(60)).to be false
+    expect(subject.check?(60)).to be false
   end
 end

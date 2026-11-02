@@ -7,10 +7,10 @@ describe Bluepill::ProcessConditions::ZombieProcess do
   end
 
   it 'passes when the process is not defunct' do
-    expect(subject.check('ruby server.rb')).to be true
+    expect(subject.check?('ruby server.rb')).to be true
   end
 
   it 'fails when the process is defunct' do
-    expect(subject.check('[ruby] <defunct>')).to be false
+    expect(subject.check?('[ruby] <defunct>')).to be false
   end
 end

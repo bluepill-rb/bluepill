@@ -22,8 +22,8 @@ describe Bluepill::ProcessConditions::FileTime do
     end
 
     it 'checks against the given limit' do
-      expect(subject.check(59)).to be true
-      expect(subject.check(60)).to be false
+      expect(subject.check?(59)).to be true
+      expect(subject.check?(60)).to be false
     end
 
     it 'watches the given file' do
@@ -52,21 +52,21 @@ describe Bluepill::ProcessConditions::FileTime do
     end
   end
 
-  describe '#check' do
+  describe '#check?' do
     it 'fails when there is no value' do
-      expect(subject.check(nil)).to be false
+      expect(subject.check?(nil)).to be false
     end
 
     it 'fails when the file could not be read' do
-      expect(subject.check(Errno::EACCES.new(filename))).to be false
+      expect(subject.check?(Errno::EACCES.new(filename))).to be false
     end
 
     it 'passes when the file was modified recently' do
-      expect(subject.check(59)).to be true
+      expect(subject.check?(59)).to be true
     end
 
     it 'fails when the file was not modified recently' do
-      expect(subject.check(60)).to be false
+      expect(subject.check?(60)).to be false
     end
   end
 end

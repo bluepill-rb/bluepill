@@ -31,7 +31,7 @@ module Bluepill
       # @return [Boolean] true unless the command line says <defunct>
       #
       # @api private
-      def check(value)
+      def check?(value)
         (value =~ /<defunct>/).nil?
       end
     end

@@ -128,7 +128,7 @@ module Bluepill
           raise
         end
 
-        @history << HistoryValue.new(@process_condition.format_value(value), @process_condition.check(value))
+        @history << HistoryValue.new(@process_condition.format_value(value), @process_condition.check?(value))
         logger.info(to_s)
 
         return @fires if fired?

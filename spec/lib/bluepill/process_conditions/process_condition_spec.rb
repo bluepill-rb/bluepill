@@ -24,8 +24,19 @@ describe Bluepill::ProcessConditions::ProcessCondition do
     expect { subject.run(123, false) }.to raise_error('Implement in subclass!')
   end
 
-  it 'requires subclasses to implement #check' do
+  it 'requires subclasses to implement #check? or #check' do
+    expect { subject.check?(1) }.to raise_error('Implement in subclass!')
     expect { subject.check(1) }.to raise_error('Implement in subclass!')
+  end
+
+  it 'passes check? on to check, as bluepill 0.1 named it' do
+    old_style = Class.new(described_class) do
+      def check(value) # rubocop:disable Naming/PredicateMethod -- the name bluepill 0.1 used
+        value > 1
+      end
+    end.new
+    expect(old_style.check?(2)).to be true
+    expect(old_style.check?(1)).to be false
   end
 
   it 'formats values as is' do

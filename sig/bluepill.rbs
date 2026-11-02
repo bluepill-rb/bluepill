@@ -959,6 +959,7 @@ module Bluepill
       def run: (Integer? pid, boolish include_children) -> V
 
       # Whether the value is fine
+      def check?: (V value) -> bool
       def check: (V value) -> bool
 
       def format_value: (V value) -> V
@@ -967,7 +968,7 @@ module Bluepill
     class AlwaysTrue < ProcessCondition[Integer]
       def run: (Integer? pid, boolish include_children) -> Integer
 
-      def check: (Integer value) -> true
+      def check?: (Integer value) -> true
     end
 
     class CpuUsage < ProcessCondition[Float]
@@ -975,7 +976,7 @@ module Bluepill
 
       def run: (Integer? pid, boolish include_children) -> Float
 
-      def check: (Float value) -> bool
+      def check?: (Float value) -> bool
     end
 
     # Seconds since the file changed, or the error that stopped bluepill
@@ -986,7 +987,7 @@ module Bluepill
 
       def run: (Integer? pid, boolish include_children) -> (Float | StandardError | nil)
 
-      def check: (Float | StandardError | nil value) -> bool
+      def check?: (Float | StandardError | nil value) -> bool
     end
 
     class Http < ProcessCondition[Net::HTTPResponse | StandardError]
@@ -998,7 +999,7 @@ module Bluepill
 
       def run: (Integer? pid, boolish include_children) -> (Net::HTTPResponse | StandardError)
 
-      def check: (Net::HTTPResponse | StandardError value) -> bool
+      def check?: (Net::HTTPResponse | StandardError value) -> bool
 
       private
 
@@ -1016,7 +1017,7 @@ module Bluepill
 
       def run: (Integer? pid, boolish include_children) -> Float
 
-      def check: (Float value) -> bool
+      def check?: (Float value) -> bool
 
       def format_value: (Float value) -> String
     end
@@ -1027,14 +1028,14 @@ module Bluepill
 
       def run: (Integer? pid, boolish include_children) -> Integer
 
-      def check: (Integer value) -> bool
+      def check?: (Integer value) -> bool
     end
 
     # The process's command line, which says <defunct> for a zombie
     class ZombieProcess < ProcessCondition[String?]
       def run: (Integer? pid, boolish include_children) -> String?
 
-      def check: (String? value) -> bool
+      def check?: (String? value) -> bool
     end
   end
 

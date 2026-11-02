@@ -83,7 +83,7 @@ module Bluepill
       #   expects, and its body matches the pattern if the check has one
       #
       # @api private
-      def check(value)
+      def check?(value)
         return false unless value.is_a?(@kind)
         return true  unless @pattern
 

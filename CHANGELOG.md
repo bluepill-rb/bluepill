@@ -29,6 +29,7 @@ To upgrade, install 0.2.0 and run `bluepill load` with the same pill file. It re
 
 ### Changed
 
+- A check's method that says whether a value is fine is now `check?`. A custom check that defines `check`, as in bluepill 0.1, still works.
 - **Breaking:** an attribute in a `process` block that bluepill doesn't know, such as a misspelled `start_comand`, now fails when the config loads, naming the attribute and the process and suggesting the closest one. Before, bluepill accepted it and quietly ignored it ([#40](https://github.com/bluepill-rb/bluepill/issues/40)).
 - A process's logger works out its prefixes once, and writes straight to the log, so a log line takes 1 allocation instead of 10, and each check's run takes about 10% less time.
 - A process with a `uid` now runs with every group the user belongs to, as it would after logging in, and with the user's primary group when it sets no `gid`. Before, it got only its `gid` and `supplementary_groups`, and without a `gid` it kept the root group and root's other groups ([#28](https://github.com/bluepill-rb/bluepill/issues/28)).

@@ -19,21 +19,21 @@ describe Bluepill::ProcessConditions::MemUsage do
     expect(subject.run(123, false)).to eql(0.0)
   end
 
-  describe '#check' do
+  describe '#check?' do
     it 'passes when the usage is below the limit' do
-      expect(subject.check(99 * 1024)).to be true
+      expect(subject.check?(99 * 1024)).to be true
     end
 
     it 'reads the usage in kilobytes of 1024 bytes' do
-      expect(subject.check(102_399)).to be true
+      expect(subject.check?(102_399)).to be true
     end
 
     it 'fails when the usage is not below the limit' do
-      expect(subject.check(100 * 1024)).to be false
+      expect(subject.check?(100 * 1024)).to be false
     end
 
     it 'passes when the usage cannot be compared' do
-      expect(subject.check(nil)).to be true
+      expect(subject.check?(nil)).to be true
     end
   end
 

@@ -27,8 +27,8 @@ check('a watch waits out its interval') { watch.run(1, 105).equal?(Bluepill::Con
 check('a watch runs again after its interval') { watch.run(1, 110).empty? }
 
 # Memory below 100 megabytes, of a process using 1,024 kilobytes
-check('a memory limit') { Bluepill::ProcessConditions::MemUsage.new(below: 100.megabytes).check(1024.0) }
-check('a running time limit') { Bluepill::ProcessConditions::RunningTime.new(below: 24.hours).check(60) }
+check('a memory limit') { Bluepill::ProcessConditions::MemUsage.new(below: 100.megabytes).check?(1024.0) }
+check('a running time limit') { Bluepill::ProcessConditions::RunningTime.new(below: 24.hours).check?(60) }
 
 # Grace times, stop signals and their delays
 factory = Bluepill::ProcessFactory.new(

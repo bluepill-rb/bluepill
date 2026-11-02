@@ -52,6 +52,22 @@ module Bluepill
 
       # Return whether a value is fine
       #
+      # A subclass implements it. This one calls check, so a custom check
+      # written for bluepill 0.1, which defines check, still works.
+      #
+      # @param [Object] value what run read
+      #
+      # @return [Boolean] true when the value is fine, false when it's not
+      #
+      # @raise [RuntimeError] unless a subclass implements check? or check
+      #
+      # @api private
+      def check?(value)
+        check(value)
+      end
+
+      # Return whether a value is fine, as bluepill 0.1 named check?
+      #
       # @param [Object] _value what run read
       #
       # @return [Boolean] true when the value is fine, false when it's not

@@ -1086,6 +1086,28 @@ module Bluepill
   # Remembers the pids and process groups of the processes bluepill starts,
   # so it can kill any left over from an earlier run
   module ProcessJournal
+    extend Lock
+
+    # What the modules that ProcessJournal extends use from it
+    interface _Journal
+      def logger: () -> Logger
+
+      def journal_base_dir: () -> String
+    end
+
+    # Locks a journal while bluepill reads and writes it
+    module Lock : _Journal
+      def acquire_atomic_fs_lock: [T] (String name) { () -> T } -> T
+
+      def clear_all_atomic_fs_locks: () -> void
+
+      def clear_atomic_fs_lock: (String name) -> void
+
+      def make_atomic_fs_lock: (String lock) -> void
+
+      def wait_for_atomic_fs_lock: (String lock, Integer attempts) -> void
+    end
+
     self.@logger: Logger
     self.@journal_base_dir: String
     self.@legacy_journal_dir: String
@@ -1105,10 +1127,6 @@ module Bluepill
 
     def self.skip_pgid?: (Integer? pgid) -> bool
 
-    def self.acquire_atomic_fs_lock: [T] (String name) { () -> T } -> T
-
-    def self.clear_all_atomic_fs_locks: () -> void
-
     def self.pid_journal_filename: (String journal_name, ?String dir) -> String
 
     def self.pgid_journal_filename: (String journal_name, ?String dir) -> String
@@ -1121,8 +1139,6 @@ module Bluepill
     def self.pid_journal: (String filename) -> Array[Integer]
 
     def self.pgid_journal: (String filename) -> Array[Integer]
-
-    def self.clear_atomic_fs_lock: (String name) -> void
 
     def self.kill_all_from_journal: (String journal_name) -> void
 

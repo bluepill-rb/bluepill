@@ -1,4 +1,5 @@
 require "bluepill/system"
+require "bluepill/process_journal/lock"
 
 module Bluepill
   # Remember the pids and process groups of the processes bluepill starts
@@ -23,6 +24,8 @@ module Bluepill
   #
   # @api private
   module ProcessJournal
+    extend Lock
+
     class << self
       # Return the logger the journal writes to
       #
@@ -102,59 +105,6 @@ module Bluepill
     # @api private
     def self.skip_pgid?(pgid)
       !pgid.is_a?(Integer) || pgid <= 1
-    end
-
-    # Run a block while holding a lock on a journal
-    #
-    # The lock is a directory, since making one is atomic on POSIX
-    # filesystems and f.flock(File::LOCK_SH) is not available on all
-    # platforms. It waits up to 10 seconds for another process's lock.
-    #
-    # @param [String] name the journal's file name
-    #
-    # @yield while holding the lock
-    # @yieldreturn [Object] what the method returns
-    #
-    # @return [Object] what the block returns
-    #
-    # @raise [RuntimeError] if the lock is still held after 10 tries
-    #
-    # @api private
-    def self.acquire_atomic_fs_lock(name)
-      lock = "#{name}.lock"
-      times = 0
-      begin
-        Dir.mkdir lock, 0o700
-      rescue Errno::EEXIST
-        times += 1
-        if times < 10
-          logger.debug("Waiting for lock #{lock}")
-          sleep 1
-          retry
-        end
-        logger.info("Timeout waiting for lock #{lock}")
-        raise "Timeout waiting for lock #{lock}"
-      end
-      logger.debug("Acquired lock #{lock}")
-      begin
-        yield
-      ensure
-        clear_atomic_fs_lock(lock)
-      end
-    end
-
-    # Remove the app's journal locks, which a daemon that died left behind
-    #
-    # Without this, a stale lock would make the next write to its journal
-    # wait 10 seconds and fail.
-    #
-    # @return [void]
-    #
-    # @api private
-    def self.clear_all_atomic_fs_locks
-      Dir[File.join(journal_base_dir, ".*.lock")].each do |lock|
-        clear_atomic_fs_lock(lock)
-      end
     end
 
     # Return the path of a process's pid journal
@@ -242,20 +192,6 @@ module Bluepill
       result
     rescue Errno::ENOENT
       []
-    end
-
-    # Release a journal lock, if it's there
-    #
-    # @param [String] name the lock's directory
-    #
-    # @return [void]
-    #
-    # @api private
-    def self.clear_atomic_fs_lock(name)
-      return unless File.directory?(name)
-
-      Dir.rmdir(name)
-      logger.debug("Cleared lock #{name}")
     end
 
     # Kill the processes and process groups that a process's journals list

@@ -23,9 +23,9 @@ describe Bluepill::Group do
     it 'gives the process a prefixed logger and stores it' do
       process = process_double('unicorn')
       allow(logger).to receive(:prefix_with).with('unicorn').and_return(process_logger)
-      expect(process).to receive(:logger=).with(process_logger)
       group.add_process(process)
       expect(logger).to have_received(:prefix_with)
+      expect(process).to have_received(:logger=).with(process_logger)
       expect(group.processes).to eq([process])
     end
   end
@@ -42,17 +42,21 @@ describe Bluepill::Group do
 
     describe '#tick' do
       it 'ticks every process' do
-        expect(first).to receive(:tick)
-        expect(second).to receive(:tick)
+        allow(first).to receive(:tick)
+        allow(second).to receive(:tick)
         group.tick
+        expect(first).to have_received(:tick)
+        expect(second).to have_received(:tick)
       end
     end
 
     describe '#determine_initial_state' do
       it 'determines the initial state of every process' do
-        expect(first).to receive(:determine_initial_state)
-        expect(second).to receive(:determine_initial_state)
+        allow(first).to receive(:determine_initial_state)
+        allow(second).to receive(:determine_initial_state)
         group.determine_initial_state
+        expect(first).to have_received(:determine_initial_state)
+        expect(second).to have_received(:determine_initial_state)
       end
     end
 
@@ -70,28 +74,36 @@ describe Bluepill::Group do
         it 'runs blocking commands one at a time' do
           [first, second].each do |process|
             allow(process).to receive("group_#{event}_noblock").and_return(false)
-            expect(process).to receive(:handle_user_command).with(event.to_s)
+            allow(process).to receive(:handle_user_command)
           end
-          expect(logger).to receive(:debug).with("Command #{event} running in blocking mode.").twice
-          expect(thread).to receive(:join).twice
           expect(group.send(event)).to eq(['web:first', 'web:second'])
+          [first, second].each do |process|
+            expect(process).to have_received(:handle_user_command).with(event.to_s)
+          end
+          expect(logger).to have_received(:debug).with("Command #{event} running in blocking mode.").twice
+          expect(thread).to have_received(:join).twice
         end
 
         it 'runs non-blocking commands in parallel' do
           [first, second].each do |process|
             allow(process).to receive("group_#{event}_noblock").and_return(true)
-            expect(process).to receive(:handle_user_command).with(event.to_s)
+            allow(process).to receive(:handle_user_command)
           end
-          expect(logger).to receive(:debug).with("Command #{event} running in non-blocking mode.").twice
-          expect(thread).to receive(:join).twice
           expect(group.send(event)).to eq(['web:first', 'web:second'])
+          [first, second].each do |process|
+            expect(process).to have_received(:handle_user_command).with(event.to_s)
+          end
+          expect(logger).to have_received(:debug).with("Command #{event} running in non-blocking mode.").twice
+          expect(thread).to have_received(:join).twice
         end
 
         it 'only affects the named process' do
           allow(second).to receive("group_#{event}_noblock").and_return(false)
-          expect(first).not_to receive(:handle_user_command)
-          expect(second).to receive(:handle_user_command).with(event.to_s)
+          allow(first).to receive(:handle_user_command)
+          allow(second).to receive(:handle_user_command)
           expect(group.send(event, 'second')).to eq(['web:second'])
+          expect(first).not_to have_received(:handle_user_command)
+          expect(second).to have_received(:handle_user_command).with(event.to_s)
         end
       end
     end

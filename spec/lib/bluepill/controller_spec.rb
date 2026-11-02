@@ -10,6 +10,10 @@ describe Bluepill::Controller do
     File.open(File.join(base_dir, *path), 'w') { |f| yield f if block_given? }
   end
 
+  def exit_with(status)
+    raise_error(an_instance_of(SystemExit).and(having_attributes(status: status)))
+  end
+
   def stub_daemon(command, response)
     allow(Bluepill::Socket).to receive(:client_command).
       with(base_dir, 'app', 'version').and_return(Bluepill::Version)
@@ -71,111 +75,111 @@ describe Bluepill::Controller do
   describe '#handle_command' do
     it 'prints the status' do
       stub_daemon('status:web', "web:\n")
-      expect(controller).to receive(:puts).with("web:\n")
-      controller.handle_command('app', 'status', 'web')
+      expect { controller.handle_command('app', 'status', 'web') }.to output("web:\n").to_stdout
     end
 
     it 'prints the status of every process' do
       stub_daemon('status', "web:\n")
-      expect(controller).to receive(:puts).with("web:\n")
-      controller.handle_command('app', 'status')
+      expect { controller.handle_command('app', 'status') }.to output("web:\n").to_stdout
     end
 
     describe 'quit' do
       before do
         controller
         touch('pids', 'app.pid') { |f| f.write('789') }
+        allow(Bluepill::System).to receive(:pid_alive?).and_return(false)
+        allow(::Process).to receive(:kill)
+      end
+
+      def quit
+        controller.handle_command('app', 'quit')
       end
 
       it 'kills a running daemon' do
         allow(Bluepill::System).to receive(:pid_alive?).with(789).and_return(true)
-        expect(::Process).to receive(:kill).with('TERM', 789)
-        expect(controller).to receive(:puts).with('Killing bluepilld[789]')
-        controller.handle_command('app', 'quit')
+        expect { quit }.to output("Killing bluepilld[789]\n").to_stdout
+        expect(::Process).to have_received(:kill).with('TERM', 789)
       end
 
       it 'kills a daemon with pid 1, as in a container' do
         touch('pids', 'app.pid') { |f| f.write('1') }
         allow(Bluepill::System).to receive(:pid_alive?).with(1).and_return(true)
-        expect(::Process).to receive(:kill).with('TERM', 1)
-        expect(controller).to receive(:puts).with('Killing bluepilld[1]')
-        controller.handle_command('app', 'quit')
+        expect { quit }.to output("Killing bluepilld[1]\n").to_stdout
+        expect(::Process).to have_received(:kill).with('TERM', 1)
       end
 
       it 'reports a daemon without a pid file' do
         File.delete(File.join(base_dir, 'pids', 'app.pid'))
-        expect(Bluepill::System).not_to receive(:pid_alive?)
-        expect(controller).to receive(:puts).with('bluepilld[false] not running')
-        controller.handle_command('app', 'quit')
+        expect { quit }.to output("bluepilld[false] not running\n").to_stdout
+        expect(Bluepill::System).not_to have_received(:pid_alive?)
       end
 
       it 'reports a daemon that is not running' do
-        allow(Bluepill::System).to receive(:pid_alive?).with(789).and_return(false)
-        expect(::Process).not_to receive(:kill)
-        expect(controller).to receive(:puts).with('bluepilld[789] not running')
-        controller.handle_command('app', 'quit')
+        expect { quit }.to output("bluepilld[789] not running\n").to_stdout
+        expect(Bluepill::System).to have_received(:pid_alive?).with(789)
+        expect(::Process).not_to have_received(:kill)
       end
 
       ['', 'garbage'].each do |contents|
         it "does not kill anything when the pid file holds #{contents.inspect}" do
           touch('pids', 'app.pid') { |f| f.write(contents) }
-          expect(Bluepill::System).not_to receive(:pid_alive?)
-          expect(::Process).not_to receive(:kill)
-          expect(controller).to receive(:puts).with('bluepilld[false] not running')
-          controller.handle_command('app', 'quit')
+          expect { quit }.to output("bluepilld[false] not running\n").to_stdout
+          expect(Bluepill::System).not_to have_received(:pid_alive?)
+          expect(::Process).not_to have_received(:kill)
         end
       end
     end
 
     describe 'log' do
-      before { allow(controller).to receive(:puts) }
+      before do
+        allow(controller).to receive(:puts)
+        allow(Kernel).to receive(:exec)
+      end
 
       it 'tails the log file reported by the daemon' do
         stub_daemon('log_file', '/tmp/app.log')
-        expect(controller).to receive(:puts).with('Tailing log for web...')
-        expect(Kernel).to receive(:exec).with("tail -n 100 -f /tmp/app.log | grep -E '\\[.*app:web.*'")
         controller.handle_command('app', 'log', 'web')
+        expect(controller).to have_received(:puts).with('Tailing log for web...')
+        expect(Kernel).to have_received(:exec).with("tail -n 100 -f /tmp/app.log | grep -E '\\[.*app:web.*'")
       end
 
       it 'uses only the first argument as the pattern' do
         stub_daemon('log_file', '/tmp/app.log')
-        expect(Kernel).to receive(:exec).with("tail -n 100 -f /tmp/app.log | grep -E '\\[.*app:web.*'")
         controller.handle_command('app', 'log', 'web', 'extra')
+        expect(Kernel).to have_received(:exec).with("tail -n 100 -f /tmp/app.log | grep -E '\\[.*app:web.*'")
       end
 
       it 'falls back to its own log file when the daemon logs to syslog' do
         stub_daemon('log_file', nil)
-        expect(Kernel).to receive(:exec).with("tail -n 100 -f /var/log/bluepill.log | grep -E '\\[.*app.*'")
         controller.handle_command('app', :log)
+        expect(Kernel).to have_received(:exec).with("tail -n 100 -f /var/log/bluepill.log | grep -E '\\[.*app.*'")
       end
 
       it 'falls back to its own log file' do
         stub_daemon('log_file', ' ')
-        expect(Kernel).to receive(:exec).with("tail -n 100 -f /var/log/bluepill.log | grep -E '\\[.*app.*'")
         controller.handle_command('app', :log)
+        expect(Kernel).to have_received(:exec).with("tail -n 100 -f /var/log/bluepill.log | grep -E '\\[.*app.*'")
       end
     end
 
     describe 'process commands' do
       it 'prints the affected processes' do
         stub_daemon('start:web', ['web:first', 'web:second'])
-        expect(controller).to receive(:puts).with('Sent start to:').ordered
-        expect(controller).to receive(:puts).with('  web:first').ordered
-        expect(controller).to receive(:puts).with('  web:second').ordered
-        controller.handle_command('app', 'start', 'web')
+        expect { controller.handle_command('app', 'start', 'web') }.to output(
+          "Sent start to:\n  web:first\n  web:second\n"
+        ).to_stdout
       end
 
       it 'says when no process was affected' do
         stub_daemon('stop', [])
-        expect(controller).to receive(:puts).with('No processes effected')
-        controller.handle_command('app', 'stop')
+        expect { controller.handle_command('app', 'stop') }.to output("No processes effected\n").to_stdout
       end
     end
 
     it 'exits on an unknown command' do
-      expect($stderr).to receive(:puts).with('Unknown command `bogus` (or application `bogus` has not been loaded yet)')
-      expect(controller).to receive(:exit).with(1)
-      controller.handle_command('app', 'bogus')
+      expect { controller.handle_command('app', 'bogus') }.to exit_with(1).and output(
+        "Unknown command `bogus` (or application `bogus` has not been loaded yet)\n"
+      ).to_stderr
     end
   end
 
@@ -189,43 +193,42 @@ describe Bluepill::Controller do
       error = RuntimeError.new('boom')
       error.set_backtrace(['a.rb:1', 'b.rb:2'])
       stub_daemon('status', error)
-      expect($stderr).to receive(:puts).with('Received error from server:').ordered
-      expect($stderr).to receive(:puts).with(error.inspect).ordered
-      expect($stderr).to receive(:puts).with("a.rb:1\nb.rb:2").ordered
-      expect(controller).to receive(:exit).with(8)
-      controller.send_to_daemon('app', :status)
+      expect { controller.send_to_daemon('app', :status) }.to exit_with(8).and output(
+        "Received error from server:\n#{error.inspect}\na.rb:1\nb.rb:2\n"
+      ).to_stderr
     end
 
     it 'exits when the daemon returns an error without a backtrace' do
       error = RuntimeError.new('boom')
       stub_daemon('status', error)
-      allow($stderr).to receive(:puts)
-      expect($stderr).to receive(:puts).with('')
-      expect(controller).to receive(:exit).with(8)
-      controller.send_to_daemon('app', :status)
+      expect { controller.send_to_daemon('app', :status) }.to exit_with(8).and output(
+        "Received error from server:\n#{error.inspect}\n\n"
+      ).to_stderr
     end
 
     it 'aborts when the daemon refuses the connection' do
       allow(Bluepill::Socket).to receive(:client_command).and_raise(Errno::ECONNREFUSED)
-      expect(controller).to receive(:abort).with('Connection Refused: Server is not running')
-      controller.send_to_daemon('app', :status)
+      expect { controller.send_to_daemon('app', :status) }.to exit_with(1).and output(
+        "Connection Refused: Server is not running\n"
+      ).to_stderr
     end
 
     it 'aborts when the daemon version differs' do
       stub_daemon('status', 'up')
       allow(Bluepill::Socket).to receive(:client_command).
         with(base_dir, 'app', 'version').and_return('0.0.1')
-      expect(controller).to receive(:abort).
-        with("The running version of your daemon seems to be out of date.\nDaemon Version: 0.0.1, CLI Version: #{Bluepill::Version}")
-      expect(controller.send_to_daemon('app', :status)).to eq('up')
+      expect { controller.send_to_daemon('app', :status) }.to exit_with(1).and output(
+        "The running version of your daemon seems to be out of date.\nDaemon Version: 0.0.1, CLI Version: #{Bluepill::Version}\n"
+      ).to_stderr
     end
 
     it 'aborts when the daemon does not understand the version command' do
       stub_daemon('status', 'up')
       allow(Bluepill::Socket).to receive(:client_command).
         with(base_dir, 'app', 'version').and_raise(ArgumentError)
-      expect(controller).to receive(:abort).with('The running version of your daemon seems to be out of date.')
-      expect(controller.send_to_daemon('app', :status)).to eq('up')
+      expect { controller.send_to_daemon('app', :status) }.to exit_with(1).and output(
+        "The running version of your daemon seems to be out of date.\n"
+      ).to_stderr
     end
   end
 

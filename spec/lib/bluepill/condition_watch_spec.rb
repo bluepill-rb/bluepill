@@ -40,9 +40,14 @@ describe Bluepill::ConditionWatch do
     end
 
     it 'passes the remaining options and its logger to the process condition' do
-      options = {below: 50, logger: logger}
-      expect(Bluepill::ProcessConditions::CpuUsage).to receive(:new).with(options).and_call_original
+      # The condition takes its logger out of the options, so they're copied
+      received = []
+      allow(Bluepill::ProcessConditions::CpuUsage).to receive(:new).and_wrap_original do |new, options|
+        received << options.dup
+        new.call(options)
+      end
       watch
+      expect(received).to eq([{below: 50, logger: logger}])
     end
 
     it 'passes include_children to the process condition' do

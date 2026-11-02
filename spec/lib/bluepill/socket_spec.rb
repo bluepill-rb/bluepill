@@ -94,9 +94,9 @@ describe Bluepill::Socket do
         end
 
         it 'prints an error and exit' do
-          expect($stderr).to receive(:puts).with('Server is already running!')
-          expect(described_class).to receive(:exit).with(7)
-          described_class.server(base_dir, 'app')
+          expect { described_class.server(base_dir, 'app') }.to raise_error(
+            an_instance_of(SystemExit).and(having_attributes(status: 7))
+          ).and output("Server is already running!\n").to_stderr
         end
       end
     end

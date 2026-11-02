@@ -144,8 +144,9 @@ describe Bluepill::ProcessJournal do
     it 'waits until the lock is released' do
       Dir.mkdir("#{name}.lock")
       yielded = false
-      expect(journal).to(receive(:sleep).with(1).once { Dir.rmdir("#{name}.lock") })
+      allow(journal).to(receive(:sleep) { Dir.rmdir("#{name}.lock") })
       journal.acquire_atomic_fs_lock(name) { yielded = true }
+      expect(journal).to have_received(:sleep).with(1).once
       expect(yielded).to be true
       expect(File.exist?("#{name}.lock")).to be false
       expect(File.exist?("#{name}.lock.lock")).to be false
@@ -154,10 +155,10 @@ describe Bluepill::ProcessJournal do
 
     it 'gives up after 10 attempts without removing the other lock' do
       Dir.mkdir("#{name}.lock")
-      expect(journal).to receive(:sleep).with(1).exactly(9).times
       expect do
         journal.acquire_atomic_fs_lock(name) { raise 'should not yield' }
       end.to raise_error("Timeout waiting for lock #{name}.lock")
+      expect(journal).to have_received(:sleep).with(1).exactly(9).times
       expect(File.directory?("#{name}.lock")).to be true
       expect(log).to eq ([[:debug, "Waiting for lock #{name}.lock"]] * 9) +
         [[:info, "Timeout waiting for lock #{name}.lock"]]
@@ -249,9 +250,11 @@ describe Bluepill::ProcessJournal do
 
   describe '.kill_all_from_journal' do
     it 'kills pids and pgids' do
-      expect(journal).to receive(:kill_all_pids_from_journal).with('app')
-      expect(journal).to receive(:kill_all_pgids_from_journal).with('app')
+      allow(journal).to receive(:kill_all_pids_from_journal)
+      allow(journal).to receive(:kill_all_pgids_from_journal)
       journal.kill_all_from_journal('app')
+      expect(journal).to have_received(:kill_all_pids_from_journal).with('app').once
+      expect(journal).to have_received(:kill_all_pgids_from_journal).with('app').once
     end
   end
 
@@ -273,9 +276,10 @@ describe Bluepill::ProcessJournal do
       end
 
       it 'skips cleanup without a journal' do
-        expect(::Process).not_to receive(:kill)
-        expect(Bluepill::System).not_to receive(:delete_if_exists)
+        allow(Bluepill::System).to receive(:delete_if_exists)
         journal.send(method, 'app')
+        expect(::Process).not_to have_received(:kill)
+        expect(Bluepill::System).not_to have_received(:delete_if_exists)
         expect(log).to eq [
           [:debug, "#{kind} journal file: #{filename}"],
           [:debug, 'No previous process journal - Skipping cleanup'],
@@ -285,9 +289,9 @@ describe Bluepill::ProcessJournal do
       it 'also kills what the journal from before 0.2 lists, and resets it' do
         write_journal(filename, [42])
         write_journal(legacy_filename, [43])
-        expect(::Process).to receive(:kill).with('TERM', sign * 42).ordered
-        expect(::Process).to receive(:kill).with('TERM', sign * 43).ordered
         journal.send(method, 'app')
+        expect(::Process).to have_received(:kill).with('TERM', sign * 42).once.ordered
+        expect(::Process).to have_received(:kill).with('TERM', sign * 43).once.ordered
         expect(File.exist?(filename)).to be false
         expect(File.exist?(legacy_filename)).to be false
         expect(File.exist?("#{legacy_filename}.lock")).to be false
@@ -297,8 +301,8 @@ describe Bluepill::ProcessJournal do
       it 'leaves alone an id that now belongs to another process, and resets the journal' do
         File.write(filename, "42 20000\n")
         allow(Bluepill::System).to receive(:started_at).with(42).and_return(50_000)
-        expect(::Process).not_to receive(:kill)
         journal.send(method, 'app')
+        expect(::Process).not_to have_received(:kill)
         expect(File.exist?(filename)).to be false
         expect(log).to include([:info, "Skipping old #{label} 42, which isn't the one bluepill started"])
       end
@@ -307,17 +311,17 @@ describe Bluepill::ProcessJournal do
         other = journal.send(filename_method, 'app', File.join(legacy_dir, 'other'))
         Dir.mkdir(File.dirname(other))
         write_journal(other, [44])
-        expect(::Process).not_to receive(:kill)
         journal.send(method, 'app')
+        expect(::Process).not_to have_received(:kill)
         expect(File.read(other)).to eq "44\n"
       end
 
       it 'terms the journaled ids and resets the journal' do
         write_journal(filename, [42, 43])
-        expect(::Process).to receive(:kill).with('TERM', sign * 42)
         allow(::Process).to receive(:kill).with('TERM', sign * 43).and_raise(Errno::ESRCH)
-        expect(journal).not_to receive(:sleep)
         journal.send(method, 'app')
+        expect(::Process).to have_received(:kill).with('TERM', sign * 42).once
+        expect(journal).not_to have_received(:sleep)
         expect(File.exist?(filename)).to be false
         expect(File.exist?("#{filename}.lock")).to be false
         expect(log).to eq journal_log([42, 43]) + [
@@ -332,10 +336,10 @@ describe Bluepill::ProcessJournal do
       it 'kills a single id that survives TERM' do
         write_journal(filename, [42])
         allow(Bluepill::System).to receive(:pid_alive?).with(sign * 42).and_return(true)
-        expect(::Process).to receive(:kill).with('TERM', sign * 42)
-        expect(journal).to receive(:sleep).with(1)
-        expect(::Process).to receive(:kill).with('KILL', sign * 42)
         journal.send(method, 'app')
+        expect(::Process).to have_received(:kill).with('TERM', sign * 42).once
+        expect(journal).to have_received(:sleep).with(1).once
+        expect(::Process).to have_received(:kill).with('KILL', sign * 42).once
         expect(File.exist?(filename)).to be false
         expect(log).to eq journal_log([42]) + [
           [:debug, "Acquired lock #{filename}.lock"],
@@ -350,11 +354,12 @@ describe Bluepill::ProcessJournal do
         write_journal(filename, [42, 43, 44])
         alive = {42 => true, 43 => true, 44 => false}
         allow(Bluepill::System).to receive(:pid_alive?) { |id| alive[sign * id] }
-        expect(journal).to(receive(:sleep).with(1).once { alive[43] = false })
+        allow(journal).to(receive(:sleep) { alive[43] = false })
         allow(::Process).to receive(:kill).with('KILL', sign * 42).and_raise(Errno::ESRCH)
-        expect(::Process).not_to receive(:kill).with('KILL', sign * 43)
-        expect(::Process).not_to receive(:kill).with('KILL', sign * 44)
         journal.send(method, 'app')
+        expect(journal).to have_received(:sleep).with(1).once
+        expect(::Process).not_to have_received(:kill).with('KILL', sign * 43)
+        expect(::Process).not_to have_received(:kill).with('KILL', sign * 44)
         expect(File.exist?(filename)).to be false
         expect(log).to include([:debug, "Unable to kill missing #{label} 42"])
       end
@@ -370,8 +375,8 @@ describe Bluepill::ProcessJournal do
       end
 
       it "appends new #{kind}s once, under the journal lock" do
-        expect(journal).to receive(:acquire_atomic_fs_lock).with(filename).twice.and_call_original
-        expect(File).to receive(:open).with(filename, 'a+', 0o600).and_call_original
+        allow(journal).to receive(:acquire_atomic_fs_lock).and_call_original
+        allow(File).to receive(:open).and_call_original
         journal.send(method, 'app', 42)
         expect(log).to eq [
           [:debug, "Acquired lock #{filename}.lock"],
@@ -392,6 +397,8 @@ describe Bluepill::ProcessJournal do
         ]
         expect(File.read(filename)).to eq "42\n"
         expect(File.stat(filename).mode & 0o777).to eq 0o600
+        expect(journal).to have_received(:acquire_atomic_fs_lock).with(filename).twice
+        expect(File).to have_received(:open).with(filename, 'a+', 0o600).once
       end
 
       it "journals when the #{kind}'s process started" do
@@ -402,8 +409,9 @@ describe Bluepill::ProcessJournal do
 
       [nil, 0, 1, '42'].each do |id|
         it "skips the invalid #{kind} #{id.inspect}" do
-          expect(::Process).not_to receive(:getpgid)
+          allow(::Process).to receive(:getpgid)
           journal.send(method, 'app', id)
+          expect(::Process).not_to have_received(:getpgid)
           expect(File.exist?(filename)).to be false
           expect(log).to eq [[:debug, "Skipping invalid #{kind} #{id} (class #{id.class})"]]
         end
@@ -512,9 +520,10 @@ describe Bluepill::ProcessJournal do
     end
 
     it 'journals the pid and its process group' do
-      expect(::Process).to receive(:getpgid).with(42).twice.and_return(40)
+      allow(::Process).to receive(:getpgid).with(42).and_return(40)
       journal.append_pid_to_journal('app', 42)
       journal.append_pid_to_journal('app', 42)
+      expect(::Process).to have_received(:getpgid).twice
       expect(File.read(filename)).to eq "42\n"
       expect(File.read(journal.pgid_journal_filename('app'))).to eq "40\n"
     end

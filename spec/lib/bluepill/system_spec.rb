@@ -351,15 +351,17 @@ describe Bluepill::System do
 
   describe '.delete_if_exists' do
     it 'does nothing for a nil filename' do
-      expect(File).not_to receive(:unlink)
+      allow(File).to receive(:unlink)
       described_class.delete_if_exists(nil)
+      expect(File).not_to have_received(:unlink)
     end
 
     it 'does nothing if the file does not exist' do
       allow(File).to receive(:exist?).with('missing').and_return(false)
-      expect(File).not_to receive(:unlink)
+      allow(File).to receive(:unlink)
       described_class.delete_if_exists('missing')
       expect(File).to have_received(:exist?).once
+      expect(File).not_to have_received(:unlink)
     end
 
     it 'deletes an existing file' do
@@ -380,9 +382,11 @@ describe Bluepill::System do
 
     it 'retries and then warns when permission is denied' do
       allow(File).to receive(:exist?).with('file').and_return(true)
-      expect(File).to receive(:unlink).with('file').exactly(3).times.and_raise(Errno::EACCES)
-      expect($stderr).to receive(:puts).with('Warning: permission denied trying to delete file')
+      allow(File).to receive(:unlink).with('file').and_raise(Errno::EACCES)
+      allow($stderr).to receive(:puts)
       described_class.delete_if_exists('file')
+      expect(File).to have_received(:unlink).exactly(3).times
+      expect($stderr).to have_received(:puts).with('Warning: permission denied trying to delete file').once
     end
   end
 
@@ -422,17 +426,20 @@ describe Bluepill::System do
       it "doesn't kill a command that finishes within its timeout" do
         allow(IO).to receive(:select).with([rd], nil, nil, 2.5).and_return([[rd], [], []])
         allow(rd).to receive(:read).and_return('')
-        expect(Process).not_to receive(:kill)
+        allow(Process).to receive(:kill)
         expect(described_class.execute_blocking('cmd', timeout: 2.5)).to eq(exit_code: 0, stdout: '', stderr: '')
+        expect(Process).not_to have_received(:kill)
         expect(IO).to have_received(:select).once
       end
 
       it "kills the command's process group when it runs past its timeout" do
         allow(IO).to receive(:select).with([rd], nil, nil, 2.0).and_return(nil)
-        expect(Process).to receive(:kill).with('KILL', -123)
-        expect(rd).not_to receive(:read)
+        allow(Process).to receive(:kill)
+        allow(rd).to receive(:read)
         expect { described_class.execute_blocking('cmd', timeout: 2) }.
           to raise_error(Timeout::Error, 'cmd took longer than 2 seconds')
+        expect(Process).to have_received(:kill).with('KILL', -123).once
+        expect(rd).not_to have_received(:read)
         expect(IO).to have_received(:select).once
         expect(rd).to have_received(:close)
       end
@@ -499,16 +506,17 @@ describe Bluepill::System do
         allow(described_class).to receive(:exec).and_raise('exec must be called on Kernel')
         allow(Process).to receive(:waitpid2).with(456).and_return([456, status])
         allow(Process).to receive(:exit!)
+        allow(Process).to receive(:setpgid)
       end
 
       it 'leads a process group of its own with a timeout' do
-        expect(Process).to receive(:setpgid).with(0, 0)
         described_class.execute_blocking('echo', timeout: 5)
+        expect(Process).to have_received(:setpgid).with(0, 0).once
       end
 
       it "stays in bluepill's process group without a timeout" do
-        expect(Process).not_to receive(:setpgid)
         described_class.execute_blocking('echo')
+        expect(Process).not_to have_received(:setpgid)
       end
 
       it 'execs the command and reports its output and exit code' do
@@ -611,7 +619,7 @@ describe Bluepill::System do
     end
 
     it 'parses ps output into a hash keyed by pid' do
-      expect(described_class).to receive(:`).with('ps -Ao pid,ppid,pcpu,rss,etime,args').once.and_return(output)
+      allow(described_class).to receive(:`).and_return(output)
       expected = {
         0 => %w[PID PPID %CPU RSS ELAPSED ARGS],
         1 => ['1', '0', '0.0', '1234', '10-01:02:03', '/sbin/init'],
@@ -619,15 +627,17 @@ describe Bluepill::System do
       }
       expect(described_class.ps_axu).to eq(expected)
       expect(described_class.ps_axu).to eq(expected)
+      expect(described_class).to have_received(:`).with('ps -Ao pid,ppid,pcpu,rss,etime,args').once
     end
 
     it 'onlies run ps once when called from several threads at once' do
-      expect(described_class).to receive(:`).once do
+      allow(described_class).to receive(:`) do
         sleep 0.05
         output
       end
       threads = Array.new(5) { Thread.new { described_class.ps_axu } }
       expect(threads.collect(&:value).uniq.size).to eq(1)
+      expect(described_class).to have_received(:`).once
     end
 
     it "raises a PsError and doesn't retry until the next tick if ps cannot be run" do
@@ -667,8 +677,9 @@ describe Bluepill::System do
 
     it 'does nothing unless running as root' do
       allow(Process::Sys).to receive(:geteuid).and_return(501)
-      expect(Etc).not_to receive(:getpwnam)
+      allow(Etc).to receive(:getpwnam)
       described_class.drop_privileges('user', 'group', ['extra'])
+      expect(Etc).not_to have_received(:getpwnam)
       expect(Process::Sys).not_to have_received(:setuid)
     end
 
@@ -722,8 +733,9 @@ describe Bluepill::System do
         allow(Etc).to receive(:getgrnam).with('group').and_return(instance_double(Etc::Group, gid: 20))
         allow(Etc).to receive(:getgrnam).with('extra').and_return(instance_double(Etc::Group, gid: 30))
         allow(Process).to receive(:groups).and_return([20])
-        expect(Process).not_to receive(:initgroups)
+        allow(Process).to receive(:initgroups)
         described_class.drop_privileges(nil, 'group', ['extra'])
+        expect(Process).not_to have_received(:initgroups)
         expect(Process).to have_received(:groups=).with([20]).ordered
         expect(Process).to have_received(:groups=).with([20, 30]).ordered
         expect(Process::Sys).to have_received(:setgid).with(20)
@@ -761,9 +773,10 @@ describe Bluepill::System do
         rescue Errno::ENOENT => e
           "Errno::ENOENT - #{e.message}"
         end
-        expect(logger).to receive(:warning).with(message)
-        expect(logger).to receive(:warning).at_least(:once).with(kind_of(String))
+        allow(logger).to receive(:warning)
         expect(described_class.can_write_pid_file(pid_file, logger)).to be false
+        expect(logger).to have_received(:warning).with(message).once
+        expect(logger).to have_received(:warning).with(kind_of(String)).at_least(:twice)
       end
     end
   end

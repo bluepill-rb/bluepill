@@ -149,7 +149,8 @@ module Bluepill
     # Start the daemon and monitor the application's processes
     #
     # It prints what went wrong, and exits with status 5, if the daemon
-    # fails to start.
+    # fails to start. Whatever stops it is also logged at crit, with its
+    # backtrace, since a daemon's stderr is /dev/null.
     #
     # @return [void]
     #
@@ -157,6 +158,7 @@ module Bluepill
     def load
       start_server
     rescue => e
+      log_crash(e)
       $stderr.puts("Failed to start bluepill:")
       $stderr.puts(format("%s `%s`", e.class.name, e.message))
       $stderr.puts(e.backtrace)
@@ -256,6 +258,17 @@ module Bluepill
     end
 
     protected
+
+    # Log an error that stopped the daemon at crit, with its backtrace
+    #
+    # @param [StandardError] error the error
+    #
+    # @return [void]
+    #
+    # @api private
+    def log_crash(error)
+      [format("Bluepill stopped: %s `%s`", error.class, error.message), *error.backtrace].each { |line| logger.crit(line) }
+    end
 
     # Send a command to a process, a group, or every process
     #

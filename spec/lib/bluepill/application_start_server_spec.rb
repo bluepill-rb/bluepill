@@ -3,7 +3,7 @@
 require "tmpdir"
 
 describe Bluepill::Application do
-  let(:logger) { instance_double(Bluepill::Logger) }
+  let(:logger) { instance_double(Bluepill::Logger, crit: nil) }
   let(:base_dir) { Dir.mktmpdir }
   let(:app) { described_class.new("test", base_dir: base_dir) }
   let(:group) { instance_double(Bluepill::Group) }
@@ -105,6 +105,22 @@ describe Bluepill::Application do
       error.set_backtrace(["a.rb:1"])
       allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks).and_raise(error)
       expect { app.load }.to exit_with(5).and output("Failed to start bluepill:\nRuntimeError `boom`\na.rb:1\n").to_stderr
+    end
+
+    # Load the app with a startup that raises error, past its exit and quietly
+    def fail_load(error)
+      allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks).and_raise(error)
+      allow($stderr).to receive(:puts)
+      app.load
+    rescue SystemExit
+      nil
+    end
+
+    it "logs the error and its backtrace at crit, since the daemon's stderr is /dev/null" do
+      fail_load(RuntimeError.new("boom").tap { |e| e.set_backtrace(["a.rb:1", "b.rb:2"]) })
+      [["Bluepill stopped: RuntimeError `boom`"], ["a.rb:1"], ["b.rb:2"]].each do |args|
+        expect(logger).to have_received(:crit).with(*args).ordered
+      end
     end
 
     it "reports the message of an error from an anonymous class" do

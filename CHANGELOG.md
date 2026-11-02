@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - An exception in a check or trigger no longer stops the daemon. It's logged, with its backtrace a line each, and the check is skipped until its next interval, so it doesn't count toward `times`. Before, it stopped the daemon with exit status 5, and the log showed the backtrace as one Array.
 - The CLI's check that the daemon runs the same version of bluepill never failed: the daemon now answers with its version as a String. A daemon older than 0.2.9 can't say which version it runs, so the CLI talks to it as before, and a CLI older than 0.2.9 says that a 0.2.9 daemon is out of date.
+- The daemon logs what stops it at `crit`, with its backtrace, since its stderr is `/dev/null`.
 
 ### Security
 

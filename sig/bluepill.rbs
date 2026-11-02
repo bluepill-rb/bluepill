@@ -368,6 +368,7 @@ module Bluepill
   # A monitored process
   class Process
     include ProcessCommands
+    include Pid
 
     CONFIGURABLE_ATTRIBUTES: Array[Symbol]
 
@@ -499,13 +500,35 @@ module Bluepill
 
     def handle_user_command: (String cmd) -> void
 
-    def process_running?: (?bool force) -> bool
-
     def clean_threads: () -> void
 
     def daemonize?: () -> bool
 
     def monitor_children?: () -> bool
+
+    def skip_ticks_for: (seconds seconds) -> Integer
+
+    def skipping_ticks?: () -> bool?
+
+    def refresh_children!: () -> void
+  end
+
+  # Finds, signals and forgets a Process's pid
+  module Process::Pid : Process::Pid::_Host
+    # What Pid uses from Process
+    interface _Host
+      %a{pure} def name: () -> String
+      %a{pure} def logger: () -> Logger
+      %a{pure} def pid_file: () -> String?
+      %a{pure} def pid_command: () -> String?
+    end
+
+    @process_running: bool?
+    @cache_actual_pid: bool
+    @actual_pid: Integer?
+    @last_pid: Integer?
+
+    def process_running?: (?bool force) -> bool
 
     def signal_process: (Integer | String | Symbol code) -> bool
 
@@ -524,12 +547,6 @@ module Bluepill
     def clear_pid: () -> nil
 
     def unlink_pid: () -> void
-
-    def skip_ticks_for: (seconds seconds) -> Integer
-
-    def skipping_ticks?: () -> bool?
-
-    def refresh_children!: () -> void
   end
 
   # Keeps a short history of a process's events

@@ -182,6 +182,7 @@ module Bluepill
       def clean_threads: () -> void
       def signal_process: (Integer | String | Symbol code) -> bool
       def unlink_pid: () -> void
+      def clear_pid: () -> void
       def skip_ticks_for: (seconds seconds) -> Integer
       def dispatch!: (Symbol | String event, ?String? reason) -> bool
     end

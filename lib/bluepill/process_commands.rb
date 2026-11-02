@@ -120,7 +120,8 @@ module Bluepill
     #
     # Bluepill only writes the pid file for processes it daemonizes, but it
     # removes it for every process, so a stopped process never leaves a stale
-    # pid behind for a later process to reuse.
+    # pid behind for a later process to reuse. It forgets the pid it cached
+    # too, so a restart that stops and starts the process reads the new one.
     #
     # @return [void]
     #
@@ -128,6 +129,7 @@ module Bluepill
     def cleanup_process
       ProcessJournal.kill_all_from_journal(name) # finish cleanup
       unlink_pid
+      clear_pid
     end
 
     # Return a command with <tt>{{PID}}</tt> replaced by the process's pid

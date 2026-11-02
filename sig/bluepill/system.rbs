@@ -54,17 +54,7 @@ module Bluepill
       # Hooks are killed after this many seconds
       attr_reader timeout: seconds?
 
-      def initialize: (
-        ?uid: String?,
-        ?gid: String?,
-        ?supplementary_groups: Array[String]?,
-        ?working_dir: String?,
-        ?environment: Hash[_ToS, _ToS]?,
-        ?stdin: String?,
-        ?stdout: String?,
-        ?stderr: String?,
-        ?timeout: seconds?
-      ) -> void
+      def initialize: (?uid: String?, ?gid: String?, ?supplementary_groups: Array[String]?, ?working_dir: String?, ?environment: Hash[_ToS, _ToS]?, ?stdin: String?, ?stdout: String?, ?stderr: String?, ?timeout: seconds?) -> void
 
       def for_hook: (Hash[String, String] env, seconds timeout) -> CommandOptions
 

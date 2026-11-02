@@ -631,7 +631,7 @@ describe Bluepill::System do
   end
 
   describe :drop_privileges do
-    let(:home) { ENV['HOME'] }
+    let(:home) { ENV.fetch('HOME', nil) }
 
     before(:each) do
       allow(Process).to receive(:groups=)

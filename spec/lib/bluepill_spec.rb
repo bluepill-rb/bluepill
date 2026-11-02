@@ -21,7 +21,7 @@ describe Bluepill do
 
     context 'without an argument' do
       around do |example|
-        gemfile = ENV['BUNDLE_GEMFILE']
+        gemfile = ENV.fetch('BUNDLE_GEMFILE', nil)
         example.run
         ENV['BUNDLE_GEMFILE'] = gemfile
       end

@@ -22,7 +22,7 @@ describe Bluepill::Application do
 
       describe '#base_dir' do
         subject { super().base_dir }
-        it { should eq(File.join(ENV['HOME'], '.bluepill')) }
+        it { should eq(File.join(ENV.fetch('HOME', nil), '.bluepill')) }
       end
     end
     context 'when euid is root' do
@@ -113,7 +113,7 @@ describe Bluepill::Application do
 
     context 'when environment BLUEPILL_BASE_DIR is specified' do
       around(:each) do |example|
-        original = ENV['BLUEPILL_BASE_DIR']
+        original = ENV.fetch('BLUEPILL_BASE_DIR', nil)
         ENV['BLUEPILL_BASE_DIR'] = '/bluepill'
         begin
           example.run
@@ -124,7 +124,7 @@ describe Bluepill::Application do
 
       describe '#base_dir' do
         subject { super().base_dir }
-        it { should eq(ENV['BLUEPILL_BASE_DIR']) }
+        it { should eq(ENV.fetch('BLUEPILL_BASE_DIR', nil)) }
       end
 
       context 'and option base_dir is specified' do

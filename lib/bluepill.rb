@@ -19,7 +19,7 @@ module Bluepill
   #   when there's no Gemfile
   #
   # @api private
-  def self.setup_bundler(gemfile = ENV['BUNDLE_GEMFILE'])
+  def self.setup_bundler(gemfile = ENV.fetch('BUNDLE_GEMFILE', nil))
     require 'bundler/setup' if gemfile && File.exist?(gemfile)
   end
 end

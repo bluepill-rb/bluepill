@@ -104,7 +104,7 @@ module Bluepill
       self.log_file = options[:log_file]
       @log_level    = options[:log_level]
       # Only used for a non-root user, who has a home
-      home = ENV['HOME'] #: String
+      home = ENV.fetch('HOME', nil) #: String
       self.base_dir = options[:base_dir] ||
                       ENV['BLUEPILL_BASE_DIR'] ||
                       (::Process.euid.zero? ? '/var/run/bluepill' : File.join(home, '.bluepill'))

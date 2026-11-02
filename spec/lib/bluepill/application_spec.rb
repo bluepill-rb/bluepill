@@ -4,7 +4,7 @@ describe Bluepill::Application do
   let(:logger) { instance_double(Bluepill::Logger, debug: nil, err: nil, reopen: nil) }
   let(:traps) { {} }
 
-  before(:each) do
+  before do
     allow(logger).to receive(:prefix_with).and_return(logger)
     allow(Bluepill::Logger).to receive(:new).and_return(logger)
     allow(Bluepill::ProcessJournal).to receive(:setup)
@@ -15,10 +15,10 @@ describe Bluepill::Application do
   describe '#initialize' do
     let(:options) { {} }
     subject { described_class.new('test', options) }
-    before(:each) { expect_any_instance_of(described_class).to receive(:setup_pids_dir) }
+    before { expect_any_instance_of(described_class).to receive(:setup_pids_dir) }
 
     context 'when euid is not root' do
-      before(:each) { allow(::Process).to receive(:euid).and_return(1) }
+      before { allow(::Process).to receive(:euid).and_return(1) }
 
       describe '#base_dir' do
         subject { super().base_dir }
@@ -26,7 +26,7 @@ describe Bluepill::Application do
       end
     end
     context 'when euid is root' do
-      before(:each) { allow(::Process).to receive(:euid).and_return(0) }
+      before { allow(::Process).to receive(:euid).and_return(0) }
 
       describe '#base_dir' do
         subject { super().base_dir }
@@ -45,7 +45,7 @@ describe Bluepill::Application do
 
     context 'without options' do
       subject { described_class.new('test') }
-      before(:each) { allow(::Process).to receive(:euid).and_return(0) }
+      before { allow(::Process).to receive(:euid).and_return(0) }
 
       it 'uses the defaults' do
         expect(subject.base_dir).to eq('/var/run/bluepill')
@@ -112,7 +112,7 @@ describe Bluepill::Application do
     end
 
     context 'when environment BLUEPILL_BASE_DIR is specified' do
-      around(:each) do |example|
+      around do |example|
         original = ENV.fetch('BLUEPILL_BASE_DIR', nil)
         ENV['BLUEPILL_BASE_DIR'] = '/bluepill'
         begin
@@ -173,7 +173,7 @@ describe Bluepill::Application do
     let(:group) { instance_double(Bluepill::Group) }
     let(:other_group) { instance_double(Bluepill::Group) }
 
-    after(:each) { FileUtils.remove_entry(base_dir) }
+    after { FileUtils.remove_entry(base_dir) }
 
     describe 'pids dir' do
       it 'is created writable for everybody' do
@@ -191,7 +191,7 @@ describe Bluepill::Application do
     end
 
     describe 'signal traps' do
-      before(:each) { app }
+      before { app }
 
       %w[TERM INT].each do |signal|
         it "terminates on #{signal}" do
@@ -256,7 +256,7 @@ describe Bluepill::Application do
     end
 
     describe 'process commands' do
-      before(:each) { app.groups = {'web' => group, 'db' => other_group} }
+      before { app.groups = {'web' => group, 'db' => other_group} }
 
       described_class::PROCESS_COMMANDS.each do |command|
         describe "##{command}" do
@@ -333,7 +333,7 @@ describe Bluepill::Application do
       let(:socket) { double('socket') }
       let(:program_name) { $0 }
 
-      before(:each) do
+      before do
         program_name
         app.groups = {'web' => group}
         allow(app).to receive(:kill_previous_bluepill)
@@ -346,7 +346,7 @@ describe Bluepill::Application do
         allow(app).to receive(:run)
       end
 
-      after(:each) { $0 = program_name }
+      after { $0 = program_name }
 
       it 'daemonizes and runs the application' do
         expect(app).to receive(:kill_previous_bluepill).ordered
@@ -389,7 +389,7 @@ describe Bluepill::Application do
     end
 
     describe 'run' do
-      before(:each) { app.groups = {'web' => group, 'db' => other_group} }
+      before { app.groups = {'web' => group, 'db' => other_group} }
 
       it 'ticks every group each second until terminated' do
         allow(app).to receive(:puts)
@@ -423,7 +423,7 @@ describe Bluepill::Application do
     describe 'cleanup' do
       let(:socket) { double('socket', path: File.join(base_dir, 'test.sock')) }
 
-      before(:each) do
+      before do
         expect(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks)
         expect(Bluepill::System).to receive(:delete_if_exists).with(pid_file)
       end
@@ -451,7 +451,7 @@ describe Bluepill::Application do
       let(:thread) { double('thread') }
       let(:listener) { [] }
 
-      before(:each) do
+      before do
         app.socket = server_socket
         allow(Thread).to receive(:new) do |&block|
           listener << block
@@ -575,7 +575,7 @@ describe Bluepill::Application do
         File.write(pid_file, '1234')
       end
 
-      before(:each) { app }
+      before { app }
 
       it 'does nothing without a pid file' do
         expect(Bluepill::System).not_to receive(:pid_alive?)
@@ -607,7 +607,7 @@ describe Bluepill::Application do
       end
 
       context 'when the previous bluepill is running' do
-        before(:each) do
+        before do
           write_pid
           allow(app).to receive(:puts)
           allow(app).to receive(:sleep)

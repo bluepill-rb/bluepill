@@ -1,5 +1,5 @@
 describe Bluepill::ProcessStatistics do
-  before(:each) do
+  before do
     @stats = described_class.new
   end
 

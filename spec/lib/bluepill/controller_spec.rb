@@ -4,7 +4,7 @@ describe Bluepill::Controller do
   let(:base_dir) { Dir.mktmpdir }
   let(:controller) { described_class.new(base_dir: base_dir, log_file: '/var/log/bluepill.log') }
 
-  after(:each) { FileUtils.remove_entry(base_dir) }
+  after { FileUtils.remove_entry(base_dir) }
 
   def touch(*path)
     File.open(File.join(base_dir, *path), 'w') { |f| yield f if block_given? }
@@ -82,7 +82,7 @@ describe Bluepill::Controller do
     end
 
     context 'quit' do
-      before(:each) do
+      before do
         controller
         touch('pids', 'app.pid') { |f| f.write('789') }
       end
@@ -128,7 +128,7 @@ describe Bluepill::Controller do
     end
 
     context 'log' do
-      before(:each) { allow(controller).to receive(:puts) }
+      before { allow(controller).to receive(:puts) }
 
       it 'tails the log file reported by the daemon' do
         stub_daemon('log_file', '/tmp/app.log')

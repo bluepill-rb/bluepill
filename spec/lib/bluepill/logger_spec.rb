@@ -2,7 +2,7 @@ require 'syslog'
 require 'tmpdir'
 
 describe Bluepill::Logger do
-  around(:each) do |example|
+  around do |example|
     Dir.mktmpdir do |dir|
       @log_file = File.join(dir, 'bluepill.log')
       example.run

@@ -33,7 +33,7 @@ describe Bluepill::Group do
     let(:first) { process_double('first') }
     let(:second) { process_double('second') }
 
-    before(:each) do
+    before do
       allow(logger).to receive(:prefix_with).and_return(process_logger)
       group.add_process(first)
       group.add_process(second)
@@ -59,7 +59,7 @@ describe Bluepill::Group do
       describe "##{event}" do
         let(:thread) { double('thread', join: nil) }
 
-        before(:each) do
+        before do
           allow(Thread).to receive(:new) do |&block|
             block.call
             thread
@@ -98,7 +98,7 @@ describe Bluepill::Group do
     describe '#status' do
       let(:child) { double('child', name: 'child', state: 'up') }
 
-      before(:each) do
+      before do
         allow(first).to receive_messages(actual_pid: 1, state: 'up', monitor_children?: true, children: [child])
         allow(second).to receive_messages(actual_pid: 2, state: 'down', monitor_children?: false)
       end

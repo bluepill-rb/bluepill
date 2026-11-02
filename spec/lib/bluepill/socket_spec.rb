@@ -19,7 +19,7 @@ describe Bluepill::Socket do
   end
 
   describe '.client_command' do
-    before(:each) do
+    before do
       allow(Timeout).to receive(:timeout).with(Bluepill::Socket::TIMEOUT).and_yield
       allow(described_class).to receive(:puts)
       allow(described_class).to receive(:abort)
@@ -70,7 +70,7 @@ describe Bluepill::Socket do
     end
 
     context 'when the socket file already exists' do
-      before(:each) do
+      before do
         calls = 0
         allow(UNIXServer).to receive(:open).with(socket_path) do
           calls += 1
@@ -87,7 +87,7 @@ describe Bluepill::Socket do
       end
 
       context 'and another server is listening' do
-        before(:each) do
+        before do
           allow(UNIXSocket).to receive(:open).with(socket_path).and_return(socket)
         end
 

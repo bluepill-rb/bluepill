@@ -2,11 +2,11 @@ require 'pathname'
 require 'tmpdir'
 
 describe Bluepill::System do
-  before(:each) do
+  before do
     described_class.reset_data
   end
 
-  after(:each) do
+  after do
     described_class.reset_data
   end
 
@@ -95,7 +95,7 @@ describe Bluepill::System do
   end
 
   describe '.cpu_usage' do
-    before(:each) { stub_ps(ps) }
+    before { stub_ps(ps) }
 
     it 'is nil for an unknown pid' do
       expect(described_class.cpu_usage(99, true)).to be_nil
@@ -116,7 +116,7 @@ describe Bluepill::System do
   end
 
   describe '.memory_usage' do
-    before(:each) { stub_ps(ps) }
+    before { stub_ps(ps) }
 
     it 'is nil for an unknown pid' do
       expect(described_class.memory_usage(99, true)).to be_nil
@@ -142,7 +142,7 @@ describe Bluepill::System do
   end
 
   describe '.running_time' do
-    before(:each) { stub_ps(ps) }
+    before { stub_ps(ps) }
 
     it 'is nil for an unknown pid' do
       expect(described_class.running_time(99)).to be_nil
@@ -154,7 +154,7 @@ describe Bluepill::System do
   end
 
   describe '.command' do
-    before(:each) { stub_ps(ps) }
+    before { stub_ps(ps) }
 
     it 'is nil for an unknown pid' do
       expect(described_class.command(99)).to be_nil
@@ -166,7 +166,7 @@ describe Bluepill::System do
   end
 
   describe '.get_children' do
-    before(:each) { stub_ps(ps) }
+    before { stub_ps(ps) }
 
     it 'returns all descendants' do
       expect(described_class.get_children(1)).to eq([2, 4, 3])
@@ -204,12 +204,12 @@ describe Bluepill::System do
     let(:wr) { double('wr', close: nil, write: nil) }
     let(:logger) { double('logger') }
 
-    before(:each) do
+    before do
       allow(IO).to receive(:pipe).and_return([rd, wr])
     end
 
     context 'in the parent' do
-      before(:each) do
+      before do
         allow(Bluepill::Daemonize).to receive(:safefork).and_return(123)
         expect(Process).to receive(:detach).with(123)
       end
@@ -247,7 +247,7 @@ describe Bluepill::System do
         }
       end
 
-      before(:each) do
+      before do
         allow(Bluepill::Daemonize).to receive(:safefork).and_return(nil)
         allow(described_class).to receive(:drop_privileges)
         allow(described_class).to receive(:redirect_io)
@@ -372,7 +372,7 @@ describe Bluepill::System do
     context 'in the parent' do
       let(:waiter) { double('waiter', join: nil) }
 
-      before(:each) do
+      before do
         allow(IO).to receive(:pipe).and_return([rd, wr])
         allow(Bluepill::Daemonize).to receive(:safefork).and_return(123)
         allow(Process).to receive(:detach).with(123).and_return(waiter)
@@ -456,7 +456,7 @@ describe Bluepill::System do
       let(:status) { double('status', exitstatus: 2) }
       let(:options) { {uid: 'user', gid: 'group', supplementary_groups: ['extra']} }
 
-      before(:each) do
+      before do
         allow(IO).to receive(:pipe).and_return([rd, wr], [out_rd, out_wr], [err_rd, err_wr])
         allow(Bluepill::Daemonize).to receive(:safefork).and_return(nil)
         allow(described_class).to receive(:fork) do |&block|
@@ -633,7 +633,7 @@ describe Bluepill::System do
   describe '.drop_privileges' do
     let(:home) { ENV.fetch('HOME', nil) }
 
-    before(:each) do
+    before do
       allow(Process).to receive(:groups=)
       allow(Process::Sys).to receive(:setgid)
       allow(Process::Sys).to receive(:setuid)
@@ -648,7 +648,7 @@ describe Bluepill::System do
     end
 
     context 'as root' do
-      before(:each) do
+      before do
         allow(Process::Sys).to receive(:geteuid).and_return(0)
       end
 
@@ -744,7 +744,7 @@ describe Bluepill::System do
   end
 
   describe '.redirect_io' do
-    before(:each) do
+    before do
       allow($stdin).to receive(:reopen)
       allow($stdout).to receive(:reopen)
       allow($stderr).to receive(:reopen)

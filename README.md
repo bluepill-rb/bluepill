@@ -60,10 +60,10 @@ end
 
 If you don&apos;t specify a stop command, a TERM signal will be sent by default. Similarly, the default restart action is to issue stop and then start.
 
-Bluepill only accepts the process attributes it knows, which are the ones this README describes. A misspelled or unsupported attribute fails when the config loads, and the error names the attribute, the process, and the closest attribute bluepill knows:
+Bluepill only accepts the attributes it knows, which are the ones this README describes. A misspelled or unsupported attribute fails when the config loads, and the error names the attribute, the process, and the closest attribute bluepill knows. Bluepill prints the line of the pill file with the mistake before the error:
 
 ```
-Unknown attribute 'start_comand' for process 'process_name'. Did you mean 'start_command'?
+app.pill.rb:5: Unknown attribute 'start_comand' for process 'process_name'. Did you mean 'start_command'?
 ```
 
 Now if we want to do something more meaningful, like actually monitor the process, we do:
@@ -78,7 +78,7 @@ Bluepill.application("app_name") do |app|
 end
 ```
 
-We added a line that checks every 10 seconds to make sure the cpu usage of this process is below 5 percent; 3 failed checks results in a restart. We can specify a two-element array for the _times_ option to say that it 3 out of 5 failed attempts results in a restart.
+We added a line that checks every 10 seconds to make sure the cpu usage of this process is below 5 percent. Three failed checks in a row restart the process. We can specify a two-element array for the _times_ option to say that 3 out of 5 failed attempts result in a restart. A check restarts the process by default, and `fires:` picks other events instead, from `:start`, `:stop`, `:unmonitor` and `:restart`, such as `fires: :stop` or `fires: [:stop, :start]`.
 
 To watch memory usage, we just add one more line:
 
@@ -92,6 +92,8 @@ Bluepill.application("app_name") do |app|
   end
 end
 ```
+
+A process can have more than one check of a kind, such as two `:http` checks of different URLs.
 
 To watch the modification time of a file, e.g. a log file to ensure the process is actually working add one more line:
 
@@ -213,6 +215,8 @@ To check for flapping:
 process.checks :flapping, times: 2, within: 30.seconds, retry_in: 7.seconds
 ```
 
+To check that a URL answers, use `process.checks :http, url: "http://localhost:4567/", kind: :success, pattern: /html/, timeout: 3.seconds`. For an `https` URL, bluepill verifies the server's certificate. For a server with a self-signed certificate, add `verify_ssl: false`.
+
 To set the working directory to `cd` into when starting the command:
 
 ```ruby
@@ -327,6 +331,8 @@ process.monitor_children do |child_process|
 end
 ```
 
+Bluepill runs this block once when the pill file loads, to check it, and again for each child it finds. `child_process.actual_pid` is the child's pid, and nil during that first run. The block must set a `stop_command`.
+
 Note `{{PID}}` will be substituted for the pid of process in both the stop and restart commands.
 
 ### Durations and sizes
@@ -337,7 +343,7 @@ If a pill file loads ActiveSupport, for example by loading a Rails app, ActiveSu
 
 ### Custom checks
 
-A check is a class in `Bluepill::ProcessConditions`, named after the check in camel case, so `checks :log_size` uses `LogSize`. Define it in the config file, before the application. It gets the check's options as keyword arguments, except `every`, `times`, `fires`, and `include_children`, which bluepill handles. Name the ones it needs, and pass the rest to `super`, which rejects any that no check takes. `run` reads a value, and `check?` returns whether the value is fine:
+A check is a subclass of `Bluepill::ProcessConditions::ProcessCondition`, in any module, named after the check in camel case, so `checks :log_size` uses a class named `LogSize`. Define it in the config file, before the application. It gets the check's options as keyword arguments, except `every`, `times`, `fires`, and `include_children`, which bluepill handles. Name the ones it needs, and pass the rest to `super`, which rejects any that no check takes. `run` reads a value, and `check?` returns whether the value is fine:
 
 ```ruby
 module Bluepill
@@ -371,6 +377,8 @@ end
 ```
 
 `logger` writes to bluepill's log, with the app's and the process's names, like the built-in checks. It's set once `super` returns, so call `super` first in `initialize`.
+
+If `run`, `check?` or `format_value` raises, bluepill logs the error with its backtrace and skips the check until its next interval. It doesn't count toward `times`, and bluepill keeps monitoring. A check class must define both `run` and `check?`, or the pill file fails to load.
 
 ### Commands Don't Run in a Shell
 

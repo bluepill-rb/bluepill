@@ -17,20 +17,52 @@ Most pill files work with 0.3.0 unchanged. Check these before you upgrade:
 - **A check without an option it needs fails the config.** `checks :mem_usage`, `:cpu_usage` or `:running_time` without `below:`, and `:file_time` without `filename:` or `below:`, now stop the pill file from loading, with Ruby's missing keyword error. Before, `mem_usage` without `below:` always passed, and the others raised an error each time they ran. `:http` without `url:` fails with the same error, where it failed with a `URI::InvalidURIError`.
 - **A check or trigger option that bluepill doesn't know fails the config.** A misspelled option, such as `evry: 10`, or one meant for another check, such as `within:` on an `http` check, now stops the pill file from loading, with Ruby's unknown keyword error. Before, bluepill ignored it.
 - **Pass options kept in a hash with `**`.** A pill file that keeps a check's or the application's options in a variable passes them as `process.checks :mem_usage, **options`, since a hash passed without `**` no longer counts as options.
+- **An https `http` check verifies the server's certificate.** One against a self-signed or otherwise invalid certificate now fails the check. Add `verify_ssl: false` to keep checking it without verification.
+- **Set attributes with `=`.** `process.daemonize!` and `process.start_command "cmd"` no longer work. Write `process.daemonize = true` and `process.start_command = "cmd"`.
+- **`on_start_timeout` and `fires:` take Symbols**, such as `process.on_start_timeout = :unmonitor` or `fires: :stop`, from `:start`, `:stop`, `:unmonitor` and `:restart`.
+- **A custom check that subclasses `MemUsage` gets bytes.** Its `run`, `check?` and `format_value` see the memory usage in bytes, where they saw kilobytes.
+- **Upgrade the daemon along with the CLI.** A 0.3.0 `bluepill` command says a 0.2 daemon is out of date, so run `bluepill load` again after upgrading. Bluepill monitors the running processes again without restarting them.
 
 ### Added
 
 - `Bluepill::ConfigError`, which bluepill raises for a mistake in a pill file, such as a misspelled process attribute or two processes with the same pid file.
+- `Bluepill::Error`, the base of the errors that stop the `bluepill` command, with the status it exits with. `ConfigError` is one, alongside `StartupError`, `PreviousDaemonError`, `AlreadyRunningError`, `ConnectionError`, `VersionMismatchError`, `UnknownCommandError` and `DaemonError`.
+- The `http` check's `verify_ssl:` option. Set it to false for a server with a self-signed certificate.
+- A custom check or trigger can be defined in any module, since bluepill finds it by its class name.
+- The daemon logs what stops it at `crit`, with the backtrace, since its stderr is `/dev/null`.
 
 ### Changed
 
 - **Breaking:** a misspelled process attribute raises `Bluepill::ConfigError` instead of `NoMethodError`. Like the other mistakes that a config check finds, such as a missing `start_command`, `bluepill load` prints its message and exits with status 6, where it showed a backtrace and exited with status 1.
 - **Breaking:** the options of `Bluepill.application` and `checks` are keyword arguments, all the way to the application, the checks and the triggers, so a misspelled, unknown or missing option fails when the pill file loads. A custom check or trigger takes its options as keyword arguments too (see "Upgrading from 0.2").
+- An exception in a check or trigger is logged, with its backtrace, and no longer stops the daemon. The check is skipped until its next interval, and doesn't count toward `times`.
+- A config error's message starts with the pill file's line, as in `app.pill.rb:5: Unknown attribute ...`.
+- **Breaking:** a misspelled application attribute, such as `app.uidd = "deploy"`, raises `Bluepill::ConfigError` with a suggestion, as a misspelled process attribute does.
+- **Breaking:** an unknown check name raises `Bluepill::ConfigError` with a did-you-mean suggestion, where it raised `NameError`.
+- **Breaking:** `fires:` takes only `:start`, `:stop`, `:unmonitor` or `:restart`, and anything else fails the pill file with a `Bluepill::ConfigError`. Before, bluepill called any public method of the process with that name.
+- **Breaking:** `on_start_timeout` defaults to `:start`, and a value that isn't one of `:start`, `:stop`, `:unmonitor` or `:restart` fails the config.
+- **Breaking:** a custom check that doesn't define `run` and `check?`, or a trigger that doesn't define `notify`, fails the pill file when it loads, where it raised each time it ran.
+- **Breaking:** the `http` check verifies TLS certificates.
+- **Breaking:** reading an attribute that isn't set returns nil instead of raising `NameError`.
+- **Breaking:** the library raises a `Bluepill::Error` instead of calling `exit` or `abort`. `bin/bluepill` and `Bluepill.application` print its message and exit with the same statuses as before.
+- **Breaking:** `Bluepill::Logger`'s log methods take only the message, and `prefix_with` is the only way to make a prefixed logger (the `prefix:` option is gone).
+- A mistake in a `monitor_children` block, such as a missing `stop_command`, fails the config when it loads. Before, the daemon exited the first time it found a child. `monitor_children` without a block fails the config.
+- The daemon traps signals and creates its pids directory when it starts, not while the pill file loads.
+- The `mem_usage` check takes 1.4% fewer instructions.
 
 ### Removed
 
 - **Breaking:** a custom check that defines `check`, as in bluepill 0.1, no longer works. Name the method `check?`, as bluepill 0.2 does.
 - **Breaking:** support for Ruby 2.7. Bluepill 0.3.0 needs Ruby 3.0 or newer, or JRuby 9.4 or newer. Bluepill 0.2.7 still runs on Ruby 2.7.
+- **Breaking:** the undocumented `name!` and `name value` forms of setting a process attribute.
+- **Breaking:** setting `monitor_children` or `child_process_factory` in a process block. Use `monitor_children` with a block.
+- **Breaking:** `Process#start`, `#stop`, `#restart` and `#unmonitor` (use `dispatch!`), `Trigger.[]` and `ProcessConditions.[]` (use `CheckRegistry.fetch`), `Group#process_logger`, and `ConditionWatch::HistoryValue#critical` (now `passed`).
+
+### Fixed
+
+- Two checks of the same kind, such as two `:http` checks of different URLs, both run. Before, only the last one did.
+- The CLI's check that the daemon runs the same version of bluepill never failed: the daemon now answers with its version as a string.
+- `bluepill log` quotes the log file's path and the pattern, so a path with spaces or shell characters works.
 
 ## [0.2.7] - 2026-11-02
 

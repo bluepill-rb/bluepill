@@ -132,7 +132,10 @@ module Bluepill
 
       # Point standard input, output and error at files
       #
-      # Output and error share one file when they name the same one.
+      # Output and error share one file when they name the same one. It
+      # reopens STDIN, STDOUT and STDERR, which are always file descriptors
+      # 0, 1 and 2, the ones the command inherits, even if $stdout and the
+      # others have been pointed somewhere else.
       #
       # @param [String, nil] io_in the file for standard input
       # @param [String, nil] io_out the file for standard output, appended to
@@ -142,15 +145,15 @@ module Bluepill
       #
       # @api private
       def redirect_io(io_in, io_out, io_err)
-        $stdin.reopen(io_in) if io_in
+        STDIN.reopen(io_in) if io_in
 
         if !io_out.nil? && io_out.eql?(io_err)
-          $stdout.reopen(io_out, APPEND_MODE)
-          $stderr.reopen($stdout)
+          STDOUT.reopen(io_out, APPEND_MODE)
+          STDERR.reopen(STDOUT)
 
         else
-          $stdout.reopen(io_out, APPEND_MODE) if io_out
-          $stderr.reopen(io_err, APPEND_MODE) if io_err
+          STDOUT.reopen(io_out, APPEND_MODE) if io_out
+          STDERR.reopen(io_err, APPEND_MODE) if io_err
         end
       end
     end

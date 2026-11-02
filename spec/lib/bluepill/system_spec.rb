@@ -623,9 +623,9 @@ describe Bluepill::System do
     let(:reopened) { [] }
 
     before do
-      allow($stdin).to(receive(:reopen)) { |*args| reopened << [:stdin, *args] }
-      allow($stdout).to(receive(:reopen)) { |*args| reopened << [:stdout, *args] }
-      allow($stderr).to(receive(:reopen)) { |*args| reopened << [:stderr, *args] }
+      allow(STDIN).to(receive(:reopen)) { |*args| reopened << [:stdin, *args] }
+      allow(STDOUT).to(receive(:reopen)) { |*args| reopened << [:stdout, *args] }
+      allow(STDERR).to(receive(:reopen)) { |*args| reopened << [:stderr, *args] }
     end
 
     it "does not redirect anything without paths" do
@@ -635,7 +635,7 @@ describe Bluepill::System do
 
     it "redirects stdout and stderr to the same file" do
       described_class.redirect_io("in", "out.log", "out.log")
-      expect(reopened).to eq [[:stdin, "in"], [:stdout, "out.log", "a"], [:stderr, $stdout]]
+      expect(reopened).to eq [[:stdin, "in"], [:stdout, "out.log", "a"], [:stderr, STDOUT]]
     end
 
     it "redirects stdout and stderr to different files" do

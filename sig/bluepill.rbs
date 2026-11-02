@@ -146,7 +146,14 @@ module Bluepill
     # Returns the daemon's response, unmarshaled
     def self.client_command: (String base_dir, String name, String command) -> untyped
 
+    # Returns the daemon's response, unmarshaled
+    def self.send_command: (String base_dir, String name, String command) -> untyped
+
+    def self.retry_or_abort: (Integer current_attempt) -> void
+
     def self.server: (String base_dir, String name) -> UNIXServer
+
+    def self.replace_stale_socket: (String path) -> UNIXServer
 
     def self.socket_path: (String base_dir, String name) -> String
   end

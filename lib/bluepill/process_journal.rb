@@ -213,16 +213,7 @@ module Bluepill
       valid_pgid = pgid #: Integer
 
       filename = pgid_journal_filename(journal_name)
-      acquire_atomic_fs_lock(filename) do
-        if pgid_journal(filename).include?(pgid)
-          logger.debug("Skipping duplicate pgid #{pgid} already in journal #{journal_name}")
-        else
-          logger.debug("Saving pgid #{pgid} to process journal #{journal_name}")
-          File.open(filename, "a+", 0o600) { |f| f.puts(journal_line(valid_pgid)) }
-          logger.info("Saved pgid #{pgid} to journal #{journal_name}")
-          logger.debug("Journal now = #{File.read(filename)}")
-        end
-      end
+      append_to_journal(filename, journal_name, "pgid", valid_pgid) { pgid_journal(filename) }
     end
 
     # Add a pid, and its process group id, to a process's journals
@@ -240,19 +231,47 @@ module Bluepill
       end
       # skip_pid? made sure it's an Integer
       valid_pid = pid #: Integer
-      begin
-        append_pgid_to_journal(journal_name, ::Process.getpgid(valid_pid))
-      rescue Errno::ESRCH
-      end
+      append_process_group_to_journal(journal_name, valid_pid)
 
       filename = pid_journal_filename(journal_name)
+      append_to_journal(filename, journal_name, "pid", valid_pid) { pid_journal(filename) }
+    end
+
+    # Add a process's process group id to the process's journal
+    #
+    # @param [String] journal_name the process's name
+    # @param [Integer] pid the process's pid
+    #
+    # @return [void]
+    #
+    # @api private
+    def self.append_process_group_to_journal(journal_name, pid)
+      append_pgid_to_journal(journal_name, ::Process.getpgid(pid))
+    rescue Errno::ESRCH
+      # The process is gone, so it has no process group to journal
+    end
+
+    # Add a line for an id to a journal, under its lock, unless it's there
+    #
+    # @param [String] filename the journal's path
+    # @param [String] journal_name the process's name
+    # @param [String] kind what the id is, pid or pgid, for the log
+    # @param [Integer] id the pid or process group id
+    #
+    # @yield under the lock, to read the journal
+    # @yieldreturn [Array<Integer>] the ids already in the journal
+    #
+    # @return [void]
+    #
+    # @api private
+    def self.append_to_journal(filename, journal_name, kind, id)
       acquire_atomic_fs_lock(filename) do
-        if pid_journal(filename).include?(pid)
-          logger.debug("Skipping duplicate pid #{pid} already in journal #{journal_name}")
+        if yield.include?(id)
+          logger.debug("Skipping duplicate #{kind} #{id} already in journal #{journal_name}")
         else
-          logger.debug("Saving pid #{pid} to process journal #{journal_name}")
-          File.open(filename, "a+", 0o600) { |f| f.puts(journal_line(valid_pid)) }
-          logger.info("Saved pid #{pid} to journal #{journal_name}")
+          logger.debug("Saving #{kind} #{id} to process journal #{journal_name}")
+          File.open(filename, "a+", 0o600) { |f| f.puts(journal_line(id)) }
+          logger.info("Saved #{kind} #{id} to journal #{journal_name}")
           logger.debug("Journal now = #{File.read(filename)}")
         end
       end

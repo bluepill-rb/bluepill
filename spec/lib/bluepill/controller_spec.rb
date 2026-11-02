@@ -266,6 +266,12 @@ describe Bluepill::Controller do
   end
 
   describe '#send_to_daemon' do
+    def send_to_daemon_until_exit
+      controller.send_to_daemon('app', :status)
+    rescue SystemExit
+      nil
+    end
+
     it 'returns the response of the daemon' do
       stub_daemon('status:web:first', 'up')
       expect(controller.send_to_daemon('app', :status, 'web', 'first')).to eq('up')
@@ -276,6 +282,20 @@ describe Bluepill::Controller do
       error.set_backtrace(['a.rb:1', 'b.rb:2'])
       stub_daemon('status', error)
       expect { controller.send_to_daemon('app', :status) }.to exit_with(8).and output("Received error from server:\n#{error.inspect}\na.rb:1\nb.rb:2\n").to_stderr
+    end
+
+    it 'prints the backtrace of an error from the daemon as one string' do
+      stub_daemon('status', RuntimeError.new('boom').tap { |e| e.set_backtrace(['a.rb:1', 'b.rb:2']) })
+      allow($stderr).to receive(:puts)
+      send_to_daemon_until_exit
+      expect($stderr).to have_received(:puts).with("a.rb:1\nb.rb:2")
+    end
+
+    it 'prints an empty backtrace for an error from the daemon without one' do
+      stub_daemon('status', RuntimeError.new('boom'))
+      allow($stderr).to receive(:puts)
+      send_to_daemon_until_exit
+      expect($stderr).to have_received(:puts).with('')
     end
 
     it 'exits when the daemon returns an error without a backtrace' do

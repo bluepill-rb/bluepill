@@ -1,22 +1,17 @@
 require 'tmpdir'
 
 describe Bluepill::Application do
-  let(:logger) { instance_double(Bluepill::Logger, debug: nil, err: nil, reopen: nil) }
-  let(:traps) { {} }
+  let(:logger) { instance_double(Bluepill::Logger) }
   let(:base_dir) { Dir.mktmpdir }
-  let(:foreground) { false }
-  let(:app) { described_class.new('test', base_dir: base_dir, foreground: foreground) }
-  let(:pids_dir) { File.join(base_dir, 'pids', 'test') }
-  let(:pid_file) { File.join(base_dir, 'pids', 'test.pid') }
-  let(:group) { instance_double(Bluepill::Group) }
-  let(:other_group) { instance_double(Bluepill::Group) }
+  let(:app) { described_class.new('test', base_dir: base_dir) }
 
   before do
     allow(logger).to receive(:prefix_with).and_return(logger)
     allow(Bluepill::Logger).to receive(:new).and_return(logger)
     allow(Bluepill::ProcessJournal).to receive(:setup)
     allow(Bluepill::ProcessJournal).to receive(:logger=)
-    allow(Signal).to receive(:trap) { |signal, &block| traps[signal] = block }
+    # Don't trap the specs' own signals
+    allow(Signal).to receive(:trap)
   end
 
   after { FileUtils.remove_entry(base_dir) }
@@ -28,6 +23,10 @@ describe Bluepill::Application do
   # An error whose class has no name
   def anonymous_error(message)
     Class.new(StandardError) { define_method(:message) { message } }
+  end
+
+  def pid_file
+    File.join(base_dir, 'pids', 'test.pid')
   end
 
   describe '#load' do
@@ -51,7 +50,7 @@ describe Bluepill::Application do
   end
 
   describe 'start_server' do
-    let(:socket) { instance_double(UNIXServer) }
+    let(:group) { instance_double(Bluepill::Group) }
     let(:calls) { [] }
 
     around do |example|
@@ -74,7 +73,7 @@ describe Bluepill::Application do
       end
       allow(Bluepill::Socket).to receive(:server) do |*args|
         calls << [:server, *args]
-        socket
+        instance_double(UNIXServer)
       end
     end
 
@@ -102,6 +101,8 @@ describe Bluepill::Application do
     end
 
     it 'keeps the socket' do
+      socket = instance_double(UNIXServer)
+      allow(Bluepill::Socket).to receive(:server).and_return(socket)
       app.send(:start_server)
       expect(app.socket).to eq(socket)
     end
@@ -113,7 +114,7 @@ describe Bluepill::Application do
     end
 
     context 'when in the foreground' do
-      let(:foreground) { true }
+      let(:app) { described_class.new('test', base_dir: base_dir, foreground: true) }
 
       it 'does not daemonize, or trap signals again' do
         app.send(:start_server)

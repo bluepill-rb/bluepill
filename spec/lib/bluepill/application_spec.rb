@@ -1,22 +1,17 @@
 require 'tmpdir'
 
 describe Bluepill::Application do
-  let(:logger) { instance_double(Bluepill::Logger, debug: nil, err: nil, reopen: nil) }
-  let(:traps) { {} }
+  let(:logger) { instance_double(Bluepill::Logger, reopen: nil) }
   let(:base_dir) { Dir.mktmpdir }
-  let(:foreground) { false }
-  let(:app) { described_class.new('test', base_dir: base_dir, foreground: foreground) }
-  let(:pids_dir) { File.join(base_dir, 'pids', 'test') }
-  let(:pid_file) { File.join(base_dir, 'pids', 'test.pid') }
-  let(:group) { instance_double(Bluepill::Group) }
-  let(:other_group) { instance_double(Bluepill::Group) }
+  let(:app) { described_class.new('test', base_dir: base_dir) }
 
   before do
     allow(logger).to receive(:prefix_with).and_return(logger)
     allow(Bluepill::Logger).to receive(:new).and_return(logger)
     allow(Bluepill::ProcessJournal).to receive(:setup)
     allow(Bluepill::ProcessJournal).to receive(:logger=)
-    allow(Signal).to receive(:trap) { |signal, &block| traps[signal] = block }
+    # Don't trap the specs' own signals
+    allow(Signal).to receive(:trap)
   end
 
   after { FileUtils.remove_entry(base_dir) }
@@ -33,13 +28,21 @@ describe Bluepill::Application do
     ENV[name] = original
   end
 
+  def pids_dir
+    File.join(base_dir, 'pids', 'test')
+  end
+
   describe '#initialize' do
     subject(:app) { described_class.new('test', options) }
 
     let(:options) { {} }
+    let(:traps) { {} }
 
-    # Don't make the base dir's directories, which for root is /var/run
-    before { allow(FileUtils).to receive_messages(mkdir_p: nil, chmod: nil) }
+    before do
+      allow(Signal).to receive(:trap) { |signal, &block| traps[signal] = block }
+      # Don't make the base dir's directories, which for root is /var/run
+      allow(FileUtils).to receive_messages(mkdir_p: nil, chmod: nil)
+    end
 
     context 'when euid is not root' do
       before { allow(::Process).to receive(:euid).and_return(1) }
@@ -100,11 +103,15 @@ describe Bluepill::Application do
         expect(app.mutex { :result }).to eq(:result)
       end
 
-      it 'logs to the log file with the application name as prefix' do
-        log = instance_double(Bluepill::Logger)
-        allow(Bluepill::Logger).to receive(:new).with(log_file: nil, log_level: nil, stdout: false).and_return(log)
-        allow(log).to receive(:prefix_with).with('test').and_return(logger)
-        expect(app.logger).to eq(logger)
+      it 'logs with the application name as prefix' do
+        prefixed = instance_double(Bluepill::Logger)
+        allow(logger).to receive(:prefix_with).with('test').and_return(prefixed)
+        expect(app.logger).to be(prefixed)
+      end
+
+      it 'logs to the log file, and not to stdout' do
+        app
+        expect(Bluepill::Logger).to have_received(:new).with(log_file: nil, log_level: nil, stdout: false)
       end
 
       it 'gives the process journal the same logger' do
@@ -193,7 +200,10 @@ describe Bluepill::Application do
   end
 
   describe 'signal traps' do
+    let(:traps) { {} }
+
     before do
+      allow(Signal).to receive(:trap) { |signal, &block| traps[signal] = block }
       allow(app).to receive(:puts)
       allow(app).to receive(:cleanup)
     end
@@ -240,6 +250,7 @@ describe Bluepill::Application do
 
   describe '#add_process' do
     let(:process) { instance_double(Bluepill::Process, :app_name= => nil, :group_name= => nil) }
+    let(:group) { instance_double(Bluepill::Group) }
 
     before { allow(group).to receive(:add_process) }
 

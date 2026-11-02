@@ -1,25 +1,17 @@
-require 'tmpdir'
-
 describe Bluepill::Application do
-  let(:logger) { instance_double(Bluepill::Logger, debug: nil, err: nil, reopen: nil) }
-  let(:traps) { {} }
-  let(:base_dir) { Dir.mktmpdir }
-  let(:foreground) { false }
-  let(:app) { described_class.new('test', base_dir: base_dir, foreground: foreground) }
-  let(:pids_dir) { File.join(base_dir, 'pids', 'test') }
-  let(:pid_file) { File.join(base_dir, 'pids', 'test.pid') }
-  let(:group) { instance_double(Bluepill::Group) }
-  let(:other_group) { instance_double(Bluepill::Group) }
+  let(:logger) { instance_double(Bluepill::Logger) }
+  let(:app) { described_class.new('test', base_dir: '/var/bluepill') }
 
   before do
     allow(logger).to receive(:prefix_with).and_return(logger)
     allow(Bluepill::Logger).to receive(:new).and_return(logger)
     allow(Bluepill::ProcessJournal).to receive(:setup)
     allow(Bluepill::ProcessJournal).to receive(:logger=)
-    allow(Signal).to receive(:trap) { |signal, &block| traps[signal] = block }
+    # Don't trap the specs' own signals
+    allow(Signal).to receive(:trap)
+    # Don't make /var/bluepill's directories
+    allow(FileUtils).to receive_messages(mkdir_p: nil, chmod: nil)
   end
-
-  after { FileUtils.remove_entry(base_dir) }
 
   # An error whose class has no name
   def anonymous_error(message)
@@ -135,11 +127,11 @@ describe Bluepill::Application do
     end
 
     context 'when accepting a client fails' do
-      let(:error) do
-        Errno::EMFILE.new.tap { |e| e.set_backtrace(['a.rb:1']) }
+      before do
+        error = Errno::EMFILE.new
+        error.set_backtrace(['a.rb:1'])
+        allow(server_socket).to receive(:accept).and_raise(error)
       end
-
-      before { allow(server_socket).to receive(:accept).and_raise(error) }
 
       it 'keeps listening' do
         expect { listen }.not_to raise_error
@@ -147,7 +139,7 @@ describe Bluepill::Application do
 
       it 'logs the error and its backtrace' do
         listen
-        expect(logged).to eq(["Got exception in cmd listener: Errno::EMFILE `#{error.message}`", 'a.rb:1'])
+        expect(logged).to eq(["Got exception in cmd listener: Errno::EMFILE `#{Errno::EMFILE.new.message}`", 'a.rb:1'])
       end
     end
 

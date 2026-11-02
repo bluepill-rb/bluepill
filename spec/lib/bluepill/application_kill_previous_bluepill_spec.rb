@@ -1,28 +1,27 @@
 require 'tmpdir'
 
 describe Bluepill::Application do
-  let(:logger) { instance_double(Bluepill::Logger, debug: nil, err: nil, reopen: nil) }
-  let(:traps) { {} }
   let(:base_dir) { Dir.mktmpdir }
-  let(:foreground) { false }
-  let(:app) { described_class.new('test', base_dir: base_dir, foreground: foreground) }
-  let(:pids_dir) { File.join(base_dir, 'pids', 'test') }
-  let(:pid_file) { File.join(base_dir, 'pids', 'test.pid') }
-  let(:group) { instance_double(Bluepill::Group) }
-  let(:other_group) { instance_double(Bluepill::Group) }
+  let(:app) { described_class.new('test', base_dir: base_dir) }
 
   before do
+    logger = instance_double(Bluepill::Logger)
     allow(logger).to receive(:prefix_with).and_return(logger)
     allow(Bluepill::Logger).to receive(:new).and_return(logger)
     allow(Bluepill::ProcessJournal).to receive(:setup)
     allow(Bluepill::ProcessJournal).to receive(:logger=)
-    allow(Signal).to receive(:trap) { |signal, &block| traps[signal] = block }
+    # Don't trap the specs' own signals
+    allow(Signal).to receive(:trap)
   end
 
   after { FileUtils.remove_entry(base_dir) }
 
   def exit_with(status)
     raise_error(an_instance_of(SystemExit).and(having_attributes(status: status)))
+  end
+
+  def pid_file
+    File.join(base_dir, 'pids', 'test.pid')
   end
 
   describe 'kill_previous_bluepill' do

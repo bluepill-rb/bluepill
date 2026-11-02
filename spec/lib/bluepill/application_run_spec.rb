@@ -1,31 +1,29 @@
-require 'tmpdir'
-
 describe Bluepill::Application do
-  let(:logger) { instance_double(Bluepill::Logger, debug: nil, err: nil, reopen: nil) }
+  let(:app) { described_class.new('test', base_dir: '/var/bluepill') }
   let(:traps) { {} }
-  let(:base_dir) { Dir.mktmpdir }
-  let(:foreground) { false }
-  let(:app) { described_class.new('test', base_dir: base_dir, foreground: foreground) }
-  let(:pids_dir) { File.join(base_dir, 'pids', 'test') }
-  let(:pid_file) { File.join(base_dir, 'pids', 'test.pid') }
-  let(:group) { instance_double(Bluepill::Group) }
-  let(:other_group) { instance_double(Bluepill::Group) }
 
   before do
+    logger = instance_double(Bluepill::Logger)
     allow(logger).to receive(:prefix_with).and_return(logger)
     allow(Bluepill::Logger).to receive(:new).and_return(logger)
     allow(Bluepill::ProcessJournal).to receive(:setup)
     allow(Bluepill::ProcessJournal).to receive(:logger=)
     allow(Signal).to receive(:trap) { |signal, &block| traps[signal] = block }
+    # Don't make /var/bluepill's directories
+    allow(FileUtils).to receive_messages(mkdir_p: nil, chmod: nil)
   end
-
-  after { FileUtils.remove_entry(base_dir) }
 
   def mutex_locked?
     app.instance_variable_get(:@mutex).locked?
   end
 
+  def pid_file
+    '/var/bluepill/pids/test.pid'
+  end
+
   describe 'run' do
+    let(:group) { instance_double(Bluepill::Group) }
+    let(:other_group) { instance_double(Bluepill::Group) }
     let(:calls) { [] }
 
     before do
@@ -52,7 +50,7 @@ describe Bluepill::Application do
   end
 
   describe 'cleanup' do
-    let(:socket) { instance_double(UNIXServer, path: File.join(base_dir, 'test.sock')) }
+    let(:socket) { instance_double(UNIXServer, path: '/var/bluepill/test.sock') }
 
     before do
       allow(Bluepill::ProcessJournal).to receive(:clear_all_atomic_fs_locks)

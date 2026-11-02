@@ -181,6 +181,10 @@ describe Bluepill::Process do
       end
     end
 
+    it "has no target from unmonitored, without raising" do
+      expect(process.tick_target(:unmonitored)).to be_nil
+    end
+
     it "stays unmonitored, running no transition callbacks" do
       process.tick
       expect([process.state, calls]).to eq([:unmonitored, [%i[clean_threads unmonitored]]])

@@ -172,6 +172,10 @@ describe Bluepill::Process do
       it "stays unmonitored" do
         expect(process).to be_unmonitored
       end
+
+      it "logs no error" do
+        expect(logger).not_to have_received(:err)
+      end
     end
 
     it "leaves threads alone when the process is monitored" do

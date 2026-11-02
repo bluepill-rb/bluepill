@@ -249,7 +249,8 @@ Bluepill.application("app_name") do |app|
 end
 ```
 
-Note: We also set the PWD in the environment to the working dir you specify. This is useful for when the working dir is a symlink. Unicorn in particular will cd into the environment variable in PWD when it re-execs to deal with a change in the symlink.
+> [!NOTE]
+> We also set the PWD in the environment to the working dir you specify. This is useful for when the working dir is a symlink. Unicorn in particular will cd into the environment variable in PWD when it re-execs to deal with a change in the symlink.
 
 To run a command before every start, for example to clear a cache:
 

@@ -173,11 +173,11 @@ describe Bluepill::ProcessConditions::Http do
     end
 
     it 'passes when the body matches the pattern' do
-      expect(http(pattern: /ok/).check?(response(Net::HTTPOK, '200', 'all ok'))).to be_truthy
+      expect(http(pattern: /ok/)).to be_check(response(Net::HTTPOK, '200', 'all ok'))
     end
 
     it 'fails when the body does not match the pattern' do
-      expect(http(pattern: /ok/).check?(response(Net::HTTPOK, '200', 'down'))).to be_falsey
+      expect(http(pattern: /ok/)).not_to be_check(response(Net::HTTPOK, '200', 'down'))
     end
   end
 end

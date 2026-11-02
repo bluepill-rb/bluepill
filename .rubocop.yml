@@ -44,11 +44,6 @@ Security/MarshalLoad:
     - lib/bluepill/socket.rb
     - lib/bluepill/system/commands.rb
 
-Lint/SuppressedException:
-  Exclude:
-    - bin/bluepill
-    - lib/bluepill/system.rb
-
 Metrics/BlockNesting:
   Max: 3
 

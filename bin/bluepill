@@ -5,6 +5,7 @@ require "bluepill"
 begin
   require "rbconfig"
 rescue LoadError
+  # A Ruby too old to have rbconfig has Config, which the next line aliases
 end
 
 RbConfig = Config unless Object.const_defined?(:RbConfig)

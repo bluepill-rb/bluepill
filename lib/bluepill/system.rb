@@ -184,6 +184,7 @@ module Bluepill
       begin
         File.unlink(filename) if filename && File.exist?(filename)
       rescue IOError, Errno::ENOENT
+        # Already gone, or another process removed it in between
       rescue Errno::EACCES
         retry if (tries += 1) < 3
         $stderr.puts("Warning: permission denied trying to delete #{filename}")

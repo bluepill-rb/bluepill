@@ -109,35 +109,21 @@ describe Bluepill::Deprecation do
   end
 
   describe ".check_keywords" do
-    # The arguments a ruby2_keywords method gets
-    def arguments(*args)
-      args
-    end
-    ruby2_keywords(:arguments)
-
-    it "warns about a Hash passed without **" do
-      options = {below: 5}
-      expect { described_class.check_keywords(arguments(options), "process.checks :cpu_usage") }.to output(
+    it "warns about options passed as a Hash" do
+      expect { described_class.check_keywords({below: 5}, {}, "process.checks :cpu_usage") }.to output(
         "DEPRECATION: bluepill 0.3.0 takes the options of process.checks :cpu_usage only as keyword arguments, " \
         "so options kept in a Hash fail unless they're passed with **. Write process.checks :cpu_usage, **options, which 0.2 takes too.\n"
       ).to_stderr
     end
 
     it "says nothing about options passed as keywords" do
-      expect { described_class.check_keywords(arguments(below: 5), "process.checks :cpu_usage") }.not_to output.to_stderr
+      expect { described_class.check_keywords(nil, {below: 5}, "process.checks :cpu_usage") }.not_to output.to_stderr
     end
 
-    it "says nothing without options" do
-      expect { described_class.check_keywords(arguments, "process.checks :cpu_usage") }.not_to output.to_stderr
-    end
-
-    it "says nothing about an argument that isn't a Hash" do
-      expect { described_class.check_keywords(arguments("options"), "process.checks :cpu_usage") }.not_to output.to_stderr
-    end
-
-    it "warns about a kind of Hash passed without **" do
-      options = Class.new(Hash).new.merge!(below: 5)
-      expect { described_class.check_keywords(arguments(options), "process.checks :cpu_usage") }.to output(/only as keyword arguments/).to_stderr
+    it "raises for options passed both ways, as 0.2.7 did" do
+      expect { described_class.check_keywords({below: 5}, {every: 5}, "process.checks :cpu_usage") }.to raise_error(
+        ArgumentError, "wrong number of arguments (given 3, expected 1..2)"
+      )
     end
   end
 end

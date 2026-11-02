@@ -78,7 +78,7 @@ describe Bluepill do
     end
 
     it "warns about options passed as a Hash, without **" do
-      expect { described_class.application(:app_name, options) { nil } }.to output(
+      expect { described_class.application(:app_name, options, **{}) { nil } }.to output(
         "DEPRECATION: bluepill 0.3.0 takes the options of Bluepill.application \"app_name\" only as keyword arguments, " \
         "so options kept in a Hash fail unless they're passed with **. Write Bluepill.application \"app_name\", **options, which 0.2 takes too.\n"
       ).to_stderr
@@ -97,8 +97,14 @@ describe Bluepill do
       expect { described_class.application(:app_name, **all) { nil } }.not_to output.to_stderr
     end
 
-    it "raises for more than one Hash, as before" do
-      expect { described_class.application(:app_name, {}, {}) { nil } }.to raise_error(ArgumentError)
+    it "raises for options passed as a Hash and as keywords, as before" do
+      expect { described_class.application(:app_name, {foreground: true}, log_file: "a.log") { nil } }.to raise_error(ArgumentError)
+    end
+
+    it "takes options passed as a Hash" do
+      allow($stderr).to receive(:puts)
+      described_class.application(:app_name, options, **{}) { nil }
+      expect(app).to have_received(:load)
     end
 
     it "defaults to no options" do

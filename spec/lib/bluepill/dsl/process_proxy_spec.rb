@@ -171,16 +171,24 @@ describe Bluepill::ProcessProxy do
       expect(proxy.watches).to eq(cpu_usage: {every: 10, below: 5}, always_true: {})
     end
 
+    it "warns about a second check of a name, by the name" do
+      expect { described_class.new("web", {}, proc { 2.times { checks :always_true } }) }.to output(/two checks :always_true runs both/).to_stderr
+    end
+
+    it "says nothing about checks of different names" do
+      expect { described_class.new("web", {}, proc { (checks :always_true) && (checks :zombie_process) }) }.not_to output.to_stderr
+    end
+
     it "records the options of a Hash passed without **" do
       options = {below: 5}
       allow($stderr).to receive(:puts)
-      proxy = described_class.new("web", {}, proc { checks :cpu_usage, options })
+      proxy = described_class.new("web", {}, proc { checks :cpu_usage, options, **{} })
       expect(proxy.watches).to eq(cpu_usage: {below: 5})
     end
 
     it "warns about options passed as a Hash, without **" do
       options = {below: 5}
-      expect { described_class.new("web", {}, proc { checks :cpu_usage, options }) }.to output(
+      expect { described_class.new("web", {}, proc { checks :cpu_usage, options, **{} }) }.to output(
         "DEPRECATION: bluepill 0.3.0 takes the options of process.checks :cpu_usage only as keyword arguments, " \
         "so options kept in a Hash fail unless they're passed with **. Write process.checks :cpu_usage, **options, which 0.2 takes too.\n"
       ).to_stderr
@@ -191,8 +199,8 @@ describe Bluepill::ProcessProxy do
       expect { described_class.new("web", {}, proc { checks :cpu_usage, **options }) }.not_to output.to_stderr
     end
 
-    it "raises for more than one Hash, as before" do
-      expect { described_class.new("web", {}, proc { checks :cpu_usage, {}, {} }) }.to raise_error(ArgumentError)
+    it "raises for options passed as a Hash and as keywords, as before" do
+      expect { described_class.new("web", {}, proc { checks :cpu_usage, {below: 5}, every: 5 }) }.to raise_error(ArgumentError)
     end
   end
 

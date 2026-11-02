@@ -58,7 +58,7 @@ module Bluepill
     APPLICATION_OPTIONS: Array[Symbol]
 
     # Warns about options passed as a Hash, without **
-    def self.check_keywords: (Array[untyped] args, String call) -> void
+    def self.check_keywords: (Hash[Symbol, untyped]? options, Hash[Symbol, untyped] keywords, String call) -> void
 
     def self.check_application_options: (Hash[Symbol, untyped] options) -> void
 

@@ -14,8 +14,3 @@ class UNIXSocket
   def self.open: (String path) -> instance
     | [T] (String path) { (instance socket) -> T } -> T
 end
-
-class Hash[unchecked out K, unchecked out V]
-  # Whether a ruby2_keywords method got the Hash as keyword arguments
-  def self.ruby2_keywords_hash?: (Hash[untyped, untyped] hash) -> bool
-end

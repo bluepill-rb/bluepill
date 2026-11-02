@@ -18,7 +18,7 @@ Bluepill 0.2.9 warns, once each, about what will break in 0.3.0. Each warning st
 
 - Running on Ruby 2.7. Bluepill 0.3.0 needs Ruby 3.0 or newer, or JRuby 9.4 or newer.
 - An application option that bluepill 0.3.0 doesn't take, such as a misspelled `log_flie:`, which 0.2 ignores. Bluepill 0.3.0 fails the config.
-- Options kept in a Hash and passed to `Bluepill.application` or `checks` without `**`, as in `process.checks :mem_usage, options`. Bluepill 0.3.0 takes them only as keyword arguments, so write `process.checks :mem_usage, **options`.
+- Options kept in a Hash and passed to `Bluepill.application` or `checks` without `**`, as in `process.checks :mem_usage, options`, on Ruby 3.0 or newer. Bluepill 0.3.0 takes them only as keyword arguments, so write `process.checks :mem_usage, **options`. Ruby 2.7 passes such a Hash as keywords, so bluepill can't tell there.
 - An https `http` check without `verify_ssl:`. Bluepill 0.3.0 verifies the server's certificate by default, so set `verify_ssl: false` to keep checking a server with a self-signed certificate.
 - A daemon older than 0.2.9, which the CLI of bluepill 0.3.0 says is out of date. Run `bluepill load` again after upgrading, so the daemon runs the same version as the CLI.
 - A custom check or trigger whose `initialize` takes its options as a Hash, as in `def initialize(options = {})`. Bluepill 0.3.0 passes them as keyword arguments, so name them, as in `def initialize(path:, below:, **options)`, and call `super(**options)`.

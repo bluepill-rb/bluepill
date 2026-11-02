@@ -86,20 +86,25 @@ module Bluepill
     #
     # Bluepill 0.3.0 takes the options of Bluepill.application and checks
     # as keyword arguments, and Ruby 3 keeps a Hash passed without ** as a
-    # positional argument, which fails. Ruby marks a Hash that a
-    # ruby2_keywords method got as keywords, so the others are the ones
-    # passed without **.
+    # positional argument, which fails. Ruby 2.7 passes such a Hash as
+    # keywords, so it can't tell, and warns about none.
     #
-    # @param [Array<Object>] args the arguments after the name
+    # @param [Hash{Symbol => Object}, nil] options the options passed as a
+    #   Hash, or nil for none
+    # @param [Hash{Symbol => Object}] keywords the options passed as
+    #   keywords
     # @param [String] call the call, as the message shows it, such as
     #   "process.checks :mem_usage"
     #
     # @return [void]
     #
+    # @raise [ArgumentError] for options passed both ways, which 0.2.7
+    #   rejected as too many arguments
+    #
     # @api private
-    def self.check_keywords(args, call)
-      positional = args.grep(Hash).reject { |options| Hash.ruby2_keywords_hash?(options) }
-      return if positional.empty?
+    def self.check_keywords(options, keywords, call)
+      return unless options
+      raise ArgumentError, "wrong number of arguments (given 3, expected 1..2)" unless keywords.empty?
 
       warn("bluepill 0.3.0 takes the options of #{call} only as keyword arguments, " \
            "so options kept in a Hash fail unless they're passed with **. Write #{call}, **options, which 0.2 takes too.")

@@ -26,7 +26,6 @@ end
 
 Bluepill.setup_bundler
 
-require "thread"
 require "monitor"
 require "timeout"
 require "logger"

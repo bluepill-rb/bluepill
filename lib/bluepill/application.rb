@@ -1,4 +1,3 @@
-require "thread"
 require "bluepill/system"
 require "bluepill/process_journal"
 require "bluepill/base_directory"

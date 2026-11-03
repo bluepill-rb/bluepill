@@ -9,14 +9,17 @@ permissions:
 
 jobs:
   test:
-    name: ${{ matrix.ruby }}
-    runs-on: ubuntu-24.04
+    name: ${{ matrix.ruby }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.allow-failure == true }}
     env:
       JRUBY_OPTS: --debug
     strategy:
       fail-fast: false
       matrix:
+        os:
+          - ubuntu-24.04
+          - macos-latest
         ruby:
           - '3.2'
           - '3.3'
@@ -25,9 +28,11 @@ jobs:
           - jruby-10.0
           - jruby-10.1
         include:
-          - ruby: head
+          - os: ubuntu-24.04
+            ruby: head
             allow-failure: true
-          - ruby: jruby-head
+          - os: ubuntu-24.04
+            ruby: jruby-head
             allow-failure: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -42,12 +47,13 @@ jobs:
       # specs can't, since they stub forking and spawning
       - name: Smoke test
         run: bash spec/smoke.sh
-      # The Gemfile only installs Steep on Ruby 3.3 and newer
+      # The Gemfile only installs Steep on Ruby 3.3 and newer, and the types
+      # don't depend on the OS
       - name: Type check with Steep
-        if: contains(fromJSON('["3.3", "3.4", "4.0"]'), matrix.ruby)
+        if: matrix.os == 'ubuntu-24.04' && contains(fromJSON('["3.3", "3.4", "4.0"]'), matrix.ruby)
         run: bundle exec rake steep
       - name: Upload coverage to Coveralls
-        if: matrix.ruby == '4.0'
+        if: matrix.os == 'ubuntu-24.04' && matrix.ruby == '4.0'
         uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
         with:
           format: simplecov

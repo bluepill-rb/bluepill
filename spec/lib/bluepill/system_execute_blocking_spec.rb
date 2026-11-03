@@ -191,10 +191,12 @@ describe Bluepill::System, ".execute_blocking" do
     end
 
     # Run a command that starts a sleep of its own, and hangs, until it
-    # times out. Return whether the sleep is still alive after that.
+    # times out. Return whether the sleep is still alive after that. The
+    # command is a shell rather than a Ruby, which can take longer than the
+    # timeout to start on a busy machine, as under mutant.
     def sleep_alive_after_timeout
       pid_file = File.join(dir, "pid")
-      cmd = %(#{RbConfig.ruby} -e "File.write('#{pid_file}', Process.spawn('sleep', '30').to_s)\nsleep 30")
+      cmd = %(sh -c "sleep 30 & echo $! > #{pid_file}; wait")
       described_class.execute_blocking(cmd, opts(timeout: 2))
     rescue Timeout::Error
       sleep_pid = Integer(File.read(pid_file))

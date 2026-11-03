@@ -41,7 +41,7 @@ Performance
 
     bundle exec duel
 
-A pull request that makes a benchmark slower, allocate more, or leave more objects alive fails the Perf workflow. To check that new benchmarks pass on unchanged code, run `bundle exec duel --force`, and to run some of them, add `--filter "^watch:"`.
+A pull request that makes a benchmark slower, allocate more, or leave more objects alive fails the Perf workflow. When the slowdown is on purpose, a maintainer can add the `duel: accept` label and run the workflow again. A push to `master` is compared with the last commit Duel passed, and a regression there doesn't fail the run, but the workflow comments on the commit with the report. To check that new benchmarks pass on unchanged code, run `bundle exec duel --force`, and to run some of them, add `--filter "^watch:"`.
 
 Design
 ------

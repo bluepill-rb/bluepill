@@ -147,23 +147,26 @@ module Bluepill
 
     # Fail if the process sets a user or groups that bluepill can't switch to
     #
-    # A Ruby that can't fork, such as JRuby, spawns commands, which can't
-    # switch users or groups. Bluepill only switches when it runs as root,
-    # so they fail the config only then.
+    # A Ruby that can't fork, such as JRuby, spawns commands, which switch
+    # users and groups with setpriv, from util-linux, so without setpriv
+    # they can't. Bluepill only switches when it runs as root, so they fail
+    # the config only then.
     #
     # @return [void]
     #
-    # @raise [ConfigError] if it sets uid, gid or supplementary_groups
+    # @raise [ConfigError] if it sets uid, gid or supplementary_groups,
+    #   and setpriv isn't on the PATH
     #
     # @api private
     def validate_privileges!
-      return if Daemonize.can_fork? || !::Process::Sys.geteuid.zero?
+      return if Daemonize.can_fork? || !::Process::Sys.geteuid.zero? || System.setpriv?
 
       set = PRIVILEGE_ATTRIBUTES.select { |name| attributes[name] }
       return if set.empty?
 
       raise ConfigError, "Config Error: #{attribute_owner} sets #{set.join(", ")}, but bluepill " \
-                         "can't run commands as another user or group on #{RUBY_ENGINE}, which can't fork"
+                         "can't run commands as another user or group on #{RUBY_ENGINE}, which can't fork, " \
+                         "without setpriv, from util-linux"
     end
 
     # Name the process, for an unknown attribute's error

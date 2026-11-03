@@ -221,20 +221,21 @@ describe Bluepill::ProcessProxy do
 
   describe "#validate_privileges!" do
     # Check a process's privileges on a Ruby that can or can't fork, run by
-    # the user with the euid
-    def validate(attributes, block = proc {}, can_fork: false, euid: 0)
+    # the user with the euid, with or without setpriv
+    def validate(attributes, block = proc {}, can_fork: false, euid: 0, setpriv: false)
       allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(can_fork)
       allow(::Process::Sys).to receive(:geteuid).and_return(euid)
+      allow(Bluepill::System).to receive(:setpriv?).and_return(setpriv)
       described_class.new("web", attributes, block).validate_privileges!
     end
 
     # The error for a process that sets the attributes on this Ruby
     def privileges_error(set)
       "Config Error: process 'web' sets #{set}, but bluepill can't run commands as another user or group " \
-        "on #{RUBY_ENGINE}, which can't fork"
+        "on #{RUBY_ENGINE}, which can't fork, without setpriv, from util-linux"
     end
 
-    it "fails for a user and group that a Ruby that can't fork can't switch to, as root" do
+    it "fails for a user and group that a Ruby that can't fork can't switch to without setpriv, as root" do
       expect { validate({uid: "user", gid: "staff"}) }
         .to raise_error(Bluepill::ConfigError, privileges_error("uid, gid"))
     end
@@ -246,6 +247,10 @@ describe Bluepill::ProcessProxy do
 
     it "passes a process that sets no user or groups" do
       expect { validate({working_dir: "/srv", uid: nil}) }.not_to raise_error
+    end
+
+    it "passes a user and group on a Ruby that can't fork, with setpriv" do
+      expect { validate({uid: "user", gid: "staff"}, setpriv: true) }.not_to raise_error
     end
 
     it "passes a user and group on a Ruby that forks" do

@@ -74,10 +74,12 @@ module Bluepill
       # The command runs in a process group of its own, as a forked daemon's
       # new session does, so killing what's left in it never kills bluepill.
       # It stays bluepill's child, and pid_alive? collects its exit status.
+      # One that runs as another user opens its files as that user, and its
+      # pid file is the user's, as a forked daemon's are.
       #
       # @param [String] cmd the command, split into words without a shell
       # @param [CommandOptions] options its working_dir, environment, stdin,
-      #   stdout and stderr
+      #   stdout, stderr, uid, gid and supplementary_groups
       # @param [String] pid_file where to write the daemon's pid
       # @param [Logger] logger where to log why it didn't start
       #
@@ -85,14 +87,52 @@ module Bluepill
       #
       # @api private
       def spawn_daemon(cmd, options, pid_file:, logger:)
-        return unless can_write_pid_file(pid_file, logger)
+        return unless spawned_can_write_pid_file(pid_file, options, logger)
 
-        pid = spawn_command(cmd, options, chdir: "/", pgroup: true, **daemon_streams(options))
+        pid = spawn_command(cmd, options, chdir: "/", pgroup: true, **spawned_daemon_streams(options))
         File.write(pid_file, pid.to_s)
+        chown_to_switched(pid_file, options)
         pid
       rescue SystemCallError => e
         logger.warning(format("%s - %s", e.class, e))
         nil
+      end
+
+      # Return whether a spawned daemon's pid file can be written
+      #
+      # It's checked as the user the daemon runs as, as a forked daemon
+      # checks it once it has switched.
+      #
+      # @param [String] pid_file the pid file's path
+      # @param [CommandOptions] options its uid, gid and supplementary_groups
+      # @param [Logger] logger where to log why it can't be written
+      #
+      # @return [Boolean]
+      #
+      # @api private
+      def spawned_can_write_pid_file(pid_file, options, logger)
+        return can_write_pid_file(pid_file, logger) unless switches_user?(options)
+        return true if switched_can_write?(pid_file, options)
+
+        logger.warning("Can't write the pid file #{pid_file} as the process's user and groups")
+        false
+      end
+
+      # Return Kernel.spawn's options for a spawned daemon's standard streams
+      #
+      # A daemon that runs as another user opens its files itself, as the
+      # user, so Kernel.spawn points the streams at /dev/null until then.
+      #
+      # @param [CommandOptions] options its stdin, stdout and stderr
+      #
+      # @return [Hash{Symbol => Object}] in, out and err, and the files for
+      #   spawn_command to open as the user
+      #
+      # @api private
+      def spawned_daemon_streams(options)
+        return daemon_streams(options) unless switches_user?(options)
+
+        {in: File::NULL, out: File::NULL, err: File::NULL, files: [options.stdin, options.stdout, options.stderr]}
       end
 
       # Return where a spawned daemon's standard streams go

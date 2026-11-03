@@ -209,7 +209,7 @@ end
 These only apply when bluepill runs as root. Every command a process runs, such as its `start_command`, `stop_command` and `pre_start_command`, runs as its user and groups, and so do the commands of its children with `monitor_children`.
 
 > [!WARNING]
-> On JRuby, bluepill can't run commands as another user or group, since the JVM can't fork, so a config that sets `uid`, `gid` or `supplementary_groups` fails to load when bluepill runs as root. Run it on CRuby to use them.
+> On JRuby, which can't fork, bluepill switches users and groups with `setpriv`, from util-linux, which most Linux distributions include. Without `setpriv`, as on macOS, a config that sets `uid`, `gid` or `supplementary_groups` fails to load when bluepill runs as root. Run it on CRuby to use them there.
 
 To track resources of child processes, use `:include_children`:
 ```ruby
@@ -524,7 +524,7 @@ implementations:
 
 * Ruby 3.2 through 3.4
 * Ruby 4.0
-* JRuby 10.0 and 10.1, without `uid`, `gid` and `supplementary_groups`
+* JRuby 10.0 and 10.1, with `uid`, `gid` and `supplementary_groups` only where `setpriv` is installed
 
 If something doesn't work on one of these interpreters, please open an issue.
 

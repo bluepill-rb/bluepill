@@ -139,9 +139,15 @@ describe Bluepill::ProcessFactory do
     end
 
     describe "validation" do
-      it "rejects a user that a Ruby that can't fork can't switch to, as root" do
+      # Run as root on a Ruby that can't fork, without setpriv
+      def as_root_without_fork_or_setpriv
         allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(false)
         allow(::Process::Sys).to receive(:geteuid).and_return(0)
+        allow(Bluepill::System).to receive(:setpriv?).and_return(false)
+      end
+
+      it "rejects a user that a Ruby that can't fork can't switch to without setpriv, as root" do
+        as_root_without_fork_or_setpriv
         expect_config_error(/process 'web' sets uid, but bluepill can't run commands as another user/) do
           create("web", proc { self.start_command = "run" }, uid: "user")
         end

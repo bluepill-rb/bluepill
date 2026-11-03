@@ -199,11 +199,42 @@ module Bluepill
       def switch_to_user: (Etc::Passwd user) -> void
     end
 
+    # Runs a spawned command as another user and groups, with setpriv
+    module CommandPrivileges
+      SWITCHED_SCRIPT: String
+
+      WRITE_CHECK: String
+
+      def switches_user?: (CommandOptions options) -> bool
+
+      def setpriv?: () -> bool
+
+      def switched_command: (CommandOptions options, Array[String] words, dir: String?, files: Array[String?]) -> Array[String]
+
+      def switched_can_write?: (String path, CommandOptions options) -> bool?
+
+      def setpriv_options: (CommandOptions options) -> Array[String]
+
+      def switched_user: (CommandOptions options) -> Etc::Passwd?
+
+      def switched_gid: (CommandOptions options, Etc::Passwd? user) -> Integer?
+
+      def supplementary_gids: (Etc::Passwd? user, Integer? gid, Array[String]? supplementary_groups) -> Array[Integer]
+
+      def member_gids: (String name) -> Array[Integer]
+
+      def switched_environment: (CommandOptions options) -> Hash[String, String]
+
+      def chown_to_switched: (String path, CommandOptions options) -> void
+    end
+
     # Starts commands without forking, in a Ruby that can't fork
     module CommandSpawn
+      include CommandPrivileges
+
       EXIT_POLL_INTERVAL: Float
 
-      def spawn_command: (String cmd, CommandOptions options, ?chdir: String?, **untyped redirects) -> Integer
+      def spawn_command: (String cmd, CommandOptions options, ?chdir: String?, ?files: Array[String?], **untyped redirects) -> Integer
 
       def spawn_blocking: (String cmd, CommandOptions options) -> CommandResult
 
@@ -237,6 +268,10 @@ module Bluepill
       def fork_daemon: (String cmd, CommandOptions options, pid_file: String, logger: Logger) -> Integer?
 
       def spawn_daemon: (String cmd, CommandOptions options, pid_file: String, logger: Logger) -> Integer?
+
+      def spawned_can_write_pid_file: (String pid_file, CommandOptions options, Logger logger) -> bool
+
+      def spawned_daemon_streams: (CommandOptions options) -> Hash[Symbol, untyped]
 
       def daemon_streams: (CommandOptions options) -> Hash[Symbol, untyped]
 

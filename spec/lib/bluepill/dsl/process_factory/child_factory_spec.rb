@@ -40,9 +40,15 @@ describe Bluepill::ProcessFactory::ChildFactory do
       expect(seen).to eq([attributes.except(:working_dir)])
     end
 
-    it "rejects the parent's user and groups on a Ruby that can't fork, as root" do
+    # Run as root on a Ruby that can't fork, without setpriv
+    def as_root_without_fork_or_setpriv
       allow(Bluepill::Daemonize).to receive(:can_fork?).and_return(false)
       allow(::Process::Sys).to receive(:geteuid).and_return(0)
+      allow(Bluepill::System).to receive(:setpriv?).and_return(false)
+    end
+
+    it "rejects the parent's user and groups on a Ruby that can't fork without setpriv, as root" do
+      as_root_without_fork_or_setpriv
       expect { described_class.new("web", attributes, halt) }.to raise_error(
         Bluepill::ConfigError, /process '<child of web>' sets uid, gid, supplementary_groups, but bluepill can't/
       )

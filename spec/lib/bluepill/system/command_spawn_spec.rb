@@ -74,6 +74,40 @@ describe Bluepill::System::CommandSpawn do
     it "raises for an empty command" do
       expect { spawner.spawn_command("", opts) }.to raise_error(SystemCallError)
     end
+
+    context "when the command runs as another user" do
+      let(:switched) { [] }
+
+      before do
+        allow(spawner).to(receive(:switches_user?)) { |options| !options.nil? }
+        allow(spawner).to(receive(:switched_environment)) { |options| options&.uid ? {} : {"FROM" => "elsewhere"} }
+        allow(spawner).to(receive(:switched_command)) { |*args, **kw| (switched << [*args, kw]) && %w[setpriv run] }
+        allow(Kernel).to receive(:spawn).and_return(7)
+      end
+
+      def spawn_switched(options, **redirects) = spawner.spawn_command("run -x", options, **redirects)
+
+      it "runs the command under setpriv, in its working directory, with its files" do
+        options = opts(uid: "deploy", working_dir: "/srv")
+        spawn_switched(options, chdir: "/", files: ["in", "out", nil])
+        expect(switched).to eq([[options, %w[run -x], {dir: "/srv", files: ["in", "out", nil]}]])
+      end
+
+      it "runs it in chdir without a working directory, and without files" do
+        options = opts(uid: "deploy")
+        spawn_switched(options, chdir: "/")
+        expect(switched).to eq([[options, %w[run -x], {dir: "/", files: [nil, nil, nil]}]])
+      end
+
+      it "spawns setpriv, which changes the directory, so Kernel.spawn doesn't" do
+        spawn_switched(opts(uid: "deploy", working_dir: "/srv"), out: :err)
+        expect(Kernel).to have_received(:spawn).with({"PWD" => "/srv"}, "setpriv", "run", out: :err)
+      end
+
+      it "returns setpriv's pid" do
+        expect(spawn_switched(opts(uid: "deploy"))).to eq(7)
+      end
+    end
   end
 
   describe "#spawn_environment" do
@@ -88,6 +122,22 @@ describe Bluepill::System::CommandSpawn do
     it "lets the environment set PWD" do
       options = opts(working_dir: "/srv", environment: {"PWD" => "/other"})
       expect(spawner.spawn_environment(options)).to eq("PWD" => "/other")
+    end
+
+    context "when the command runs as another user" do
+      before do
+        allow(spawner).to(receive(:switched_environment)) { |options| options&.uid ? {"HOME" => "/home/deploy"} : {} }
+      end
+
+      it "sets HOME to the user's home directory, along with PWD and the environment" do
+        options = opts(uid: "deploy", working_dir: "/srv", environment: {A: 1})
+        expect(spawner.spawn_environment(options)).to eq("HOME" => "/home/deploy", "PWD" => "/srv", "A" => "1")
+      end
+
+      it "lets the environment set HOME" do
+        options = opts(uid: "deploy", environment: {"HOME" => "/custom"})
+        expect(spawner.spawn_environment(options)).to eq("HOME" => "/custom")
+      end
     end
   end
 

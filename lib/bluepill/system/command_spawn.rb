@@ -2,6 +2,7 @@
 
 require "shellwords"
 require "bluepill/system/command_result"
+require "bluepill/system/command_privileges"
 
 module Bluepill
   module System
@@ -17,15 +18,24 @@ module Bluepill
     #
     # @api private
     module CommandSpawn
+      include CommandPrivileges
+
       # The seconds between checks of whether a spawned command has exited
       EXIT_POLL_INTERVAL = 0.05
 
       # Start a command, without waiting for it to finish
       #
+      # A command that runs as another user or groups runs under setpriv,
+      # which also changes to its directory and opens files, as the user.
+      #
       # @param [String] cmd the command, split into words without a shell
-      # @param [CommandOptions] options its working_dir and environment
+      # @param [CommandOptions] options its working_dir, environment, uid,
+      #   gid and supplementary_groups
       # @param [String, nil] chdir the directory to run in without a
       #   working_dir, or nil for bluepill's
+      # @param [Array(String, String, String)] files the files for standard
+      #   input, output and error that a switched command opens as its user,
+      #   each nil for none
       # @param [Hash{Symbol => Object}] redirects more of Kernel.spawn's
       #   options, such as where its standard streams go
       #
@@ -35,10 +45,15 @@ module Bluepill
       #   exist
       #
       # @api private
-      def spawn_command(cmd, options, chdir: nil, **redirects)
+      def spawn_command(cmd, options, chdir: nil, files: [nil, nil, nil], **redirects)
         dir = options.working_dir&.to_s || chdir
-        redirects[:chdir] = dir if dir
-        program, *args = Shellwords.shellwords(cmd)
+        words = Shellwords.shellwords(cmd)
+        if switches_user?(options)
+          words = switched_command(options, words, dir:, files:)
+        elsif dir
+          redirects[:chdir] = dir
+        end
+        program, *args = words
         Kernel.spawn(spawn_environment(options), program.to_s, *args, **redirects)
       end
 
@@ -226,18 +241,20 @@ module Bluepill
 
       # Return the environment variables a command gets, as Strings
       #
-      # PWD is the working directory, as a shell sets it, unless the
-      # environment sets it too.
+      # PWD is the working directory, as a shell sets it, and HOME is the
+      # home directory of the user it runs as, unless the environment sets
+      # them too.
       #
-      # @param [CommandOptions] options its working_dir and environment
+      # @param [CommandOptions] options its working_dir, environment and uid
       #
       # @return [Hash{String => String}]
       #
       # @api private
       def spawn_environment(options)
         working_dir = options.working_dir
-        env = options.environment.to_h { |key, value| [key.to_s, value.to_s] }
-        working_dir ? {"PWD" => working_dir.to_s}.merge(env) : env
+        env = switched_environment(options)
+        env["PWD"] = working_dir.to_s if working_dir
+        env.merge(options.environment.to_h { |key, value| [key.to_s, value.to_s] })
       end
     end
   end

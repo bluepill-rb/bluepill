@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `uid`, `gid` and `supplementary_groups` on JRuby, on Linux. Bluepill runs a process's commands under `setpriv`, from util-linux, which switches to the user and groups that a forked child would, and opens the process's files and changes to its directory as the user. Without `setpriv` on the `PATH`, a config that sets them still fails to load when bluepill runs as root.
 - `weeks` and `week`, as in `checks :running_time, below: 1.week`, which are 7 days, as ActiveSupport's are.
 - `terabytes` and `terabyte`, as in `below: 2.terabytes`, which are 1024 gigabytes, as ActiveSupport's are.
 - `bytes` and `byte`, as in `below: 512.bytes`, which return the number itself, as `seconds` does and as ActiveSupport's do.

@@ -45,6 +45,7 @@ module Bluepill
     KILOBYTE: Integer
     MEGABYTE: Integer
     GIGABYTE: Integer
+    TERABYTE: Integer
 
     def seconds: () -> self
     alias second seconds
@@ -66,6 +67,9 @@ module Bluepill
 
     def gigabytes: () -> Numeric
     alias gigabyte gigabytes
+
+    def terabytes: () -> Numeric
+    alias terabyte terabytes
   end
 
   module Util

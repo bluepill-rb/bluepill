@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `terabytes` and `terabyte`, as in `below: 2.terabytes`, which are 1024 gigabytes, as ActiveSupport's are.
+
 ### Fixed
 
 - A tick of an up process is as fast as in 0.3.0 again. Bluepill 0.3.2 checked whether Ruby can fork each time it signaled a process, which made a tick 5% to 8% slower.

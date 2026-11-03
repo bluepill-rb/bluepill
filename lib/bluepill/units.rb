@@ -27,6 +27,8 @@ module Bluepill
     MEGABYTE = 1024 * KILOBYTE
     # The number of bytes in a gigabyte
     GIGABYTE = 1024 * MEGABYTE
+    # The number of bytes in a terabyte
+    TERABYTE = 1024 * GIGABYTE
 
     # Return this many seconds, in seconds
     #
@@ -104,6 +106,17 @@ module Bluepill
     # @api public
     def gigabytes = self * GIGABYTE
     alias_method :gigabyte, :gigabytes
+
+    # Return this many terabytes, in bytes
+    #
+    # @example
+    #   1.terabyte # => 1099511627776
+    #
+    # @return [Numeric] the number of bytes
+    #
+    # @api public
+    def terabytes = self * TERABYTE
+    alias_method :terabyte, :terabytes
   end
 end
 

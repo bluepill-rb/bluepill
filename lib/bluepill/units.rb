@@ -21,6 +21,8 @@ module Bluepill
     HOUR = 60 * MINUTE
     # The number of seconds in a day
     DAY = 24 * HOUR
+    # The number of seconds in a week
+    WEEK = 7 * DAY
     # The number of bytes in a kilobyte
     KILOBYTE = 1024
     # The number of bytes in a megabyte
@@ -73,6 +75,17 @@ module Bluepill
     # @api public
     def days = self * DAY
     alias_method :day, :days
+
+    # Return this many weeks, in seconds
+    #
+    # @example
+    #   1.week # => 604800
+    #
+    # @return [Numeric] the number of seconds
+    #
+    # @api public
+    def weeks = self * WEEK
+    alias_method :week, :weeks
 
     # Return this many bytes, in bytes
     #

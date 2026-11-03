@@ -6,6 +6,7 @@ describe Bluepill::Units do
 
   {
     seconds: 1, second: 1, minutes: 60, minute: 60, hours: 3600, hour: 3600, days: 86_400, day: 86_400,
+    weeks: 604_800, week: 604_800,
     bytes: 1, byte: 1, kilobytes: 1024, kilobyte: 1024, megabytes: 1_048_576, megabyte: 1_048_576,
     gigabytes: 1_073_741_824, gigabyte: 1_073_741_824, terabytes: 1_099_511_627_776, terabyte: 1_099_511_627_776
   }.each do |method, factor|

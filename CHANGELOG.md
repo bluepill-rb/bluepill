@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `weeks` and `week`, as in `checks :running_time, below: 1.week`, which are 7 days, as ActiveSupport's are.
 - `terabytes` and `terabyte`, as in `below: 2.terabytes`, which are 1024 gigabytes, as ActiveSupport's are.
 - `bytes` and `byte`, as in `below: 512.bytes`, which return the number itself, as `seconds` does and as ActiveSupport's do.
 

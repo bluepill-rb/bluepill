@@ -355,7 +355,7 @@ Note `{{PID}}` will be substituted for the pid of process in both the stop and r
 
 ### Durations and sizes
 
-`10.seconds` and `100.megabytes` are plain numbers of seconds and bytes, so `every: 10.seconds` and `every: 10` mean the same thing. To make them work, bluepill adds `seconds`, `minutes`, `hours`, `days`, `kilobytes`, `megabytes`, `gigabytes`, and `terabytes`, and their singular forms such as `1.minute`, to Ruby's `Numeric`. It's the only change bluepill makes to Ruby's own classes, and it applies to all the code that a pill file loads, not just the pill file.
+`10.seconds` and `100.megabytes` are plain numbers of seconds and bytes, so `every: 10.seconds` and `every: 10` mean the same thing. To make them work, bluepill adds `seconds`, `minutes`, `hours`, `days`, `bytes`, `kilobytes`, `megabytes`, `gigabytes`, and `terabytes`, and their singular forms such as `1.minute`, to Ruby's `Numeric`. It's the only change bluepill makes to Ruby's own classes, and it applies to all the code that a pill file loads, not just the pill file.
 
 If a pill file loads ActiveSupport, for example by loading a Rails app, ActiveSupport's versions of these methods win, whichever loads first. Bluepill accepts ActiveSupport's durations too.
 

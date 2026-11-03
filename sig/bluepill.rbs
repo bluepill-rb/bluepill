@@ -59,6 +59,9 @@ module Bluepill
     def days: () -> Numeric
     alias day days
 
+    def bytes: () -> self
+    alias byte bytes
+
     def kilobytes: () -> Numeric
     alias kilobyte kilobytes
 

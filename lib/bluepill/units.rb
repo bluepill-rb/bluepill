@@ -74,6 +74,17 @@ module Bluepill
     def days = self * DAY
     alias_method :day, :days
 
+    # Return this many bytes, in bytes
+    #
+    # @example
+    #   512.bytes # => 512
+    #
+    # @return [Numeric] the number itself
+    #
+    # @api public
+    def bytes = self
+    alias_method :byte, :bytes
+
     # Return this many kilobytes, in bytes
     #
     # @example

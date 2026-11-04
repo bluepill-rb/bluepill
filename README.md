@@ -1,7 +1,7 @@
 # Bluepill
 Bluepill is a simple process monitoring tool written in Ruby.
 
-[![Duel](https://raw.githubusercontent.com/sferik/duel-ruby/main/assets/badge.svg)](https://github.com/sferik/duel-ruby)
+[![Duel](https://raw.githubusercontent.com/bluepill-rb/bluepill/duel/badge/badge.svg)](https://github.com/sferik/duel-ruby)
 [![Test](https://github.com/bluepill-rb/bluepill/actions/workflows/test.yml/badge.svg?branch=master)][test]
 [![Lint](https://github.com/bluepill-rb/bluepill/actions/workflows/lint.yml/badge.svg?branch=master)][lint]
 [![Mutant](https://github.com/bluepill-rb/bluepill/actions/workflows/mutant.yml/badge.svg?branch=master)][mutant]

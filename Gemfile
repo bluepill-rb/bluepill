@@ -13,7 +13,7 @@ gem "syslog" if RUBY_VERSION >= "3.4"
 # MRI
 group :development do
   if RUBY_VERSION >= "3.4" && RUBY_ENGINE == "ruby"
-    gem "duel", ">= 0.1.6", require: false
+    gem "duel", ">= 0.1.7", require: false
     gem "duel-retained", require: false
     gem "stackprof", require: false
   end
